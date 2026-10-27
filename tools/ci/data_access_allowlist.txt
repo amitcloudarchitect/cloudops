@@ -5,4 +5,5 @@
 # tenancy owner: each line here is a path that is not protected by the tenancy
 # package's role check, scope handling or statement guard.
 #
-# Intentionally empty.
+db/migrations/  # schema owner role, pipeline job only; DDL and RLS policies name app.role
+db/tests/  # isolation suite: must open raw and unscoped connections to prove they see nothing

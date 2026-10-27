@@ -137,6 +137,13 @@ def test_allowlist_requires_justification(tmp_path: Path) -> None:
     assert checker.check_repo(tmp_path) == []
 
 
+def test_allowlist_directory_entries_cover_only_that_directory(tmp_path: Path) -> None:
+    _write(tmp_path, "db/migrations/versions/0001.py", "import psycopg\n")
+    _write(tmp_path, "db/migrations_extra.py", "import psycopg\n")
+    _write(tmp_path, "tools/ci/data_access_allowlist.txt", "db/migrations/  # owner role\n")
+    assert {v.path for v in checker.check_repo(tmp_path)} == {"db/migrations_extra.py"}
+
+
 def test_main_exit_code(tmp_path: Path) -> None:
     _write(tmp_path, "services/api/ok.py", "x = 1\n")
     assert checker.main(["check", str(tmp_path)]) == 0

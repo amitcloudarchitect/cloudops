@@ -31,19 +31,17 @@ jobs:
 
   tests:
     runs-on: ubuntu-24.04
-    services:
-      postgres:
-        image: pgvector/pgvector:pg16
-        env:
-          POSTGRES_PASSWORD: ci-only-throwaway
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       CLOUDOPS_TEST_ADMIN_DSN: postgresql://postgres:ci-only-throwaway@localhost:5432/postgres
+      # The migration's no-pg_partman fallback exists for local runs only.
+      CLOUDOPS_REQUIRE_PARTMAN: "1"
     steps:
       - uses: actions/checkout@v4
+      - name: database with pgvector and pg_partman
+        run: |
+          docker build -t cloudops-pg-test db/test-image
+          docker run -d --name pg -p 5432:5432 -e POSTGRES_PASSWORD=ci-only-throwaway cloudops-pg-test
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --locked
       - name: unit and integration tests

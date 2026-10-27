@@ -17,7 +17,8 @@ allowed everywhere: building a query is fine, executing it needs a
 ``ScopedConnection`` from the tenancy package.
 
 Exceptions go in ``data_access_allowlist.txt`` with a justification, and are
-reviewed like any other change to this gate.
+reviewed like any other change to this gate. An entry ending in ``/`` covers a
+directory.
 
 Usage: python tools/ci/check_data_access.py [repo_root]
 """
@@ -206,6 +207,11 @@ def load_allowlist(root: Path) -> frozenset[str]:
     return frozenset(entries)
 
 
+def _allowed(rel: str, allow: frozenset[str]) -> bool:
+    """Exact paths, or directories given with a trailing slash."""
+    return rel in allow or any(e.endswith("/") and rel.startswith(e) for e in allow)
+
+
 def _walk(root: Path) -> Iterator[Path]:
     for path in root.iterdir():
         if path.is_dir():
@@ -220,7 +226,7 @@ def check_repo(root: Path) -> list[Violation]:
     out: list[Violation] = []
     for path in _walk(root):
         rel = path.relative_to(root).as_posix()
-        if rel.startswith(TENANCY_DIR + "/") or rel in SELF_EXEMPT or rel in allow:
+        if rel.startswith(TENANCY_DIR + "/") or rel in SELF_EXEMPT or _allowed(rel, allow):
             continue
         out.extend(check_file(rel, path))
     return sorted(out)

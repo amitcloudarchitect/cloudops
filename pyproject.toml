@@ -3,7 +3,7 @@ name = "cloudops-platform"
 version = "0.0.0"
 description = "Getronics CloudOps platform monorepo root"
 requires-python = ">=3.12,<3.13"
-dependencies = ["cloudops-tenancy"]
+dependencies = ["cloudops-tenancy", "alembic>=1.14"]
 
 [tool.uv]
 package = false
@@ -24,7 +24,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["packages", "tools"]
+testpaths = ["packages", "db", "tools"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
