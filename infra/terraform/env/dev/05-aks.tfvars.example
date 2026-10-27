@@ -1,0 +1,14 @@
+# Copy to 05-aks.tfvars (gitignored).
+aks_admin_group_object_ids = ["00000000-0000-0000-0000-000000000000"] # grp-cloudops-platform-admin
+
+# Dev pools: the smallest Dsv5 size, one system node, and user pools that
+# scale to zero until a workload is scheduled on them (2 vCPUs idle, 14 at most).
+# Names and labels match production, so workloads place the same way.
+# UAT and production use the LLD table (variables.tf defaults).
+node_pools = {
+  npsystem    = { vm_size = "Standard_D2s_v5", min = 1, max = 2 }
+  npapp       = { vm_size = "Standard_D2s_v5", min = 0, max = 2 }
+  npingest    = { vm_size = "Standard_D2s_v5", min = 0, max = 1 }
+  nptelemetry = { vm_size = "Standard_D2s_v5", min = 0, max = 1 }
+  npai        = { vm_size = "Standard_D2s_v5", min = 0, max = 1 }
+}

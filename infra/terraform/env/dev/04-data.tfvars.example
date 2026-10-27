@@ -1,0 +1,22 @@
+# Copy to 04-data.tfvars (gitignored).
+postgres_entra_admin = {
+  object_id      = "00000000-0000-0000-0000-000000000000"
+  principal_name = "grp-cloudops-platform-admin"
+  principal_type = "Group"
+}
+
+enable_metrics_capture = false # true only after 04b-rbac is applied
+
+# Dev sizing (UAT and production use the LLD defaults in variables.tf).
+postgres_sizing = {
+  sku_name              = "GP_Standard_D2ds_v5"
+  storage_mb            = 131072 # 128 GB
+  storage_tier          = "P10"
+  backup_retention_days = 7
+  geo_redundant_backup  = false
+  zone_redundant_ha     = false
+}
+redis_zone_redundant = false
+
+# Dev subscription is restricted from Flexible Server in westeurope.
+postgres_location = "northeurope"

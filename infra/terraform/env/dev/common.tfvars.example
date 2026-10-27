@@ -1,0 +1,31 @@
+# Copy to common.tfvars (gitignored) and fill in. Used by every stack:
+#
+#   terraform plan -var-file=../../env/dev/common.tfvars [-var-file=../../env/dev/<stack>.tfvars]
+#
+# Identifiers only. Nothing in this file is a secret.
+
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Dev runs in one subscription. When the LLD's five-subscription model arrives,
+# set the domains that move here; everything else keeps using subscription_id.
+#   subscription_ids = { aks = "...", data = "..." }
+subscription_ids = {}
+
+env          = "dev"
+location     = "westeurope"
+region_short = "weu"
+
+# Mandatory tags (LLD, Tagging).
+owner       = "someone@getronics.com"
+costcentre  = "CC-0000"
+application = "cloudops"
+
+# Sensitivity class per stack. The HLD names classes c1-c5 without defining
+# them here; confirm these against the classification policy.
+dataclass = {
+  network       = "c2"
+  security      = "c4"
+  observability = "c3"
+  data          = "c5"
+  aks           = "c4"
+}
