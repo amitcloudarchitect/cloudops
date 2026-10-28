@@ -7,6 +7,7 @@ dependencies = [
     "cloudops-tenancy",
     "cloudops-config",
     "azure-storage-blob>=12.24",
+    "pyjwt[crypto]>=2.10",
 ]
 
 [tool.uv.sources]

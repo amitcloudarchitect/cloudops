@@ -11,6 +11,8 @@
 #                              the migration's own CREATE is IF NOT EXISTS)
 #   cloudops_app_local       login, member of cloudops_app    — what services use
 #   cloudops_ingest_local    login, member of cloudops_ingest — what connectors and the seed use
+#   cloudops_resolver        own the access-control functions (migration 0004);
+#   cloudops_access_admin      NOLOGIN, reachable only through those functions
 #
 # No login here is superuser, BYPASSRLS, or a table owner except the migrator;
 # packages/tenancy refuses to run as anything else.
@@ -27,6 +29,11 @@ CREATE ROLE cloudops_app_local    LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD :'app_p
     IN ROLE cloudops_app;
 CREATE ROLE cloudops_ingest_local LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD :'ingest_pw'
     IN ROLE cloudops_ingest;
+-- Owners of the access-control functions (migration 0004). The migrator must be
+-- able to SET ROLE to them to hand over ownership, but never inherits their rights.
+CREATE ROLE cloudops_resolver     NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
+CREATE ROLE cloudops_access_admin NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
+GRANT cloudops_resolver, cloudops_access_admin TO cloudops_migrator WITH INHERIT FALSE;
 
 CREATE DATABASE cloudops OWNER cloudops_migrator;
 REVOKE ALL ON DATABASE cloudops FROM PUBLIC;

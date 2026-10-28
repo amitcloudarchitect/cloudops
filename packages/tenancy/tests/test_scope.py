@@ -98,3 +98,29 @@ def test_guard_rejects_scope_and_transaction_changes(sql: str) -> None:
 )
 def test_guard_allows_ordinary_statements(sql: str) -> None:
     check_statement(sql)
+
+
+# --- account scope (ADR 0002, D16) ---------------------------------------------
+
+
+def test_unrestricted_accounts_are_all() -> None:
+    assert TenantScope([uuid4()], Role.ENGINEER, "p").account_ids_setting == "all"
+
+
+def test_restricted_accounts_are_sorted_and_empty_means_none() -> None:
+    a, b = sorted([uuid4(), uuid4()], key=str)
+    s = TenantScope([uuid4()], Role.CUSTOMER, "p", account_ids=[b, a])
+    assert s.account_ids_setting == f"{a},{b}"
+    assert TenantScope([uuid4()], Role.CUSTOMER, "p", account_ids=[]).account_ids_setting == ""
+
+
+@pytest.mark.parametrize("bad", ["0b5c...", ["not-a-uuid"], [1]])
+def test_invalid_account_ids_are_rejected(bad: Any) -> None:
+    with pytest.raises(InvalidScopeError):
+        TenantScope([uuid4()], Role.ENGINEER, "p", account_ids=bad)
+
+
+def test_resolution_scope_has_no_tenants_and_no_usable_role() -> None:
+    s = TenantScope.for_resolution("user:x")
+    assert s.tenant_ids == frozenset()
+    assert s.role is Role.UNRESOLVED

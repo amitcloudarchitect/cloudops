@@ -17,10 +17,10 @@ import psycopg
 import pytest
 from sqlalchemy import text
 
-from cloudops_tenancy import Database, Role
+from cloudops_tenancy import Database, Role, TenantScope
 
-from .conftest import Seeded, embedding
-from .support import has_customer_role, has_python, pending, raw_scope, scope, stub
+from .conftest import Api, Principals, Seeded, embedding
+from .support import has_python, pending, raw_scope, scope, stub
 
 pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
@@ -34,7 +34,6 @@ COMMERCIAL_ROLES = {
     "platform_admin",
 }
 
-api_built = has_python("services/api/**/*.py")
 assistant_built = has_python("services/**/*assistant*/**/*.py", "services/**/*gateway*/**/*.py")
 broker_built = has_python("execution/**/*.py")
 
@@ -64,9 +63,14 @@ async def test_case1_foreign_id_is_indistinguishable_from_missing(
     assert own == [(getattr(seeded.a, attr),)]
 
 
-@pending("Phase 3 API: GET of another tenant's resource returns 404, not 403")
-def test_case1_api_returns_404() -> None:
-    stub(api_built, "the API (services/api)")
+async def test_case1_api_returns_404(api: Api, principals: Principals, seeded: Seeded) -> None:
+    """Through the API, as a customer and as single-tenant staff: 404, never 403,
+    and the same body as an id that never existed."""
+    for who in (principals.customer_a, principals.engineer_a):
+        foreign = await api.get(f"/v1/resources/{seeded.b.resource_id}", who)
+        missing = await api.get(f"/v1/resources/{uuid4()}", who)
+        assert foreign.status_code == missing.status_code == 404
+        assert foreign.json()["error"]["code"] == missing.json()["error"]["code"]
 
 
 # --- 2. Direct SQL with scope unset -> zero rows, not all rows --------------------
@@ -253,9 +257,25 @@ async def test_case6_commercial_visibility_matches_the_role_list(
     assert len(rows) == (1 if role.value in COMMERCIAL_ROLES else 0)
 
 
-@pending("Phase 3: customer roles defined, and a customer principal sees no margin fields")
-def test_case6_customer_principal() -> None:
-    stub(has_customer_role, "customer roles in cloudops_tenancy.Role")
+async def test_case6_customer_principal(
+    api: Api, principals: Principals, seeded: Seeded, app_db: Database
+) -> None:
+    """Absent by RLS, not by serialisation: the customer role class sees no SOW
+    row even with the query run directly, and the matrix cannot be widened to
+    grant it (D10)."""
+    assert (await api.get("/v1/commercial/sows", principals.customer_a)).status_code == 403
+    rows = await _rows(
+        app_db,
+        scope(seeded.a, role=Role.CUSTOMER),
+        "SELECT monthly_manage_revenue FROM cloudops.sow",
+    )
+    assert rows == []
+    with pytest.raises(Exception, match="commercial permission"):
+        await _rows(
+            app_db, TenantScope.for_resolution("test"),
+            "SELECT access.grant_permission(:a, 'Customer viewer', 'commercial.read')",
+            a=principals.admin,
+        )
 
 
 # --- 7. Customer principal with a tampered organisation claim -> claim ignored ------
@@ -275,9 +295,14 @@ def test_case7_malformed_scope_fails_closed(seeded: Seeded, tampered: str) -> No
         cx.execute("SELECT count(*) FROM cloudops.resource")
 
 
-@pending("Phase 3 scope resolution: tampered organisation claim ignored, scope from the server")
-def test_case7_claim_ignored() -> None:
-    stub(api_built, "the API's scope resolution (services/api)")
+async def test_case7_claim_ignored(api: Api, principals: Principals, seeded: Seeded) -> None:
+    """A tenant, organisation or role claim naming tenant b changes nothing:
+    scope comes from the access tables, keyed on the verified oid alone."""
+    me = await api.get(
+        "/v1/me", principals.customer_a,
+        claims={"tenant_id": str(seeded.b.id), "organisation": "bravo", "roles": ["cfo"]},
+    )
+    assert [t["id"] for t in me.json()["tenants"]] == [str(seeded.a.id)]
 
 
 # --- 8. Engineer in tenant scope requests commercial data -> restrictive policy -----

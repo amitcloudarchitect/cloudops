@@ -70,11 +70,13 @@ _INTERNAL: Final = "_cloudops_tenancy_internal"
 # Never change `true` to `false` here, and never add a plain SET anywhere.
 _APPLY_SCOPE: Final = text(
     "SELECT set_config('app.tenant_ids', :tenant_ids, true),"
-    "       set_config('app.role', :role, true)"
+    "       set_config('app.role', :role, true),"
+    "       set_config('app.account_ids', :account_ids, true)"
 )
 
 _READ_SCOPE: Final = text(
-    "SELECT current_setting('app.tenant_ids', true), current_setting('app.role', true)"
+    "SELECT current_setting('app.tenant_ids', true), current_setting('app.role', true),"
+    "       current_setting('app.account_ids', true)"
 )
 
 # One row: can this login reach a role that bypasses RLS, either directly or by
@@ -190,7 +192,11 @@ class Database:
         async with self._engine.connect() as conn, conn.begin():
             await conn.execute(
                 _APPLY_SCOPE,
-                {"tenant_ids": scope.tenant_ids_setting, "role": scope.role.value},
+                {
+                    "tenant_ids": scope.tenant_ids_setting,
+                    "role": scope.role.value,
+                    "account_ids": scope.account_ids_setting,
+                },
                 execution_options={_INTERNAL: True},
             )
             scoped = ScopedConnection(conn, scope)
@@ -216,7 +222,8 @@ def _psycopg_url(dsn: str) -> URL:
 
 async def _assert_scope_intact(conn: AsyncConnection, scope: TenantScope) -> None:
     row = (await conn.execute(_READ_SCOPE, execution_options={_INTERNAL: True})).one()
-    if (row[0], row[1]) != (scope.tenant_ids_setting, scope.role.value):
+    expected = (scope.tenant_ids_setting, scope.role.value, scope.account_ids_setting)
+    if (row[0], row[1], row[2]) != expected:
         raise ScopeTamperingError("scope changed during the transaction; rolled back")
 
 

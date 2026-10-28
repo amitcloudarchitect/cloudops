@@ -298,6 +298,31 @@ async def test_scope_changed_behind_the_guard_is_caught_at_commit(
         assert len(await visible_tenants(conn)) == provisioned.rows_per_tenant[provisioned.tenant_b]
 
 
+async def test_account_scope_is_set_and_widening_it_is_caught_at_commit(
+    db: Database, provisioned: Provisioned
+) -> None:
+    """app.account_ids is applied with the rest of the scope, and re-verified."""
+    from cloudops_tenancy.database import _INTERNAL
+
+    account = UUID("00000000-0000-4000-8000-0000000000ac")
+    restricted = TenantScope([provisioned.tenant_a], Role.CUSTOMER, "p", account_ids=[account])
+    read = text("SELECT current_setting('app.account_ids', true)")
+    async with db.transaction(restricted) as conn:
+        assert await conn.scalar(read) == str(account)
+    async with db.transaction(scope(provisioned.tenant_a)) as conn:
+        assert await conn.scalar(read) == "all"
+
+    async def widen() -> None:
+        async with db.transaction(restricted) as conn:
+            await conn._conn.execute(
+                text("SELECT set_config('app.account_ids', 'all', true)"),
+                execution_options={_INTERNAL: True},
+            )
+
+    with pytest.raises(ScopeTamperingError):
+        await widen()
+
+
 async def test_connection_is_dead_after_its_transaction(
     db: Database, provisioned: Provisioned
 ) -> None:

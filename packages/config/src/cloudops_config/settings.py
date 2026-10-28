@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, TypeVar
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from cloudops_config.errors import ConfigurationError, NotBuiltError
 from cloudops_config.identity import TOKEN_FILE, WorkloadIdentity
@@ -56,6 +57,7 @@ class Component(enum.StrEnum):
     TEMPORAL = "temporal"
     TELEMETRY = "telemetry"
     LLM = "llm"
+    AUTH = "auth"
 
 
 class DbLogin(enum.StrEnum):
@@ -110,6 +112,23 @@ class TelemetryConfig:
     auth: AuthMode
 
 
+@dataclass(frozen=True, slots=True)
+class AuthConfig:
+    """How the API validates bearer tokens (step 04, ADR 0002).
+
+    Exactly one key source: ``jwks_url`` (Entra, Azure) or ``jwks_secret`` (the
+    local dev issuer's public keys, from the secret store). Tokens must come from
+    ``tenant_id``'s directory, for ``audience``, carrying ``required_scope``.
+    """
+
+    issuer: str
+    audience: str
+    tenant_id: str
+    required_scope: str
+    jwks_url: str | None
+    jwks_secret: str | None
+
+
 _T = TypeVar("_T")
 
 
@@ -152,6 +171,10 @@ class Settings:
     @property
     def telemetry(self) -> TelemetryConfig:
         return self._get(Component.TELEMETRY, TelemetryConfig)
+
+    @property
+    def auth(self) -> AuthConfig:
+        return self._get(Component.AUTH, AuthConfig)
 
     @property
     def llm(self) -> LlmGateway:
@@ -202,6 +225,19 @@ LOCAL_TELEMETRY: Final = TelemetryConfig(
 )
 
 
+# A dev issuer that only exists on a laptop: tokens are minted by
+# `python -m cloudops_devdata.token` with the key in .env.local. Entra never
+# issues for this tenant id or this audience, so a dev token is useless in Azure.
+LOCAL_AUTH: Final = AuthConfig(
+    issuer="https://login.cloudops.local/00000000-0000-4000-8000-0000000c10c0/v2.0",
+    audience="api://cloudops-local",
+    tenant_id="00000000-0000-4000-8000-0000000c10c0",
+    required_scope="access_as_user",
+    jwks_url=None,
+    jwks_secret="api-dev-jwks",  # noqa: S106 - a secret's name
+)
+
+
 def _local(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings:
     present = [v for v in _NOT_A_LAPTOP if environ.get(v)]
     if present:
@@ -226,6 +262,9 @@ def _local(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
             components[c] = LOCAL_TELEMETRY
         elif c is Component.LLM:
             components[c] = MockLlmGateway.with_packaged_responses()
+        elif c is Component.AUTH:
+            store.get(LOCAL_AUTH.jwks_secret or "")
+            components[c] = LOCAL_AUTH
     return Settings(Environment.LOCAL, store, None, components)
 
 
@@ -236,6 +275,8 @@ BRONZE_URL_VAR: Final = "CLOUDOPS_BRONZE_CONTAINER_URL"
 REPORTS_URL_VAR: Final = "CLOUDOPS_REPORTS_CONTAINER_URL"
 TEMPORAL_ADDRESS_VAR: Final = "CLOUDOPS_TEMPORAL_ADDRESS"
 TEMPORAL_NAMESPACE_VAR: Final = "CLOUDOPS_TEMPORAL_NAMESPACE"
+ENTRA_TENANT_VAR: Final = "CLOUDOPS_ENTRA_TENANT_ID"
+API_AUDIENCE_VAR: Final = "CLOUDOPS_API_AUDIENCE"
 
 # LLD, Redis: TLS required, non-TLS port disabled.
 AZURE_REDIS_PORT: Final = 6380
@@ -274,11 +315,29 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
                 "the Azure telemetry store is undecided (LLD open item L1: ClickHouse or "
                 "Azure Data Explorer); no Azure telemetry backend exists yet"
             )
+        elif c is Component.AUTH:
+            components[c] = _entra(environ)
         elif c is Component.LLM:
             raise NotBuiltError(
                 "the Azure OpenAI gateway is not built yet (step 06); the mock is local-only"
             )
     return Settings(Environment.AZURE, store, identity, components)
+
+
+def _entra(environ: Mapping[str, str]) -> AuthConfig:
+    tenant = _required(environ, ENTRA_TENANT_VAR)
+    try:
+        tenant = str(UUID(tenant))
+    except ValueError:
+        raise ConfigurationError(f"{ENTRA_TENANT_VAR} must be the directory (tenant) id") from None
+    return AuthConfig(
+        issuer=f"https://login.microsoftonline.com/{tenant}/v2.0",
+        audience=_required(environ, API_AUDIENCE_VAR),
+        tenant_id=tenant,
+        required_scope="access_as_user",  # LLD: app-cloudops-api exposes access_as_user
+        jwks_url=f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys",
+        jwks_secret=None,
+    )
 
 
 def _check_database_secret(store: SecretStore, login: DbLogin) -> _DatabaseDeclared:

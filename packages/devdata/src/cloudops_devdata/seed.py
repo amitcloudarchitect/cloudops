@@ -21,12 +21,12 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, fields
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Final
-from uuid import UUID
+from uuid import UUID, uuid5
 
 from sqlalchemy import text
 
 from cloudops_config import Component, ConfigurationError, DbLogin, Environment, load_settings
-from cloudops_devdata.synthetic import Dataset, as_json, generate
+from cloudops_devdata.synthetic import NAMESPACE, Dataset, as_json, generate
 from cloudops_tenancy import Database, Role, ScopedConnection, TenantScope
 
 PRINCIPAL: Final = "seed:local-dev"
@@ -143,6 +143,51 @@ async def verify(app: Database, ds: Dataset) -> None:
           "engineers see no SOW rows")
 
 
+# Demo principals, created through the real access functions by the dev admin.
+# (label, kind, role, tenant short codes, all tenants, restrict to first subscription)
+DEMO_PRINCIPALS: Final[tuple[tuple[str, str, str, tuple[str, ...], bool, bool], ...]] = (
+    ("finops-all", "staff", "FinOps", (), True, False),
+    ("engineer-nwl-crl", "staff", "Engineer", ("NWL", "CRL"), False, False),
+    ("customer-nwl", "customer", "Customer viewer", ("NWL",), False, False),
+    ("customer-fab-one-sub", "customer", "Customer viewer", ("FAB",), False, True),
+)
+
+
+def demo_oid(label: str) -> UUID:
+    return uuid5(NAMESPACE, f"principal:{label}")
+
+
+async def principals(app: Database, ds: Dataset, admin: UUID) -> list[tuple[str, UUID]]:
+    """Bootstrap the dev admin (D14) and create the demo principals."""
+    by_code = {t.short_code: t.id for t in ds.tenants}
+    first_account = {t.id: next(a.id for a in ds.accounts if a.tenant_id == t.id)
+                     for t in ds.tenants}
+    created = [("platform-admin", admin)]
+    async with app.transaction(TenantScope.for_resolution("seed:local-dev")) as conn:
+        await conn.execute(
+            text("SELECT access.bootstrap_admin(:o, 'Local platform admin')"), {"o": admin}
+        )
+        for label, kind, role, codes, all_tenants, one_sub in DEMO_PRINCIPALS:
+            oid = demo_oid(label)
+            await conn.execute(
+                text("SELECT access.set_principal(:a, :o, :k, :n, :r, :all)"),
+                {"a": admin, "o": oid, "k": kind, "n": label, "r": role, "all": all_tenants},
+            )
+            for code in codes:
+                await conn.execute(
+                    text("SELECT access.grant_tenant(:a, :o, :t)"),
+                    {"a": admin, "o": oid, "t": by_code[code]},
+                )
+            if one_sub:
+                tenant = by_code[codes[0]]
+                await conn.execute(
+                    text("SELECT access.restrict_accounts(:a, :o, :t, CAST(:ids AS uuid[]))"),
+                    {"a": admin, "o": oid, "t": tenant, "ids": [first_account[tenant]]},
+                )
+            created.append((label, oid))
+    return created
+
+
 async def run(anchor: date, seed: int) -> None:
     settings = load_settings(
         os.environ, require={Component.DATABASE_INGEST, Component.DATABASE_APP}
@@ -153,9 +198,13 @@ async def run(anchor: date, seed: int) -> None:
     print(f"seeding synthetic data: cost {anchor - timedelta(days=89)} .. {anchor}, seed {seed}")
     ingest = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=1)
     app = Database.create(settings.database_dsn(DbLogin.APP), pool_size=1)
+    admin = UUID(settings.secrets.get("platform-admin-oid"))
     try:
         await load(ingest, ds)
         await verify(app, ds)
+        print("  principals (mint a token: make token OID=<oid>):")
+        for label, oid in await principals(app, ds, admin):
+            print(f"    {label:<22} {oid}")
     finally:
         await ingest.dispose()
         await app.dispose()

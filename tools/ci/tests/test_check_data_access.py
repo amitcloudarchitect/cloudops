@@ -56,6 +56,7 @@ def test_repository_has_no_data_access_outside_tenancy() -> None:
         "__import__('asyncpg')",
         "q = \"SELECT set_config('app.tenant_ids', '', false)\"",
         "q = 'SET app.role = cfo'",
+        "q = \"SELECT current_setting('app.account_ids')\"",
     ],
 )
 def test_python_violations_are_detected(source: str) -> None:

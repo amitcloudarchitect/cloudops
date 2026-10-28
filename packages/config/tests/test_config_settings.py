@@ -29,6 +29,7 @@ POSTGRES_APP_DSN=postgresql://cloudops_app_local:pw@127.0.0.1:5432/cloudops
 POSTGRES_INGEST_DSN=postgresql://cloudops_ingest_local:pw@127.0.0.1:5432/cloudops
 
 CLICKHOUSE_TELEMETRY_PASSWORD=pw
+API_DEV_JWKS={"keys":[]}
 """
 
 
@@ -229,3 +230,33 @@ def test_local_missing_secret_is_named_not_shown(tmp_path: Path) -> None:
         load_settings(environ, require={Component.DATABASE_INGEST})
     assert "POSTGRES_INGEST_DSN" in str(info.value)
     assert "hunter2" not in str(info.value)
+
+
+# Auth -----------------------------------------------------------------------------------
+
+
+def test_azure_auth_is_entra_and_requires_tenant_and_audience(azure_env: dict[str, str]) -> None:
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_ENTRA_TENANT_ID"):
+        load_settings(azure_env, require={Component.AUTH})
+    azure_env["CLOUDOPS_ENTRA_TENANT_ID"] = "not-a-guid"
+    azure_env["CLOUDOPS_API_AUDIENCE"] = "api://cloudops"
+    with pytest.raises(ConfigurationError, match="directory"):
+        load_settings(azure_env, require={Component.AUTH})
+    azure_env["CLOUDOPS_ENTRA_TENANT_ID"] = "11111111-1111-1111-1111-111111111111"
+    auth = load_settings(azure_env, require={Component.AUTH}).auth
+    assert auth.issuer == "https://login.microsoftonline.com/11111111-1111-1111-1111-111111111111/v2.0"
+    assert auth.jwks_url is not None
+    assert auth.jwks_url.startswith("https://login.microsoftonline.com/")
+    assert auth.jwks_secret is None
+
+
+def test_local_auth_is_the_dev_issuer_and_needs_its_keys(local_env: dict[str, str]) -> None:
+    path = Path(local_env["CLOUDOPS_LOCAL_SECRETS_FILE"])
+    full = path.read_text(encoding="utf-8")
+    path.write_text(full.replace('API_DEV_JWKS={"keys":[]}\n', ""), "utf-8")
+    with pytest.raises(MissingSecretError, match="api-dev-jwks"):
+        load_settings(local_env, require={Component.AUTH})
+    path.write_text(full, "utf-8")
+    auth = load_settings(local_env, require={Component.AUTH}).auth
+    assert "login.microsoftonline.com" not in auth.issuer
+    assert auth.jwks_url is None

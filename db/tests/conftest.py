@@ -72,6 +72,10 @@ class Seeded:
     b: Tenant
     c: Tenant
     global_axis: int
+    # Tenant c's second subscription, with one resource, ticket and cost row:
+    # what a subscription-limited principal must not see (ADR 0002, D16).
+    c_account2: UUID
+    c_resource2: UUID
 
     @property
     def tenants(self) -> tuple[Tenant, Tenant, Tenant]:
@@ -107,7 +111,26 @@ def _admin_dsn() -> Iterator[str]:
         container.stop()
 
 
+def _provision_access_roles(cx: psycopg.Connection[Any], migrator: str) -> None:
+    """As infrastructure does: the function-owner roles migration 0004 needs.
+    Cluster-wide, so created once and reused by every test database."""
+    for role in ("cloudops_resolver", "cloudops_access_admin"):
+        exists = cx.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,)).fetchone()
+        if exists is None:
+            cx.execute(
+                sql.SQL("CREATE ROLE {} NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT").format(
+                    sql.Identifier(role)
+                )
+            )
+        cx.execute(
+            sql.SQL("GRANT {} TO {} WITH INHERIT FALSE").format(
+                sql.Identifier(role), sql.Identifier(migrator)
+            )
+        )
+
+
 def _provision_extensions(cx: psycopg.Connection[Any], migrator: str) -> bool:
+    _provision_access_roles(cx, migrator)
     cx.execute("CREATE EXTENSION IF NOT EXISTS vector")
     available = cx.execute(
         "SELECT 1 FROM pg_available_extensions WHERE name = 'pg_partman'"
@@ -134,6 +157,34 @@ def _migrate(migrator_dsn: str, partman: bool) -> None:
     cfg.attributes["dsn"] = migrator_dsn
     cfg.attributes["allow_missing_partman"] = not partman
     command.upgrade(cfg, "head")
+
+
+def _seed_second_subscription(
+    cx: psycopg.Connection[Any], t: Tenant, account: UUID, resource: UUID
+) -> None:
+    now = datetime.now(UTC)
+    cx.execute(
+        "INSERT INTO cloudops.cloud_account (id, tenant_id, provider, native_id, display_name)"
+        " VALUES (%s, %s, 'aws', %s, %s)",
+        (account, t.id, f"{t.account_native_id}-2", f"{t.name} subsidiary"),
+    )
+    cx.execute(
+        "INSERT INTO cloudops.resource (id, tenant_id, account_id, native_id, name,"
+        " type_native, type_canonical) VALUES (%s, %s, %s, %s, %s,"
+        " 'AWS::EC2::Instance', 'compute.vm')",
+        (resource, t.id, account, f"/vm/{t.name}-2", f"vm-{t.name}-02"),
+    )
+    cx.execute(
+        "INSERT INTO cloudops.work_item (tenant_id, kind, number, company_raw, opened_at,"
+        " resource_id) VALUES (%s, 'incident', %s, %s, %s, %s)",
+        (t.id, f"INC-{t.name}-2", t.name.upper(), now - timedelta(days=1), resource),
+    )
+    cx.execute(
+        "INSERT INTO cloudops.cost_fact (tenant_id, account_id, resource_id, usage_date,"
+        " invoice_period, service_native, unblended_cost, amortized_cost, currency)"
+        " VALUES (%s, %s, %s, %s, %s, 'EC2', 7.500000, 7.500000, 'USD')",
+        (t.id, account, resource, now.date(), now.strftime("%Y-%m")),
+    )
 
 
 def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis: int) -> None:
@@ -264,6 +315,8 @@ def seeded() -> Iterator[Seeded]:
                     )
                 )
                 _seed(cx, tenants, global_axis=4)
+                c_account2, c_resource2 = uuid4(), uuid4()
+                _seed_second_subscription(cx, tenants[2], c_account2, c_resource2)
 
             yield Seeded(
                 admin_dsn=test_admin,
@@ -275,6 +328,8 @@ def seeded() -> Iterator[Seeded]:
                 b=tenants[1],
                 c=tenants[2],
                 global_axis=4,
+                c_account2=c_account2,
+                c_resource2=c_resource2,
             )
         finally:
             with psycopg.connect(server, autocommit=True) as cx:
@@ -303,3 +358,133 @@ async def ingest_db(seeded: Seeded) -> AsyncIterator[Database]:
         yield database
     finally:
         await database.dispose()
+
+
+# --- Access and the API (step 04) -------------------------------------------------
+
+
+@dataclass(frozen=True)
+class Principals:
+    """One principal per shape the resolver must handle, created through the
+    real access functions by a bootstrapped administrator."""
+
+    admin: UUID
+    finops_all: UUID  # staff, all tenants
+    engineer_a: UUID  # staff, tenant a only
+    customer_a: UUID  # customer of tenant a
+    customer_c_limited: UUID  # customer of tenant c, first subscription only
+    tickets_only: UUID  # staff role whose matrix lacks inventory.read
+    revocable: UUID  # staff, tenant a; tests revoke it
+    staff_no_tenants: UUID  # valid identity, nothing assigned -> 403
+    disabled: UUID  # customer of a, disabled -> 403
+    customer_two_tenants: UUID  # defect -> 500
+    customer_no_tenant: UUID  # defect -> 500
+
+
+async def _access(conn: Any, sql_text: str, **params: Any) -> None:
+    from sqlalchemy import text
+
+    await conn.execute(text(sql_text), params)
+
+
+@pytest.fixture(scope="session")
+async def principals(seeded: Seeded) -> Principals:
+    from cloudops_tenancy import TenantScope
+
+    p = Principals(*(uuid4() for _ in range(11)))
+    db = Database.create(seeded.app_dsn, pool_size=1, max_overflow=0)
+    a, b, c = seeded.a.id, seeded.b.id, seeded.c.id
+    try:
+        async with db.transaction(TenantScope.for_resolution("setup:principals")) as conn:
+            await _access(conn, "SELECT access.bootstrap_admin(:o, 'Test admin')", o=p.admin)
+            act = p.admin
+
+            async def principal(
+                oid: UUID, kind: str, role: str, *tenants: UUID, all_tenants: bool = False
+            ) -> None:
+                await _access(
+                    conn,
+                    "SELECT access.set_principal(:a, :o, :k, :n, :r, :all)",
+                    a=act, o=oid, k=kind, n=f"{kind} {oid}", r=role, all=all_tenants,
+                )
+                for t in tenants:
+                    await _access(conn, "SELECT access.grant_tenant(:a, :o, :t)", a=act, o=oid, t=t)
+
+            await principal(p.finops_all, "staff", "FinOps", all_tenants=True)
+            await principal(p.engineer_a, "staff", "Engineer", a)
+            await principal(p.customer_a, "customer", "Customer viewer", a)
+            await principal(p.customer_c_limited, "customer", "Customer viewer", c)
+            await _access(
+                conn,
+                "SELECT access.restrict_accounts(:a, :o, :t, CAST(:ids AS uuid[]))",
+                a=act, o=p.customer_c_limited, t=c, ids=[seeded.c.account_id],
+            )
+            await _access(
+                conn,
+                "SELECT access.define_role(:a, 'Tickets only', 'engineer', 'test role')",
+                a=act,
+            )
+            await _access(
+                conn, "SELECT access.grant_permission(:a, 'Tickets only', 'tickets.read')", a=act
+            )
+            await principal(p.tickets_only, "staff", "Tickets only", a)
+            await principal(p.revocable, "staff", "Engineer", a)
+            await principal(p.staff_no_tenants, "staff", "Engineer")
+            await principal(p.disabled, "customer", "Customer viewer", a)
+            await _access(conn, "SELECT access.disable_principal(:a, :o)", a=act, o=p.disabled)
+            # Defects: the functions allow building them; the resolver must refuse.
+            await principal(p.customer_two_tenants, "customer", "Customer viewer", a, b)
+            await principal(p.customer_no_tenant, "customer", "Customer viewer")
+    finally:
+        await db.dispose()
+    return p
+
+
+@dataclass
+class Api:
+    client: Any  # httpx.AsyncClient
+    signing_key: dict[str, Any]
+    auth: Any  # AuthConfig
+
+    def token(self, oid: UUID, **mint_kwargs: Any) -> str:
+        from cloudops_devdata.tokens import mint
+
+        return mint(self.signing_key, self.auth, oid, **mint_kwargs)
+
+    async def get(
+        self,
+        path: str,
+        oid: UUID,
+        *,
+        headers: dict[str, str] | None = None,
+        params: dict[str, str] | None = None,
+        **mint_kwargs: Any,
+    ) -> Any:
+        auth = {"Authorization": f"Bearer {self.token(oid, **mint_kwargs)}"}
+        return await self.client.get(path, headers={**auth, **(headers or {})}, params=params)
+
+
+@pytest.fixture(scope="session")
+async def api(seeded: Seeded, principals: Principals) -> AsyncIterator[Api]:
+    import httpx
+
+    from cloudops_api.app import create_app
+    from cloudops_api.auth import StaticKeys, TokenValidator
+    from cloudops_config import AuthConfig
+    from cloudops_devdata.tokens import new_signing_key
+
+    auth = AuthConfig(
+        issuer="https://login.example.test/44444444-4444-4444-8444-444444444444/v2.0",
+        audience="api://cloudops-isolation-suite",
+        tenant_id="44444444-4444-4444-8444-444444444444",
+        required_scope="access_as_user",
+        jwks_url=None,
+        jwks_secret=None,
+    )
+    private, public = new_signing_key("suite")
+    db = Database.create(seeded.app_dsn, pool_size=4, max_overflow=0)
+    app = create_app(db=db, validator=TokenValidator(auth, StaticKeys(public)))
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://api") as client:
+        yield Api(client, private, auth)
+    await db.dispose()

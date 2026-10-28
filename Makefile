@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -22,9 +22,10 @@ help: ## list targets
 $(ENV_FILE):
 	uv run python -m cloudops_devdata.envfile $(ENV_FILE)
 
-env: $(ENV_FILE) ## create .env.local with fresh random passwords (never overwrites)
+env: ## create .env.local, or add keys later steps need (never changes a value)
+	uv run python -m cloudops_devdata.envfile $(ENV_FILE)
 
-up: $(ENV_FILE) ## start the stack, wait until healthy, migrate, create blob containers
+up: env ## start the stack, wait until healthy, migrate, create blob containers
 	$(COMPOSE) up --detach --build --wait
 	$(MAKE) --no-print-directory migrate
 	uv run python -m cloudops_devdata.provision
@@ -44,6 +45,13 @@ migrate: $(ENV_FILE) ## apply database migrations as cloudops_migrator
 
 seed: $(ENV_FILE) ## load the synthetic dataset, then check isolation (refuses if already seeded)
 	uv run python -m cloudops_devdata.seed
+
+api: env ## run the API on http://127.0.0.1:8000 (dev token issuer, OpenAPI at /openapi.json)
+	uv run python -m cloudops_api
+
+token: ## mint a dev token for a seeded principal: make token OID=<oid>
+	@test -n "$(OID)" || { echo "usage: make token OID=<oid> (make seed prints them)"; exit 2; }
+	@uv run --quiet python -m cloudops_devdata.tokens --oid $(OID)
 
 # Tests provision their own throwaway databases on the local server, so they
 # never touch seeded data. pg_partman is required, as in CI.

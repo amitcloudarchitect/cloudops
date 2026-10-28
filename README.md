@@ -89,6 +89,8 @@ row-level security**, and `packages/tenancy` refuses to run as one that could.
 | `make down` | Stops the stack. Data stays in Docker volumes. |
 | `make reset` | Wipes every volume, then runs `up` and `seed` again |
 | `make psql` | Opens psql as the application login |
+| `make api` | Runs the API at `http://127.0.0.1:8000` |
+| `make token OID=…` | Mints a dev token for a seeded principal |
 | `make logs` / `make ps` | Container logs and status |
 
 `make test` never touches your seeded data. Each test session creates its own database
@@ -213,6 +215,35 @@ This is for poking around by hand only. **Application code never sets scope itse
 It goes through `cloudops_tenancy.Database.transaction(scope)`, and CI fails on
 anything else.
 
+## Calling the API
+
+`make seed` also creates the default platform admin (ADR 0002, D14) and four demo
+principals, and prints their Entra object ids:
+
+| Principal | What it can see |
+| --- | --- |
+| `finops-all` | Staff, FinOps role, every tenant, including commercial data |
+| `engineer-nwl-crl` | Staff, Engineer role, Northwind and Contoso, no commercial data |
+| `customer-nwl` | A Northwind customer: the customer view, its own tenant only |
+| `customer-fab-one-sub` | A Fabrikam customer limited to one subscription |
+
+```bash
+make api
+```
+
+Then, in another terminal (`make seed` prints the oid):
+
+```bash
+curl -s -H "Authorization: Bearer $(make -s token OID=<oid from make seed>)" http://127.0.0.1:8000/v1/resources
+```
+
+Every request goes through the same pipeline: token validation, scope resolution from
+the database, the permission matrix, the query under row-level security, provenance
+on every number, and an audit row. Tenant scope comes only from the access tables,
+keyed on the token's `oid`. Headers, query parameters and token claims never change
+it; try sending `X-Tenant-Id`. The OpenAPI schema is at
+`http://127.0.0.1:8000/openapi.json` (local only).
+
 ## How local differs from Azure
 
 Each of these departures is deliberate and applies to local only.
@@ -226,6 +257,7 @@ Each of these departures is deliberate and applies to local only.
 | One Azurite account with two containers | Separate bronze and reports storage accounts | Same container URLs, different hosts |
 | ClickHouse single node, users only, no tables | 3–5 nodes, schema decided at the telemetry step | LLD L1 (ClickHouse or ADX) is still open |
 | Mock LLM | Azure OpenAI through the AI gateway (step 06) | No model calls, cost or data leaving the laptop |
+| Tokens from a dev issuer (`make token`) | Entra ID tokens | No Entra on a laptop. The API validates both the same way. |
 | `statement_timeout` 30 s for every login | 30 s application, 300 s reporting | No reporting role exists yet. It takes a per-role override when it does. |
 | `make up` runs migrations | A pipeline job runs migrations, never a human | Convenience. It still runs as the migrator, not as superuser. |
 
@@ -248,7 +280,8 @@ Each of these departures is deliberate and applies to local only.
 | --- | --- |
 | `packages/tenancy` | The only door to the database |
 | `packages/config` | Backend selection, secret stores, the mock LLM |
-| `packages/devdata` | `.env.local` generation, Azurite provisioning, the synthetic seed. Local only. |
+| `packages/devdata` | `.env.local` generation, Azurite provisioning, the synthetic seed, dev tokens. Local only. |
+| `services/api` | The API: token validation, scope resolution, BFF, provenance, audit |
 | `db/migrations` | Hand-written SQL migrations (alembic) |
 | `db/tests` | Schema checks and the isolation suite |
 | `infra/local` | Init scripts for the compose stack |

@@ -3,18 +3,19 @@ name = "cloudops-platform"
 version = "0.0.0"
 description = "Getronics CloudOps platform monorepo root"
 requires-python = ">=3.12,<3.13"
-dependencies = ["cloudops-tenancy", "cloudops-config", "cloudops-devdata", "alembic>=1.14"]
+dependencies = ["cloudops-tenancy", "cloudops-config", "cloudops-devdata", "cloudops-api", "alembic>=1.14"]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/tenancy", "packages/config", "packages/devdata"]
+members = ["packages/tenancy", "packages/config", "packages/devdata", "services/api"]
 
 [tool.uv.sources]
 cloudops-tenancy = { workspace = true }
 cloudops-config = { workspace = true }
 cloudops-devdata = { workspace = true }
+cloudops-api = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -26,7 +27,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["packages", "db", "tools"]
+testpaths = ["packages", "services", "db", "tools"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
@@ -45,17 +46,19 @@ extend-exclude = ["reference"]
 select = ["E", "F", "W", "I", "B", "UP", "S", "N", "SIM", "RUF", "ASYNC", "PT"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["cloudops_tenancy", "cloudops_config", "cloudops_devdata"]
+known-first-party = ["cloudops_tenancy", "cloudops_config", "cloudops_devdata", "cloudops_api"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101", "S105", "S106", "S608"]
+# Migrations build DDL from module constants, never from input.
+"db/migrations/**" = ["S608"]
 
 [tool.mypy]
 strict = true
 python_version = "3.12"
 exclude = ["^reference/", "^\\.venv/"]
 explicit_package_bases = true
-mypy_path = "packages/tenancy/src:packages/config/src:packages/devdata/src"
+mypy_path = "packages/tenancy/src:packages/config/src:packages/devdata/src:services/api/src"
 
 [[tool.mypy.overrides]]
 module = ["testcontainers.*"]

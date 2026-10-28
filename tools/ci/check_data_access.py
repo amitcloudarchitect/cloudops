@@ -6,7 +6,8 @@ Fails (exit 1) when any file outside ``packages/tenancy/``:
   that create engines, pools, sessions or raw connections;
 - names an engine factory (``create_engine``, ``create_async_engine``, ...);
 - imports a module dynamically, which this check cannot verify;
-- mentions the scope settings ``app.tenant_ids`` / ``app.role`` or
+- mentions the scope settings ``app.tenant_ids`` / ``app.role`` /
+  ``app.account_ids`` or
   ``set_config`` in a string — scope is set by the tenancy package alone;
 - in TypeScript/JavaScript, imports a database client at all — the web tier
   never talks to the database;
@@ -73,7 +74,9 @@ BANNED_NAMES = frozenset(
 
 DYNAMIC_IMPORTERS = frozenset({"import_module", "__import__"})
 
-SCOPE_STRING = re.compile(r"\bapp\.(tenant_ids|role)\b|\bset_config\b", re.IGNORECASE)
+SCOPE_STRING = re.compile(
+    r"\bapp\.(tenant_ids|role|account_ids)\b|\bset_config\b", re.IGNORECASE
+)
 
 BANNED_JS_PACKAGES = (
     "pg", "pg-pool", "pg-promise", "postgres", "@neondatabase/serverless", "@vercel/postgres",

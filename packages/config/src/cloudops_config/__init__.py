@@ -17,6 +17,7 @@ from cloudops_config.identity import WorkloadIdentity
 from cloudops_config.llm import LlmGateway, MockLlmGateway, Tier
 from cloudops_config.secrets import EnvFileSecretStore, MountedSecretStore, SecretStore
 from cloudops_config.settings import (
+    AuthConfig,
     AuthMode,
     BlobConfig,
     Component,
@@ -30,6 +31,7 @@ from cloudops_config.settings import (
 )
 
 __all__ = [
+    "AuthConfig",
     "AuthMode",
     "BlobConfig",
     "Component",

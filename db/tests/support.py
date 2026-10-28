@@ -22,15 +22,20 @@ def scope(*tenants: Any, role: Role = Role.ENGINEER) -> TenantScope:
 
 
 @contextmanager
-def raw_scope(dsn: str, tenant_ids: str, role: str) -> Iterator[psycopg.Connection[Any]]:
+def raw_scope(
+    dsn: str, tenant_ids: str, role: str, account_ids: str | None = "all"
+) -> Iterator[psycopg.Connection[Any]]:
     """A connection with scope set by hand, for cases the tenancy package
     deliberately cannot express (unknown roles, malformed scope, planner
-    settings). Transaction-local, rolled back on exit."""
+    settings). Transaction-local, rolled back on exit. ``account_ids=None``
+    leaves app.account_ids unset."""
     with psycopg.connect(dsn) as cx:
         cx.execute(
             "SELECT set_config('app.tenant_ids', %s, true), set_config('app.role', %s, true)",
             (tenant_ids, role),
         )
+        if account_ids is not None:
+            cx.execute("SELECT set_config('app.account_ids', %s, true)", (account_ids,))
         try:
             yield cx
         finally:
@@ -63,6 +68,3 @@ def stub(built: Callable[[], bool], component: str) -> None:
 def has_python(*globs: str) -> Callable[[], bool]:
     return lambda: any(any(REPO_ROOT.glob(g)) for g in globs)
 
-
-def has_customer_role() -> bool:
-    return any(r.value.startswith("customer") for r in Role)

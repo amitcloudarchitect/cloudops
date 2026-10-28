@@ -96,3 +96,52 @@
 | # | Question | Why it matters |
 | --- | --- | --- |
 | O1a | **Resolved by ADR 0003:** stored app registration secrets and AWS access keys are allowed in non-production only, read-only, with guardrails. Production uses Lighthouse or GDAP and `AssumeRole` with an external ID. | ADR 0003 blocks the first production deployment until the exit steps are done. |
+
+## Implementation (step 04)
+
+| Piece | Where |
+| --- | --- |
+| Access schema, resolver and admin functions, default matrix, `account_scope` policies | `db/migrations/versions/0004_access_and_account_scope.py` |
+| Account scope (`app.account_ids`), role classes `customer` and `unresolved` | `packages/tenancy` |
+| Token validation | `services/api/src/cloudops_api/auth.py` |
+| Scope resolution | `services/api/src/cloudops_api/access.py` |
+| Pipeline: token, scope, matrix, handler, audit | `services/api/src/cloudops_api/pipeline.py` |
+| BFF endpoints and views | `services/api/src/cloudops_api/bff.py` |
+| `Metric` and the provenance rule | `services/api/src/cloudops_api/provenance.py` |
+| Default admin (D14) | `python -m cloudops_api.bootstrap` |
+
+The "What follows" proposals are implemented as written, with these choices made
+along the way:
+
+- **Infrastructure prerequisite (Azure).** Two NOLOGIN roles own the access functions:
+  `cloudops_resolver` and `cloudops_access_admin`. The migration role must be a member
+  of both, `WITH INHERIT FALSE`, so it can hand over ownership without gaining their
+  rights. Locally `infra/local/postgres/init.sh` creates them. **Azure has no
+  equivalent yet**: whoever creates the Flexible Server roles must add them before
+  migration 0004 runs. The migration checks for them and stops if they are missing.
+- **A subscription restriction applies to a single-tenant principal only.** One flat
+  `app.account_ids` list cannot express "these subscriptions of tenant A, and all of
+  tenant B", so the resolver raises a defect for a restricted principal with more than
+  one tenant.
+- **What subscription limits cover.** `cloud_account`, `resource`, `cost_fact` and
+  `resource_quarantine` filter by account. `work_item` and `vulnerability` follow their
+  resource, and unlinked rows are hidden. Tenant-level tables (`tenant`,
+  `tenant_alias`, `sow`, `knowledge_chunk`, `audit.action_log`) are **not**
+  subscription-scoped, so a limited user still sees the tenant's knowledge base.
+  Revisit when the knowledge module lands, if documents can belong to one subsidiary.
+- **Audit volume.** `action_log.tenant_id` is required, so a request is logged once per
+  tenant it could reach, or once for the tenant a detail endpoint actually touched.
+  For an all-tenant user a list request writes one row per tenant. That is correct but
+  grows with tenant count; revisit before the tenant count reaches the hundreds.
+- **Attempts with no tenant are not in `action_log`.** A rejected token or an unknown
+  principal has no tenant to log under, so these go to the application log only, as
+  structured warnings with a request id. The LLD's always-page alert on "any
+  cross-tenant query attempt" needs a security event sink. Until one exists, a probe
+  for another tenant's resource is in `action_log` as `failed` under the caller's own
+  tenant.
+- **Default matrix (D15).** "Customer viewer" includes `cost.read`, so customers see
+  their own cloud spend. The product owner should confirm this, along with the rest of
+  the defaults in migration 0004.
+- **Local tokens** come from a dev issuer whose signing key is in `.env.local`
+  (`make token`). Entra never issues for that issuer, tenant or audience, so a dev
+  token is useless against Azure.
