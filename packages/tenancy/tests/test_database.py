@@ -378,3 +378,32 @@ async def test_unsafe_roles_are_refused(provisioned: Provisioned, which: str) ->
                 pass
     finally:
         await database.dispose()
+
+
+# --- ping: the readiness check every service uses ----------------------------------
+
+
+async def test_ping_answers_and_sees_no_tenant_rows(db: Database) -> None:
+    await db.ping()
+    async with db.transaction(TenantScope.for_resolution("probe:readyz")) as conn:
+        assert await visible_tenants(conn) == []
+
+
+async def test_ping_fails_for_an_unsafe_login_role(provisioned: Provisioned) -> None:
+    """Readiness must not report ready on a connection the platform would refuse."""
+    unsafe = Database.create(provisioned.owner_member_dsn, pool_size=1, max_overflow=0)
+    try:
+        with pytest.raises(UnsafeDatabaseRoleError):
+            await unsafe.ping()
+    finally:
+        await unsafe.dispose()
+
+
+async def test_ping_fails_when_the_server_is_unreachable() -> None:
+    down = Database.create("postgresql://nobody:x@127.0.0.1:1/none", pool_size=1,
+                           pool_timeout=1.0)
+    try:
+        with pytest.raises(Exception):  # noqa: B017, PT011 - the driver's own error
+            await down.ping()
+    finally:
+        await down.dispose()

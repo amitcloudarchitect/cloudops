@@ -8,7 +8,7 @@ locals {
   r = var.region_short
 
   resource_groups = {
-    for p in ["net", "sec", "obs", "data", "msg", "aks", "ai", "exec"] :
+    for p in ["net", "sec", "obs", "data", "msg", "aks", "ai", "exec", "acr"] :
     p => "rg-cloudops-${p}-${local.e}-${local.r}"
   }
 

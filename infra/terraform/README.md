@@ -16,7 +16,8 @@ applies it (CLAUDE.md).
 | `02-security` | Key Vaults (app Standard, keys Premium), workload and AKS identities | 01 |
 | `03-observability` | Log Analytics, Application Insights, Key Vault diagnostics | 02 |
 | `04-data` | PostgreSQL 16, Redis Premium, storage, Event Hubs | 01, 03 |
-| `04b-rbac` | **Every role assignment** (User Access Administrator) | 02, 04 |
+| `04a-registry` | Container registry `crcloudops{env}{region}` in its own resource group | 03 |
+| `04b-rbac` | **Every role assignment** (User Access Administrator); after a first `05`, apply again for the kubelet's AcrPull | 02, 04, 04a |
 | `05-aks` | Private AKS cluster, pools npsystem/npapp/npingest/nptelemetry/npai | 01, 02, 03, 04b |
 | `06-edge` | Front Door Premium with WAF (Prevention, DRS 2.1 and bot rules), the ingress public IP in public mode | 01, 03, 05 |
 
@@ -76,6 +77,12 @@ Copy each `*.tfvars.example` to `*.tfvars` first; tfvars files are gitignored.
   - Front Door reaches the origin over **plain HTTP**: it refuses self-signed origin
     certificates and dev has no public certificate for the IP. Client to Front Door is
     HTTPS only. Private mode uses Private Link and HTTPS to the origin.
+- **Dev container registry is Basic with public network access** (`04a-registry`).
+  The LLD's registry is private: Premium, a private endpoint and the
+  `privatelink.azurecr.io` zone (already in stack 01). Basic was chosen for cost. The
+  admin user and anonymous pull are off, so every pull and push needs an Entra
+  identity with AcrPull or AcrPush (`04b-rbac`). UAT and production must use Premium
+  with the private endpoint.
 - **PgBouncer** (L6) is not configured; transaction mode is mandatory once it is.
 - **Exec plane** (identity, vault, VNet `10.62.0.0/16`, npexec) is not here,
   pending the security review.

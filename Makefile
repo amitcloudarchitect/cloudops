@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay eval eval-baseline
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay eval eval-baseline images image-check
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -76,6 +76,15 @@ lint: ## ruff, mypy --strict and the data-access gate
 	uv run python -I tools/ci/check_data_access.py .
 
 check: lint test ## what CI runs
+
+IMAGES := api connector-servicenow worker-ai
+
+images: ## build every image (docker-bake.hcl), then SBOM and scan each
+	docker buildx bake -f docker-bake.hcl --load
+	$(MAKE) image-check
+
+image-check: ## SBOM and the critical/high vulnerability gate for the local images
+	scripts/image-check.sh $(foreach i,$(IMAGES),cloudops/$(i):dev)
 
 down: ## stop the stack; data is kept in volumes
 	$(COMPOSE) down

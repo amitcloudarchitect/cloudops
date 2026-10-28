@@ -30,3 +30,9 @@ provider "azurerm" {
   features {}
   subscription_id = local.subscription["data"]
 }
+
+provider "azurerm" {
+  alias = "aks"
+  features {}
+  subscription_id = local.subscription["aks"]
+}

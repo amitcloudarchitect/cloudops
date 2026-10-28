@@ -206,11 +206,22 @@ class Database:
             finally:
                 scoped._close()
 
+    async def ping(self) -> None:
+        """Readiness: the database answers, under a scope that sees no tenant rows.
+
+        Raises whatever the driver raises when it does not. Opens a pooled
+        connection, so it also proves the login role passes the safety check.
+        """
+        async with self.transaction(TenantScope.for_resolution(_PING_PRINCIPAL)) as conn:
+            await conn.scalar(_PING)
+
     async def dispose(self) -> None:
         await self._engine.dispose()
 
 
 _CONSTRUCT: Final = object()
+_PING_PRINCIPAL: Final = "probe:readyz"
+_PING: Final = text("SELECT 1")
 
 
 def _psycopg_url(dsn: str) -> URL:

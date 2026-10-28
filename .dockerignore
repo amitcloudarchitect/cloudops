@@ -1,0 +1,16 @@
+# Allowlist: the build context is only what the images need. Everything else (tests,
+# docs, .git, .env*, tfvars, keys, evals, infra) never reaches the builder.
+*
+!pyproject.toml
+!uv.lock
+!packages/*/pyproject.toml
+!packages/*/src/
+!services/*/pyproject.toml
+!services/*/src/
+!connectors/pyproject.toml
+!connectors/src/
+**/__pycache__
+**/*.pyc
+**/tests/
+**/.pytest_cache/
+**/.mypy_cache/

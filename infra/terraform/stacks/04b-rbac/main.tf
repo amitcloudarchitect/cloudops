@@ -1,7 +1,8 @@
 # Stack 04b — role assignments. Every Azure role assignment for stacks 01-05
 # lives here and nowhere else, so they can be reviewed as one diff and applied
 # by someone holding User Access Administrator (AZURE-ACCESS.md). Apply after
-# 04, before 05. Each assignment is the narrowest scope that works.
+# 04 and 04a, before 05, and once more after 05 on a first build (the kubelet's
+# AcrPull needs the cluster). Each assignment is the narrowest scope that works.
 
 data "azurerm_user_assigned_identity" "aks" {
   provider            = azurerm.sec
@@ -53,4 +54,47 @@ resource "azurerm_role_assignment" "capture" {
   principal_id                     = data.terraform_remote_state.data.outputs.eventhub_namespace_principal_id
   principal_type                   = "ServicePrincipal"
   skip_service_principal_aad_check = true
+}
+
+# --- Container registry (stack 04a) -------------------------------------------------
+
+data "azurerm_container_registry" "this" {
+  provider            = azurerm.aks
+  name                = module.names.container_registry
+  resource_group_name = module.names.resource_group["acr"]
+}
+
+# The kubelet identity is created by AKS with the cluster (stack 05), which applies
+# after this stack. On a first build its output does not exist yet: the default
+# below skips the grant, and applying this stack once more after 05 adds it. Read
+# from 05's state rather than by name, so a replaced cluster's new identity is
+# picked up rather than a stale one.
+data "terraform_remote_state" "aks" {
+  backend = "azurerm"
+  config = merge(module.names.tfstate, {
+    key              = "05-aks.tfstate"
+    use_azuread_auth = true
+  })
+  defaults = {
+    kubelet_object_id = null
+  }
+}
+
+resource "azurerm_role_assignment" "kubelet_acr_pull" {
+  count = data.terraform_remote_state.aks.outputs.kubelet_object_id == null ? 0 : 1
+
+  scope                            = data.azurerm_container_registry.this.id
+  role_definition_name             = "AcrPull"
+  principal_id                     = data.terraform_remote_state.aks.outputs.kubelet_object_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+# Dev: people who push from their own az login (variables.tf). Registry scope only.
+resource "azurerm_role_assignment" "acr_push" {
+  for_each = toset(var.acr_push_principal_ids)
+
+  scope                = data.azurerm_container_registry.this.id
+  role_definition_name = "AcrPush"
+  principal_id         = each.value
 }

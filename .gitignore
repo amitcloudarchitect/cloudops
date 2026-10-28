@@ -25,3 +25,6 @@ evals/last-report.json
 # SSH keys kept beside the repo on the devbox; never committed
 /keypair
 /keypair.pub
+
+# Image SBOMs and scan output (scripts/image-check.sh)
+/build/

@@ -13,12 +13,10 @@ import asyncio
 
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy import text
 
-from cloudops_tenancy import Database, TenantScope
+from cloudops_tenancy import Database
 
 READY_TIMEOUT_SECONDS = 2.0
-_PROBE_PRINCIPAL = "probe:readyz"
 
 PROBES = APIRouter(include_in_schema=False)
 
@@ -32,12 +30,8 @@ async def healthz() -> JSONResponse:
 async def readyz(request: Request) -> JSONResponse:
     db: Database = request.app.state.platform.db
     try:
-        await asyncio.wait_for(_database_answers(db), READY_TIMEOUT_SECONDS)
+        await asyncio.wait_for(db.ping(), READY_TIMEOUT_SECONDS)
     except Exception:  # any failure means not ready; the cause is never disclosed
         return JSONResponse({"status": "unavailable"}, status_code=503)
     return JSONResponse({"status": "ok"})
 
-
-async def _database_answers(db: Database) -> None:
-    async with db.transaction(TenantScope.for_resolution(_PROBE_PRINCIPAL)) as conn:
-        await conn.scalar(text("SELECT 1"))

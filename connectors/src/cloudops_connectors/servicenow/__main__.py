@@ -8,8 +8,10 @@
 
 ``run`` and ``replay`` start a worker in this process, run one workflow on
 Temporal and print its report. ``worker`` serves the task queue until
-stopped. ``schedule`` creates a Temporal schedule (every 5 minutes, LLD) that
-starts ``ServiceNowIngest`` for an entity.
+stopped, with liveness and readiness probes on port 8080 (readiness: the
+database, Temporal and the bronze container all answer). ``schedule``
+creates a Temporal schedule (every 5 minutes, LLD) that starts
+``ServiceNowIngest`` for an entity.
 
 ``--fixtures`` serves recorded fixtures from an in-process fake instance:
 local profile only. Against a real instance this refuses until the ServiceNow
@@ -49,6 +51,7 @@ from cloudops_config import (
     Settings,
     load_settings,
 )
+from cloudops_config.probes import serve_probes
 from cloudops_connectors.core.raw import BlobRawStore
 from cloudops_connectors.servicenow.client import ServiceNowClient
 from cloudops_connectors.servicenow.fake import FIXTURE_HOST, FakeServiceNow
@@ -122,6 +125,19 @@ async def _main(args: argparse.Namespace) -> int:
         worker = Worker(temporal, task_queue=TASK_QUEUE, workflows=WORKFLOWS,
                         activities=activities(acts))
         if args.command == "worker":
+            async def temporal_ready() -> None:
+                if not await temporal.service_client.check_health():
+                    raise ConnectionError("temporal unhealthy")
+
+            async def bronze_ready() -> None:
+                await container.get_container_properties()
+
+            local = settings.environment is Environment.LOCAL
+            probes = await serve_probes(
+                {"database": db.ping, "temporal": temporal_ready, "bronze": bronze_ready},
+                host="127.0.0.1" if local else "0.0.0.0",  # noqa: S104 - the kubelet probes the pod IP
+            )
+            stack.push_async_callback(_close_server, probes)
             print(f"worker serving {TASK_QUEUE}")
             await worker.run()
             return 0
@@ -140,6 +156,11 @@ async def _main(args: argparse.Namespace) -> int:
                     )
                 print(json.dumps(asdict(report), indent=2))
     return 0
+
+
+async def _close_server(server: asyncio.Server) -> None:
+    server.close()
+    await server.wait_closed()
 
 
 def main(argv: list[str] | None = None) -> int:

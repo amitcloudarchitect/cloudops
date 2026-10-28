@@ -1,0 +1,4 @@
+# Copy to 04b-rbac.tfvars (gitignored).
+# Entra object IDs allowed to push images from their own az login (dev only):
+#   az ad signed-in-user show --query id -o tsv
+acr_push_principal_ids = ["00000000-0000-0000-0000-000000000000"]

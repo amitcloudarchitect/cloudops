@@ -108,3 +108,9 @@ output "frontdoor" {
 output "ingress_public_ip" {
   value = "pip-cloudops-ingress-${local.e}-${local.r}"
 }
+
+# Container registry (step 11). Alphanumeric only, globally unique: crcloudops{env}{region}
+# (LLD, Compute: images only from crcloudopsprdweu).
+output "container_registry" {
+  value = "crcloudops${local.e}${local.r}"
+}

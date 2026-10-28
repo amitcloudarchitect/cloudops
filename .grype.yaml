@@ -1,0 +1,62 @@
+# Reviewed exceptions to the image gate (scripts/image-check.sh). Anything critical or
+# high not listed here fails the build.
+#
+# Rules for adding one:
+#   - name the exact CVE *and* the package; never a blanket rule. Grype reads the
+#     package name as a regular expression: anchor it and escape '+';
+#   - only for a package of the base image (gcr.io/distroless/cc-debian13), never one
+#     our code or our copied libraries bring in;
+#   - pin fix-state, so the rule stops matching the day Debian ships a fix, and the
+#     gate then fails until the base digest is bumped;
+#   - give a reason and the review date.
+#
+# Reviewed 2026-10-28 (step 11): no Debian 13 fix exists for any of these.
+
+ignore:
+  # glibc: core C library, present in every Debian-based image.
+  - vulnerability: CVE-2026-19499
+    fix-state: wont-fix
+    package: { name: '^libc6$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-5435
+    fix-state: wont-fix
+    package: { name: '^libc6$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  # GCC 14 runtime (libgcc_s, libstdc++, libgomp); Rust and C++ extensions need it.
+  - vulnerability: CVE-2026-102010
+    fix-state: wont-fix
+    package: { name: '^gcc-14-base$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-102010
+    fix-state: wont-fix
+    package: { name: '^libgcc-s1$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-102010
+    fix-state: wont-fix
+    package: { name: '^libgomp1$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-102010
+    fix-state: wont-fix
+    package: { name: '^libstdc\+\+6$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-95619
+    fix-state: wont-fix
+    package: { name: '^gcc-14-base$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-95619
+    fix-state: wont-fix
+    package: { name: '^libgcc-s1$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-95619
+    fix-state: wont-fix
+    package: { name: '^libgomp1$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  - vulnerability: CVE-2026-95619
+    fix-state: wont-fix
+    package: { name: '^libstdc\+\+6$', type: deb }
+    reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  # zlib: no fixed Debian 13 package yet; re-check on every base bump.
+  - vulnerability: CVE-2026-85091
+    fix-state: not-fixed
+    package: { name: '^zlib1g$', type: deb }
+    reason: "distroless base; no Debian 13 fix yet; reviewed 2026-10-28"
