@@ -85,7 +85,9 @@ TENANT_TABLES = (
 )
 
 
-@pytest.mark.parametrize("login", ["app_dsn", "ingest_dsn"])
+# migrator_dsn is the schema owner, the role migrations run as: without FORCE it
+# would bypass every policy, so this is the behavioural proof that FORCE holds.
+@pytest.mark.parametrize("login", ["app_dsn", "ingest_dsn", "migrator_dsn"])
 @pytest.mark.parametrize("table", TENANT_TABLES)
 def test_case2_unscoped_sql_sees_zero_rows(seeded: Seeded, login: str, table: str) -> None:
     with psycopg.connect(seeded.admin_dsn) as cx:
