@@ -91,6 +91,8 @@ row-level security**, and `packages/tenancy` refuses to run as one that could.
 | `make psql` | Opens psql as the application login |
 | `make api` | Runs the API at `http://127.0.0.1:8000` |
 | `make token OID=…` | Mints a dev token for a seeded principal |
+| `make ingest` | Runs the ServiceNow connector over the recorded fixtures |
+| `make replay` | Reprocesses today's bronze pages without re-fetching |
 | `make logs` / `make ps` | Container logs and status |
 
 `make test` never touches your seeded data. Each test session creates its own database
@@ -309,6 +311,7 @@ Each of these departures is deliberate and applies to local only.
 | `packages/config` | Backend selection, secret stores, the mock LLM |
 | `packages/devdata` | `.env.local` generation, Azurite provisioning, the synthetic seed, dev tokens. Local only. |
 | `services/api` | The API: token validation, scope resolution, BFF, provenance, audit |
+| `connectors` | Source connectors, plus the connector contract ([`connectors/README.md`](connectors/README.md)) |
 | `db/migrations` | Hand-written SQL migrations (alembic) |
 | `db/tests` | Schema checks and the isolation suite |
 | `infra/local` | Init scripts for the compose stack |

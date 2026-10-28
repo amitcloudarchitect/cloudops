@@ -37,6 +37,9 @@ class Role(enum.StrEnum):
     PLATFORM_ADMIN = "platform_admin"
     ENGINEER = "engineer"
     CUSTOMER = "customer"
+    # Connectors writing ingested data: a machine, never a person, and in no
+    # commercial policy's list.
+    INGEST = "ingest"
     # Only for the transaction that resolves who a principal is: no tenants,
     # no role any policy admits. It can call the resolver function and nothing else.
     UNRESOLVED = "unresolved"

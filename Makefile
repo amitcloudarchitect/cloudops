@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps api token
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -52,6 +52,12 @@ api: env ## run the API on http://127.0.0.1:8000 (dev token issuer, OpenAPI at /
 token: ## mint a dev token for a seeded principal: make token OID=<oid>
 	@test -n "$(OID)" || { echo "usage: make token OID=<oid> (make seed prints them)"; exit 2; }
 	@uv run --quiet python -m cloudops_devdata.tokens --oid $(OID)
+
+ingest: env ## run the ServiceNow connector over the recorded fixtures (Temporal, Azurite, local DB)
+	uv run python -m cloudops_connectors.servicenow run --fixtures
+
+replay: env ## reprocess today's ServiceNow bronze pages without re-fetching
+	uv run python -m cloudops_connectors.servicenow replay --fixtures --start $$(date -u +%F) --end $$(date -u +%F)
 
 # Tests provision their own throwaway databases on the local server, so they
 # never touch seeded data. pg_partman is required, as in CI.

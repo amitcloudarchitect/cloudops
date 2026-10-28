@@ -25,6 +25,10 @@ NON_TENANT = {
     "staging.ingest_watermark",
     "staging.tenant_alias_quarantine",  # unmatched names: no tenant by definition
     "cloudops.global_knowledge_chunk",  # Getronics-wide content, read-only (ADR 0001)
+    # Connector state: a run spans tenants, so these carry none (ingest-only grants).
+    "staging.legal_suffix",
+    "staging.ingest_run",
+    "staging.ingest_dead_letter",
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
 COMMERCIAL = {"cloudops.sow"}

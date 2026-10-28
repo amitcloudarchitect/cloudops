@@ -36,7 +36,7 @@ _RESOLVE: Final = text(
     " FROM access.resolve_principal(:oid)"
 )
 
-STAFF_ROLES: Final = frozenset(Role) - {Role.CUSTOMER, Role.UNRESOLVED}
+STAFF_ROLES: Final = frozenset(Role) - {Role.CUSTOMER, Role.UNRESOLVED, Role.INGEST}
 
 
 class NoScopeError(Exception):

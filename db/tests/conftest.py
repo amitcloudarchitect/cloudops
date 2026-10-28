@@ -265,81 +265,97 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
     )
 
 
+@dataclass(frozen=True)
+class Provisioned:
+    admin_dsn: str  # superuser, on the test database
+    migrator_dsn: str
+    app_dsn: str
+    ingest_dsn: str
+    partman: bool
+    suffix: str
+
+
 @pytest.fixture(scope="session")
-def seeded() -> Iterator[Seeded]:
+def admin_server() -> Iterator[str]:
+    """One server for the session (one container, if Testcontainers)."""
     with _admin_dsn() as admin:
-        suffix = secrets.token_hex(4)
-        dbname = f"cloudops_schema_test_{suffix}"
-        migrator, app, ingest = (f"cloudops_t_{r}_{suffix}" for r in ("migrator", "app", "ingest"))
-        passwords = {r: secrets.token_hex(24) for r in (migrator, app, ingest)}
-        server = _with(admin, drivername="postgresql")
+        yield admin
 
-        with psycopg.connect(server, autocommit=True) as cx:
-            cx.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(dbname)))
-            for role, pw in passwords.items():
-                extra = "CREATEROLE" if role == migrator else ""
-                cx.execute(
-                    sql.SQL(
-                        "CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOBYPASSRLS " + extra
-                    ).format(sql.Identifier(role), sql.Literal(pw))
-                )
 
-        test_admin = _with(admin, drivername="postgresql", database=dbname)
-        dsn = {
-            r: _with(admin, username=r, password=pw, database=dbname) for r, pw in passwords.items()
-        }
-        try:
-            with psycopg.connect(test_admin, autocommit=True) as cx:
-                cx.execute(
-                    sql.SQL("GRANT CREATE ON DATABASE {} TO {}").format(
-                        sql.Identifier(dbname), sql.Identifier(migrator)
-                    )
-                )
-                partman = _provision_extensions(cx, migrator)
+@contextmanager
+def _database(admin: str, label: str) -> Iterator[Provisioned]:
+    """A fresh database migrated to head, with migrator, app and ingest logins
+    made exactly as production makes them. Dropped afterwards."""
+    suffix = secrets.token_hex(4)
+    dbname = f"cloudops_{label}_test_{suffix}"
+    migrator, app, ingest = (f"cloudops_t_{r}_{suffix}" for r in ("migrator", "app", "ingest"))
+    passwords = {r: secrets.token_hex(24) for r in (migrator, app, ingest)}
+    server = _with(admin, drivername="postgresql")
 
-            _migrate(dsn[migrator], partman)
-
-            with psycopg.connect(test_admin, autocommit=True) as cx:
-                for login, group in ((app, "cloudops_app"), (ingest, "cloudops_ingest")):
-                    cx.execute(
-                        sql.SQL("GRANT {} TO {}").format(
-                            sql.Identifier(group), sql.Identifier(login)
-                        )
-                    )
-                tenants = tuple(
-                    Tenant(uuid4(), name, ccy, uuid4(), f"sub-{name}-{suffix}", uuid4(), axis)
-                    for name, ccy, axis in (
-                        ("alpha", "EUR", 1),
-                        ("bravo", "GBP", 2),
-                        ("charlie", "USD", 3),
-                    )
-                )
-                _seed(cx, tenants, global_axis=4)
-                c_account2, c_resource2 = uuid4(), uuid4()
-                _seed_second_subscription(cx, tenants[2], c_account2, c_resource2)
-
-            yield Seeded(
-                admin_dsn=test_admin,
-                migrator_dsn=dsn[migrator],
-                app_dsn=dsn[app],
-                ingest_dsn=dsn[ingest],
-                partman=partman,
-                a=tenants[0],
-                b=tenants[1],
-                c=tenants[2],
-                global_axis=4,
-                c_account2=c_account2,
-                c_resource2=c_resource2,
+    with psycopg.connect(server, autocommit=True) as cx:
+        cx.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(dbname)))
+        for role, pw in passwords.items():
+            extra = "CREATEROLE" if role == migrator else ""
+            cx.execute(
+                sql.SQL(
+                    "CREATE ROLE {} LOGIN PASSWORD {} NOSUPERUSER NOBYPASSRLS " + extra
+                ).format(sql.Identifier(role), sql.Literal(pw))
             )
-        finally:
-            with psycopg.connect(server, autocommit=True) as cx:
-                cx.execute(
-                    sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(
-                        sql.Identifier(dbname)
-                    )
+
+    test_admin = _with(admin, drivername="postgresql", database=dbname)
+    dsn = {r: _with(admin, username=r, password=pw, database=dbname) for r, pw in passwords.items()}
+    try:
+        with psycopg.connect(test_admin, autocommit=True) as cx:
+            cx.execute(
+                sql.SQL("GRANT CREATE ON DATABASE {} TO {}").format(
+                    sql.Identifier(dbname), sql.Identifier(migrator)
                 )
-                for role in (app, ingest, migrator):
-                    cx.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(role)))
+            )
+            partman = _provision_extensions(cx, migrator)
+
+        _migrate(dsn[migrator], partman)
+
+        with psycopg.connect(test_admin, autocommit=True) as cx:
+            for login, group in ((app, "cloudops_app"), (ingest, "cloudops_ingest")):
+                cx.execute(
+                    sql.SQL("GRANT {} TO {}").format(sql.Identifier(group), sql.Identifier(login))
+                )
+        yield Provisioned(test_admin, dsn[migrator], dsn[app], dsn[ingest], partman, suffix)
+    finally:
+        with psycopg.connect(server, autocommit=True) as cx:
+            cx.execute(
+                sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(dbname))
+            )
+            for role in (app, ingest, migrator):
+                cx.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(role)))
+
+
+@pytest.fixture(scope="session")
+def seeded(admin_server: str) -> Iterator[Seeded]:
+    with _database(admin_server, "schema") as db:
+        with psycopg.connect(db.admin_dsn, autocommit=True) as cx:
+            tenants = tuple(
+                Tenant(uuid4(), name, ccy, uuid4(), f"sub-{name}-{db.suffix}", uuid4(), axis)
+                for name, ccy, axis in (
+                    ("alpha", "EUR", 1), ("bravo", "GBP", 2), ("charlie", "USD", 3)
+                )
+            )
+            _seed(cx, tenants, global_axis=4)
+            c_account2, c_resource2 = uuid4(), uuid4()
+            _seed_second_subscription(cx, tenants[2], c_account2, c_resource2)
+        yield Seeded(
+            admin_dsn=db.admin_dsn,
+            migrator_dsn=db.migrator_dsn,
+            app_dsn=db.app_dsn,
+            ingest_dsn=db.ingest_dsn,
+            partman=db.partman,
+            a=tenants[0],
+            b=tenants[1],
+            c=tenants[2],
+            global_axis=4,
+            c_account2=c_account2,
+            c_resource2=c_resource2,
+        )
 
 
 @pytest.fixture
@@ -488,3 +504,38 @@ async def api(seeded: Seeded, principals: Principals) -> AsyncIterator[Api]:
     async with httpx.AsyncClient(transport=transport, base_url="http://api") as client:
         yield Api(client, private, auth)
     await db.dispose()
+
+
+# --- The synthetic dataset, for connectors (step 05) ------------------------------
+
+
+@dataclass(frozen=True)
+class Synthetic:
+    """A database holding the synthetic dataset's tenants, aliases, accounts and
+    resources, but no tickets and no quarantine: whatever lands there in a
+    connector test, the connector put there."""
+
+    admin_dsn: str
+    app_dsn: str
+    ingest_dsn: str
+
+
+@pytest.fixture(scope="session")
+async def synthetic(admin_server: str) -> AsyncIterator[Synthetic]:
+    from dataclasses import replace
+
+    from cloudops_devdata.seed import load
+    from cloudops_devdata.servicenow_fixtures import FIXTURE_ANCHOR, FIXTURE_SEED
+    from cloudops_devdata.synthetic import generate
+
+    ds = replace(
+        generate(FIXTURE_ANCHOR, FIXTURE_SEED),
+        work_items=[], alias_quarantine=[], resource_quarantine=[],
+    )
+    with _database(admin_server, "connector") as db:
+        ingest = Database.create(db.ingest_dsn, pool_size=1, max_overflow=0)
+        try:
+            await load(ingest, ds)
+        finally:
+            await ingest.dispose()
+        yield Synthetic(db.admin_dsn, db.app_dsn, db.ingest_dsn)
