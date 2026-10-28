@@ -313,6 +313,7 @@ Each of these departures is deliberate and applies to local only.
 | `services/api` | The API: token validation, scope resolution, BFF, provenance, audit |
 | `connectors` | Source connectors, plus the connector contract ([`connectors/README.md`](connectors/README.md)) |
 | `services/gateway` | The AI gateway: tiers, redaction, quotas, semantic cache, tracing, breaker, tool registry, retrieval (ADR 0005) |
+| `packages/agents` | The agent layer: versioned prompts, schema-validated output, allowlisted tools, Temporal activities ([`packages/agents/README.md`](packages/agents/README.md)) |
 | `db/migrations` | Hand-written SQL migrations (alembic) |
 | `db/tests` | Schema checks and the isolation suite |
 | `infra/local` | Init scripts for the compose stack |

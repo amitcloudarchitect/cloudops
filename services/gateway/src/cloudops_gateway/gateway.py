@@ -155,6 +155,9 @@ class GatewayReply:
     cache_hit: bool
     budget_warning: bool
     call_id: int
+    # Exactly what the provider received (redacted), and how long it took.
+    prompt_redacted: str = ""
+    latency_ms: int = 0
 
 
 _INSERT_CALL: Final = text(
@@ -264,7 +267,7 @@ class Gateway:
                                              cost=Decimal(0), currency="USD", latency_ms=0,
                                              cache_hit=True, outcome="succeeded")
                 return GatewayReply(hit, (), tier, "cache", "cache", 0, 0, Decimal(0), "USD",
-                                    True, warning, call_id)
+                                    True, warning, call_id, prompt, 0)
 
         started = time.monotonic()
         completion, deployment, tier_used = await self._call(
@@ -283,7 +286,7 @@ class Gateway:
         return GatewayReply(
             completion.text, completion.tool_calls, tier_used, deployment.provider,
             deployment.alias, completion.tokens_in, completion.tokens_out, cost,
-            deployment.currency, False, warning, call_id,
+            deployment.currency, False, warning, call_id, prompt, latency,
         )
 
     async def embed(self, ctx: CallContext, texts: Sequence[str], *, task: str = "embed"
