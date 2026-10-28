@@ -24,9 +24,9 @@ NON_TENANT = {
     "cloudops.fx_rate",
     "staging.ingest_watermark",
     "staging.tenant_alias_quarantine",  # unmatched names: no tenant by definition
+    "cloudops.global_knowledge_chunk",  # Getronics-wide content, read-only (ADR 0001)
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
-NULLABLE_TENANT = {"cloudops.knowledge_chunk"}  # NULL = Getronics-wide content
 COMMERCIAL = {"cloudops.sow"}
 PARTITIONED = {
     "cloudops.cost_fact",
@@ -88,6 +88,7 @@ def test_every_table_is_classified(seeded: Seeded) -> None:
         "cloudops.cost_fact",
         "cloudops.vulnerability",
         "cloudops.knowledge_chunk",
+        "cloudops.global_knowledge_chunk",
         "audit.action_log",
         "cloudops.fx_rate",
         "staging.ingest_watermark",
@@ -111,16 +112,33 @@ def test_tenant_tables_force_rls_with_the_isolation_policy(seeded: Seeded) -> No
         exprs = info["isolation_exprs"]
         if exprs is None or exprs.count("current_tenant_ids()") != 2:
             problems.append(f"{name}: tenant_isolation must USE and CHECK current_tenant_ids()")
-        if name not in TENANT_KEYED_BY_ID | NULLABLE_TENANT and info["tenant_nullable"]:
+        if name not in TENANT_KEYED_BY_ID and info["tenant_nullable"]:
             problems.append(f"{name}: tenant_id is nullable")
     assert problems == []
 
 
-def test_nullable_tenant_rows_are_never_writable(seeded: Seeded) -> None:
-    for name in NULLABLE_TENANT:
-        exprs = _catalog(seeded)[name]["isolation_exprs"]
-        with_check = exprs.split(" | ")[1]
-        assert "IS NULL" not in with_check, f"{name}: a scope could write a NULL-tenant row"
+def test_no_isolation_policy_has_a_null_tenant_escape(seeded: Seeded) -> None:
+    """ADR 0001: no tenant table admits tenant-less rows, in either direction."""
+    for name, info in _catalog(seeded).items():
+        if name in NON_TENANT:
+            continue
+        assert "IS NULL" not in (info["isolation_exprs"] or ""), name
+
+
+def test_non_tenant_tables_are_read_only_to_the_application(seeded: Seeded) -> None:
+    """Reference data every scope may read must not be writable by any scope."""
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        writable = cx.execute(
+            "SELECT r, t FROM unnest(%s::text[]) r, unnest(%s::text[]) t"
+            " WHERE has_table_privilege(r, t, 'INSERT,UPDATE,DELETE,TRUNCATE')",
+            (list(GROUP_ROLES), ["cloudops.global_knowledge_chunk"]),
+        ).fetchall()
+        readable = cx.execute(
+            "SELECT has_table_privilege('cloudops_app', 'cloudops.global_knowledge_chunk',"
+            " 'SELECT')"
+        ).fetchone()
+    assert writable == []
+    assert readable == (True,)
 
 
 def test_commercial_tables_have_the_restrictive_policy(seeded: Seeded) -> None:

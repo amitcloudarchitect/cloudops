@@ -204,8 +204,8 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             (t.id, t.account_id, f"q-{t.name}"),
         )
     cx.execute(
-        "INSERT INTO cloudops.knowledge_chunk (tenant_id, source_kind, title, body, embedding)"
-        " VALUES (NULL, 'runbook', 'Global runbook', 'Restart the service', %s)",
+        "INSERT INTO cloudops.global_knowledge_chunk (source_kind, title, body, embedding)"
+        " VALUES ('runbook', 'Global runbook', 'Restart the service', %s)",
         (embedding(global_axis),),
     )
     cx.execute(

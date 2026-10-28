@@ -325,6 +325,7 @@ Amounts are stored in transaction currency with a sibling `*_currency` column. C
 | `cost_fact` | `(tenant_id, usage_date)`, `(tenant_id, charge_class, usage_date)` |
 | `vulnerability` | `(tenant_id, severity, remediated_at)`, `(tenant_id) WHERE remediated_at IS NULL` |
 | `knowledge_chunk` | HNSW on `embedding`, `(tenant_id, source_kind)` |
+| `global_knowledge_chunk` | HNSW on `embedding`, `(source_kind)` |
 | `audit.action_log` | `(tenant_id, created_at DESC)`, `(actor, created_at DESC)` |
 
 The `tenant_id` leading column is deliberate: with RLS applied the tenant predicate is on every query, so it belongs first.
@@ -433,16 +434,26 @@ Application code names a tier, never a model. Which published model fills each t
 
 ### Vector store
 
-`vector` extension on the platform database; `knowledge_chunk.embedding vector(N)` with N fixed by the embedding deployment; HNSW index with cosine distance, `m=16`, `ef_construction=64`, `ef_search` tuned against the evaluation set; row-level security identical to every other tenant table; hybrid search fusing vector similarity with full-text by reciprocal rank, re-ranked by the `small` tier.
+`vector` extension on the platform database; `knowledge_chunk.embedding vector(N)` with N fixed by the embedding deployment; HNSW index with cosine distance, `m=16`, `ef_construction=64`, `ef_search` tuned against the evaluation set; row-level security identical to every other tenant table, with `tenant_id NOT NULL`; hybrid search fusing vector similarity with full-text by reciprocal rank, re-ranked by the `small` tier.
 
-The retrieval query carries the tenant predicate **inside** the SQL, so RLS applies to retrieval exactly as to any other read:
+Getronics-wide content (shared runbooks, best practice) lives in `cloudops.global_knowledge_chunk`, which has no `tenant_id`. Every scope can read it, and no application role can write it (ADR 0001). Customer content is never tenant-less.
+
+The retrieval query carries the tenant predicate **inside** the SQL, so RLS applies to retrieval exactly as to any other read. Each branch is ordered and limited so it can use its own HNSW index:
 
 ```sql
-SELECT id, title, body, 1 - (embedding <=> $1) AS score
-FROM cloudops.knowledge_chunk
-WHERE (tenant_id = ANY(cloudops.current_tenant_ids()) OR tenant_id IS NULL)
-  AND source_kind = ANY($2)
-ORDER BY embedding <=> $1 LIMIT 20;
+SELECT id, title, body, tenant_id, 1 - distance AS score FROM (
+  (SELECT id, title, body, tenant_id, embedding <=> $1 AS distance
+   FROM cloudops.knowledge_chunk
+   WHERE tenant_id = ANY(cloudops.current_tenant_ids())
+     AND source_kind = ANY($2)
+   ORDER BY embedding <=> $1 LIMIT 20)
+  UNION ALL
+  (SELECT id, title, body, NULL::uuid, embedding <=> $1
+   FROM cloudops.global_knowledge_chunk
+   WHERE source_kind = ANY($2)
+   ORDER BY embedding <=> $1 LIMIT 20)
+) candidates
+ORDER BY distance LIMIT 20;
 ```
 
 **Azure AI Search fallback:** stand up an index with the same chunk schema and a tenant field, point the gateway's retrieval interface at it, run both in parallel against the evaluation set before switching. The isolation suite gains a case, because AI Search enforces tenant filtering by query construction rather than by row-level security — which is precisely why it is the fallback.

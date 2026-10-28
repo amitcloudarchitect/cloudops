@@ -9,6 +9,9 @@ reading. `docs/HLD.md` gives the why. Where this file and the LLD disagree, the 
 wins. If something is genuinely unspecified, say so and propose options — do not
 invent a design and proceed silently.
 
+Decisions made since the LLD was written are in `docs/adr/`; read the ones touching
+your area. ADR 0002 (scope resolution) supersedes parts of the `/step04` brief.
+
 ## Commands
 
 ```bash
@@ -55,6 +58,10 @@ must hold.
 When you add a table, add its RLS policy and its isolation test in the same change.
 
 ### 2. Never invent a credential path
+
+Exception: until production, ADR 0003 allows stored, read-only customer credentials
+(Azure app registration secrets, AWS access keys) under its guardrails. Production
+never uses them.
 
 No secrets in code, committed config, logs, or prompts sent to a model. Secrets come
 from Key Vault via workload identity, mounted as files by the CSI driver. The platform

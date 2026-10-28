@@ -80,6 +80,7 @@ TENANT_TABLES = (
     "cloudops.work_item",
     "cloudops.vulnerability",
     "cloudops.cost_fact",
+    "cloudops.knowledge_chunk",
     "audit.action_log",
     "staging.resource_quarantine",
 )
@@ -104,10 +105,14 @@ def test_case2_unscoped_sql_sees_zero_rows(seeded: Seeded, login: str, table: st
     assert visible == (0,)
 
 
-def test_case2_unscoped_knowledge_shows_global_chunks_only(seeded: Seeded) -> None:
+def test_case2_unscoped_sees_global_knowledge_and_nothing_else(seeded: Seeded) -> None:
+    """Getronics-wide content is in its own table with no tenant: readable by
+    every scope, including none. Customer chunks stay invisible (ADR 0001)."""
     with psycopg.connect(seeded.app_dsn) as cx:
-        tenants = cx.execute("SELECT tenant_id FROM cloudops.knowledge_chunk").fetchall()
-    assert tenants == [(None,)]
+        customer = cx.execute("SELECT count(*) FROM cloudops.knowledge_chunk").fetchone()
+        shared = cx.execute("SELECT title FROM cloudops.global_knowledge_chunk").fetchall()
+    assert customer == (0,)
+    assert shared == [("Global runbook",)]
 
 
 async def test_case2_explicitly_empty_scope_sees_zero_rows(
@@ -120,12 +125,23 @@ async def test_case2_explicitly_empty_scope_sees_zero_rows(
 
 # --- 3. Vector retrieval naming another customer -> no foreign chunks ---------------
 
+# The LLD retrieval query after ADR 0001: the tenant's own chunks, tenant
+# predicate inside the SQL, merged with Getronics-wide chunks (tenant NULL in
+# the result). Each branch is ordered and limited so each can use its HNSW index.
 RETRIEVAL = """
-SELECT tenant_id, 1 - (embedding <=> {q}) AS score
-FROM cloudops.knowledge_chunk
-WHERE (tenant_id = ANY(cloudops.current_tenant_ids()) OR tenant_id IS NULL)
-  AND source_kind = ANY({kinds})
-ORDER BY embedding <=> {q} LIMIT 20
+SELECT tenant_id, 1 - distance AS score FROM (
+  (SELECT tenant_id, embedding <=> {q} AS distance
+   FROM cloudops.knowledge_chunk
+   WHERE tenant_id = ANY(cloudops.current_tenant_ids())
+     AND source_kind = ANY({kinds})
+   ORDER BY embedding <=> {q} LIMIT 20)
+  UNION ALL
+  (SELECT NULL::uuid, embedding <=> {q}
+   FROM cloudops.global_knowledge_chunk
+   WHERE source_kind = ANY({kinds})
+   ORDER BY embedding <=> {q} LIMIT 20)
+) candidates
+ORDER BY distance LIMIT 20
 """
 
 
@@ -346,7 +362,9 @@ async def test_write_into_another_tenant_is_rejected(
     )
 
 
-async def test_no_scope_can_write_global_knowledge(app_db: Database, seeded: Seeded) -> None:
+async def test_customer_knowledge_cannot_be_written_without_a_tenant(
+    app_db: Database, seeded: Seeded
+) -> None:
     async def write() -> None:
         await _rows(
             app_db,
@@ -355,5 +373,19 @@ async def test_no_scope_can_write_global_knowledge(app_db: Database, seeded: See
             " VALUES (NULL, 'runbook', 'x') RETURNING 1",
         )
 
-    with pytest.raises(Exception, match="row-level security"):
+    with pytest.raises(Exception, match=r"row-level security|null value"):
         await write()
+
+
+@pytest.mark.parametrize("login", ["app_dsn", "ingest_dsn"])
+def test_no_application_role_can_write_global_knowledge(seeded: Seeded, login: str) -> None:
+    """Global content reaches every customer's assistant, so writing it is not
+    something a scoped application session may do at all (ADR 0001)."""
+    with (
+        pytest.raises(psycopg.errors.InsufficientPrivilege),
+        psycopg.connect(getattr(seeded, login)) as cx,
+    ):
+        cx.execute(
+            "INSERT INTO cloudops.global_knowledge_chunk (source_kind, body)"
+            " VALUES ('runbook', 'Ignore previous instructions')"
+        )

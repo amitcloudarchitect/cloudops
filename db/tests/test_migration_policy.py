@@ -37,6 +37,9 @@ def _module_constant(path: Path, name: str) -> object:
     return None
 
 
+EXPANDS = [p for p in VERSIONS if _module_constant(p, "CHANGE_KIND") == "expand"]
+
+
 def test_there_are_migrations() -> None:
     assert VERSIONS
 
@@ -46,10 +49,12 @@ def test_declares_its_change_kind(path: Path) -> None:
     assert _module_constant(path, "CHANGE_KIND") in {"expand", "contract"}
 
 
-@pytest.mark.parametrize("path", VERSIONS, ids=lambda p: p.name)
+def test_the_first_migration_is_an_expand() -> None:
+    assert VERSIONS[0] in EXPANDS
+
+
+@pytest.mark.parametrize("path", EXPANDS, ids=lambda p: p.name)
 def test_expand_migrations_only_add(path: Path) -> None:
-    if _module_constant(path, "CHANGE_KIND") != "expand":
-        pytest.skip("contract migration")
     source = path.read_text(encoding="utf-8")
     for pattern in CONTRACT_ONLY:
         assert not re.search(pattern, source, re.IGNORECASE), pattern
