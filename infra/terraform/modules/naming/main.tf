@@ -25,5 +25,7 @@ locals {
 
   # LLD, App registrations and identities. The execution identity is part of
   # the execution plane and is deliberately not created before its review.
-  workload_identities = ["api", "ingest", "telemetry", "ai", "workflow"]
+  # "migrate" runs database migrations (LLD: a dedicated role, applied by a
+  # pipeline job); federated to the pipeline in step 13.
+  workload_identities = ["api", "ingest", "telemetry", "ai", "workflow", "migrate"]
 }

@@ -116,9 +116,10 @@ along the way:
 - **Infrastructure prerequisite (Azure).** Two NOLOGIN roles own the access functions:
   `cloudops_resolver` and `cloudops_access_admin`. The migration role must be a member
   of both, `WITH INHERIT FALSE`, so it can hand over ownership without gaining their
-  rights. Locally `infra/local/postgres/init.sh` creates them. **Azure has no
-  equivalent yet**: whoever creates the Flexible Server roles must add them before
-  migration 0004 runs. The migration checks for them and stops if they are missing.
+  rights. They are created by `db/bootstrap/roles.sql`, run once per server by its
+  administrator: locally by `infra/local/postgres/init.sh`, and in Azure by the
+  Entra administrator, as the README's "Azure database bootstrap" section describes.
+  The migration checks for them and stops if they are missing.
 - **A subscription restriction applies to a single-tenant principal only.** One flat
   `app.account_ids` list cannot express "these subscriptions of tenant A, and all of
   tenant B", so the resolver raises a defect for a restricted principal with more than

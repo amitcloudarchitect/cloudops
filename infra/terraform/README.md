@@ -59,6 +59,12 @@ Copy each `*.tfvars.example` to `*.tfvars` first; tfvars files are gitignored.
   in the dev subscription, and AKS reserves `172.30/16` and `172.31/16`.
 - **Cluster access**: the API server is private and run-command is off. Until
   the hub's Bastion or a VPN exists, nobody can reach it.
+- **Dev box to PostgreSQL** (`01-network`, dev only): `allow-devbox-postgres` admits
+  `snet-devbox-dev` to the data subnet on 5432, and nothing else. It is there to run
+  the server bootstrap (`db/bootstrap/roles.sql`) and, until the migration pipeline
+  exists (step 13), migrations as `id-cloudops-migrate-dev`. PostgreSQL still requires
+  an Entra token. The trade-off: while `ssh_allow_any_source` is on, a compromised dev
+  box can reach the server's port. Remove the rule once the pipeline runs migrations.
 - **PgBouncer** (L6) is not configured; transaction mode is mandatory once it is.
 - **Exec plane** (identity, vault, VNet `10.62.0.0/16`, npexec) is not here,
   pending the security review.

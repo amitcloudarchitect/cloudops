@@ -244,6 +244,33 @@ keyed on the token's `oid`. Headers, query parameters and token claims never cha
 it; try sending `X-Tenant-Id`. The OpenAPI schema is at
 `http://127.0.0.1:8000/openapi.json` (local only).
 
+## Azure database bootstrap
+
+Before the first migration on a new server, its administrator creates the server-level
+roles the migrations rely on. This is the same file `make up` runs locally,
+[`db/bootstrap/roles.sql`](db/bootstrap/roles.sql). It is idempotent, and it refuses
+rather than repairs a role that already exists with `LOGIN`, `SUPERUSER` or
+`BYPASSRLS`.
+
+Prerequisites on Azure Database for PostgreSQL (Entra authentication only):
+
+1. **The migration role exists.** It is the Entra identity the migration pipeline runs
+   as (step 13), created by the Entra administrator with
+   `SELECT * FROM pgaadauth_create_principal('<identity name>', false, false);`.
+2. **A host that can reach the private endpoint,** such as a pod in AKS or the devbox
+   once stack 01 admits it to the data subnet. `psql` must be installed there.
+3. **An Entra access token for the server administrator,** used as the password.
+
+```bash
+export PGPASSWORD="$(az account get-access-token --resource-type oss-rdbms --query accessToken -o tsv)"
+```
+
+```bash
+psql "host=psql-cloudops-dev-neu.postgres.database.azure.com dbname=postgres user=<entra admin name> sslmode=require" -v migrator=<migration identity name> -f db/bootstrap/roles.sql
+```
+
+The token expires within about an hour and is never written anywhere.
+
 ## How local differs from Azure
 
 Each of these departures is deliberate and applies to local only.

@@ -121,6 +121,16 @@ resource "azurerm_subnet_nat_gateway_association" "this" {
 locals {
   aks_cidrs = [for s in local.aks_subnets : local.subnet_cidr[s]]
 
+  # Dev only, a recorded departure (README): the devbox (stack 06, x.38.0/24,
+  # the same offset it computes) may reach PostgreSQL on 5432, to run the server
+  # bootstrap (db/bootstrap/roles.sql) and, until the pipeline exists, migrations.
+  # PostgreSQL still requires an Entra token; no other port on the data subnet
+  # is opened, and no other environment gets the rule.
+  devbox_cidr = cidrsubnet(local.vnet_cidr, 8, 38)
+  devbox_postgres = var.env == "dev" ? [
+    { name = "allow-devbox-postgres", priority = 110, sources = [local.devbox_cidr], ports = ["5432"], protocol = "Tcp" },
+  ] : []
+
   # Inbound allows per subnet. Ports are the LLD's (Private endpoints and NSGs)
   # unless noted.
   inbound = {
@@ -132,10 +142,10 @@ locals {
       { name = "allow-frontdoor-https", priority = 100, sources = ["AzureFrontDoor.Backend"], ports = ["443"], protocol = "Tcp" },
       { name = "allow-aks-nodes", priority = 110, sources = local.aks_cidrs, ports = ["*"], protocol = "*" },
     ]
-    data = [
+    data = concat([
       # 443 is not in the LLD's list but the blob private endpoints live here.
       { name = "allow-aks-data", priority = 100, sources = local.aks_cidrs, ports = ["5432", "6380", "443"], protocol = "Tcp" },
-    ]
+    ], local.devbox_postgres)
     msg = [
       { name = "allow-aks-messaging", priority = 100, sources = local.aks_cidrs, ports = ["443", "5671"], protocol = "Tcp" },
     ]

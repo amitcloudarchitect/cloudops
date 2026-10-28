@@ -61,6 +61,7 @@ services:
       CLOUDOPS_INGEST_PASSWORD: ${POSTGRES_INGEST_PASSWORD:?run make env}
     volumes:
       - ./infra/local/postgres/init.sh:/docker-entrypoint-initdb.d/10-cloudops.sh:ro
+      - ./db/bootstrap:/cloudops/bootstrap:ro
       - postgres-data:/var/lib/postgresql/data
     ports:
       - 127.0.0.1:5432:5432

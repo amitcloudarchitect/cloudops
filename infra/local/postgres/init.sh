@@ -6,34 +6,36 @@
 # meet the same roles they will meet there:
 #
 #   cloudops_migrator        owns the database and the schema; runs alembic
-#   cloudops_app             group roles the migration grants privileges to
-#   cloudops_ingest            (created here so logins can join them before migrating;
-#                              the migration's own CREATE is IF NOT EXISTS)
+#   cloudops_app             group roles the migration grants privileges to, created by
+#   cloudops_ingest            db/bootstrap/roles.sql, exactly as in Azure
 #   cloudops_app_local       login, member of cloudops_app    — what services use
 #   cloudops_ingest_local    login, member of cloudops_ingest — what connectors and the seed use
-#   cloudops_resolver        own the access-control functions (migration 0004);
-#   cloudops_access_admin      NOLOGIN, reachable only through those functions
+#   cloudops_resolver        own the access-control functions (migration 0004), also
+#   cloudops_access_admin      from roles.sql; NOLOGIN, reachable only through them
 #
 # No login here is superuser, BYPASSRLS, or a table owner except the migrator;
 # packages/tenancy refuses to run as anything else.
 set -euo pipefail
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
-    -v migrator_pw="$CLOUDOPS_MIGRATOR_PASSWORD" \
+    -v migrator_pw="$CLOUDOPS_MIGRATOR_PASSWORD" <<'SQL'
+CREATE ROLE cloudops_migrator LOGIN NOSUPERUSER NOBYPASSRLS CREATEROLE PASSWORD :'migrator_pw';
+SQL
+
+# The same server bootstrap Azure runs (db/bootstrap/roles.sql): group roles and
+# the access-function owners. Run twice to prove it is idempotent.
+for _ in 1 2; do
+    psql --quiet --username "$POSTGRES_USER" --dbname postgres \
+        -v migrator=cloudops_migrator -f /cloudops/bootstrap/roles.sql
+done
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
     -v app_pw="$CLOUDOPS_APP_PASSWORD" \
     -v ingest_pw="$CLOUDOPS_INGEST_PASSWORD" <<'SQL'
-CREATE ROLE cloudops_migrator LOGIN NOSUPERUSER NOBYPASSRLS CREATEROLE PASSWORD :'migrator_pw';
-CREATE ROLE cloudops_app    NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
-CREATE ROLE cloudops_ingest NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
 CREATE ROLE cloudops_app_local    LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD :'app_pw'
     IN ROLE cloudops_app;
 CREATE ROLE cloudops_ingest_local LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD :'ingest_pw'
     IN ROLE cloudops_ingest;
--- Owners of the access-control functions (migration 0004). The migrator must be
--- able to SET ROLE to them to hand over ownership, but never inherits their rights.
-CREATE ROLE cloudops_resolver     NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
-CREATE ROLE cloudops_access_admin NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT;
-GRANT cloudops_resolver, cloudops_access_admin TO cloudops_migrator WITH INHERIT FALSE;
 
 CREATE DATABASE cloudops OWNER cloudops_migrator;
 REVOKE ALL ON DATABASE cloudops FROM PUBLIC;
