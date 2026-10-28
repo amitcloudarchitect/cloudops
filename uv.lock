@@ -9,6 +9,7 @@ members = [
     "cloudops-config",
     "cloudops-connectors",
     "cloudops-devdata",
+    "cloudops-evals",
     "cloudops-gateway",
     "cloudops-platform",
     "cloudops-tenancy",
@@ -397,6 +398,27 @@ requires-dist = [
 ]
 
 [[package]]
+name = "cloudops-evals"
+version = "0.1.0"
+source = { editable = "packages/evals" }
+dependencies = [
+    { name = "cloudops-agents" },
+    { name = "cloudops-gateway" },
+    { name = "cloudops-tenancy" },
+    { name = "pydantic" },
+    { name = "temporalio" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cloudops-agents", editable = "packages/agents" },
+    { name = "cloudops-gateway", editable = "services/gateway" },
+    { name = "cloudops-tenancy", editable = "packages/tenancy" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "temporalio", specifier = ">=1.34" },
+]
+
+[[package]]
 name = "cloudops-gateway"
 version = "0.1.0"
 source = { editable = "services/gateway" }
@@ -424,6 +446,7 @@ dependencies = [
     { name = "cloudops-config" },
     { name = "cloudops-connectors" },
     { name = "cloudops-devdata" },
+    { name = "cloudops-evals" },
     { name = "cloudops-gateway" },
     { name = "cloudops-tenancy" },
 ]
@@ -445,6 +468,7 @@ requires-dist = [
     { name = "cloudops-config", editable = "packages/config" },
     { name = "cloudops-connectors", editable = "connectors" },
     { name = "cloudops-devdata", editable = "packages/devdata" },
+    { name = "cloudops-evals", editable = "packages/evals" },
     { name = "cloudops-gateway", editable = "services/gateway" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
 ]

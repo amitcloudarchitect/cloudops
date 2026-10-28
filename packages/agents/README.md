@@ -71,6 +71,18 @@ An agent is five things (`AgentSpec`):
 7. **Changing the prompt means a new file** (`v2.md`), never an edit to `v1.md`. Then
    run the evaluation suite before switching.
 
+## The agents so far, and the pipeline they serve
+
+| Agent | Stage | Tier | Tools | Output |
+| --- | --- | --- | --- | --- |
+| `classify_ticket` (`classifier.py`, prompt `ticket_classifier/v2`) | 2 Classify | small | none | intent, affected CI, customer, action class, risk, confidence |
+| `enrich_ticket` (`enricher.py`, prompt `ticket_enricher/v1`) | 3 Enrich | large | `get_resource_context`, `search_tickets`, `search_knowledge` | the context bundle |
+
+`remediation.py` holds `TicketTriageWorkflow`, stages 1 to 3 as a Temporal workflow.
+`triage.py` holds the deterministic guardrails between the stages; ADR 0006 explains
+them. Both agents are measured by the evaluation suite (`evals/README.md`) from their
+first commit. Stage 4 onwards needs the security review first.
+
 ## Limits
 
 These tests prove the structure: injected text stays inside data, a tool outside the

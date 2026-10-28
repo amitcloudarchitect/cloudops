@@ -18,3 +18,6 @@ htmlcov/
 *.tfplan
 tfplan
 plan.json
+
+# Evaluation run output (the baseline is committed; the last report is not)
+evals/last-report.json

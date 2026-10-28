@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay eval eval-baseline
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -63,6 +63,12 @@ replay: env ## reprocess today's ServiceNow bronze pages without re-fetching
 # never touch seeded data. pg_partman is required, as in CI.
 test: $(ENV_FILE) ## run every test, including the isolation suite, against the local Postgres
 	CLOUDOPS_TEST_ADMIN_DSN="$$($(SECRET) postgres-admin-dsn)" CLOUDOPS_REQUIRE_PARTMAN=1 uv run pytest
+
+eval: $(ENV_FILE) ## run the AI evaluation suite (golden set, regression gate)
+	CLOUDOPS_TEST_ADMIN_DSN="$$($(SECRET) postgres-admin-dsn)" CLOUDOPS_REQUIRE_PARTMAN=1 uv run pytest -m evaluation
+
+eval-baseline: $(ENV_FILE) ## re-score and rewrite evals/baseline.json (commit it with a reason)
+	CLOUDOPS_TEST_ADMIN_DSN="$$($(SECRET) postgres-admin-dsn)" CLOUDOPS_REQUIRE_PARTMAN=1 CLOUDOPS_EVAL_UPDATE_BASELINE=1 uv run pytest -m evaluation
 
 lint: ## ruff, mypy --strict and the data-access gate
 	uv run ruff check .

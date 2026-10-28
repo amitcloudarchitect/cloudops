@@ -53,7 +53,7 @@ async def test_the_classifier_runs_through_the_gateway_and_is_traced(
     with psycopg.connect(seeded.admin_dsn) as cx:
         run = cx.execute(
             "SELECT tenant_id, agent, prompt_version, prompt_hash, tier, status, attempts,"
-            " llm_call_ids, cost, cost_currency, output->>'category' FROM cloudops.agent_run"
+            " llm_call_ids, cost, cost_currency, output->>'affected_ci' FROM cloudops.agent_run"
             " WHERE principal = %s", (principal,)).fetchone()
         calls = cx.execute(
             "SELECT id, tenant_id, task FROM cloudops.llm_call WHERE principal = %s",
@@ -63,7 +63,7 @@ async def test_the_classifier_runs_through_the_gateway_and_is_traced(
                        hashlib.sha256(result.prompt.encode()).hexdigest(), "small", "answered", 1)
     assert run[7] == [c[0] for c in calls], "the run links to the gateway calls it was made of"
     assert {c[1] for c in calls} == {seeded.a.id}
-    assert (run[9], run[10]) == ("USD", "compute.vm")
+    assert (run[9], run[10]) == ("USD", None)
 
 
 def test_agent_runs_are_tenant_isolated(seeded: Seeded) -> None:

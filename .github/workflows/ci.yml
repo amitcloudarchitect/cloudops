@@ -45,6 +45,33 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --locked
       - name: unit and integration tests
-        run: uv run pytest -m "not isolation"
+        run: uv run pytest -m "not isolation and not evaluation"
       - name: isolation suite (release gate)
         run: uv run pytest -m isolation
+
+  # Release gate (LLD, Evaluation): the golden set through the real stage 1 to 3
+  # workflow, failing on any regression against evals/baseline.json and on any
+  # injection followed or cross-tenant leak.
+  evaluation:
+    runs-on: ubuntu-24.04
+    env:
+      CLOUDOPS_TEST_ADMIN_DSN: postgresql://postgres:ci-only-throwaway@localhost:5432/postgres
+      CLOUDOPS_REQUIRE_PARTMAN: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - name: database with pgvector and pg_partman
+        run: |
+          docker build -t cloudops-pg-test db/test-image
+          docker run -d --name pg -p 5432:5432 -e POSTGRES_PASSWORD=ci-only-throwaway cloudops-pg-test
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - name: AI evaluation suite (release gate)
+        run: uv run pytest -m evaluation
+      - name: evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: evals/last-report.json
+          if-no-files-found: ignore

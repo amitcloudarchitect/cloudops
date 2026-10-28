@@ -2,9 +2,11 @@
   "_comment": "Canned responses for MockLlmGateway, keyed by task. Objects are returned as JSON text, as a model would return them; the caller schema-validates. Steps 06-08 replace these with their own tasks and golden-set cases.",
   "tasks": {
     "classify_ticket": {
-      "category": "compute.vm",
-      "subcategory": "service_unavailable",
-      "priority_suggestion": "3 - Moderate",
+      "intent": "service_down",
+      "affected_ci": null,
+      "customer": null,
+      "action_class": "B",
+      "risk": "medium",
       "confidence": 0.82,
       "rationale": "Canned mock response."
     },

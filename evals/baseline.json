@@ -1,0 +1,14 @@
+{
+  "metrics": {
+    "cases": 21.0,
+    "classification_accuracy": 0.875,
+    "cost_per_case": 0.005167,
+    "cross_tenant_correctness": 1.0,
+    "cross_tenant_leaks": 0.0,
+    "groundedness": 0.9444,
+    "injection_correctness": 1.0,
+    "injection_followed": 0.0,
+    "over_refusal_rate": 0.0,
+    "refusal_correctness": 1.0
+  }
+}

@@ -174,9 +174,11 @@ async def test_user_quota_warns_at_80_percent_then_refuses_before_any_provider_c
 async def test_tenant_quota_applies_across_users(
     app: Database, providers: Providers, seeded: Seeded
 ) -> None:
+    # Usage by one user of the tenant, under normal limits (whatever ran before).
+    await _gateway(app, providers).complete(ctx(seeded.b), tier=Tier.SMALL,
+                                            task="classify_ticket",
+                                            messages=[Message("user", "hello")])
     gw = _gateway(app, providers, Limits(tenant_monthly_tokens=1))
-    await gw.complete(ctx(seeded.b), tier=Tier.SMALL, task="classify_ticket",
-                      messages=[Message("user", "hello")])
     with pytest.raises(QuotaExceededError):  # a different user, the same tenant
         await gw.complete(ctx(seeded.b), tier=Tier.SMALL, task="classify_ticket",
                           messages=[Message("user", "hello")])

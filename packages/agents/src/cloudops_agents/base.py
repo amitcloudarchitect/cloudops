@@ -104,6 +104,8 @@ class AgentResult[O: AgentOutput]:
     cost: Decimal
     currency: str
     latency_ms: int
+    # Every tool result the model saw, as delivered (JSON). Claims are checked against it.
+    evidence: list[str] = field(default_factory=list)
 
 
 class GatewayLike(Protocol):
@@ -188,6 +190,7 @@ class Agent[O: AgentOutput]:
                    if self._registry is not None else [])
         retrieval = [{"id": r} for r in retrieval_ids] or None
         tools_trace: list[dict[str, Any]] = []
+        evidence: list[str] = []
         calls: list[int] = []
         tokens_in = tokens_out = latency = 0
         cost = Decimal(0)
@@ -234,6 +237,8 @@ class Agent[O: AgentOutput]:
                     for call in reply.tool_calls:
                         outcome = await self._tool(call, ctx)
                         tools_trace.append({"round": rounds, **outcome.trace()})
+                        if outcome.ok:
+                            evidence.append(outcome.content)
                         history.append(Message("tool", outcome.content,
                                                tool_call_id=call.id, name=call.name))
                     continue
@@ -257,7 +262,7 @@ class Agent[O: AgentOutput]:
                     run_id, spec.name, status, None if declined else output, output.confidence,
                     attempts, spec.prompt.version, hashlib.sha256(prompt.encode()).hexdigest(),
                     prompt, response, spec.tier, tools_trace, calls, tokens_in, tokens_out,
-                    cost, currency, latency,
+                    cost, currency, latency, evidence,
                 )
         except (AgentOutputError, AgentEscalationError):
             raise

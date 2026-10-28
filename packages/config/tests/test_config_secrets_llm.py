@@ -86,7 +86,7 @@ def test_mounted_store_rejects_empty_secret(tmp_path: Path) -> None:
 async def test_mock_returns_canned_response_and_records_the_call() -> None:
     llm = MockLlmGateway.with_packaged_responses()
     out = await llm.complete(tier=Tier.SMALL, task="classify_ticket", prompt="disk full")
-    assert '"category"' in out
+    assert '"intent"' in out
     assert [(c.tier, c.task) for c in llm.calls] == [(Tier.SMALL, "classify_ticket")]
 
 

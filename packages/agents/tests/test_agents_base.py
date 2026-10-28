@@ -23,7 +23,7 @@ from cloudops_agents.base import (
     AgentOutputError,
     AgentSpec,
 )
-from cloudops_agents.classifier import CLASSIFIER, TicketClassification, ticket_data
+from cloudops_agents.classifier import CLASSIFIER, TicketTriage, ticket_data
 from cloudops_agents.prompts import DataItem, PromptError, PromptTemplate, build_messages
 from cloudops_agents.temporal import AgentActivities, AgentCall, RunAgentWorkflow
 from cloudops_agents.trace import MemoryTraceSink
@@ -33,8 +33,8 @@ from cloudops_gateway.registry import ToolOutcome
 from cloudops_tenancy import Role, TenantScope
 
 TENANT = uuid.UUID("11111111-2222-4333-8444-555555555555")
-VALID = json.dumps({"category": "compute.vm", "subcategory": "disk_full",
-                    "priority_suggestion": "3 - Moderate", "confidence": 0.9,
+VALID = json.dumps({"intent": "disk_space", "affected_ci": "vm-alpha-01", "customer": None,
+                    "action_class": "C", "risk": "medium", "confidence": 0.9,
                     "rationale": "The C: drive on the VM is full."})
 
 
@@ -87,8 +87,8 @@ class FakeRegistry:
 
 def agent(gateway: FakeGateway, *, tools: frozenset[str] = frozenset(),
           registry: FakeRegistry | None = None, trace: MemoryTraceSink | None = None,
-          ) -> Agent[TicketClassification]:
-    spec = AgentSpec(CLASSIFIER.name, CLASSIFIER.prompt, Tier.SMALL, TicketClassification,
+          ) -> Agent[TicketTriage]:
+    spec = AgentSpec(CLASSIFIER.name, CLASSIFIER.prompt, Tier.SMALL, TicketTriage,
                      0.6, tools)
     return Agent(spec, gateway, registry, trace or MemoryTraceSink())
 
@@ -104,8 +104,8 @@ async def test_valid_output_is_returned_as_the_schema_type() -> None:
     result = await agent(FakeGateway(VALID), trace=trace).run(
         ctx(), request="Classify this ticket.", data=[ticket_data(TICKET)])
     assert result.status == "answered"
-    assert isinstance(result.output, TicketClassification)
-    assert result.output.category == "compute.vm"
+    assert isinstance(result.output, TicketTriage)
+    assert result.output.intent == "disk_space"
     assert (result.attempts, result.prompt_version) == (1, CLASSIFIER.prompt.version)
     (run,) = trace.runs
     assert (run.status, run.tenant_id if hasattr(run, "tenant_id") else run.ctx.tenant_id) == (
@@ -115,14 +115,14 @@ async def test_valid_output_is_returned_as_the_schema_type() -> None:
 
 
 async def test_a_schema_violation_is_retried_once_with_the_errors_fed_back() -> None:
-    gateway = FakeGateway('{"category": "compute.vm"}', VALID)
+    gateway = FakeGateway('{"intent": "disk_space"}', VALID)
     result = await agent(gateway).run(ctx(), request="Classify.", data=[ticket_data(TICKET)])
     assert (result.status, result.attempts) == ("answered", 2)
     feedback = gateway.sent[1][-1]
     assert feedback.role == "user"
     assert "did not match the required JSON Schema" in feedback.content
-    assert "subcategory" in feedback.content
-    assert gateway.sent[1][-2] == Message("assistant", '{"category": "compute.vm"}')
+    assert "action_class" in feedback.content
+    assert gateway.sent[1][-2] == Message("assistant", '{"intent": "disk_space"}')
 
 
 @pytest.mark.parametrize(
@@ -130,8 +130,8 @@ async def test_a_schema_violation_is_retried_once_with_the_errors_fed_back() -> 
     [
         "Sure! Here is the classification: category compute.vm",  # prose, not JSON
         '```json\n' + VALID + '\n```',  # fenced: never stripped with string handling
-        '{"category": "compute.vm"}',  # missing fields
-        json.dumps({**json.loads(VALID), "category": "mainframe"}),  # not an allowed value
+        '{"intent": "disk_space"}',  # missing fields
+        json.dumps({**json.loads(VALID), "action_class": "F"}),  # not an allowed value
         json.dumps({**json.loads(VALID), "close_ticket": True}),  # an extra (injected) field
         json.dumps({**json.loads(VALID), "confidence": 1.7}),
     ],
@@ -249,8 +249,8 @@ def test_injected_content_stays_inside_its_data_section() -> None:
 async def test_a_model_that_obeys_injected_instructions_cannot_get_an_action_through() -> None:
     """Suppose the model follows the planted text and adds an action field. The
     closed schema refuses it twice, and nothing is returned to act on."""
-    obeyed = json.dumps({**json.loads(VALID), "category": "security",
-                         "priority_suggestion": "1 - Critical", "close_ticket": True})
+    obeyed = json.dumps({**json.loads(VALID), "action_class": "A", "risk": "low",
+                         "close_ticket": True})
     with pytest.raises(AgentOutputError):
         await agent(FakeGateway(obeyed, obeyed)).run(
             ctx(), request="Classify.",
@@ -291,7 +291,7 @@ async def _run(gateway: FakeGateway) -> Any:
 async def test_the_activity_result_carries_the_audit_trail() -> None:
     result = await _run(FakeGateway(VALID))
     assert result.status == "answered"
-    assert result.output["category"] == "compute.vm"
+    assert result.output["intent"] == "disk_space"
     assert result.prompt_version == CLASSIFIER.prompt.version
     assert "INC0040123" in result.prompt
     assert result.response == VALID

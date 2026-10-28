@@ -93,6 +93,7 @@ row-level security**, and `packages/tenancy` refuses to run as one that could.
 | `make token OID=…` | Mints a dev token for a seeded principal |
 | `make ingest` | Runs the ServiceNow connector over the recorded fixtures |
 | `make replay` | Reprocesses today's bronze pages without re-fetching |
+| `make eval` | Runs the AI evaluation suite, the release gate ([`evals/README.md`](evals/README.md)) |
 | `make logs` / `make ps` | Container logs and status |
 
 `make test` never touches your seeded data. Each test session creates its own database
@@ -314,6 +315,7 @@ Each of these departures is deliberate and applies to local only.
 | `connectors` | Source connectors, plus the connector contract ([`connectors/README.md`](connectors/README.md)) |
 | `services/gateway` | The AI gateway: tiers, redaction, quotas, semantic cache, tracing, breaker, tool registry, retrieval (ADR 0005) |
 | `packages/agents` | The agent layer: versioned prompts, schema-validated output, allowlisted tools, Temporal activities ([`packages/agents/README.md`](packages/agents/README.md)) |
+| `packages/evals`, `evals/` | The evaluation harness, golden set, cassettes and baseline |
 | `db/migrations` | Hand-written SQL migrations (alembic) |
 | `db/tests` | Schema checks and the isolation suite |
 | `infra/local` | Init scripts for the compose stack |
