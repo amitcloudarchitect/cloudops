@@ -18,6 +18,7 @@ applies it (CLAUDE.md).
 | `04-data` | PostgreSQL 16, Redis Premium, storage, Event Hubs | 01, 03 |
 | `04b-rbac` | **Every role assignment** (User Access Administrator) | 02, 04 |
 | `05-aks` | Private AKS cluster, pools npsystem/npapp/npingest/nptelemetry/npai | 01, 02, 03, 04b |
+| `06-edge` | Front Door Premium with WAF (Prevention, DRS 2.1 and bot rules), the ingress public IP in public mode | 01, 03, 05 |
 
 ## Running a stack
 
@@ -57,14 +58,24 @@ Copy each `*.tfvars.example` to `*.tfvars` first; tfvars files are gitignored.
   environments default to westeurope.
 - **AKS service CIDR** is `10.200.0.0/16`: `172.16.0.0/16` is used by two VNets
   in the dev subscription, and AKS reserves `172.30/16` and `172.31/16`.
-- **Cluster access**: the API server is private and run-command is off. Until
-  the hub's Bastion or a VPN exists, nobody can reach it.
 - **Dev box to PostgreSQL** (`01-network`, dev only): `allow-devbox-postgres` admits
   `snet-devbox-dev` to the data subnet on 5432, and nothing else. It is there to run
   the server bootstrap (`db/bootstrap/roles.sql`) and, until the migration pipeline
   exists (step 13), migrations as `id-cloudops-migrate-dev`. PostgreSQL still requires
   an Entra token. The trade-off: while `ssh_allow_any_source` is on, a compromised dev
   box can reach the server's port. Remove the rule once the pipeline runs migrations.
+- **`network_mode = "public"`** (dev only; a validation refuses it elsewhere). The LLD
+  is "private". In public mode:
+  - the AKS API server is public, limited to `api_server_authorized_ip_ranges` (empty,
+    as dev currently sets it, means any IP), and
+    still Entra-only (no local accounts). Switching modes replaces the cluster: new node
+    resource group, new OIDC issuer, workload identity federations to redo;
+  - ingress-nginx has a public static IP (`06-edge`). Two locks keep everything but our
+    Front Door out: the `AzureFrontDoor.Backend` NSG rule (`01-network`) and the
+    `X-Azure-FDID` check in the controller's server snippet (`infra/cluster`);
+  - Front Door reaches the origin over **plain HTTP**: it refuses self-signed origin
+    certificates and dev has no public certificate for the IP. Client to Front Door is
+    HTTPS only. Private mode uses Private Link and HTTPS to the origin.
 - **PgBouncer** (L6) is not configured; transaction mode is mandatory once it is.
 - **Exec plane** (identity, vault, VNet `10.62.0.0/16`, npexec) is not here,
   pending the security review.

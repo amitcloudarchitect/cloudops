@@ -14,6 +14,7 @@ from fastapi.routing import APIRoute
 from cloudops_api import bff
 from cloudops_api.access import ScopeResolver
 from cloudops_api.auth import TokenValidator
+from cloudops_api.health import PROBES
 from cloudops_api.pipeline import AuditedRoute, Platform
 from cloudops_tenancy import Database
 
@@ -31,6 +32,8 @@ def create_app(*, db: Database, validator: TokenValidator, expose_openapi: bool 
     for router in ROUTERS:
         check_router(router)
         app.include_router(router)
+    # Unauthenticated and data-free by design (health.py); the only routes not audited.
+    app.include_router(PROBES)
     return app
 
 

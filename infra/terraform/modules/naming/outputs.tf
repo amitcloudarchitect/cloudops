@@ -93,3 +93,18 @@ output "private_endpoint_suffix" {
   description = "pe-{service}-cloudops-{env}, as in the LLD example pe-psql-cloudops-prd."
   value       = "cloudops-${local.e}"
 }
+
+# Edge (step 10). Front Door is global; the profile and its WAF policy live in the
+# network resource group. WAF policy names allow letters and digits only.
+output "frontdoor" {
+  value = {
+    profile    = "afd-cloudops-${local.e}"
+    endpoint   = "cloudops-${local.e}"
+    waf_policy = "wafcloudops${local.e}"
+    origin     = "aks-ingress"
+  }
+}
+
+output "ingress_public_ip" {
+  value = "pip-cloudops-ingress-${local.e}-${local.r}"
+}

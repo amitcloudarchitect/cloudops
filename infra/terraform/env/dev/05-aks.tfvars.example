@@ -12,3 +12,9 @@ node_pools = {
   nptelemetry = { vm_size = "Standard_D2s_v5", min = 0, max = 1 }
   npai        = { vm_size = "Standard_D2s_v5", min = 0, max = 1 }
 }
+
+# network_mode = "public" (dev) only: who may reach the public API server. Never
+# 0.0.0.0/0; an empty list means no restriction. Ignored in private mode.
+api_server_authorized_ip_ranges = [
+  "203.0.113.10/32", # devbox
+]

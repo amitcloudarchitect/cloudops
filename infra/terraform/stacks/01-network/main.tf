@@ -127,6 +127,10 @@ locals {
   # PostgreSQL still requires an Entra token; no other port on the data subnet
   # is opened, and no other environment gets the rule.
   devbox_cidr = cidrsubnet(local.vnet_cidr, 8, 38)
+
+  # The service tag admits every Front Door profile in Azure, not only ours, so the
+  # ingress also checks X-Azure-FDID against our profile (infra/cluster/ingress-nginx).
+  frontdoor_ports = var.network_mode == "public" ? ["80", "443"] : ["443"]
   devbox_postgres = var.env == "dev" ? [
     { name = "allow-devbox-postgres", priority = 110, sources = [local.devbox_cidr], ports = ["5432"], protocol = "Tcp" },
   ] : []
@@ -139,7 +143,11 @@ locals {
       { name = "allow-aks-nodes", priority = 100, sources = local.aks_cidrs, ports = ["*"], protocol = "*" },
     ]
     aks_app = [
-      { name = "allow-frontdoor-https", priority = 100, sources = ["AzureFrontDoor.Backend"], ports = ["443"], protocol = "Tcp" },
+      # Front Door to the ingress. In public mode the ingress load balancer keeps the
+      # public frontend IP as the destination (floating IP), so the rule must not be
+      # limited to the subnet's range: destination_override below. Port 80 only in
+      # public mode, where the Front Door -> origin hop is plain HTTP (README).
+      { name = "allow-frontdoor-https", priority = 100, sources = ["AzureFrontDoor.Backend"], ports = local.frontdoor_ports, protocol = "Tcp", destination = "*" },
       { name = "allow-aks-nodes", priority = 110, sources = local.aks_cidrs, ports = ["*"], protocol = "*" },
     ]
     data = concat([
@@ -185,7 +193,7 @@ resource "azurerm_network_security_group" "this" {
       destination_port_ranges      = security_rule.value.ports == ["*"] ? null : security_rule.value.ports
       source_address_prefix        = length(security_rule.value.sources) == 1 ? security_rule.value.sources[0] : null
       source_address_prefixes      = length(security_rule.value.sources) > 1 ? security_rule.value.sources : null
-      destination_address_prefix   = local.subnet_cidr[each.key]
+      destination_address_prefix   = lookup(security_rule.value, "destination", local.subnet_cidr[each.key])
       destination_address_prefixes = null
     }
   }

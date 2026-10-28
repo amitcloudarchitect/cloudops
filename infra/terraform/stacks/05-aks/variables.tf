@@ -93,3 +93,19 @@ variable "node_pools" {
     error_message = "Outside dev, npsystem needs at least two nodes so a node upgrade never takes down the system add-ons."
   }
 }
+
+variable "api_server_authorized_ip_ranges" {
+  type        = list(string)
+  default     = []
+  description = <<-EOT
+    With network_mode = "public" (dev only): the only addresses that may reach the API
+    server, as CIDRs. Empty means no IP restriction: the API server is reachable from
+    the internet, and Entra ID sign-in (local accounts are off) is the only control.
+    Ignored when private.
+  EOT
+  validation {
+    # "Allow all" is the empty list, never 0.0.0.0/0.
+    condition     = alltrue([for r in var.api_server_authorized_ip_ranges : can(cidrhost(r, 0)) && r != "0.0.0.0/0"])
+    error_message = "api_server_authorized_ip_ranges must be CIDRs; leave it empty, not 0.0.0.0/0, for no restriction."
+  }
+}

@@ -53,6 +53,25 @@ variable "dataclass" {
   description = "Sensitivity class per stack: network, security, observability, data, aks."
 }
 
+variable "network_mode" {
+  type        = string
+  default     = "private"
+  description = <<-EOT
+    "private" is the LLD: private AKS API server, internal ingress, Front Door to the
+    origin over Private Link. "public" is dev only (README, Recorded departures): a
+    public API server limited to authorised IPs, a public ingress locked to Front Door
+    by service tag and the X-Azure-FDID header. Data services stay private in both.
+  EOT
+  validation {
+    condition     = contains(["public", "private"], var.network_mode)
+    error_message = "network_mode must be public or private."
+  }
+  validation {
+    condition     = var.network_mode == "private" || var.env == "dev"
+    error_message = "network_mode = public is for dev only."
+  }
+}
+
 locals {
   subscription = {
     for d in ["net", "sec", "obs", "data", "aks"] :

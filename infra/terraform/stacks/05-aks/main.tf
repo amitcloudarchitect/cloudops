@@ -1,4 +1,5 @@
-# Stack 05 — AKS (LLD, Compute). Private cluster, Workload Identity, Entra ID
+# Stack 05 — AKS (LLD, Compute). Private cluster (or, in dev with network_mode =
+# "public", a public API server limited to authorised IPs), Workload Identity, Entra ID
 # RBAC only, Azure CNI overlay with Cilium, every pool across zones 1-3, Azure
 # Linux, no spot. npexec is excluded: it belongs to the execution plane, in its
 # own subscription and VNet, after the security review.
@@ -61,11 +62,21 @@ resource "azurerm_kubernetes_cluster" "this" {
   node_resource_group = module.names.aks_node_resource_group
   dns_prefix          = module.names.aks
 
-  sku_tier                  = "Standard" # uptime SLA
-  private_cluster_enabled   = true
-  private_dns_zone_id       = "System"
+  sku_tier = "Standard" # uptime SLA
+  # Changing network_mode replaces the cluster: Azure cannot convert a private
+  # cluster to public (or back) in place without API server VNet integration.
+  private_cluster_enabled   = var.network_mode == "private"
+  private_dns_zone_id       = var.network_mode == "private" ? "System" : null
   automatic_upgrade_channel = "stable" # N-1 of the latest supported minor
   node_os_upgrade_channel   = "NodeImage"
+
+  dynamic "api_server_access_profile" {
+    # Public with an empty list: no IP restriction (dev only; see the variable).
+    for_each = var.network_mode == "public" && length(var.api_server_authorized_ip_ranges) > 0 ? [1] : []
+    content {
+      authorized_ip_ranges = var.api_server_authorized_ip_ranges
+    }
+  }
 
   oidc_issuer_enabled          = true
   workload_identity_enabled    = true

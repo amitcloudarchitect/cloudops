@@ -263,3 +263,19 @@ async def test_every_access_is_written_to_the_audit_log(
     assert any(
         r[0] == f"user:{principals.tickets_only}" and r[3] == "blocked" for r in rows
     ), "a matrix refusal is audited as blocked"
+
+
+# --- Probes (step 10): ready against the real database, and still no data ------------
+
+
+async def test_readyz_is_ready_against_the_real_database_and_writes_no_audit(
+    api: Api, seeded: Seeded
+) -> None:
+    with psycopg.connect(seeded.admin_dsn) as conn:
+        before = conn.execute("SELECT count(*) FROM audit.action_log").fetchone()
+    response = await api.client.get("/readyz")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+    with psycopg.connect(seeded.admin_dsn) as conn:
+        after = conn.execute("SELECT count(*) FROM audit.action_log").fetchone()
+    assert after == before

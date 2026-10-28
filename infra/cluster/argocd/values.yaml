@@ -1,0 +1,16 @@
+# Argo CD (step 10 installs it; step 12 gives it the GitOps tree). Not exposed: reach
+# the UI with kubectl port-forward. Argo CD pulls from git; the pipeline never pushes
+# to the cluster (LLD, Delivery).
+dex:
+  enabled: false
+notifications:
+  enabled: false
+server:
+  service:
+    type: ClusterIP
+configs:
+  params:
+    server.insecure: false
+global:
+  nodeSelector:
+    cloudops.getronics.com/pool: app

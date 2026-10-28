@@ -29,3 +29,9 @@ dataclass = {
   data          = "c5"
   aks           = "c4"
 }
+
+# "private" is the LLD (private AKS API server, internal ingress behind Front Door
+# Private Link). "public" is a dev-only departure (infra/terraform/README.md): a public
+# API server limited to api_server_authorized_ip_ranges, and a public ingress IP locked
+# to Front Door. Changing it replaces the AKS cluster.
+network_mode = "public"
