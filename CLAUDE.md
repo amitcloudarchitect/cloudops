@@ -12,6 +12,11 @@ invent a design and proceed silently.
 ## Commands
 
 ```bash
+# Local stack (README.md): Postgres+pgvector+partman, Redis, Temporal, Azurite, ClickHouse
+make up && make seed             # start, migrate, load the messy synthetic dataset
+make test                        # every test, isolation suite included, against the local Postgres
+make down                        # stop; make reset wipes volumes and reseeds
+
 # Python
 uv sync                          # install dependencies
 uv run pytest                    # all tests

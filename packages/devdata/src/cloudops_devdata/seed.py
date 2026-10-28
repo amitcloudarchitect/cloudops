@@ -1,0 +1,183 @@
+"""Load the synthetic dataset into the local database. Local profile only.
+
+    CLOUDOPS_ENV=local python -m cloudops_devdata.seed [--anchor 2026-10-27] [--seed 7]
+
+Writes through ``packages/tenancy`` as the ingest login, one transaction per
+tenant under that tenant's scope, so row-level security checks every row on the
+way in exactly as it will for a connector. Nothing here is superuser or owner.
+
+Afterwards it reads back as the application login and checks what each scope
+can see: each tenant only its own rows, an empty scope nothing, an engineer no
+commercial rows. A seed that loads but leaks fails here, loudly.
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import os
+import sys
+from collections.abc import Mapping, Sequence
+from dataclasses import asdict, fields
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, Final
+from uuid import UUID
+
+from sqlalchemy import text
+
+from cloudops_config import Component, ConfigurationError, DbLogin, Environment, load_settings
+from cloudops_devdata.synthetic import Dataset, as_json, generate
+from cloudops_tenancy import Database, Role, ScopedConnection, TenantScope
+
+PRINCIPAL: Final = "seed:local-dev"
+
+# Parameters that need a cast the driver cannot infer.
+_CASTS: Final = {
+    "tags": "jsonb",
+    "tags_snapshot": "jsonb",
+    "ip_addresses": "inet[]",
+    "ip_address": "inet",
+}
+# Dataclass fields that are not columns.
+_NOT_COLUMNS: Final = frozenset({"billing_currency"})
+
+
+class SeedError(Exception):
+    pass
+
+
+def _params(row: Any) -> dict[str, Any]:
+    out = {k: v for k, v in asdict(row).items() if k not in _NOT_COLUMNS}
+    for key in ("tags", "tags_snapshot"):
+        if key in out and out[key] is not None:
+            out[key] = as_json(out[key])
+    return out
+
+
+async def _insert(conn: ScopedConnection, table: str, rows: Sequence[Any]) -> None:
+    if not rows:
+        return
+    cols = [f.name for f in fields(rows[0]) if f.name not in _NOT_COLUMNS]
+    values = ", ".join(
+        f"CAST(:{c} AS {_CASTS[c]})" if c in _CASTS else f":{c}" for c in cols
+    )
+    # Table and column names come from this module's own dataclasses, never input.
+    statement = text(f"INSERT INTO {table} ({', '.join(cols)}) VALUES ({values})")  # noqa: S608
+    await conn.execute(statement, [_params(r) for r in rows])
+
+
+def _scope(tenant_ids: Sequence[UUID], role: Role = Role.PLATFORM_ADMIN) -> TenantScope:
+    return TenantScope(tenant_ids, role, PRINCIPAL)
+
+
+async def load(db: Database, ds: Dataset) -> None:
+    ids = [t.id for t in ds.tenants]
+    async with db.transaction(_scope(ids)) as conn:
+        if await conn.scalar(text("SELECT count(*) FROM cloudops.tenant")):
+            raise SeedError("already seeded; `make reset` wipes the database and seeds again")
+    for tenant in ds.tenants:
+        rows = ds.for_tenant(tenant.id)
+        async with db.transaction(_scope([tenant.id])) as conn:
+            await _insert(conn, "cloudops.tenant", [tenant])
+            for table, table_rows in rows.items():
+                await _insert(conn, table, table_rows)
+        print(f"  {tenant.short_code} {tenant.id}: " + ", ".join(
+            f"{len(r)} {t.split('.')[1]}" for t, r in rows.items() if r))
+    # Reference data and the alias quarantine carry no tenant_id.
+    async with db.transaction(_scope([])) as conn:
+        await _insert(conn, "cloudops.fx_rate", ds.fx_rates)
+        await _insert(conn, "staging.tenant_alias_quarantine", ds.alias_quarantine)
+    print(f"  global: {len(ds.fx_rates)} fx_rate, "
+          f"{len(ds.alias_quarantine)} tenant_alias_quarantine")
+
+
+_VISIBLE: Final = ("cloudops.tenant", "cloudops.cloud_account", "cloudops.resource",
+                   "cloudops.work_item", "cloudops.vulnerability", "cloudops.cost_fact")
+
+
+async def _counts(db: Database, scope: TenantScope) -> dict[str, int]:
+    async with db.transaction(scope) as conn:
+        return {
+            t: int(await conn.scalar(text(f"SELECT count(*) FROM {t}")))  # noqa: S608
+            for t in (*_VISIBLE, "cloudops.sow")
+        }
+
+
+def _expected(ds: Dataset, tenant_ids: set[UUID]) -> dict[str, int]:
+    def n(rows: Sequence[Any], key: str = "tenant_id") -> int:
+        return sum(1 for r in rows if getattr(r, key) in tenant_ids)
+
+    return {
+        "cloudops.tenant": n(ds.tenants, "id"),
+        "cloudops.cloud_account": n(ds.accounts),
+        "cloudops.resource": n(ds.resources),
+        "cloudops.work_item": n(ds.work_items),
+        "cloudops.vulnerability": n(ds.vulnerabilities),
+        "cloudops.cost_fact": n(ds.costs),
+        "cloudops.sow": n(ds.sows),
+    }
+
+
+async def verify(app: Database, ds: Dataset) -> None:
+    """Read back as the application login and check every scope sees exactly its share."""
+    failures: list[str] = []
+
+    def check(label: str, got: Mapping[str, int], want: Mapping[str, int]) -> None:
+        for table, expected in want.items():
+            if got[table] != expected:
+                failures.append(f"{label}: {table} saw {got[table]}, expected {expected}")
+
+    empty = await _counts(app, _scope([], Role.FINOPS))
+    check("empty scope", empty, dict.fromkeys(empty, 0))
+    for t in ds.tenants:
+        want = _expected(ds, {t.id})
+        check(f"{t.short_code} finops", await _counts(app, _scope([t.id], Role.FINOPS)), want)
+        engineer = await _counts(app, _scope([t.id], Role.ENGINEER))
+        check(f"{t.short_code} engineer", engineer, {**want, "cloudops.sow": 0})
+    pair = {ds.tenants[0].id, ds.tenants[1].id}
+    check("two-tenant scope", await _counts(app, _scope(sorted(pair), Role.FINOPS)),
+          _expected(ds, pair))
+    if failures:
+        raise SeedError("isolation check failed:\n  " + "\n  ".join(failures))
+    print("  isolation check: each tenant scope sees only its rows; empty scope sees none; "
+          "engineers see no SOW rows")
+
+
+async def run(anchor: date, seed: int) -> None:
+    settings = load_settings(
+        os.environ, require={Component.DATABASE_INGEST, Component.DATABASE_APP}
+    )
+    if settings.environment is not Environment.LOCAL:
+        raise SeedError("the synthetic seed is local-only; it must never touch Azure")
+    ds = generate(anchor, seed)
+    print(f"seeding synthetic data: cost {anchor - timedelta(days=89)} .. {anchor}, seed {seed}")
+    ingest = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=1)
+    app = Database.create(settings.database_dsn(DbLogin.APP), pool_size=1)
+    try:
+        await load(ingest, ds)
+        await verify(app, ds)
+    finally:
+        await ingest.dispose()
+        await app.dispose()
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="python -m cloudops_devdata.seed")
+    yesterday = datetime.now(UTC).date() - timedelta(days=1)
+    parser.add_argument("--anchor", type=date.fromisoformat, default=yesterday,
+                        help="last cost day (default: yesterday, UTC)")
+    parser.add_argument("--seed", type=int, default=7, help="random seed (default 7)")
+    args = parser.parse_args(argv)
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # type: ignore[attr-defined,unused-ignore]
+    try:
+        asyncio.run(run(args.anchor, args.seed))
+    except (ConfigurationError, SeedError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print("done")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
