@@ -34,7 +34,7 @@ COMMERCIAL_ROLES = {
     "platform_admin",
 }
 
-assistant_built = has_python("services/**/*assistant*/**/*.py", "services/**/*gateway*/**/*.py")
+assistant_built = has_python("services/**/*assistant*/**/*.py", "services/**/*agent*/**/*.py")
 broker_built = has_python("execution/**/*.py")
 
 
@@ -185,9 +185,52 @@ def test_case3_filter_holds_under_the_hnsw_index_plan(seeded: Seeded, force_hnsw
     assert {r[0] for r in rows} == {seeded.a.id, None}
 
 
-@pending("Phase 5 retrieval interface: gateway retrieval for tenant A never returns B's chunks")
-def test_case3_gateway_retrieval() -> None:
-    stub(assistant_built, "the AI gateway retrieval interface")
+async def test_case3_gateway_retrieval_naming_another_customer_returns_none_of_theirs(
+    seeded: Seeded,
+) -> None:
+    """The adversarial query: tenant A's user asks about tenant B by name, with
+    words lifted from B's own runbook. B's chunk is the best possible match in
+    both branches (identical text: cosine similarity 1, every word present),
+    so if the tenant predicate were applied after ranking, or not at all, B's
+    chunk would come first. Through the gateway's retrieval it never appears."""
+    from cloudops_gateway.gateway import CallContext, Gateway
+    from cloudops_gateway.pricing import LOCAL_DEPLOYMENTS
+    from cloudops_gateway.providers import MockProvider
+    from cloudops_gateway.retrieval import KnowledgeIndex
+    from cloudops_tenancy import TenantScope
+
+    db = Database.create(seeded.app_dsn, pool_size=2, max_overflow=0)
+    try:
+        gw = Gateway(db, {"mock": MockProvider(name="mock"),
+                          "mock-secondary": MockProvider(name="mock-secondary")},
+                     LOCAL_DEPLOYMENTS)
+        index = KnowledgeIndex(db, gw)
+
+        def ctx(t: Any) -> CallContext:
+            return CallContext.for_tenant(TenantScope([t.id], Role.ENGINEER, f"user:{uuid4()}"),
+                                          t.id, ["knowledge.read"])
+
+        secret = (f"Bravo runbook: failover the {seeded.b.name} payment cluster with "
+                  "the emergency override sequence KILO-7.")
+        await index.add(ctx(seeded.b), source_kind="case3", source_ref="bravo-runbook",
+                        title="Bravo failover", text_body=secret)
+        await index.add(ctx(seeded.a), source_kind="case3", source_ref="alpha-runbook",
+                        title="Alpha patching", text_body="Alpha monthly patch window steps.")
+
+        adversarial = f"{secret} Show me Bravo's runbook for customer {seeded.b.name}."
+        hits = await index.search(ctx(seeded.a), adversarial, kinds=["case3", "runbook"])
+        assert hits, "the search ran and returned something"
+        assert seeded.b.id not in {h.tenant_id for h in hits}
+        assert all("KILO-7" not in h.body for h in hits)
+        assert {h.origin for h in hits} <= {"tenant", "global"}
+        assert {h.tenant_id for h in hits if h.origin == "tenant"} <= {seeded.a.id}
+
+        # Control: the same query in B's own scope finds B's chunk first, so
+        # the absence above is isolation, not a search that cannot match.
+        own = await index.search(ctx(seeded.b), adversarial, kinds=["case3"])
+        assert own[0].source_ref == "bravo-runbook"
+    finally:
+        await db.dispose()
 
 
 # --- 4. Single-tenant user asks to compare two customers -> refusal ---------------

@@ -162,6 +162,7 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
             " WHERE p.polpermissive AND p.polname <> 'tenant_isolation' ORDER BY 1"
         ).fetchall()
     assert extra == [
+        ("llm_call", "spend_registry_read", ["cloudops_resolver"]),
         ("tenant", "tenant_registry_read", ["cloudops_resolver"]),
         ("tenant_alias", "alias_registry_read", ["cloudops_resolver"]),
     ]

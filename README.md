@@ -312,6 +312,7 @@ Each of these departures is deliberate and applies to local only.
 | `packages/devdata` | `.env.local` generation, Azurite provisioning, the synthetic seed, dev tokens. Local only. |
 | `services/api` | The API: token validation, scope resolution, BFF, provenance, audit |
 | `connectors` | Source connectors, plus the connector contract ([`connectors/README.md`](connectors/README.md)) |
+| `services/gateway` | The AI gateway: tiers, redaction, quotas, semantic cache, tracing, breaker, tool registry, retrieval (ADR 0005) |
 | `db/migrations` | Hand-written SQL migrations (alembic) |
 | `db/tests` | Schema checks and the isolation suite |
 | `infra/local` | Init scripts for the compose stack |
