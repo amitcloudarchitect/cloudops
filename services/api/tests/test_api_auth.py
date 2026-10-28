@@ -197,3 +197,46 @@ async def test_unknown_kids_cannot_make_us_refetch_in_a_loop(
     for i in range(20):
         assert await keys.key(f"invented-{i}") is None
     assert fetches == 1
+
+
+class _Clock:
+    def __init__(self, now: float) -> None:
+        self.now = now
+
+    def __call__(self) -> float:
+        return self.now
+
+
+@pytest.mark.parametrize("uptime", [1.0, 299.0, 100_000.0])
+async def test_keys_are_fetched_on_first_use_however_long_the_node_has_been_up(
+    key: tuple[dict[str, Any], dict[str, Any]], monkeypatch: pytest.MonkeyPatch, uptime: float,
+) -> None:
+    """The monotonic clock starts at boot. A pod on a node up for under five
+    minutes must still fetch the keys on its first token, not treat "never
+    fetched" as "fetched just now"."""
+    clock = _Clock(uptime)
+    monkeypatch.setattr("cloudops_api.auth.time.monotonic", clock)
+    fetches = 0
+
+    def serve(request: httpx.Request) -> httpx.Response:
+        nonlocal fetches
+        fetches += 1
+        return httpx.Response(200, json=key[1])
+
+    keys = RemoteKeys("https://keys.example.test/jwks",
+                      client=httpx.AsyncClient(transport=httpx.MockTransport(serve)))
+    assert await keys.key("k1") is not None
+    assert fetches == 1
+
+    # An unknown kid inside min_refresh does not refetch; after it, it does once.
+    clock.now += 10
+    assert await keys.key("rolled-over") is None
+    assert fetches == 1
+    clock.now += 300
+    assert await keys.key("rolled-over") is None
+    assert fetches == 2
+
+    # The TTL forces a refresh even for a known kid.
+    clock.now += 3601
+    assert await keys.key("k1") is not None
+    assert fetches == 3

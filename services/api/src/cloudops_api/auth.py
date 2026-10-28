@@ -105,7 +105,10 @@ class RemoteKeys:
         self._min_refresh = min_refresh
         self._client = client or httpx.AsyncClient(timeout=5.0)
         self._keys: dict[str, Any] = {}
-        self._fetched = 0.0
+        # None until the first fetch. Not 0.0: the monotonic clock starts at boot,
+        # so on a node up for less than min_refresh a zero would read as "fetched
+        # just now" and the keys would never be fetched at all.
+        self._fetched: float | None = None
         self._lock = asyncio.Lock()
 
     async def _refresh(self) -> None:
@@ -116,6 +119,9 @@ class RemoteKeys:
 
     async def key(self, kid: str) -> Any | None:
         async with self._lock:
+            if self._fetched is None:
+                await self._refresh()
+                return self._keys.get(kid)
             age = time.monotonic() - self._fetched
             if age > self._ttl or (kid not in self._keys and age > self._min_refresh):
                 await self._refresh()
