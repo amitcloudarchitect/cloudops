@@ -121,6 +121,16 @@ resource "azurerm_subnet_nat_gateway_association" "this" {
 locals {
   aks_cidrs = [for s in local.aks_subnets : local.subnet_cidr[s]]
 
+  # Azure CNI overlay (stack 05, pod_cidr; a test keeps the two equal). Pod-to-pod
+  # traffic between nodes keeps the pod addresses as source and destination, so the
+  # intra-cluster rules must name this range too, or deny-all-inbound drops it: the
+  # control plane's konnectivity tunnel to webhooks, CoreDNS across pools, and every
+  # service whose pods sit on another pool. Traffic leaving the cluster (private
+  # endpoints included) is SNATed to the node's address, so other subnets need only
+  # the node ranges.
+  aks_pod_cidr      = "100.64.0.0/16"
+  aks_intra_sources = concat(local.aks_cidrs, [local.aks_pod_cidr])
+
   # Dev only, a recorded departure (README): the devbox (stack 06, x.38.0/24,
   # the same offset it computes) may reach PostgreSQL on 5432, to run the server
   # bootstrap (db/bootstrap/roles.sql) and, until the pipeline exists, migrations.
@@ -140,15 +150,15 @@ locals {
   inbound = {
     aks_system = [
       # Intra-cluster traffic between node pools; AKS does not work without it.
-      { name = "allow-aks-nodes", priority = 100, sources = local.aks_cidrs, ports = ["*"], protocol = "*" },
+      { name = "allow-aks-nodes", priority = 100, sources = local.aks_intra_sources, ports = ["*"], protocol = "*", destinations = [local.subnet_cidr["aks_system"], local.aks_pod_cidr] },
     ]
     aks_app = [
       # Front Door to the ingress. In public mode the ingress load balancer keeps the
       # public frontend IP as the destination (floating IP), so the rule must not be
-      # limited to the subnet's range: destination_override below. Port 80 only in
+      # limited to the subnet's range. Port 80 only in
       # public mode, where the Front Door -> origin hop is plain HTTP (README).
-      { name = "allow-frontdoor-https", priority = 100, sources = ["AzureFrontDoor.Backend"], ports = local.frontdoor_ports, protocol = "Tcp", destination = "*" },
-      { name = "allow-aks-nodes", priority = 110, sources = local.aks_cidrs, ports = ["*"], protocol = "*" },
+      { name = "allow-frontdoor-https", priority = 100, sources = ["AzureFrontDoor.Backend"], ports = local.frontdoor_ports, protocol = "Tcp", destinations = ["*"] },
+      { name = "allow-aks-nodes", priority = 110, sources = local.aks_intra_sources, ports = ["*"], protocol = "*", destinations = [local.subnet_cidr["aks_app"], local.aks_pod_cidr] },
     ]
     data = concat([
       # 443 is not in the LLD's list but the blob private endpoints live here.
@@ -193,8 +203,8 @@ resource "azurerm_network_security_group" "this" {
       destination_port_ranges      = security_rule.value.ports == ["*"] ? null : security_rule.value.ports
       source_address_prefix        = length(security_rule.value.sources) == 1 ? security_rule.value.sources[0] : null
       source_address_prefixes      = length(security_rule.value.sources) > 1 ? security_rule.value.sources : null
-      destination_address_prefix   = lookup(security_rule.value, "destination", local.subnet_cidr[each.key])
-      destination_address_prefixes = null
+      destination_address_prefix   = length(lookup(security_rule.value, "destinations", [""])) == 1 ? lookup(security_rule.value, "destinations", [local.subnet_cidr[each.key]])[0] : null
+      destination_address_prefixes = length(lookup(security_rule.value, "destinations", [""])) > 1 ? security_rule.value.destinations : null
     }
   }
 

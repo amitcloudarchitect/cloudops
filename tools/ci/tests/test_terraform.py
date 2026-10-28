@@ -117,6 +117,22 @@ def test_common_variables_are_identical_in_every_stack() -> None:
         assert (stack / "variables_common.tf").read_text(encoding="utf-8") == reference, stack.name
 
 
+def test_network_nsgs_admit_the_aks_overlay_pod_range() -> None:
+    """Stack 01's NSGs must name the pod range stack 05 gives the cluster: with CNI
+    overlay, pod-to-pod traffic across pools carries pod addresses, and the final
+    deny drops it otherwise (webhooks, CoreDNS)."""
+    stacks = REPO_ROOT / "infra/terraform/stacks"
+    pod = re.search(r'variable "pod_cidr" \{.*?default\s*=\s*"([^"]+)"',
+                    (stacks / "05-aks/variables.tf").read_text(encoding="utf-8"), re.S)
+    nsg = re.search(r'aks_pod_cidr\s*=\s*"([^"]+)"',
+                    (stacks / "01-network/main.tf").read_text(encoding="utf-8"))
+    assert pod
+    assert nsg
+    assert nsg.group(1) == pod.group(1)
+    for example in (REPO_ROOT / "infra/terraform/env").glob("*/05-aks.tfvars.example"):
+        assert "pod_cidr" not in example.read_text(encoding="utf-8"), example
+
+
 @pytest.mark.parametrize("stack", STACKS, ids=lambda p: p.name)
 def test_backend_uses_entra_auth_and_holds_no_key(stack: Path) -> None:
     versions = (stack / "versions.tf").read_text(encoding="utf-8")
