@@ -21,7 +21,7 @@ images:
     newTag: 17baeb4
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
-    newTag: e2c64ed
+    newTag: c5867d0
   - name: pause
     newName: crcloudopsdevweu.azurecr.io/pause
     newTag: 3.10.1
