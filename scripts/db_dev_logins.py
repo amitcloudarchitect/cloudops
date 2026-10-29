@@ -16,7 +16,9 @@ What it does, in order:
    and ``temporal_visibility``.
 2. In ``cloudops``: the extensions the migrations expect an administrator to
    create, as ``infra/local/postgres/init.sh`` does locally.
-3. In ``temporal_visibility``: ``btree_gin``.
+3. In ``temporal`` and ``temporal_visibility``: CREATE on ``public`` for the
+   ``temporal`` login (Temporal's schema lives there; Azure makes ``public`` belong
+   to ``azure_pg_admin`` in every new database), and ``btree_gin`` for visibility.
 4. For each login without a Key Vault secret (or all, with ``--rotate``): a new
    random password, sent to the server only as a SCRAM-SHA-256 verifier so the
    plaintext never reaches it or its logs, then stored in Key Vault. Nothing is
@@ -131,7 +133,10 @@ GRANT EXECUTE ON ALL PROCEDURES IN SCHEMA partman TO {m};
 """
 
 
-VISIBILITY_SQL = "\\set ON_ERROR_STOP on\nCREATE EXTENSION IF NOT EXISTS btree_gin;\n"
+# Azure creates public owned by azure_pg_admin with only USAGE for others, so the
+# database owner cannot create Temporal's tables there without this grant.
+TEMPORAL_SQL = '\\set ON_ERROR_STOP on\nGRANT CREATE ON SCHEMA public TO "temporal";\n'
+VISIBILITY_SQL = TEMPORAL_SQL + "CREATE EXTENSION IF NOT EXISTS btree_gin;\n"
 
 
 def password_sql(role: str, verifier: str) -> str:
@@ -210,6 +215,7 @@ def main(argv: list[str] | None = None) -> int:
 
     _psql(host, admin, token, "postgres", bootstrap_sql(args.migrator))
     _psql(host, admin, token, "cloudops", cloudops_sql(args.migrator))
+    _psql(host, admin, token, "temporal", TEMPORAL_SQL)
     _psql(host, admin, token, "temporal_visibility", VISIBILITY_SQL)
     print("roles, databases and extensions: ok")
 

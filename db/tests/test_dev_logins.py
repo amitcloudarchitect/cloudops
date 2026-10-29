@@ -89,3 +89,10 @@ def test_dsn_verifies_the_server_certificate() -> None:
     value = logins.dsn("cloudops_app_azure", "pw", "h.postgres.database.azure.com", "cloudops")
     assert "sslmode=verify-full" in value
     assert "sslrootcert=system" in value
+
+
+def test_temporal_may_create_its_tables_and_cloudops_public_stays_closed() -> None:
+    for sql in (logins.TEMPORAL_SQL, logins.VISIBILITY_SQL):
+        assert 'GRANT CREATE ON SCHEMA public TO "temporal";' in sql
+    assert "btree_gin" in logins.VISIBILITY_SQL
+    assert "public" not in logins.cloudops_sql("id-cloudops-migrate-dev")
