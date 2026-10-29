@@ -1,5 +1,5 @@
-# The platform: namespaces, policies, the PreSync migration, the API Rollout and
-# Temporal's secret sync (overlays/dev).
+# The platform: namespaces, policies, the migration job, the API Rollout and
+# Temporal's secret sync (overlays/dev), in that order (sync waves).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

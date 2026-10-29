@@ -162,9 +162,26 @@ def test_api_releases_by_canary_with_analysis() -> None:
     assert {m["name"] for m in template["spec"]["metrics"]} == {"error-rate", "p95-latency"}
 
 
+def _wave(d: dict[str, Any]) -> int:
+    return int((d["metadata"].get("annotations") or {}).get("argocd.argoproj.io/sync-wave", 0))
+
+
 def test_migrations_run_before_the_rollout() -> None:
+    """Namespaces, then the job's own objects, then the job (a hook Argo CD waits on),
+    then the Rollout. Not PreSync: that runs before the namespace and the job's
+    ServiceAccount exist, so the job could never start on a fresh cluster."""
     (job,) = [d for d in DEV if d["kind"] == "Job"]
-    assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "PreSync"
+    assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "Sync"
+    (rollout,) = [d for d in DEV if d["kind"] == "Rollout"]
+    assert _wave(rollout) > _wave(job)
+    sa_name = job["spec"]["template"]["spec"]["serviceAccountName"]
+    needs = [d for d in DEV if d["metadata"]["name"] in {sa_name, "migrate"}
+             and d["kind"] in {"ServiceAccount", "ConfigMap", "NetworkPolicy"}]
+    assert len(needs) == 3
+    assert all(_wave(d) < _wave(job) for d in needs)
+    for ns in (d for d in DEV if d["kind"] == "Namespace"):
+        assert _wave(ns) < min(_wave(d) for d in needs)
+    assert "argocd.argoproj.io/hook" not in (needs[0]["metadata"].get("annotations") or {})
     env = {e["name"]: e["value"] for e in job["spec"]["template"]["spec"]["containers"][0]["env"]}
     assert env["CLOUDOPS_MIGRATION_AUTH"] == "entra"
     (cm,) = [d for d in DEV if d["kind"] == "ConfigMap" and d["metadata"]["name"] == "migrate"]

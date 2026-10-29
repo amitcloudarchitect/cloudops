@@ -1,6 +1,6 @@
 # Dev (crcloudopsdevweu, kv-cloudops-app-dev-weu, network_mode = "public").
 #
-# Deployed: namespaces and policies, migrations (PreSync), the API, and the secret
+# Deployed: namespaces and policies, migrations (before the API), the API, and the secret
 # sync Temporal needs. Not yet: connector-servicenow (no ServiceNow read account)
 # and worker-ai (no Azure OpenAI tiers); their bases exist and build.
 #

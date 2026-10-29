@@ -1,5 +1,9 @@
-# Database migrations as an Argo CD PreSync hook of the platform Application: they
-# finish before any workload in the same sync rolls out (LLD, Delivery). Expand-only
+# Database migrations, run by the platform Application before any workload rolls
+# out (LLD, Delivery). Sync waves, not a PreSync hook: PreSync runs before the
+# namespace and the job's own ServiceAccount exist, so the job could never start on
+# a fresh cluster. Order: namespaces (-2), the job's ServiceAccount, ConfigMap and
+# policy (-1), the job (0, a Sync hook Argo CD waits on), the API Rollout (1). A
+# failed migration fails the sync, so the Rollout never moves. Expand-only
 # (db/tests/test_migration_policy.py), so a rollback never needs a data restore.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

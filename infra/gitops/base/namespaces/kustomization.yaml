@@ -2,6 +2,9 @@
 # default-deny NetworkPolicy (LLD, Compute). Workload bases add the explicit allows.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+# Wave -2: everything else in the platform Application lands in these namespaces.
+commonAnnotations:
+  argocd.argoproj.io/sync-wave: "-2"
 resources:
   - namespaces.yaml
   - default-deny.yaml

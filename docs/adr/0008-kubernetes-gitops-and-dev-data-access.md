@@ -12,7 +12,8 @@
    `infra/gitops/applications/<env>`. Its children, in sync-wave order:
    - Argo Rollouts (-2);
    - Prometheus (-1);
-   - the platform Kustomize overlay (0), whose PreSync hook runs the migrations;
+   - the platform Kustomize overlay (0), which runs the migrations before the API
+     rollout (its own sync waves: namespaces, the migration job, then the Rollout);
    - Temporal (1).
 
    Argo CD assesses child Application health, so each wave waits for the last. The

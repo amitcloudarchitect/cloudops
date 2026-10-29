@@ -47,7 +47,8 @@ replaced or destroyed.
 Argo CD then syncs, in order:
 1. Rollouts;
 2. Prometheus;
-3. the platform: namespaces, policies, the migration job, then the API canary;
+3. the platform: namespaces and policies, the migration job (Argo CD waits for it
+   to complete; a failure stops the sync), then the API canary;
 4. Temporal.
 
 ## Rotating dev database passwords
