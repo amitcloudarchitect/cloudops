@@ -53,7 +53,17 @@ PARTITIONED = (
 )
 
 FOUNDATION = """
-CREATE EXTENSION IF NOT EXISTS vector;
+-- Extensions are an administrator's job (infra/local/postgres/init.sh,
+-- scripts/db_dev_logins.py). Azure refuses CREATE EXTENSION vector to anyone outside
+-- azure_pg_admin even with IF NOT EXISTS and the extension present, so only ask
+-- for it when it is genuinely missing.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector') THEN
+        CREATE EXTENSION vector;
+    END IF;
+END
+$$;
 
 CREATE SCHEMA IF NOT EXISTS cloudops;
 CREATE SCHEMA IF NOT EXISTS staging;
