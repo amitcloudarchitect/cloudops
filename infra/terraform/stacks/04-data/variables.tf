@@ -72,3 +72,19 @@ variable "postgres_location" {
     error_message = "Allowed locations are westeurope and northeurope (LLD, Azure Policy)."
   }
 }
+
+variable "postgres_breakglass_password_wo" {
+  type        = string
+  default     = null
+  sensitive   = true
+  ephemeral   = true
+  description = <<-EOT
+    Dev only: the password for the administrator login that password authentication
+    requires. Write-only, never stored in state. Generate it at apply time and do not
+    keep it (docs/kubernetes.md); the Entra administrator administers the server.
+  EOT
+  validation {
+    condition     = var.env != "dev" || (var.postgres_breakglass_password_wo != null && length(coalesce(var.postgres_breakglass_password_wo, "")) >= 32)
+    error_message = "In dev, pass a generated password of at least 32 characters via TF_VAR_postgres_breakglass_password_wo."
+  }
+}

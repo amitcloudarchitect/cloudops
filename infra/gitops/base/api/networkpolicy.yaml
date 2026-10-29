@@ -1,0 +1,28 @@
+# Explicit allows on top of the namespace's default-deny.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: api
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Only the ingress controller reaches the API.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+      ports:
+        - { protocol: TCP, port: 8000 }
+  egress:
+    # PostgreSQL's private endpoint (the data subnet).
+    - to:
+        - ipBlock: { cidr: SET-IN-OVERLAY }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    # Entra ID (signing keys, workload identity token exchange). NetworkPolicy has no
+    # FQDNs; the cluster's egress path is the boundary.
+    - ports:
+        - { protocol: TCP, port: 443 }

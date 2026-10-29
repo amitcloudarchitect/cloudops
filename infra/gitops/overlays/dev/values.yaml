@@ -1,0 +1,11 @@
+# Values substituted into the bases (replacements in kustomization.yaml). Local
+# only: never applied to the cluster.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: overlay-values
+  annotations:
+    config.kubernetes.io/local-config: "true"
+data:
+  # snet-data-dev, where PostgreSQL's private endpoint lives (stack 01).
+  dataSubnet: 10.65.32.0/24

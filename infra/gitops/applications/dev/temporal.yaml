@@ -1,0 +1,112 @@
+# Temporal, self-hosted (ADR 0008), on the npai pool, persisting to two databases
+# on the platform's PostgreSQL server (created by scripts/db_dev_logins.py). The
+# password comes from the temporal-db Secret, synced from Key Vault by the
+# platform Application (wave 0). Inside the cluster the frontend is plaintext gRPC,
+# reachable only from the worker namespaces (NetworkPolicy); mTLS is an open item.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: temporal
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: https://go.temporal.io/helm-charts
+    chart: temporal
+    targetRevision: 1.7.0
+    helm:
+      valuesObject:
+        server:
+          replicaCount: 1
+          nodeSelector: { cloudops.getronics.com/pool: ai }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            fsGroup: 1000
+            seccompProfile: { type: RuntimeDefault }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          config:
+            logLevel: info
+            persistence:
+              defaultStore: default
+              visibilityStore: visibility
+              # Fixed for the life of the cluster's Temporal; never change it.
+              numHistoryShards: 512
+              datastores:
+                default:
+                  sql:
+                    pluginName: postgres12
+                    driverName: postgres12
+                    databaseName: temporal
+                    connectAddr: psql-cloudops-dev-neu.postgres.database.azure.com:5432
+                    connectProtocol: tcp
+                    user: temporal
+                    existingSecret: temporal-db
+                    secretKey: password
+                    createDatabase: false
+                    manageSchema: true
+                    maxConns: 20
+                    maxIdleConns: 20
+                    maxConnLifetime: 1h
+                    tls:
+                      enabled: true
+                      enableHostVerification: true
+                      serverName: psql-cloudops-dev-neu.postgres.database.azure.com
+                visibility:
+                  sql:
+                    pluginName: postgres12
+                    driverName: postgres12
+                    databaseName: temporal_visibility
+                    connectAddr: psql-cloudops-dev-neu.postgres.database.azure.com:5432
+                    connectProtocol: tcp
+                    user: temporal
+                    existingSecret: temporal-db
+                    secretKey: password
+                    createDatabase: false
+                    manageSchema: true
+                    maxConns: 10
+                    maxIdleConns: 10
+                    maxConnLifetime: 1h
+                    tls:
+                      enabled: true
+                      enableHostVerification: true
+                      serverName: psql-cloudops-dev-neu.postgres.database.azure.com
+            namespaces:
+              create: true
+              namespace:
+                - name: default
+                  retention: 3d
+        admintools:
+          enabled: false
+        schema:
+          containerSecurityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile: { type: RuntimeDefault }
+        web:
+          enabled: true
+          nodeSelector: { cloudops.getronics.com/pool: ai }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile: { type: RuntimeDefault }
+          containerSecurityContext:
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: temporal
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    retry: { limit: 10, backoff: { duration: 30s, factor: 2, maxDuration: 10m } }

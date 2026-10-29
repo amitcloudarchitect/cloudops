@@ -1,0 +1,50 @@
+# A small Prometheus for canary analysis only (ADR 0008): ingress-nginx metrics,
+# two days, no alerting, no exporters. Not the platform's observability stack.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: prometheus
+    targetRevision: 29.40.0
+    helm:
+      valuesObject:
+        alertmanager: { enabled: false }
+        kube-state-metrics: { enabled: false }
+        prometheus-node-exporter: { enabled: false }
+        prometheus-pushgateway: { enabled: false }
+        server:
+          retention: 2d
+          persistentVolume: { enabled: false }
+          nodeSelector: { cloudops.getronics.com/pool: app }
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+            seccompProfile: { type: RuntimeDefault }
+          containerSecurityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+        configmapReload:
+          prometheus:
+            containerSecurityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities: { drop: [ALL] }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    retry: { limit: 10, backoff: { duration: 30s, factor: 2, maxDuration: 10m } }

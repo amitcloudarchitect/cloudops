@@ -83,6 +83,15 @@ Copy each `*.tfvars.example` to `*.tfvars` first; tfvars files are gitignored.
   admin user and anonymous pull are off, so every pull and push needs an Entra
   identity with AcrPull or AcrPush (`04b-rbac`). UAT and production must use Premium
   with the private endpoint.
+- **Dev PostgreSQL accepts password logins** (`04-data`, dev only; ADR 0008). Entra
+  stays enabled and is how the server is administered. The password-auth admin
+  `breakglass_dev` has a write-only password generated at apply and not kept. The
+  application and Temporal logins are created by `scripts/db_dev_logins.py`.
+  UAT and production stay Entra-only.
+- **Dev box to Key Vault** (`01-network`, dev only): `allow-devbox-keyvault` admits
+  `snet-devbox-dev` to the vault subnet on 443, so `scripts/db_dev_logins.py` can store
+  the connection strings. The vault still requires an Entra identity with a secrets
+  role (`04b-rbac`).
 - **PgBouncer** (L6) is not configured; transaction mode is mandatory once it is.
 - **Exec plane** (identity, vault, VNet `10.62.0.0/16`, npexec) is not here,
   pending the security review.

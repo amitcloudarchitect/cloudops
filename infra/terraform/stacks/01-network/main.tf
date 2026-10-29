@@ -144,6 +144,12 @@ locals {
   devbox_postgres = var.env == "dev" ? [
     { name = "allow-devbox-postgres", priority = 110, sources = [local.devbox_cidr], ports = ["5432"], protocol = "Tcp" },
   ] : []
+  # Dev only (README, ADR 0008): the devbox writes the generated database
+  # connection strings into the app Key Vault (scripts/db-dev-logins.sh). The vault
+  # still requires an Entra identity with a secrets role.
+  devbox_keyvault = var.env == "dev" ? [
+    { name = "allow-devbox-keyvault", priority = 110, sources = [local.devbox_cidr], ports = ["443"], protocol = "Tcp" },
+  ] : []
 
   # Inbound allows per subnet. Ports are the LLD's (Private endpoints and NSGs)
   # unless noted.
@@ -167,9 +173,9 @@ locals {
     msg = [
       { name = "allow-aks-messaging", priority = 100, sources = local.aks_cidrs, ports = ["443", "5671"], protocol = "Tcp" },
     ]
-    sec = [
+    sec = concat([
       { name = "allow-aks-https", priority = 100, sources = local.aks_cidrs, ports = ["443"], protocol = "Tcp" },
-    ]
+    ], local.devbox_keyvault)
     ai = [
       { name = "allow-aks-https", priority = 100, sources = local.aks_cidrs, ports = ["443"], protocol = "Tcp" },
     ]

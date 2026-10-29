@@ -25,3 +25,8 @@ output "kubelet_object_id" {
   description = "The node pools' identity; stack 04b grants it AcrPull on the registry."
   value       = azurerm_kubernetes_cluster.this.kubelet_identity[0].object_id
 }
+
+output "workload_client_ids" {
+  description = "Client IDs for the service accounts' azure.workload.identity/client-id annotation (infra/gitops overlays)."
+  value       = { for k, v in data.azurerm_user_assigned_identity.workload : k => v.client_id }
+}

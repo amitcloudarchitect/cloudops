@@ -1,5 +1,6 @@
 # One Dockerfile for every Python deployable; docker-bake.hcl picks the final
-# stage (target) and the workspace package (PACKAGE). Context: the repository root.
+# stage (target) and the workspace package (PACKAGE; "all" for the whole root
+# environment, which the migrations use). Context: the repository root.
 #
 # LLD, Compute (pod controls): the runtime is distroless (no shell, no package
 # manager), runs as UID 65532, and needs no writable path, so the pod can run with
@@ -21,7 +22,9 @@ ENV UV_COMPILE_BYTECODE=1 \
 WORKDIR /src
 COPY . .
 ARG PACKAGE
-RUN test -n "$PACKAGE" && uv sync --frozen --no-dev --no-editable --package "$PACKAGE"
+RUN test -n "$PACKAGE" \
+ && if [ "$PACKAGE" = all ]; then uv sync --frozen --no-dev --no-editable; \
+    else uv sync --frozen --no-dev --no-editable --package "$PACKAGE"; fi
 
 # The interpreter without what a runtime never uses: pip (a package manager), the
 # test suite, IDLE, tkinter, ensurepip, and the extension modules for terminals and
@@ -86,3 +89,11 @@ ENTRYPOINT ["/app/.venv/bin/python", "-m", "cloudops_connectors.servicenow", "wo
 FROM runtime AS worker-ai
 EXPOSE 8080
 ENTRYPOINT ["/app/.venv/bin/python", "-m", "cloudops_agents.worker"]
+
+# Database migrations (Argo CD PreSync hook, ADR 0008). Alembic as the migration
+# role; the DSN file comes from a ConfigMap and, in Azure, the password is an
+# Entra token (CLOUDOPS_MIGRATION_AUTH=entra).
+FROM runtime AS migrate
+COPY --from=build /src/alembic.ini /app/alembic.ini
+COPY --from=build /src/db/migrations /app/db/migrations
+ENTRYPOINT ["/app/.venv/bin/alembic", "-c", "/app/alembic.ini", "upgrade", "head"]

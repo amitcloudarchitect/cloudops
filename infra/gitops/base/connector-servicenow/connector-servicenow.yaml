@@ -1,0 +1,152 @@
+# Federated to id-cloudops-ingest-{env} (stack 05).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector-servicenow
+  annotations:
+    azure.workload.identity/client-id: SET-IN-OVERLAY
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connector-servicenow
+data:
+  CLOUDOPS_ENV: azure
+  CLOUDOPS_SECRETS_DIR: /mnt/secrets
+  CLOUDOPS_TEMPORAL_ADDRESS: temporal-frontend.temporal.svc.cluster.local:7233
+  CLOUDOPS_TEMPORAL_NAMESPACE: default
+  CLOUDOPS_BRONZE_CONTAINER_URL: SET-IN-OVERLAY
+  CLOUDOPS_REPORTS_CONTAINER_URL: SET-IN-OVERLAY
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: connector-servicenow
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: SET-IN-OVERLAY
+    keyvaultName: SET-IN-OVERLAY
+    tenantId: SET-IN-OVERLAY
+    objects: |
+      array:
+        - |
+          objectName: postgres-ingest-dsn
+          objectType: secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-servicenow
+spec:
+  replicas: 1  # KEDA owns the count (scaledobject below)
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: connector-servicenow
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: connector-servicenow
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: connector-servicenow
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60  # let in-flight activities finish
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ingest] }
+      containers:
+        - name: worker
+          image: connector-servicenow
+          ports:
+            - { name: probes, containerPort: 8080 }
+          envFrom:
+            - configMapRef: { name: connector-servicenow }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: probes }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet: { path: /readyz, port: probes }
+            periodSeconds: 10
+            timeoutSeconds: 3
+          volumeMounts:
+            - { name: secrets, mountPath: /mnt/secrets, readOnly: true }
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: connector-servicenow
+---
+# Scale on Temporal task queue depth (KEDA's temporal scaler, the AKS add-on).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: connector-servicenow
+spec:
+  scaleTargetRef:
+    name: connector-servicenow
+  minReplicaCount: 1
+  maxReplicaCount: 4
+  triggers:
+    - type: temporal
+      metadata:
+        endpoint: temporal-frontend.temporal.svc.cluster.local:7233
+        namespace: default
+        taskQueue: connectors-servicenow
+        targetQueueSize: "5"
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: connector-servicenow
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: connector-servicenow
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: connector-servicenow
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: connector-servicenow
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: temporal
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+      ports:
+        - { protocol: TCP, port: 7233 }
+    - to:
+        - ipBlock: { cidr: SET-IN-OVERLAY }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    - ports:
+        - { protocol: TCP, port: 443 }  # Entra, and storage for the bronze layer

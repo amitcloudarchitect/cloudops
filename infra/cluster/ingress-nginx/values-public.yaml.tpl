@@ -31,5 +31,11 @@ controller:
       # The cluster-managed NSG rule, too, admits Front Door only.
       service.beta.kubernetes.io/azure-allowed-service-tags: "AzureFrontDoor.Backend"
       service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+  # Request metrics for Argo Rollouts' canary analysis (in-cluster Prometheus).
+  metrics:
+    enabled: true
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
   admissionWebhooks:
     enabled: true

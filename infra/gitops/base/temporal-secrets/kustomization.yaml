@@ -1,0 +1,10 @@
+# Temporal's database password, from Key Vault into the Kubernetes Secret the
+# Temporal chart reads (ADR 0008). The CSI driver only syncs a Secret while a pod
+# mounts the volume, so a minimal pod holds the mount. Applied before Temporal
+# (Argo CD sync waves).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: temporal
+resources:
+  - temporal-secrets.yaml
+  - networkpolicy.yaml

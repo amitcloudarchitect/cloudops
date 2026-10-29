@@ -24,5 +24,11 @@ controller:
       service.beta.kubernetes.io/azure-load-balancer-internal: "true"
       service.beta.kubernetes.io/azure-pls-create: "true"
       service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: /healthz
+  # Request metrics for Argo Rollouts' canary analysis (in-cluster Prometheus).
+  metrics:
+    enabled: true
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10254"
   admissionWebhooks:
     enabled: true

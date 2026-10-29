@@ -11,6 +11,20 @@ server:
 configs:
   params:
     server.insecure: false
+  cm:
+    # App of apps: assess child Applications' health, so the root app's sync waves
+    # (infra/gitops/applications/<env>) wait for each wave to be healthy.
+    resource.customizations.health.argoproj.io_Application: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = ""
+      if obj.status ~= nil and obj.status.health ~= nil then
+        hs.status = obj.status.health.status
+        if obj.status.health.message ~= nil then
+          hs.message = obj.status.health.message
+        end
+      end
+      return hs
 global:
   nodeSelector:
     cloudops.getronics.com/pool: app

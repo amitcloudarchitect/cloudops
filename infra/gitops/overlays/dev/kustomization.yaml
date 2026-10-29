@@ -1,0 +1,39 @@
+# Dev (crcloudopsdevweu, kv-cloudops-app-dev-weu, network_mode = "public").
+#
+# Deployed: namespaces and policies, migrations (PreSync), the API, and the secret
+# sync Temporal needs. Not yet: connector-servicenow (no ServiceNow read account)
+# and worker-ai (no Azure OpenAI tiers); their bases exist and build.
+#
+# Image tags are the only thing the pipeline changes here (step 13); Argo CD
+# reconciles. Nothing in this directory is a secret.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base/namespaces
+  - ../../base/migrate
+  - ../../base/api
+  - ../../base/temporal-secrets
+  - ../../base/monitoring
+  - values.yaml
+images:
+  - name: api
+    newName: crcloudopsdevweu.azurecr.io/api
+    newTag: 17baeb4
+  - name: migrate
+    newName: crcloudopsdevweu.azurecr.io/migrate
+    newTag: pending  # set once the migrate image is pushed
+  - name: pause
+    newName: crcloudopsdevweu.azurecr.io/pause
+    newTag: 3.10.1
+patches:
+  - path: identity.yaml
+  - path: config.yaml
+replacements:
+  - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.dataSubnet }
+    targets:  # every policy that names the database
+      - select: { kind: NetworkPolicy, name: api }
+        fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: migrate }
+        fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: temporal-database }
+        fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]

@@ -9,6 +9,11 @@ Every connection runs with lock_timeout = 3s so a migration blocked behind
 application traffic fails fast instead of queueing the application behind it.
 The setting is a connection startup option, then checked, so a pooler that
 silently drops startup options cannot quietly disable it.
+
+In Azure the migration role is an Entra identity (the PreSync job's workload
+identity, ADR 0008): with ``CLOUDOPS_MIGRATION_AUTH=entra`` the DSN file holds no
+password, and an Entra access token for the server is used as the password,
+fetched once for the run. Tokens last about an hour; a migration run is minutes.
 """
 
 from __future__ import annotations
@@ -21,6 +26,8 @@ from sqlalchemy import create_engine, pool, text
 from sqlalchemy.engine import make_url
 
 DSN_FILE_ENV = "CLOUDOPS_MIGRATION_DSN_FILE"
+AUTH_ENV = "CLOUDOPS_MIGRATION_AUTH"
+ENTRA_SCOPE = "https://ossrdbms-aad.database.windows.net/.default"
 LOCK_TIMEOUT = "3s"
 VERSION_SCHEMA = "migration_meta"
 
@@ -35,8 +42,25 @@ def _dsn() -> str:
     return Path(path).read_text(encoding="utf-8").strip()
 
 
+def _entra_token() -> str:
+    from azure.identity import WorkloadIdentityCredential
+
+    credential = WorkloadIdentityCredential()
+    try:
+        return credential.get_token(ENTRA_SCOPE).token
+    finally:
+        credential.close()
+
+
 def run_migrations_online() -> None:
     url = make_url(_dsn()).set(drivername="postgresql+psycopg")
+    auth = os.environ.get(AUTH_ENV, "password")
+    if auth == "entra":
+        if url.password:
+            raise RuntimeError("entra auth: the DSN file must not hold a password")
+        url = url.set(password=_entra_token())
+    elif auth != "password":
+        raise RuntimeError(f"{AUTH_ENV} must be 'password' or 'entra'")
     engine = create_engine(
         url,
         poolclass=pool.NullPool,

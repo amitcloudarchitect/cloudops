@@ -98,3 +98,40 @@ resource "azurerm_role_assignment" "acr_push" {
   role_definition_name = "AcrPush"
   principal_id         = each.value
 }
+
+# --- App Key Vault: workloads read their mounted secrets (CSI driver) -----------
+
+data "azurerm_key_vault" "app" {
+  provider            = azurerm.sec
+  name                = module.names.key_vault["app"]
+  resource_group_name = module.names.resource_group["sec"]
+}
+
+data "azurerm_user_assigned_identity" "workload" {
+  provider            = azurerm.sec
+  for_each            = toset(["api", "ingest", "ai", "workflow"])
+  name                = module.names.workload_identity[each.key]
+  resource_group_name = module.names.resource_group["sec"]
+}
+
+# Vault scope: the vault holds only platform secrets, and per-secret scopes would
+# need the secrets to exist first. Read only; nothing in a pod can write a secret.
+resource "azurerm_role_assignment" "workload_secrets" {
+  for_each = data.azurerm_user_assigned_identity.workload
+
+  scope                            = data.azurerm_key_vault.app.id
+  role_definition_name             = "Key Vault Secrets User"
+  principal_id                     = each.value.principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+# Dev: people who write the generated database connection strings
+# (scripts/db-dev-logins.sh). Production has nobody here.
+resource "azurerm_role_assignment" "dev_secret_writers" {
+  for_each = toset(var.dev_secret_writer_ids)
+
+  scope                = data.azurerm_key_vault.app.id
+  role_definition_name = "Key Vault Secrets Officer"
+  principal_id         = each.value
+}

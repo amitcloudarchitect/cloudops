@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-api
+  labels:
+    cloudops.getronics.com/managed: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-ingest
+  labels:
+    cloudops.getronics.com/managed: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-ai
+  labels:
+    cloudops.getronics.com/managed: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-web
+  labels:
+    cloudops.getronics.com/managed: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+---
+# Third-party charts: baseline enforced, restricted reported, until every pod in
+# the chart is verified against restricted.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: temporal
+  labels:
+    cloudops.getronics.com/managed: "true"
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+---
+# Third-party charts: baseline enforced, restricted reported, until every pod in
+# the chart is verified against restricted.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    cloudops.getronics.com/managed: "true"
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

@@ -1,0 +1,14 @@
+# UAT: skeleton. Every workload, as the LLD deploys it there (private network
+# mode, all workers). Its SET-IN-OVERLAY values (client IDs, vault, tenant,
+# audience, data subnet, image tags) arrive with the uat environment; until then no
+# Argo CD Application points here, and the dev overlay is the worked example.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base/namespaces
+  - ../../base/migrate
+  - ../../base/api
+  - ../../base/temporal-secrets
+  - ../../base/monitoring
+  - ../../base/connector-servicenow
+  - ../../base/worker-ai

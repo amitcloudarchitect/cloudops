@@ -1,0 +1,29 @@
+# Canary health from ingress-nginx's own request metrics, via the in-cluster
+# Prometheus (ADR 0008). Only the canary Service's traffic is measured. No traffic
+# yet (NaN) passes; a 5xx rate of 2% or a p95 of 500 ms fails and rolls back.
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: api-canary-health
+spec:
+  metrics:
+    - name: error-rate
+      interval: 1m
+      failureLimit: 1
+      successCondition: isNaN(result[0]) || result[0] < 0.02
+      provider:
+        prometheus:
+          address: http://prometheus-server.monitoring.svc.cluster.local
+          query: |
+            sum(rate(nginx_ingress_controller_requests{service="api-canary",status=~"5.."}[2m]))
+            /
+            sum(rate(nginx_ingress_controller_requests{service="api-canary"}[2m]))
+    - name: p95-latency
+      interval: 1m
+      failureLimit: 1
+      successCondition: isNaN(result[0]) || result[0] < 0.5
+      provider:
+        prometheus:
+          address: http://prometheus-server.monitoring.svc.cluster.local
+          query: |
+            histogram_quantile(0.95, sum by (le) (rate(nginx_ingress_controller_request_duration_seconds_bucket{service="api-canary"}[2m])))

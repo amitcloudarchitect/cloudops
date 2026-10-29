@@ -1,0 +1,21 @@
+# The API (LLD, Compute: npapp). An Argo Rollouts canary (10% for 15 minutes,
+# analysed on error rate and p95 latency), not a Deployment. Values that differ per
+# environment are SET-IN-OVERLAY here; a test fails if one reaches a built overlay.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-api
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: cloudops
+    includeSelectors: false
+resources:
+  - serviceaccount.yaml
+  - config.yaml
+  - secretproviderclass.yaml
+  - rollout.yaml
+  - services.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - analysistemplate.yaml
+  - networkpolicy.yaml

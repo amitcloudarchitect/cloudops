@@ -22,7 +22,7 @@ variable "REVISION" {
 }
 
 group "default" {
-  targets = ["api", "connector-servicenow", "worker-ai"]
+  targets = ["api", "connector-servicenow", "worker-ai", "migrate"]
 }
 
 target "_python" {
@@ -55,4 +55,11 @@ target "worker-ai" {
   target   = "worker-ai"
   args     = { PACKAGE = "cloudops-agents" }
   tags     = ["${REGISTRY}/worker-ai:${TAG}"]
+}
+
+target "migrate" {
+  inherits = ["_python"]
+  target   = "migrate"
+  args     = { PACKAGE = "all" }
+  tags     = ["${REGISTRY}/migrate:${TAG}"]
 }

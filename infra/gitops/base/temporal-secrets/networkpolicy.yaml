@@ -1,0 +1,55 @@
+# The temporal namespace: its services talk among themselves; the platform's workers
+# and KEDA reach the frontend; the servers reach PostgreSQL.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: temporal-internal
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: temporal-frontend-clients
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: frontend
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-ingest
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-ai
+        # KEDA's managed add-on (task queue depth). Its pod labels are AKS's, not
+        # ours, so the namespace is the selector; narrow it once verified.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - { protocol: TCP, port: 7233 }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: temporal-database
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: temporal
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock: { cidr: SET-IN-OVERLAY }
+      ports:
+        - { protocol: TCP, port: 5432 }

@@ -1,0 +1,8 @@
+# Database migrations as an Argo CD PreSync hook of the platform Application: they
+# finish before any workload in the same sync rolls out (LLD, Delivery). Expand-only
+# (db/tests/test_migration_policy.py), so a rollback never needs a data restore.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-api
+resources:
+  - migrate.yaml

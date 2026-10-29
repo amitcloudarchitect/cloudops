@@ -1,0 +1,7 @@
+# Every namespace the platform owns, each with Pod Security admission and a
+# default-deny NetworkPolicy (LLD, Compute). Workload bases add the explicit allows.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespaces.yaml
+  - default-deny.yaml

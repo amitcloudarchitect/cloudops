@@ -79,9 +79,18 @@ resource "azurerm_postgresql_flexible_server" "this" {
 
   public_network_access_enabled = false
 
+  # Dev only, a recorded departure (README, ADR 0008): password logins alongside
+  # Entra, because the application logins and Temporal authenticate with passwords
+  # in dev. Turning it on requires an administrator login. Its password is
+  # write-only (never in state), generated at apply time and not kept: the Entra
+  # administrator stays the way to administer the server.
+  administrator_login               = var.env == "dev" ? "breakglass_dev" : null
+  administrator_password_wo         = var.env == "dev" ? var.postgres_breakglass_password_wo : null
+  administrator_password_wo_version = var.env == "dev" ? 1 : null
+
   authentication {
     active_directory_auth_enabled = true
-    password_auth_enabled         = false
+    password_auth_enabled         = var.env == "dev"
     tenant_id                     = data.azurerm_client_config.current.tenant_id
   }
 
@@ -117,10 +126,11 @@ resource "azurerm_postgresql_flexible_server_active_directory_administrator" "th
 # while it is busy (ServerIsBusy). A for_each would send them in parallel.
 
 resource "azurerm_postgresql_flexible_server_configuration" "pg_azure_extensions" {
-  # LLD extensions: pgvector, pg_stat_statements, pgcrypto, pg_partman
+  # LLD extensions: pgvector, pg_stat_statements, pgcrypto, pg_partman; btree_gin
+  # for Temporal's visibility store (ADR 0008).
   name      = "azure.extensions"
   server_id = azurerm_postgresql_flexible_server.this.id
-  value     = "VECTOR,PG_STAT_STATEMENTS,PGCRYPTO,PG_PARTMAN"
+  value     = "VECTOR,PG_STAT_STATEMENTS,PGCRYPTO,PG_PARTMAN,BTREE_GIN"
 }
 
 resource "azurerm_postgresql_flexible_server_configuration" "pg_shared_preload_libraries" {

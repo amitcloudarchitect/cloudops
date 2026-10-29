@@ -132,6 +132,11 @@ resource "azurerm_kubernetes_cluster" "this" {
     secret_rotation_enabled = true
   }
 
+  # KEDA, as the managed add-on (LLD: KEDA on connectors and Temporal workers).
+  workload_autoscaler_profile {
+    keda_enabled = true
+  }
+
   oms_agent {
     log_analytics_workspace_id      = data.azurerm_log_analytics_workspace.this.id
     msi_auth_for_monitoring_enabled = true
@@ -210,4 +215,39 @@ resource "azurerm_monitor_diagnostic_setting" "aks" {
   enabled_metric {
     category = "AllMetrics"
   }
+}
+
+# --- Workload identity federation -------------------------------------------------
+#
+# Each workload's managed identity (stack 02) trusts exactly one Kubernetes service
+# account on this cluster's OIDC issuer. Here rather than in 02 because the issuer
+# belongs to the cluster: a replaced cluster gets a new issuer, and these follow.
+# The service accounts are in infra/gitops/base (a test keeps the two lists equal).
+
+locals {
+  federated_service_accounts = {
+    api      = "platform-api/api"
+    migrate  = "platform-api/migrate"
+    ingest   = "platform-ingest/connector-servicenow"
+    ai       = "platform-ai/worker-ai"
+    workflow = "temporal/temporal-secrets"
+  }
+}
+
+data "azurerm_user_assigned_identity" "workload" {
+  provider            = azurerm.sec
+  for_each            = local.federated_service_accounts
+  name                = module.names.workload_identity[each.key]
+  resource_group_name = module.names.resource_group["sec"]
+}
+
+resource "azurerm_federated_identity_credential" "workload" {
+  provider            = azurerm.sec
+  for_each            = local.federated_service_accounts
+  name                = "aks-${replace(each.value, "/", "-")}"
+  resource_group_name = module.names.resource_group["sec"]
+  parent_id           = data.azurerm_user_assigned_identity.workload[each.key].id
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.this.oidc_issuer_url
+  subject             = "system:serviceaccount:${replace(each.value, "/", ":")}"
 }

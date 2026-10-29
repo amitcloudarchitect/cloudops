@@ -52,7 +52,7 @@ def test_bake_builds_exactly_the_final_stages_each_with_its_package() -> None:
     assert set(re.findall(r'"([^"]+)"', default.group(1))) == finals
     for target in finals:
         block = bake[bake.index(f'target "{target}"'):].split("\n}\n", 1)[0]
-        assert re.search(r'PACKAGE = "cloudops-[a-z-]+"', block), target
+        assert re.search(r'PACKAGE = "(cloudops-[a-z-]+|all)"', block), target
 
 
 def test_dockerignore_is_an_allowlist_that_keeps_tests_out() -> None:
@@ -62,7 +62,7 @@ def test_dockerignore_is_an_allowlist_that_keeps_tests_out() -> None:
     assert "**/tests/" in lines
     allowed = [ln for ln in lines if ln.startswith("!")]
     for pattern in allowed:
-        assert not re.search(r"\.env|tfvars|keypair|\.git|docs|evals|infra", pattern), pattern
+        assert not re.search(r"\.env|tfvars|keypair|\.git|docs|evals|infra|tests", pattern), pattern
 
 
 def test_vulnerability_exceptions_are_narrow() -> None:

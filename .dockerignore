@@ -9,6 +9,8 @@
 !services/*/src/
 !connectors/pyproject.toml
 !connectors/src/
+!alembic.ini
+!db/migrations/
 **/__pycache__
 **/*.pyc
 **/tests/

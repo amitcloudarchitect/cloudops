@@ -2,3 +2,5 @@
 # Entra object IDs allowed to push images from their own az login (dev only):
 #   az ad signed-in-user show --query id -o tsv
 acr_push_principal_ids = ["00000000-0000-0000-0000-000000000000"]
+# Entra object IDs that may write secrets to the app Key Vault (dev only):
+dev_secret_writer_ids = ["00000000-0000-0000-0000-000000000000"]

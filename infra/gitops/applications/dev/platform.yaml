@@ -1,0 +1,20 @@
+# The platform: namespaces, policies, the PreSync migration, the API Rollout and
+# Temporal's secret sync (overlays/dev).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/amitcloudarchitect/cloudops.git
+    targetRevision: main
+    path: infra/gitops/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    retry: { limit: 10, backoff: { duration: 30s, factor: 2, maxDuration: 10m } }

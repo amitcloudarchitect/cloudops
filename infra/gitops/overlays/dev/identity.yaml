@@ -1,0 +1,46 @@
+# Workload identity client IDs (stack 05 output workload_client_ids). Not secrets.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: api
+  namespace: platform-api
+  annotations:
+    azure.workload.identity/client-id: b30fad8a-e050-4077-9152-dbe1d30f51b3
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: migrate
+  namespace: platform-api
+  annotations:
+    azure.workload.identity/client-id: c7807bef-0161-4df5-8dad-f65316e71129
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: temporal-secrets
+  namespace: temporal
+  annotations:
+    azure.workload.identity/client-id: 225eeb2b-a835-4b69-96c3-2766bd5c12d6
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: api
+  namespace: platform-api
+spec:
+  parameters:
+    clientID: b30fad8a-e050-4077-9152-dbe1d30f51b3
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: temporal-db
+  namespace: temporal
+spec:
+  parameters:
+    clientID: 225eeb2b-a835-4b69-96c3-2766bd5c12d6
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe

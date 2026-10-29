@@ -1,0 +1,84 @@
+# Federated to id-cloudops-migrate-{env}, the Entra identity that owns the schema.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: migrate
+  annotations:
+    azure.workload.identity/client-id: SET-IN-OVERLAY
+automountServiceAccountToken: false
+---
+# Host, database and user only: the password is an Entra token fetched by the job
+# (CLOUDOPS_MIGRATION_AUTH=entra), so nothing here is secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migrate
+data:
+  dsn: SET-IN-OVERLAY
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 900
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: migrate
+        azure.workload.identity/use: "true"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: migrate
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [app] }
+      containers:
+        - name: migrate
+          image: migrate
+          env:
+            - { name: CLOUDOPS_MIGRATION_DSN_FILE, value: /etc/cloudops/migration/dsn }
+            - { name: CLOUDOPS_MIGRATION_AUTH, value: entra }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          volumeMounts:
+            - { name: dsn, mountPath: /etc/cloudops/migration, readOnly: true }
+      volumes:
+        - name: dsn
+          configMap: { name: migrate }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: migrate
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: migrate
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - ipBlock: { cidr: SET-IN-OVERLAY }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    - ports:
+        - { protocol: TCP, port: 443 }  # Entra token exchange
