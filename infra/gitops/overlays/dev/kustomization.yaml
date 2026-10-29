@@ -21,7 +21,7 @@ images:
     newTag: 17baeb4
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
-    newTag: pending  # set once the migrate image is pushed
+    newTag: e2c64ed
   - name: pause
     newName: crcloudopsdevweu.azurecr.io/pause
     newTag: 3.10.1
