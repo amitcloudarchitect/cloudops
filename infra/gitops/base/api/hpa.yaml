@@ -2,6 +2,10 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: api
+  annotations:
+    # After the Rollout (wave 1): until its target exists an HPA reports Degraded,
+    # and Argo CD would wait on that wave for ever.
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   scaleTargetRef:
     apiVersion: argoproj.io/v1alpha1

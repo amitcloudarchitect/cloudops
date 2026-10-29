@@ -205,3 +205,13 @@ def test_applications_pin_their_charts_and_paths() -> None:
 @pytest.mark.parametrize("env", ["uat", "prd"])
 def test_other_overlays_build(env: str) -> None:
     assert _build(GITOPS / "overlays" / env)
+
+
+def test_autoscalers_come_after_what_they_scale() -> None:
+    """An HPA whose target does not exist yet is Degraded, and Argo CD waits for a
+    sync wave to be healthy before starting the next: the target would never come."""
+    for hpa in (d for d in ALL_OURS if d["kind"] == "HorizontalPodAutoscaler"):
+        ref = hpa["spec"]["scaleTargetRef"]
+        (target,) = [d for d in ALL_OURS if d["kind"] == ref["kind"]
+                     and d["metadata"]["name"] == ref["name"]]
+        assert _wave(hpa) > _wave(target), hpa["metadata"]["name"]
