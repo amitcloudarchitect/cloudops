@@ -1,0 +1,7 @@
+{
+ "body": {
+  "text": "{\n  \"error\": {\n    \"type\": \"invalid_request_error\",\n    \"code\": \"DeploymentNotFound\",\n    \"message\": \"The API deployment for this resource does not exist. If you created the deployment within the last 5 minutes, please wait a moment and try again.\"\n  }\n}"
+ },
+ "retry_after": null,
+ "status": 404
+}

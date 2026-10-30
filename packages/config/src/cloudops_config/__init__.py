@@ -19,6 +19,7 @@ from cloudops_config.secrets import EnvFileSecretStore, MountedSecretStore, Secr
 from cloudops_config.settings import (
     AuthConfig,
     AuthMode,
+    AzureOpenAIConfig,
     BlobConfig,
     Component,
     DbLogin,
@@ -35,6 +36,7 @@ from cloudops_config.temporal_tls import TemporalTls, TlsMaterial
 __all__ = [
     "AuthConfig",
     "AuthMode",
+    "AzureOpenAIConfig",
     "BlobConfig",
     "Component",
     "ConfigurationError",

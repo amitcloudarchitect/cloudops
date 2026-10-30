@@ -1,0 +1,12 @@
+{
+ "body": {
+  "error": {
+   "code": "unsupported_parameter",
+   "message": "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+   "param": "max_tokens",
+   "type": "invalid_request_error"
+  }
+ },
+ "retry_after": null,
+ "status": 400
+}

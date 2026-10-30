@@ -167,7 +167,7 @@ def test_azure_blob_must_be_an_https_container(azure_env: dict[str, str], url: s
         load_settings(azure_env, require={Component.BLOB})
 
 
-@pytest.mark.parametrize("component", [Component.LLM, Component.TELEMETRY])
+@pytest.mark.parametrize("component", [Component.TELEMETRY])
 def test_azure_backends_not_yet_built_refuse_rather_than_use_the_mock(
     azure_env: dict[str, str], component: Component
 ) -> None:
@@ -354,3 +354,33 @@ def test_local_real_servicenow_is_opt_in_and_says_how(local_env: dict[str, str])
     with pytest.raises(ConfigurationError, match="--fixtures") as info:
         load_settings(local_env, require={Component.SERVICENOW})
     assert "Azure" not in str(info.value)
+
+
+# Azure OpenAI (ADR 0012) -------------------------------------------------------------
+
+
+def test_azure_llm_is_the_openai_account_never_the_mock(azure_env: dict[str, str]) -> None:
+    azure_env["CLOUDOPS_AZURE_OPENAI_ENDPOINT"] = "https://oai-cloudops-dev-weu.openai.azure.com/"
+    s = load_settings(azure_env, require={Component.LLM})
+    assert s.azure_openai.endpoint == "https://oai-cloudops-dev-weu.openai.azure.com/"
+    with pytest.raises(ConfigurationError, match="wrong type"):
+        s.llm  # noqa: B018 - the mock is local-only
+
+
+def test_azure_llm_without_an_endpoint_is_refused(azure_env: dict[str, str]) -> None:
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_OPENAI_ENDPOINT"):
+        load_settings(azure_env, require={Component.LLM})
+
+
+@pytest.mark.parametrize("url", [
+    "http://oai-cloudops-dev-weu.openai.azure.com",
+    "https://oai-cloudops-dev-weu.openai.azure.com/openai/deployments",
+    "https://api.openai.com",
+    "https://oai-cloudops-dev-weu.openai.azure.com.example.net",
+])
+def test_azure_llm_endpoint_must_be_an_azure_openai_account(
+    azure_env: dict[str, str], url: str
+) -> None:
+    azure_env["CLOUDOPS_AZURE_OPENAI_ENDPOINT"] = url
+    with pytest.raises(ConfigurationError, match=r"openai\.azure\.com"):
+        load_settings(azure_env, require={Component.LLM})

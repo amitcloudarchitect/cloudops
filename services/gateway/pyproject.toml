@@ -7,6 +7,7 @@ dependencies = [
     "cloudops-tenancy",
     "cloudops-config",
     "jsonschema>=4.23",
+    "httpx>=0.28",
 ]
 
 [tool.uv.sources]

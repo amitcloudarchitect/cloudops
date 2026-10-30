@@ -313,6 +313,7 @@ name = "cloudops-agents"
 version = "0.1.0"
 source = { editable = "packages/agents" }
 dependencies = [
+    { name = "azure-identity" },
     { name = "cloudops-config", extra = ["temporal"] },
     { name = "cloudops-gateway" },
     { name = "cloudops-tenancy" },
@@ -322,6 +323,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "azure-identity", specifier = ">=1.19" },
     { name = "cloudops-config", extras = ["temporal"], editable = "packages/config" },
     { name = "cloudops-gateway", editable = "services/gateway" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
@@ -436,6 +438,7 @@ source = { editable = "services/gateway" }
 dependencies = [
     { name = "cloudops-config" },
     { name = "cloudops-tenancy" },
+    { name = "httpx" },
     { name = "jsonschema" },
 ]
 
@@ -443,6 +446,7 @@ dependencies = [
 requires-dist = [
     { name = "cloudops-config", editable = "packages/config" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
+    { name = "httpx", specifier = ">=0.28" },
     { name = "jsonschema", specifier = ">=4.23" },
 ]
 

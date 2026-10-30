@@ -8,8 +8,15 @@ rest are fallbacks, tried on throttling or unavailability.
 Prices are per thousand tokens, ``Decimal`` in a stated currency (CLAUDE.md
 rule 5). The local prices below are placeholders of a realistic order of
 magnitude, so quotas and the spend breaker have something to count; they are
-not anyone's real price list. Production values come with LLD open item L12
-(the model per tier), recorded in an ADR.
+not anyone's real price list.
+
+Azure (ADR 0012): list prices from Microsoft's public Retail Prices API
+(prices.azure.com), West Europe, Data Zone Standard, read 2026-10-30. In USD
+because the API rounds EUR prices to too few decimals (the embedding price
+reads 0.00 in EUR). List price, not Getronics' rate: contract pricing (CSP or
+another channel) replaces these later. gpt-5.5 has a dearer long-context band
+(input 0.011, output 0.0495 per 1K) that applies above its context threshold;
+the gateway's prompts stay far below it, so the short-context price is used.
 """
 
 from __future__ import annotations
@@ -52,5 +59,22 @@ LOCAL_DEPLOYMENTS: Final[Mapping[Tier, Sequence[Deployment]]] = {
     Tier.EMBED: (
         Deployment("mock", "cloudops-embed", Decimal("0.000020"), Decimal("0")),
         Deployment("mock-secondary", "cloudops-embed", Decimal("0.000020"), Decimal("0")),
+    ),
+}
+
+
+# Azure: one deployment per tier, no secondary provider yet (ADR 0012); the
+# gateway still falls back from large to small. Meter IDs from the Retail Prices
+# API, so a price can be traced: small e378a12b / 69008474, large db528725 /
+# f7f9d475, embed 08d886b7.
+AZURE_DEPLOYMENTS: Final[Mapping[Tier, Sequence[Deployment]]] = {
+    Tier.SMALL: (
+        Deployment("azure-openai", "cloudops-small", Decimal("0.000825"), Decimal("0.004950")),
+    ),
+    Tier.LARGE: (
+        Deployment("azure-openai", "cloudops-large", Decimal("0.005500"), Decimal("0.033000")),
+    ),
+    Tier.EMBED: (
+        Deployment("azure-openai", "cloudops-embed", Decimal("0.000022"), Decimal("0")),
     ),
 }

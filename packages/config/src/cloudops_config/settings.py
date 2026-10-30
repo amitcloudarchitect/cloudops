@@ -148,6 +148,31 @@ class ServiceNowConfig:
     client_secret: str  # the secret's *name* in the store, never its value
 
 
+@dataclass(frozen=True, slots=True)
+class AzureOpenAIConfig:
+    """The Azure OpenAI account the gateway calls (ADR 0012). Only the endpoint:
+    authentication is the workload identity's Entra token, and the deployments
+    are the tier aliases (cloudops_gateway.pricing)."""
+
+    endpoint: str
+
+
+AZURE_OPENAI_ENDPOINT_VAR: Final = "CLOUDOPS_AZURE_OPENAI_ENDPOINT"
+
+
+def _azure_openai(environ: Mapping[str, str]) -> AzureOpenAIConfig:
+    url = _required(environ, AZURE_OPENAI_ENDPOINT_VAR).rstrip("/")
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    if (parts.scheme != "https" or parts.path or parts.query
+            or not host.endswith(".openai.azure.com")):
+        raise ConfigurationError(
+            f"{AZURE_OPENAI_ENDPOINT_VAR} must be the account's https://<name>.openai.azure.com "
+            "address, with no path"
+        )
+    return AzureOpenAIConfig(f"https://{host}/")
+
+
 SERVICENOW_URL_VAR: Final = "CLOUDOPS_SERVICENOW_URL"
 SERVICENOW_CLIENT_ID_VAR: Final = "CLOUDOPS_SERVICENOW_CLIENT_ID"
 SERVICENOW_CLIENT_SECRET: Final = "servicenow-read-client-secret"  # noqa: S105 - a name
@@ -218,8 +243,12 @@ class Settings:
 
     @property
     def llm(self) -> LlmGateway:
-        # Only the mock exists so far; the Azure profile refuses LLM at load.
+        """The local mock. In Azure the LLM component is ``azure_openai``."""
         return self._get(Component.LLM, MockLlmGateway)
+
+    @property
+    def azure_openai(self) -> AzureOpenAIConfig:
+        return self._get(Component.LLM, AzureOpenAIConfig)
 
 
 @dataclass(frozen=True, slots=True)
@@ -366,9 +395,7 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
         elif c is Component.SERVICENOW:
             components[c] = _servicenow(environ, store)
         elif c is Component.LLM:
-            raise NotBuiltError(
-                "the Azure OpenAI gateway is not built yet (step 06); the mock is local-only"
-            )
+            components[c] = _azure_openai(environ)
     return Settings(Environment.AZURE, store, identity, components)
 
 
