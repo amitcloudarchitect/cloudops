@@ -15,6 +15,17 @@ spec:
     path: infra/gitops/overlays/dev
   destination:
     server: https://kubernetes.default.svc
+  # Argo Rollouts owns the API route's weights and its in-progress label during a
+  # canary (ADR 0011): self-heal must not reset them mid-rollout.
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: api
+      namespace: platform-api
+      jqPathExpressions:
+        - .spec.rules[].backendRefs[].weight
+        - '.metadata.labels."rollouts.argoproj.io/gatewayapi-canary"'
   syncPolicy:
+    syncOptions: [RespectIgnoreDifferences=true]
     automated: { prune: true, selfHeal: true }
     retry: { limit: 10, backoff: { duration: 30s, factor: 2, maxDuration: 10m } }

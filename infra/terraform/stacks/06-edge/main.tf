@@ -102,6 +102,10 @@ resource "azurerm_cdn_frontdoor_origin_group" "this" {
   }
 }
 
+# ingress-nginx, failover only since the cutover (ADR 0011, phase B): priority 2, so
+# Front Door sends it traffic only while the gateway's health probe fails. Phase C
+# removes it. Never both priority 1 by intent; during the apply that is harmless, as
+# both serve the same API.
 resource "azurerm_cdn_frontdoor_origin" "this" {
   count                          = local.public ? 1 : 0
   name                           = module.names.frontdoor.origin
@@ -111,18 +115,17 @@ resource "azurerm_cdn_frontdoor_origin" "this" {
   http_port                      = 80
   https_port                     = 443
   certificate_name_check_enabled = true
-  priority                       = 1
+  priority                       = 2
   weight                         = 1000
 }
 
-# Disabled until the cutover (ADR 0011, phase B): Front Door sends it nothing, so the
-# gateway can be proven inside the cluster first. The cutover enables this origin and
-# disables the one above in the same apply.
+# The Gateway API ingress (ADR 0011): Front Door's primary origin since the cutover
+# (phase B), proven inside the cluster first in phase A.
 resource "azurerm_cdn_frontdoor_origin" "gateway" {
   count                          = local.public ? 1 : 0
   name                           = module.names.frontdoor.gateway_origin
   cdn_frontdoor_origin_group_id  = azurerm_cdn_frontdoor_origin_group.this.id
-  enabled                        = false
+  enabled                        = true
   host_name                      = azurerm_public_ip.gateway[0].ip_address
   http_port                      = 80
   https_port                     = 443

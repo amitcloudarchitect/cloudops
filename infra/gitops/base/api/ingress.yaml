@@ -1,6 +1,7 @@
-# Front Door -> ingress-nginx -> api. /healthz is Front Door's origin probe; the
-# controller exempts it from the X-Azure-FDID check (infra/cluster/ingress-nginx).
-# Rollouts adds a canary copy of this Ingress during a rollout.
+# Front Door -> ingress-nginx -> api: the rollback path until ingress-nginx is removed
+# (ADR 0011, phase C). Front Door's nginx origin is disabled and Rollouts no longer
+# routes through this Ingress; it serves the stable API only. /healthz is Front Door's
+# origin probe; the controller exempts it from the X-Azure-FDID check.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

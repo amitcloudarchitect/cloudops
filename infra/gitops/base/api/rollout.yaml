@@ -14,9 +14,14 @@ spec:
     canary:
       stableService: api
       canaryService: api-canary
+      # The Gateway API plugin sets the stable and canary weights on the HTTPRoute
+      # (ADR 0011); the platform Application ignores those weights so it does not
+      # reset them mid-rollout.
       trafficRouting:
-        nginx:
-          stableIngress: api
+        plugins:
+          argoproj-labs/gatewayAPI:
+            httpRoute: api
+            namespace: platform-api
       analysis:
         templates:
           - templateName: api-canary-health

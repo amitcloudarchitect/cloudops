@@ -437,3 +437,27 @@ def test_the_rollouts_plugin_is_local_and_pinned() -> None:
     assert plugin["name"] == "argoproj-labs/gatewayAPI"
     assert plugin["location"].startswith("file:///plugins/")  # never fetched at runtime
     assert re.fullmatch(r"[0-9a-f]{64}", plugin["sha256"])
+
+
+
+def test_canaries_route_through_the_gateway_and_are_judged_on_its_metrics() -> None:
+    """Phase B (ADR 0011): the plugin owns the weights, Argo CD ignores exactly them,
+    and the analysis reads the gateway's view of the canary Service only."""
+    rollout = _one("Rollout", "api")
+    routing = rollout["spec"]["strategy"]["canary"]["trafficRouting"]
+    assert routing == {"plugins": {"argoproj-labs/gatewayAPI": {
+        "httpRoute": "api", "namespace": "platform-api"}}}
+    template = _one("AnalysisTemplate", "api-canary-health")
+    for metric in template["spec"]["metrics"]:
+        query = metric["provider"]["prometheus"]["query"]
+        assert 'destination_service_name="api-canary"' in query, metric["name"]
+        assert 'reporter="source"' in query, metric["name"]
+        assert "nginx" not in query, metric["name"]
+    (p95,) = [m for m in template["spec"]["metrics"] if m["name"] == "p95-latency"]
+    assert "milliseconds" in p95["provider"]["prometheus"]["query"]
+    assert p95["successCondition"].endswith("< 500")  # Istio reports milliseconds
+    app = yaml.safe_load((GITOPS / "applications/dev/platform.yaml").read_text(encoding="utf-8"))
+    (ignored,) = app["spec"]["ignoreDifferences"]
+    assert (ignored["kind"], ignored["name"]) == ("HTTPRoute", "api")
+    assert ignored["jqPathExpressions"][0] == ".spec.rules[].backendRefs[].weight"
+    assert "RespectIgnoreDifferences=true" in app["spec"]["syncPolicy"]["syncOptions"]

@@ -1,6 +1,6 @@
-# Front Door -> the Gateway API ingress (base/edge) -> api (ADR 0011). Side by side
-# with the nginx Ingress until the cutover; Argo Rollouts then sets the weights here
-# (Gateway API plugin) instead of on a canary Ingress.
+# Front Door -> the Gateway API ingress (base/edge) -> api (ADR 0011). Argo Rollouts
+# sets the weights here during a canary (Gateway API plugin); the platform Application
+# ignores them, and the plugin's in-progress label.
 #
 # /healthz is Front Door's origin probe and is open, as it was on nginx. Everything
 # else must carry our Front Door profile's X-Azure-FDID (lock 2, stack 06): a request

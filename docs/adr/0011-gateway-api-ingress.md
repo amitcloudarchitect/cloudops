@@ -1,6 +1,7 @@
 # ADR 0011: Gateway API ingress, replacing the retired ingress-nginx
 
-- **Status:** Accepted, 2026-10-30; phase A (side by side) built, phases B and C to come
+- **Status:** Accepted, 2026-10-30; phase A (side by side) verified, phase B (cutover)
+  built, phase C (removal) to come
 - **Decided by:** Amit Kumar (AKS application routing Gateway API, over Envoy Gateway,
   Application Gateway for Containers and Traefik)
 - **Departs from:** the LLD's NGINX ingress controller (Compute, Edge). The LLD's
@@ -32,9 +33,16 @@
 | Option | Images | Findings |
 |---|---|---|
 | **AKS application routing, Gateway API (Istio)** | `mcr.microsoft.com/oss/v2/istio/proxyv2` and `pilot` v1.31.3 | 0 / 0 |
+| ↳ as AKS actually deployed it on our 1.36 cluster | the same images, v1.30.5 | 2 / 17 each |
 | Envoy Gateway v1.9.3, self-managed | controller (Envoy proxy not scanned) | 0 / 1 |
 | Traefik v3.7.16, self-managed | controller | 0 / 1 |
 | Application Gateway for Containers | outside the cluster | n/a; Azure-managed |
+
+AKS chooses the Istio version for the cluster's Kubernetes version and upgrades it in
+place. On our cluster it deployed v1.30.5, not the v1.31.3 compared above: 2 critical
+and 17 high in each image (Go stdlib, `x/net`, Azure Linux's OpenSSL, `go-jose`), all
+fixed in later builds. Still far below nginx's 50 / 201, and Microsoft's to roll out,
+not ours to patch.
 
 ## Decisions
 
@@ -72,12 +80,18 @@
      scraping deploy; nginx still carries everything. Proven from inside the cluster:
      the route answers with the header, 404s without it, and the proxies' metrics
      reach Prometheus.
-   - **B — cutover, one commit and one apply.** Enable the gateway origin and disable
-     nginx's. Switch the Rollout to the plugin. Switch the analysis to the gateway's
-     metrics, using the names confirmed in A.
+   - **B — cutover, one commit and one apply.** Enable the gateway origin at priority 1
+     and move nginx's to priority 2: Front Door sends everything to the gateway and
+     fails over to nginx by itself if the gateway's health probe fails. There is never
+     a moment with no enabled origin. Switch the Rollout to the plugin, and the
+     analysis to the gateway's metrics (`istio_requests_total` and
+     `istio_request_duration_milliseconds_bucket`, `reporter="source"`, confirmed in
+     A; latency is in milliseconds, so the threshold is 500). Argo CD ignores the
+     route's weights and the plugin's in-progress label.
    - **C — removal.** ingress-nginx, its IP, its origin, the canary Ingress, and the
      bootstrap script's install.
-   - Rollback before C is symmetric: flip the origins back.
+   - Rollback before C: swap the two origins' priorities back, and the Rollout to
+     `trafficRouting.nginx`. Until then the nginx Ingress serves the stable API.
 
 ## Consequences
 
