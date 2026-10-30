@@ -5,6 +5,7 @@ description = "The agent layer: versioned prompts, schema-validated output, allo
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "azure-identity>=1.19",
+    "azure-core[aio]>=1.32",  # aiohttp: azure.identity.aio's transport
     "cloudops-config[temporal]",
     "cloudops-tenancy",
     "cloudops-gateway",
