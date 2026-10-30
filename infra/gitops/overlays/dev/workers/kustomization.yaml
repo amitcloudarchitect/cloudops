@@ -16,7 +16,7 @@ images:
     newTag: ffe0941
   - name: worker-ai
     newName: crcloudopsdevweu.azurecr.io/worker-ai
-    newTag: 7b0be3c
+    newTag: 3536b84
 patches:
   - path: connector-servicenow.yaml
   - path: worker-ai.yaml
