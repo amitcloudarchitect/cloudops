@@ -100,6 +100,15 @@ needs two samples, so the queries returned nothing for the first minutes. Argo
 Rollouts counts empty as an error, not a pass. Each query now falls back to NaN
 ("no traffic yet"). The old version served throughout.
 
+Phase C caused a partial dev outage, 2026-10-30 from about 12:25 UTC. The gateway's
+Service used the add-on's default, `externalTrafficPolicy: Cluster`, so the load
+balancer sent Front Door to all five nodes. Only the app subnet's NSG admits Front
+Door; the system subnet's dropped the connections, and Front Door answered 504 for
+roughly 40% of new connections. nginx had used `Local` and so never touched system
+nodes, and Front Door's long-lived connections hid the difference until uninstalling
+nginx made the cloud provider rewrite the load balancer. The gateway now uses `Local`
+(the add-on's documented Service customisation), and a test keeps it there.
+
 ## Consequences
 
 - **Lost from nginx, not needed today:** the add-on has no gateway-level rate limiting,

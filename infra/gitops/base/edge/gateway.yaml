@@ -32,11 +32,27 @@ spec:
               kubernetes.io/metadata.name: platform-api
 ---
 # Customisations of the generated proxy, within the add-on's allow list.
+#
+# externalTrafficPolicy Local: the load balancer sends Front Door only to nodes running
+# a proxy, which nodeSelector keeps on the app pool, the one subnet whose NSG admits
+# Front Door (stack 01). With the add-on's default (Cluster) it sends to every node,
+# and the system subnet's NSG silently drops Front Door's connections: 504s from Front
+# Door for about 40% of new connections (2 of 5 nodes), 2026-10-30. Local needs the
+# add-on's port-80 probe annotations unset, so Azure probes healthCheckNodePort instead
+# (Microsoft's documented customisation).
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: api-gateway
 data:
+  service: |
+    spec:
+      externalTrafficPolicy: Local
+    metadata:
+      annotations:
+        service.beta.kubernetes.io/port_80_health-probe_port:
+        service.beta.kubernetes.io/port_80_health-probe_protocol:
+        service.beta.kubernetes.io/port_80_health-probe_request-path:
   deployment: |
     spec:
       template:

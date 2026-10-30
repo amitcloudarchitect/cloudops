@@ -469,3 +469,17 @@ def test_canaries_route_through_the_gateway_and_are_judged_on_its_metrics() -> N
     assert (ignored["kind"], ignored["name"]) == ("HTTPRoute", "api")
     assert ignored["jqPathExpressions"][0] == ".spec.rules[].backendRefs[].weight"
     assert "RespectIgnoreDifferences=true" in app["spec"]["syncPolicy"]["syncOptions"]
+
+
+
+def test_front_door_only_reaches_nodes_that_run_the_gateway() -> None:
+    """Only the app subnet's NSG admits Front Door. With externalTrafficPolicy Cluster
+    the load balancer also sends to system nodes, whose NSG drops the connection."""
+    config = _one("ConfigMap", "api-gateway")["data"]
+    service = yaml.safe_load(config["service"])
+    assert service["spec"]["externalTrafficPolicy"] == "Local"
+    unset = service["metadata"]["annotations"]
+    assert all(v is None for v in unset.values())
+    deployment = yaml.safe_load(config["deployment"])
+    assert deployment["spec"]["template"]["spec"]["nodeSelector"] == {
+        "cloudops.getronics.com/pool": "app"}
