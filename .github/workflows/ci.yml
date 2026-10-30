@@ -211,7 +211,8 @@ jobs:
   # repository variables (docs/ci.md). The dev identifiers fall back to their values:
   # they are not secrets, and Entra trusts this identity only from this repository.
   terraform-plan:
-    name: terraform plan + conftest
+    # One stable name per stack: the ruleset requires these checks by name.
+    name: terraform plan (${{ matrix.stack }})
     needs: terraform-static
     if: vars.TF_DEV_COMMON_TFVARS != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
