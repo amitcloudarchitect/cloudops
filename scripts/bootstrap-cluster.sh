@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Bootstrap a freshly applied AKS cluster: credentials, ingress-nginx, Argo CD and the
-# root Application. Idempotent: every step is an upsert, so re-running it converges.
+# Bootstrap a freshly applied AKS cluster: credentials, Argo CD and the root
+# Application. Idempotent: every step is an upsert, so re-running it converges. The
+# ingress is the AKS Gateway API add-on (stack 05) with its Gateway in the GitOps tree
+# (ADR 0011), so nothing here installs one.
 #
 #   scripts/bootstrap-cluster.sh --repo-url https://github.com/<org>/<repo>.git [--revision main] [--env dev]
 #
@@ -10,7 +12,6 @@
 # are registered with Argo CD separately (step 12).
 set -euo pipefail
 
-INGRESS_NGINX_CHART_VERSION=4.15.1
 ARGO_CD_CHART_VERSION=10.11.6
 ENV_DIR=infra/terraform/env/dev
 STACKS=infra/terraform/stacks
@@ -48,30 +49,12 @@ echo "==> Cluster credentials"
 eval "$(tf_output 05-aks get_credentials_command)"
 kubectl get nodes -o wide >/dev/null
 
-frontdoor_id="$(tf_output 06-edge frontdoor_id)"
 frontdoor_hostname="$(tf_output 06-edge frontdoor_hostname)"
-ingress_ip="$(tf_output 06-edge ingress_public_ip 2>/dev/null || true)"
-if [[ -n "$ingress_ip" && "$ingress_ip" != "null" ]]; then
-  mode=public
-  ingress_ip_rg="$(tf_output 06-edge ingress_public_ip_resource_group)"
-else
-  mode=private ingress_ip="" ingress_ip_rg=""
-fi
-echo "    network mode: $mode"
 
-render() {  # template; substitutes only the named variables, never nginx's $vars
-  INGRESS_IP="$ingress_ip" INGRESS_IP_RG="$ingress_ip_rg" FRONTDOOR_ID="$frontdoor_id" \
+render() {  # template; substitutes only the named variables
   REPO_URL="$repo_url" REVISION="$revision" ENV="$env" \
-    envsubst '${INGRESS_IP} ${INGRESS_IP_RG} ${FRONTDOOR_ID} ${REPO_URL} ${REVISION} ${ENV}' < "$1"
+    envsubst '${REPO_URL} ${REVISION} ${ENV}' < "$1"
 }
-tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-
-echo "==> ingress-nginx $INGRESS_NGINX_CHART_VERSION"
-render "$CLUSTER/ingress-nginx/values-$mode.yaml.tpl" > "$tmp/ingress-values.yaml"
-helm upgrade --install ingress-nginx ingress-nginx \
-  --repo https://kubernetes.github.io/ingress-nginx --version "$INGRESS_NGINX_CHART_VERSION" \
-  --namespace ingress-nginx --create-namespace \
-  --values "$tmp/ingress-values.yaml" --wait --timeout 10m
 
 echo "==> Argo CD chart $ARGO_CD_CHART_VERSION"
 helm upgrade --install argocd argo-cd \

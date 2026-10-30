@@ -139,7 +139,7 @@ locals {
   devbox_cidr = cidrsubnet(local.vnet_cidr, 8, 38)
 
   # The service tag admits every Front Door profile in Azure, not only ours, so the
-  # ingress also checks X-Azure-FDID against our profile (infra/cluster/ingress-nginx).
+  # ingress also checks X-Azure-FDID against our profile (the API's HTTPRoute, ADR 0011).
   frontdoor_ports = var.network_mode == "public" ? ["80", "443"] : ["443"]
   devbox_postgres = var.env == "dev" ? [
     { name = "allow-devbox-postgres", priority = 110, sources = [local.devbox_cidr], ports = ["5432"], protocol = "Tcp" },

@@ -1,4 +1,4 @@
-# A small Prometheus for canary analysis only (ADR 0008): ingress-nginx metrics,
+# A small Prometheus for canary analysis only (ADR 0008): the Gateway API proxies' metrics,
 # two days, no alerting, no exporters. Not the platform's observability stack.
 apiVersion: argoproj.io/v1alpha1
 kind: Application

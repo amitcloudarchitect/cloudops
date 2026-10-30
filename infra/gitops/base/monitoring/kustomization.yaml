@@ -1,5 +1,5 @@
-# Allows for the in-cluster Prometheus (ADR 0008): it scrapes ingress-nginx's
-# request metrics and answers Argo Rollouts' canary analysis.
+# Allows for the in-cluster Prometheus (ADR 0008): it scrapes the Gateway API
+# proxies' request metrics (ADR 0011) and answers Argo Rollouts' canary analysis.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: monitoring

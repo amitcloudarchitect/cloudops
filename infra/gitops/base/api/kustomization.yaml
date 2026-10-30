@@ -14,7 +14,6 @@ resources:
   - secretproviderclass.yaml
   - rollout.yaml
   - services.yaml
-  - ingress.yaml
   - httproute.yaml
   - hpa.yaml
   - pdb.yaml

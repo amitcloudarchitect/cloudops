@@ -1,8 +1,7 @@
 # Kubernetes and GitOps
 
 What runs in the cluster and how it gets there. Decisions: ADR 0008; Temporal's
-mutual TLS, ADR 0010; the Gateway API ingress replacing ingress-nginx, ADR 0011
-(phase A: both run, Front Door still sends everything to nginx).
+mutual TLS, ADR 0010; the Gateway API ingress that replaced ingress-nginx, ADR 0011.
 
 ```
 infra/gitops/
@@ -48,8 +47,8 @@ replaced or destroyed.
    ```
    Docker Hub and ECR Public sometimes answer ACR with HTTP 429: wait and retry.
 7. **Push the migrate image**, set its tag in `overlays/dev`, then commit and push.
-8. **Re-run the bootstrap.** It points the root app at `applications/dev`, adds Argo CD's
-   Application health check, and turns on ingress-nginx metrics:
+8. **Re-run the bootstrap.** It points the root app at `applications/dev` and adds Argo
+   CD's Application health check (the ingress is the AKS Gateway API add-on, ADR 0011):
    ```bash
    scripts/bootstrap-cluster.sh --repo-url https://github.com/amitcloudarchitect/cloudops.git --env dev
    ```

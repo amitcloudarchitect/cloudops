@@ -7,7 +7,7 @@
 #      is every Front Door profile in Azure, so anyone with their own profile could
 #      point it at our IP;
 #   2. the ingress therefore also rejects requests whose X-Azure-FDID header is not
-#      our profile's id (frontdoor_id below; infra/cluster/ingress-nginx).
+#      our profile's id (frontdoor_id below; the API's HTTPRoute, ADR 0011).
 # The Front Door -> origin hop is plain HTTP in public mode: Front Door accepts only a
 # trusted certificate on an HTTPS origin, and a bare IP cannot have one. Browsers still
 # get HTTPS, and HTTP redirects to it. Recorded as a departure in the README.
@@ -41,23 +41,9 @@ locals {
   origin_protocol = local.public ? "HttpOnly" : "HttpsOnly"
 }
 
-# In the AKS node resource group, so the cluster's identity can attach it to the
-# ingress load balancer without a role assignment. Recreated if the cluster is.
-resource "azurerm_public_ip" "ingress" {
-  count               = local.public ? 1 : 0
-  provider            = azurerm.aks
-  name                = module.names.ingress_public_ip
-  resource_group_name = data.azurerm_kubernetes_cluster.this.node_resource_group
-  location            = var.location
-  allocation_method   = "Static"
-  sku                 = "Standard"
-  zones               = ["1", "2", "3"]
-  tags                = module.tags.tags
-}
-
-# The Gateway API ingress (ADR 0011), side by side with ingress-nginx until the
-# cutover. Same resource group and the same two locks: the NSG's service tag, and the
-# X-Azure-FDID match, now on the HTTPRoute (infra/gitops/base/edge).
+# The Gateway API ingress's IP (ADR 0011). In the AKS node resource group, so the
+# cluster's identity can attach it to the gateway's load balancer without a role
+# assignment. Recreated if the cluster is.
 resource "azurerm_public_ip" "gateway" {
   count               = local.public ? 1 : 0
   provider            = azurerm.aks
@@ -102,25 +88,8 @@ resource "azurerm_cdn_frontdoor_origin_group" "this" {
   }
 }
 
-# ingress-nginx, failover only since the cutover (ADR 0011, phase B): priority 2, so
-# Front Door sends it traffic only while the gateway's health probe fails. Phase C
-# removes it. Never both priority 1 by intent; during the apply that is harmless, as
-# both serve the same API.
-resource "azurerm_cdn_frontdoor_origin" "this" {
-  count                          = local.public ? 1 : 0
-  name                           = module.names.frontdoor.origin
-  cdn_frontdoor_origin_group_id  = azurerm_cdn_frontdoor_origin_group.this.id
-  enabled                        = true
-  host_name                      = azurerm_public_ip.ingress[0].ip_address
-  http_port                      = 80
-  https_port                     = 443
-  certificate_name_check_enabled = true
-  priority                       = 2
-  weight                         = 1000
-}
-
-# The Gateway API ingress (ADR 0011): Front Door's primary origin since the cutover
-# (phase B), proven inside the cluster first in phase A.
+# The Gateway API ingress (ADR 0011): Front Door's only origin since ingress-nginx
+# was removed (phase C).
 resource "azurerm_cdn_frontdoor_origin" "gateway" {
   count                          = local.public ? 1 : 0
   name                           = module.names.frontdoor.gateway_origin
@@ -180,7 +149,7 @@ resource "azurerm_cdn_frontdoor_route" "this" {
   name                          = "route-all"
   cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.this.id
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.this.id
-  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.this[0].id]
+  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.gateway[0].id]
   enabled                       = true
   patterns_to_match             = ["/*"]
   supported_protocols           = ["Http", "Https"]

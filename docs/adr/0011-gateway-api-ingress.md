@@ -1,7 +1,6 @@
 # ADR 0011: Gateway API ingress, replacing the retired ingress-nginx
 
-- **Status:** Accepted, 2026-10-30; phase A (side by side) verified, phase B (cutover)
-  built, phase C (removal) to come
+- **Status:** Accepted, 2026-10-30; all three phases done (removal: phase C, below)
 - **Decided by:** Amit Kumar (AKS application routing Gateway API, over Envoy Gateway,
   Application Gateway for Containers and Traefik)
 - **Departs from:** the LLD's NGINX ingress controller (Compute, Edge). The LLD's
@@ -88,10 +87,18 @@ not ours to patch.
      `istio_request_duration_milliseconds_bucket`, `reporter="source"`, confirmed in
      A; latency is in milliseconds, so the threshold is 500). Argo CD ignores the
      route's weights and the plugin's in-progress label.
-   - **C — removal.** ingress-nginx, its IP, its origin, the canary Ingress, and the
-     bootstrap script's install.
+   - **C — removal.** ingress-nginx (uninstalled), its IP and Front Door origin
+     (stack 06), the API's Ingress, the network-policy and Prometheus rules for it,
+     its values files, and the bootstrap script's install. A test fails if any comes
+     back. There is no failover origin any more: rolling back means reinstalling it.
    - Rollback before C: swap the two origins' priorities back, and the Rollout to
      `trafficRouting.nginx`. Until then the nginx Ingress serves the stable API.
+
+Phase B's first canary (api `8277a3d`, 2026-10-30) was aborted by its own analysis:
+the canary's Istio series exists only after its first request, and a 2-minute rate
+needs two samples, so the queries returned nothing for the first minutes. Argo
+Rollouts counts empty as an error, not a pass. Each query now falls back to NaN
+("no traffic yet"). The old version served throughout.
 
 ## Consequences
 

@@ -2,7 +2,7 @@
 # sets the weights here during a canary (Gateway API plugin); the platform Application
 # ignores them, and the plugin's in-progress label.
 #
-# /healthz is Front Door's origin probe and is open, as it was on nginx. Everything
+# /healthz is Front Door's origin probe and is open. Everything
 # else must carry our Front Door profile's X-Azure-FDID (lock 2, stack 06): a request
 # without it matches no rule and gets a 404 from the gateway.
 apiVersion: gateway.networking.k8s.io/v1

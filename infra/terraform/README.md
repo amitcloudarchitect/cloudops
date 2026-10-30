@@ -71,9 +71,9 @@ Copy each `*.tfvars.example` to `*.tfvars` first; tfvars files are gitignored.
     as dev currently sets it, means any IP), and
     still Entra-only (no local accounts). Switching modes replaces the cluster: new node
     resource group, new OIDC issuer, workload identity federations to redo;
-  - ingress-nginx has a public static IP (`06-edge`). Two locks keep everything but our
-    Front Door out: the `AzureFrontDoor.Backend` NSG rule (`01-network`) and the
-    `X-Azure-FDID` check in the controller's server snippet (`infra/cluster`);
+  - the Gateway API ingress has a public static IP (`06-edge`, ADR 0011). Two locks
+    keep everything but our Front Door out: the `AzureFrontDoor.Backend` NSG rule
+    (`01-network`) and the exact `X-Azure-FDID` match on the API's HTTPRoute;
   - Front Door reaches the origin over **plain HTTP**: it refuses self-signed origin
     certificates and dev has no public certificate for the IP. Client to Front Door is
     HTTPS only. Private mode uses Private Link and HTTPS to the origin.

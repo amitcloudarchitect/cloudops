@@ -341,10 +341,6 @@ MIRRORED = {
     "infra/gitops/applications/dev/prometheus.yaml": ["server.image",
                                                       "configmapReload.prometheus.image"],
     "infra/cluster/argocd/values.yaml": ["global.image", "redis.image"],
-    "infra/cluster/ingress-nginx/values-public.yaml.tpl": [
-        "controller.image", "controller.admissionWebhooks.patch.image"],
-    "infra/cluster/ingress-nginx/values-private.yaml.tpl": [
-        "controller.image", "controller.admissionWebhooks.patch.image"],
 }
 
 
@@ -424,11 +420,21 @@ def test_only_the_ingress_reaches_the_api() -> None:
     sources = [peer for rule in policy["spec"]["ingress"] for peer in rule["from"]]
     allowed = {peer["namespaceSelector"]["matchLabels"]["kubernetes.io/metadata.name"]
                for peer in sources}
-    assert allowed == {"ingress-nginx", "platform-edge"}
-    edge = [p for p in sources if p["namespaceSelector"]["matchLabels"][
-        "kubernetes.io/metadata.name"] == "platform-edge"]
-    assert edge[0]["podSelector"]["matchLabels"] == {
+    assert allowed == {"platform-edge"}
+    (edge,) = sources
+    assert edge["podSelector"]["matchLabels"] == {
         "gateway.networking.k8s.io/gateway-name": "api"}
+
+
+def test_ingress_nginx_is_gone_for_good() -> None:
+    """Retired upstream, never patched again (ADR 0011, phase C): no Ingress object,
+    no policy naming its namespace, and the bootstrap never installs it again."""
+    everything = ALL_OURS + WORKERS
+    assert not [d for d in everything if d["kind"] == "Ingress"]
+    assert "ingress-nginx" not in yaml.safe_dump_all(everything)
+    bootstrap = (REPO_ROOT / "scripts/bootstrap-cluster.sh").read_text(encoding="utf-8")
+    assert "ingress-nginx" not in bootstrap
+    assert not (REPO_ROOT / "infra/cluster/ingress-nginx").exists()
 
 
 def test_the_rollouts_plugin_is_local_and_pinned() -> None:
