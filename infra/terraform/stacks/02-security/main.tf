@@ -102,22 +102,32 @@ resource "azurerm_user_assigned_identity" "workload" {
 # (stack 04b-rbac) before stack 05 can create the cluster.
 # The pipeline's identity (LLD: id-cloudops-cicd, "federated to GitHub OIDC, no
 # standing secret"; ADR 0013). GitHub issues a token per workflow run; Entra trusts
-# it only for these two subjects. Pull requests from forks get no token at all.
-# Roles (push images, read for plans) are in 04b; it never applies Terraform.
+# it only for main and this repository's pull requests. Pull requests from forks get
+# no token at all. Roles (push images, read for plans) are in 04b; it never applies.
+#
+# GitHub names the repository in its tokens either by name or, in its immutable
+# format, by name and numeric ID ("owner@id/repo@id"), which a re-registered name
+# cannot reuse. This repository's tokens use the immutable form; the by-name form is
+# kept so a change of that setting cannot lock CI out.
 locals {
+  github_immutable = format("%s@%d/%s@%d",
+    split("/", var.github_repository)[0], var.github_repository_ids.owner,
+  split("/", var.github_repository)[1], var.github_repository_ids.repository)
   github_subjects = {
-    main         = "repo:${var.github_repository}:ref:refs/heads/main"
-    pull-request = "repo:${var.github_repository}:pull_request"
+    main                   = "repo:${var.github_repository}:ref:refs/heads/main"
+    pull-request           = "repo:${var.github_repository}:pull_request"
+    main-immutable         = "repo:${local.github_immutable}:ref:refs/heads/main"
+    pull-request-immutable = "repo:${local.github_immutable}:pull_request"
   }
 }
 
 resource "azurerm_federated_identity_credential" "github" {
-  for_each  = local.github_subjects
-  name      = "github-${each.key}"
-  parent_id = azurerm_user_assigned_identity.workload["cicd"].id
-  audience  = ["api://AzureADTokenExchange"]
-  issuer    = "https://token.actions.githubusercontent.com"
-  subject   = each.value
+  for_each                  = local.github_subjects
+  name                      = "github-${each.key}"
+  user_assigned_identity_id = azurerm_user_assigned_identity.workload["cicd"].id
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = "https://token.actions.githubusercontent.com"
+  subject                   = each.value
 }
 
 resource "azurerm_user_assigned_identity" "aks" {

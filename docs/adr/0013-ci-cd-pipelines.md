@@ -96,5 +96,9 @@ The gates stopped the release, as designed; nothing was pushed or signed.
   the finding stays visible in code scanning.
 - **Images:** the Anchore download actions do not put `syft` and `grype` on `PATH`;
   both workflows now add them.
+- **OIDC subject:** GitHub issues this repository's tokens in its immutable form,
+  `repo:amitcloudarchitect@91311714/cloudops@1437077070:...`, which a re-registered
+  name cannot reuse. Stack 02 trusts that form (and keeps the by-name form, so a
+  change of GitHub's setting cannot lock CI out).
 - The `conftest` policy unit tests passed (the devbox's permission rules had refused
   to run a downloaded `conftest`, so CI was their first run).

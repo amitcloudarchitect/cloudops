@@ -8,3 +8,9 @@ variable "github_repository" {
     error_message = "github_repository must be owner/name."
   }
 }
+
+variable "github_repository_ids" {
+  type        = object({ owner = number, repository = number })
+  default     = { owner = 91311714, repository = 1437077070 }
+  description = "GitHub's numeric IDs for the owner and repository: its immutable OIDC subjects name them (ADR 0013)."
+}
