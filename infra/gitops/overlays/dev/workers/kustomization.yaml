@@ -1,6 +1,6 @@
 # Dev workers: applied by the workers Application after Temporal (ADR 0010), since a
 # worker is not ready until Temporal answers. connector-servicenow reads the dev
-# instance (ADR 0009). worker-ai joins when the Azure OpenAI tiers exist (LLD L12).
+# instance (ADR 0009). worker-ai calls the dev Azure OpenAI account (ADR 0012).
 #
 # Image tags are the only thing the pipeline changes here (step 13). Nothing in
 # this directory is a secret.
@@ -8,15 +8,22 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../../base/connector-servicenow
+  - ../../../base/worker-ai
   - values.yaml
 images:
   - name: connector-servicenow
     newName: crcloudopsdevweu.azurecr.io/connector-servicenow
     newTag: ffe0941
+  - name: worker-ai
+    newName: crcloudopsdevweu.azurecr.io/worker-ai
+    newTag: 7b0be3c
 patches:
   - path: connector-servicenow.yaml
+  - path: worker-ai.yaml
 replacements:
   - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.dataSubnet }
     targets:
       - select: { kind: NetworkPolicy, name: connector-servicenow }
+        fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: worker-ai }
         fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]

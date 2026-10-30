@@ -1,0 +1,28 @@
+# id-cloudops-ai-dev (stack 05 output workload_client_ids). It holds Cognitive
+# Services OpenAI User on the account (04b) and reads the app vault. Not secrets.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: worker-ai
+  namespace: platform-ai
+  annotations:
+    azure.workload.identity/client-id: 3873ffd6-6825-45a8-8e54-15b03170c388
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: worker-ai
+  namespace: platform-ai
+data:
+  CLOUDOPS_AZURE_OPENAI_ENDPOINT: https://oai-cloudops-dev-weu.openai.azure.com/
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: worker-ai
+  namespace: platform-ai
+spec:
+  parameters:
+    clientID: 3873ffd6-6825-45a8-8e54-15b03170c388
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe

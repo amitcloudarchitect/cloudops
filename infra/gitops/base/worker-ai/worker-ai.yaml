@@ -17,6 +17,9 @@ data:
   CLOUDOPS_TEMPORAL_ADDRESS: temporal-frontend.temporal.svc.cluster.local:7233
   CLOUDOPS_TEMPORAL_NAMESPACE: default
   CLOUDOPS_TEMPORAL_TLS_DIR: /mnt/temporal-tls  # the Certificate below
+  # The Azure OpenAI account (ADR 0012), reached over its private endpoint with the
+  # workload identity's Entra token; not secret.
+  CLOUDOPS_AZURE_OPENAI_ENDPOINT: SET-IN-OVERLAY
 ---
 # Its client certificate for Temporal (mutual TLS, ADR 0010), also KEDA's.
 apiVersion: cert-manager.io/v1

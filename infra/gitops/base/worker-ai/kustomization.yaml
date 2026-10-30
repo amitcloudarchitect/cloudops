@@ -1,5 +1,6 @@
-# The triage worker with the AI gateway in-process (LLD: npai; ADR 0007). Not in
-# any overlay until the Azure OpenAI tiers exist (LLD L12): it refuses to start without them.
+# The triage worker with the AI gateway in-process (LLD: npai; ADR 0007), calling
+# Azure OpenAI as its workload identity (ADR 0012). Deployed by the workers
+# Application, after Temporal.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: platform-ai
