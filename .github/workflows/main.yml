@@ -38,7 +38,7 @@ jobs:
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
     env:
-      REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
+      REGISTRY: ${{ vars.ACR_LOGIN_SERVER || 'crcloudopsdevweu.azurecr.io' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: tag
@@ -46,9 +46,9 @@ jobs:
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID || 'd58543ec-1d1f-4831-8520-fd7b283ee4c4' }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID || '2fa5e26d-5ad2-415f-88a2-771caca87cbe' }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID || 'cd12743c-f76e-4284-aa62-eb8bd576ac91' }}
       - name: registry login (the CI identity's AcrPush; no admin user, no password)
         run: az acr login --name "${REGISTRY%%.*}"
       - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
@@ -112,6 +112,15 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: the release bot is configured
+        env:
+          CLIENT_ID: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          HAS_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY != '' }}
+        run: |
+          if [ -z "$CLIENT_ID" ] || [ "$HAS_KEY" != true ]; then
+            echo "::error::The release bot is not set up: the repository variable RELEASE_APP_CLIENT_ID and the repository secret RELEASE_APP_PRIVATE_KEY (docs/ci.md, steps 2 and 3). Repository level, not on an environment." >&2
+            exit 1
+          fi
       # The release bot (a GitHub App, ADR 0013): its pull requests run CI like
       # anyone's, and it is the ruleset's only bypass actor, for its own merges.
       - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0

@@ -56,7 +56,13 @@ Repository → Settings → Secrets and variables → Actions.
 | `TF_DEV_05_AKS_TFVARS` | the contents of `env/dev/05-aks.tfvars` |
 
 The tfvars hold IDs and sizes, nothing secret; they are gitignored only so each
-environment keeps its own. Until `AZURE_CLIENT_ID` is set, the plan job is skipped.
+environment keeps its own. Until `TF_DEV_COMMON_TFVARS` is set, the plan job is
+skipped. `AZURE_*` and `ACR_LOGIN_SERVER` fall back to the dev values when unset:
+they are identifiers, and Entra trusts the CI identity only from this repository.
+
+Set these on the **repository** (Settings → Secrets and variables → Actions), not on
+an environment: a job sees an environment's variables only when it deploys to that
+environment, and the release job deploys to none.
 
 **Secret:** `RELEASE_APP_PRIVATE_KEY`, the whole `.pem`. Delete the downloaded file
 afterwards. Rotate it by generating a new key on the App and deleting the old one.

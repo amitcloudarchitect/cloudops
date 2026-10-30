@@ -207,11 +207,13 @@ jobs:
 
   # Real plans against dev state, read-only (the CI identity has Reader and state
   # read, never write; -lock=false so it never takes a lease). Skipped where GitHub
-  # gives no OIDC token (pull requests from forks) or before the identity exists.
+  # gives no OIDC token (pull requests from forks) or until the dev tfvars are set as
+  # repository variables (docs/ci.md). The dev identifiers fall back to their values:
+  # they are not secrets, and Entra trusts this identity only from this repository.
   terraform-plan:
     name: terraform plan + conftest
     needs: terraform-static
-    if: vars.AZURE_CLIENT_ID != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: vars.TF_DEV_COMMON_TFVARS != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -235,9 +237,9 @@ jobs:
           - stack: 06-edge
     env:
       ARM_USE_OIDC: "true"
-      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID || 'd58543ec-1d1f-4831-8520-fd7b283ee4c4' }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID || '2fa5e26d-5ad2-415f-88a2-771caca87cbe' }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID || 'cd12743c-f76e-4284-aa62-eb8bd576ac91' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -246,9 +248,9 @@ jobs:
           terraform_wrapper: false
       - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID || 'd58543ec-1d1f-4831-8520-fd7b283ee4c4' }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID || '2fa5e26d-5ad2-415f-88a2-771caca87cbe' }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID || 'cd12743c-f76e-4284-aa62-eb8bd576ac91' }}
       # Identifiers, not secrets: subscription and group IDs, sizes. Kept as
       # repository variables because the files are gitignored (ADR 0013).
       - name: dev variables
