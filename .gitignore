@@ -28,3 +28,12 @@ evals/last-report.json
 
 # Image SBOMs and scan output (scripts/image-check.sh)
 /build/
+
+# Operations console (apps/web)
+!.env.example
+.next/
+next-env.d.ts
+*.tsbuildinfo
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/e2e/.tokens/

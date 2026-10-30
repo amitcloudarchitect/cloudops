@@ -83,10 +83,13 @@ async def test_every_route_refuses_a_request_without_a_token() -> None:
     transport = httpx.ASGITransport(app=_app())
     async with httpx.AsyncClient(transport=transport, base_url="http://api") as client:
         for route in _routes():
-            path = route.path_format.replace("{resource_id}", str(UUID(int=1)))
-            response = await client.get(path)
-            assert response.status_code == 401, path
-            assert response.json()["error"]["code"] == "missing_token"
+            path = route.path_format
+            for name in ("resource_id", "triage_id"):
+                path = path.replace(f"{{{name}}}", str(UUID(int=1)))
+            for method in sorted(route.methods or ()):
+                response = await client.request(method, path.replace("{number}", "INC0000001"))
+                assert response.status_code == 401, (method, path)
+                assert response.json()["error"]["code"] == "missing_token"
 
 
 def test_a_router_with_a_plain_route_is_refused() -> None:

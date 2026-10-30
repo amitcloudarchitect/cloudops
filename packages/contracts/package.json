@@ -1,0 +1,16 @@
+{
+  "name": "@cloudops/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API types generated from the API's OpenAPI schema. Never edited by hand (ADR 0014).",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "generate": "openapi-typescript openapi.json --output src/api.ts --alphabetize && node scripts/stamp.mjs",
+    "check": "npm run generate && git diff --exit-code -- src/api.ts"
+  },
+  "devDependencies": {
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.9.3"
+  }
+}

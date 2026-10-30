@@ -1,0 +1,130 @@
+/*
+ * Design tokens: the only place the console's look is defined (HLD, UI patterns).
+ * A rebrand changes this file and nothing else. Components use the Tailwind
+ * utilities these tokens generate (bg-surface, text-muted, border-line, ...),
+ * never a raw colour.
+ *
+ * Contrast: every text/background pair below meets WCAG 2.1 AA (4.5:1 for body
+ * text, 3:1 for large text and UI boundaries) in both themes; e2e/a11y.spec.ts
+ * checks the rendered screens with axe.
+ */
+
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-focus: var(--focus);
+
+  /* Health banding: one scale for the whole product (lib/health.ts). */
+  --color-band-healthy: var(--band-healthy);
+  --color-band-healthy-bg: var(--band-healthy-bg);
+  --color-band-watch: var(--band-watch);
+  --color-band-watch-bg: var(--band-watch-bg);
+  --color-band-at-risk: var(--band-at-risk);
+  --color-band-at-risk-bg: var(--band-at-risk-bg);
+  --color-band-critical: var(--band-critical);
+  --color-band-critical-bg: var(--band-critical-bg);
+  --color-band-unknown: var(--band-unknown);
+  --color-band-unknown-bg: var(--band-unknown-bg);
+
+  /* Provenance: observed values are solid; modelled ones are marked apart. */
+  --color-modelled: var(--modelled);
+  --color-modelled-bg: var(--modelled-bg);
+
+  --radius-card: 0.5rem;
+  --radius-control: 0.375rem;
+}
+
+:root {
+  --font-body: "Segoe UI", "Inter";
+  color-scheme: light;
+
+  --canvas: #f4f6f8;
+  --surface: #ffffff;
+  --surface-raised: #eef1f4;
+  --line: #8a96a3;
+  --ink: #16202b;
+  --muted: #4d5b69;
+  --accent: #0b5cad;
+  --accent-ink: #ffffff;
+  --focus: #b34700;
+
+  --band-healthy: #1d6b36;
+  --band-healthy-bg: #e3f3e8;
+  --band-watch: #6b5300;
+  --band-watch-bg: #fbf1cc;
+  --band-at-risk: #9a4100;
+  --band-at-risk-bg: #fde6d6;
+  --band-critical: #a1121d;
+  --band-critical-bg: #fbe1e3;
+  --band-unknown: #4d5b69;
+  --band-unknown-bg: #e9edf1;
+
+  --modelled: #5b3d99;
+  --modelled-bg: #efe9fa;
+}
+
+/* Dark: the system preference unless the user chose light; or chosen explicitly. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #0f151b;
+    --surface: #18212a;
+    --surface-raised: #212c37;
+    --line: #6c7a88;
+    --ink: #e8edf2;
+    --muted: #a9b6c3;
+    --accent: #6cb4ff;
+    --accent-ink: #0b1620;
+    --focus: #ffb366;
+
+    --band-healthy: #7fd69a;
+    --band-healthy-bg: #173322;
+    --band-watch: #f0d061;
+    --band-watch-bg: #3a3112;
+    --band-at-risk: #ffad70;
+    --band-at-risk-bg: #3f2412;
+    --band-critical: #ff8f97;
+    --band-critical-bg: #45161b;
+    --band-unknown: #a9b6c3;
+    --band-unknown-bg: #26313c;
+
+    --modelled: #c4a8ff;
+    --modelled-bg: #2c2340;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0f151b;
+  --surface: #18212a;
+  --surface-raised: #212c37;
+  --line: #6c7a88;
+  --ink: #e8edf2;
+  --muted: #a9b6c3;
+  --accent: #6cb4ff;
+  --accent-ink: #0b1620;
+  --focus: #ffb366;
+
+  --band-healthy: #7fd69a;
+  --band-healthy-bg: #173322;
+  --band-watch: #f0d061;
+  --band-watch-bg: #3a3112;
+  --band-at-risk: #ffad70;
+  --band-at-risk-bg: #3f2412;
+  --band-critical: #ff8f97;
+  --band-critical-bg: #45161b;
+  --band-unknown: #a9b6c3;
+  --band-unknown-bg: #26313c;
+
+  --modelled: #c4a8ff;
+  --modelled-bg: #2c2340;
+}

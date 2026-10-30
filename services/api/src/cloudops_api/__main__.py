@@ -46,6 +46,7 @@ def main() -> int:
         db=Database.create(settings.database_dsn(DbLogin.APP)),
         validator=TokenValidator(auth, keys),
         expose_openapi=local,
+        web_origins=auth.web_origins,
     )
     uvicorn.run(
         app,

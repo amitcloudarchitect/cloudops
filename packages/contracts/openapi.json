@@ -1,0 +1,1787 @@
+{
+  "components": {
+    "schemas": {
+      "CostLine": {
+        "additionalProperties": false,
+        "properties": {
+          "amortized": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "currency",
+          "amortized"
+        ],
+        "title": "CostLine",
+        "type": "object"
+      },
+      "CostSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/CostLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "lines"
+        ],
+        "title": "CostSummary",
+        "type": "object"
+      },
+      "CustomerOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_30d": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/Metric_Decimal_"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost 30D"
+          },
+          "critical_vulnerabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_incidents": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resources": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sla_breached_open": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "resources",
+          "open_incidents",
+          "sla_breached_open",
+          "critical_vulnerabilities",
+          "cost_30d"
+        ],
+        "title": "CustomerOverview",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "MeView": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "oid": {
+            "format": "uuid",
+            "title": "Oid",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "subscription_limited": {
+            "title": "Subscription Limited",
+            "type": "boolean"
+          },
+          "tenants": {
+            "items": {
+              "$ref": "#/components/schemas/TenantView"
+            },
+            "title": "Tenants",
+            "type": "array"
+          }
+        },
+        "required": [
+          "oid",
+          "kind",
+          "role",
+          "permissions",
+          "tenants",
+          "subscription_limited"
+        ],
+        "title": "MeView",
+        "type": "object"
+      },
+      "Metric_Decimal_": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "is_modelled": {
+            "title": "Is Modelled",
+            "type": "boolean"
+          },
+          "query_ref": {
+            "title": "Query Ref",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "unit",
+          "source_system",
+          "as_of",
+          "query_ref",
+          "is_modelled"
+        ],
+        "title": "Metric[Decimal]",
+        "type": "object"
+      },
+      "Metric_int_": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "is_modelled": {
+            "title": "Is Modelled",
+            "type": "boolean"
+          },
+          "query_ref": {
+            "title": "Query Ref",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "value",
+          "unit",
+          "source_system",
+          "as_of",
+          "query_ref",
+          "is_modelled"
+        ],
+        "title": "Metric[int]",
+        "type": "object"
+      },
+      "ResourceContext": {
+        "additionalProperties": false,
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/TelemetryStatus"
+          },
+          "open_incidents": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkItemSummary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Incidents"
+          },
+          "open_vulnerabilities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recent_changes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkItemSummary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recent Changes"
+          },
+          "resource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResourceStaffView"
+              },
+              {
+                "$ref": "#/components/schemas/ResourceView"
+              }
+            ],
+            "title": "Resource"
+          },
+          "vulnerabilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VulnerabilityView"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vulnerabilities"
+          }
+        },
+        "required": [
+          "resource",
+          "vulnerabilities",
+          "open_vulnerabilities",
+          "recent_changes",
+          "open_incidents",
+          "metrics"
+        ],
+        "title": "ResourceContext",
+        "type": "object"
+      },
+      "ResourceList": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items": {
+            "items": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/ResourceStaffView"
+                },
+                {
+                  "$ref": "#/components/schemas/ResourceView"
+                }
+              ]
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "ResourceList",
+        "type": "object"
+      },
+      "ResourceStaffView": {
+        "additionalProperties": false,
+        "description": "What Getronics staff see: provider identifiers and tags as well.",
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "native_id": {
+            "title": "Native Id",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "tags": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "object"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "type_native": {
+            "title": "Type Native",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant_id",
+          "account_id",
+          "native_id",
+          "name",
+          "type",
+          "type_native",
+          "region",
+          "state",
+          "tags"
+        ],
+        "title": "ResourceStaffView",
+        "type": "object"
+      },
+      "ResourceView": {
+        "additionalProperties": false,
+        "description": "What a customer sees of a resource.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "region",
+          "state"
+        ],
+        "title": "ResourceView",
+        "type": "object"
+      },
+      "ReviewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "accept",
+              "override"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageOverrides"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "ReviewRequest",
+        "type": "object"
+      },
+      "ReviewView": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "accept",
+              "override"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overrides"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reviewer_oid": {
+            "format": "uuid",
+            "title": "Reviewer Oid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "decision",
+          "overrides",
+          "reason",
+          "reviewer_oid",
+          "created_at"
+        ],
+        "title": "ReviewView",
+        "type": "object"
+      },
+      "SowView": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "monthly_manage_revenue": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "effective_from",
+          "effective_to",
+          "currency",
+          "monthly_manage_revenue"
+        ],
+        "title": "SowView",
+        "type": "object"
+      },
+      "TelemetryStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "reason"
+        ],
+        "title": "TelemetryStatus",
+        "type": "object"
+      },
+      "TenantView": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TenantView",
+        "type": "object"
+      },
+      "TriageOverrides": {
+        "additionalProperties": false,
+        "description": "What a reviewer may change: the classification's fields, each to a value its\nschema allows. Typed here so the console's choices come from the contract.",
+        "properties": {
+          "action_class": {
+            "anyOf": [
+              {
+                "enum": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Class"
+          },
+          "affected_ci": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Ci"
+          },
+          "customer": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer"
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "service_down",
+                  "performance",
+                  "disk_space",
+                  "backup_failure",
+                  "certificate_expiry",
+                  "patching",
+                  "capacity_change",
+                  "access_request",
+                  "connectivity",
+                  "security_alert",
+                  "decommission",
+                  "information_request",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "risk": {
+            "anyOf": [
+              {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk"
+          }
+        },
+        "title": "TriageOverrides",
+        "type": "object"
+      },
+      "TriageView": {
+        "additionalProperties": false,
+        "properties": {
+          "classification": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classification"
+          },
+          "cost": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enrichment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enrichment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "injection_signals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Injection Signals",
+            "type": "array"
+          },
+          "plan": {
+            "title": "Plan",
+            "type": "null"
+          },
+          "reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewView"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "title": "Stage",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "route",
+          "stage",
+          "reasons",
+          "classification",
+          "enrichment",
+          "injection_signals",
+          "cost",
+          "created_at",
+          "reviews"
+        ],
+        "title": "TriageView",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VulnerabilityView": {
+        "additionalProperties": false,
+        "properties": {
+          "first_detected": {
+            "format": "date-time",
+            "title": "First Detected",
+            "type": "string"
+          },
+          "last_detected": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Detected"
+          },
+          "qid": {
+            "title": "Qid",
+            "type": "string"
+          },
+          "remediated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediated At"
+          },
+          "severity": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "title": "Severity",
+            "type": "integer"
+          },
+          "solution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solution"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "qid",
+          "title",
+          "severity",
+          "first_detected",
+          "last_detected",
+          "remediated_at",
+          "solution"
+        ],
+        "title": "VulnerabilityView",
+        "type": "object"
+      },
+      "WorkItemDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "assigned_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned To"
+          },
+          "change_request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Request"
+          },
+          "close_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Close Notes"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "closure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closure Code"
+          },
+          "configuration_item": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Item"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "resolve_time": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "sla_breached": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Breached"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "triage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TriageView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "triage_route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triage Route"
+          },
+          "workgroup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workgroup"
+          }
+        },
+        "required": [
+          "number",
+          "kind",
+          "tenant",
+          "state",
+          "priority",
+          "workgroup",
+          "short_description",
+          "configuration_item",
+          "resource_id",
+          "opened_at",
+          "closed_at",
+          "sla_breached",
+          "change_request",
+          "assigned_to",
+          "closure_code",
+          "close_notes",
+          "resolve_time",
+          "triage"
+        ],
+        "title": "WorkItemDetail",
+        "type": "object"
+      },
+      "WorkItemList": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkItemSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "workgroups": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Workgroups",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count",
+          "workgroups"
+        ],
+        "title": "WorkItemList",
+        "type": "object"
+      },
+      "WorkItemSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "configuration_item": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Item"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "sla_breached": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sla Breached"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "triage_route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triage Route"
+          },
+          "workgroup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workgroup"
+          }
+        },
+        "required": [
+          "number",
+          "kind",
+          "tenant",
+          "state",
+          "priority",
+          "workgroup",
+          "short_description",
+          "configuration_item",
+          "resource_id",
+          "opened_at",
+          "closed_at",
+          "sla_breached"
+        ],
+        "title": "WorkItemSummary",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "CloudOps Platform API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/commercial/sows": {
+      "get": {
+        "operationId": "list_sows_v1_commercial_sows_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SowView"
+                  },
+                  "title": "Response List Sows V1 Commercial Sows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Sows"
+      }
+    },
+    "/v1/cost/summary": {
+      "get": {
+        "operationId": "cost_summary_v1_cost_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cost Summary"
+      }
+    },
+    "/v1/customers": {
+      "get": {
+        "description": "One row per tenant in scope. Each figure is present only when the caller\nholds the permission it comes from; absent is not zero.",
+        "operationId": "list_customers_v1_customers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CustomerOverview"
+                  },
+                  "title": "Response List Customers V1 Customers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Customers"
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "operationId": "me_v1_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Me"
+      }
+    },
+    "/v1/resources": {
+      "get": {
+        "operationId": "list_resources_v1_resources_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Resources"
+      }
+    },
+    "/v1/resources/{resource_id}": {
+      "get": {
+        "operationId": "get_resource_v1_resources__resource_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resource_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resource Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ResourceStaffView"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ResourceView"
+                    }
+                  ],
+                  "title": "Response Get Resource V1 Resources  Resource Id  Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Resource"
+      }
+    },
+    "/v1/resources/{resource_id}/context": {
+      "get": {
+        "operationId": "resource_context_v1_resources__resource_id__context_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resource_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resource Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceContext"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resource Context"
+      }
+    },
+    "/v1/work-items": {
+      "get": {
+        "operationId": "list_work_items_v1_work_items_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "incident",
+                    "change_task",
+                    "service_request",
+                    "project_task"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workgroup",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workgroup"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "closed",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkItemList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Work Items"
+      }
+    },
+    "/v1/work-items/{number}": {
+      "get": {
+        "operationId": "get_work_item_v1_work_items__number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkItemDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Work Item"
+      }
+    },
+    "/v1/work-items/{number}/triage/{triage_id}/reviews": {
+      "post": {
+        "operationId": "review_triage_v1_work_items__number__triage__triage_id__reviews_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "triage_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Triage Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Triage"
+      }
+    }
+  }
+}
