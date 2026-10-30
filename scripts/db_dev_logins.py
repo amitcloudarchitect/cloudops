@@ -52,7 +52,7 @@ _IDENT = re.compile(r"^[a-z][a-z0-9_-]{0,62}$")
 @dataclass(frozen=True)
 class Login:
     role: str
-    secret: str
+    vault_entry: str  # the Key Vault secret's name, never its value
     group: str | None  # the NOLOGIN group role it joins, if any
     database: str | None  # set: the secret is a DSN for this database; None: the password
 
@@ -220,14 +220,14 @@ def main(argv: list[str] | None = None) -> int:
     print("roles, databases and extensions: ok")
 
     for login in LOGINS:
-        if not args.rotate and _secret_exists(args.vault, login.secret):
-            print(f"{login.role}: secret {login.secret} exists, unchanged")
+        if not args.rotate and _secret_exists(args.vault, login.vault_entry):
+            print(f"{login.role}: secret {login.vault_entry} exists, unchanged")
             continue
         password = secrets.token_urlsafe(32)
         _psql(host, admin, token, "postgres", password_sql(login.role, scram_verifier(password)))
         value = dsn(login.role, password, host, login.database) if login.database else password
-        _write_secret(args.vault, login.secret, value)
-        print(f"{login.role}: new password set, stored as {login.secret}")
+        _write_secret(args.vault, login.vault_entry, value)
+        print(f"{login.role}: new password set, stored as {login.vault_entry}")
     return 0
 
 

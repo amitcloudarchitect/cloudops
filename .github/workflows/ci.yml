@@ -133,26 +133,7 @@ jobs:
         with:
           output: sarif
       - name: fail on high or critical (security severity 7.0 and above)
-        run: |
-          python3 - <<'EOF'
-          import json, pathlib, sys
-          bad = []
-          for path in pathlib.Path("sarif").glob("*.sarif"):
-              run_data = json.loads(path.read_text())
-              for run in run_data["runs"]:
-                  rules = {r["id"]: r for r in run["tool"]["driver"].get("rules", [])}
-                  for ext in run["tool"].get("extensions", []):
-                      rules.update({r["id"]: r for r in ext.get("rules", [])})
-                  for res in run.get("results", []):
-                      sev = float(rules.get(res.get("ruleId"), {}).get("properties", {})
-                                  .get("security-severity", 0) or 0)
-                      if sev >= 7.0:
-                          loc = res["locations"][0]["physicalLocation"]
-                          bad.append(f'{loc["artifactLocation"]["uri"]}:{loc.get("region", {}).get("startLine")}: '
-                                     f'{res["ruleId"]} ({sev})')
-          print("\n".join(bad) or "no high or critical findings")
-          sys.exit(1 if bad else 0)
-          EOF
+        run: python3 -I tools/ci/check_sarif.py sarif
 
   sca:
     name: SCA (dependencies, high and critical fail)
@@ -173,11 +154,22 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        id: syft
         with:
           syft-version: v1.55.0
       - uses: anchore/scan-action/download-grype@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        id: grype-bin
         with:
           grype-version: v0.121.0
+      # The download actions report where they put each tool; image-check.sh finds
+      # them on PATH.
+      - name: syft and grype on PATH
+        env:
+          SYFT: ${{ steps.syft.outputs.cmd }}
+          GRYPE: ${{ steps.grype-bin.outputs.cmd }}
+        run: |
+          dirname "$SYFT" >> "$GITHUB_PATH"
+          dirname "$GRYPE" >> "$GITHUB_PATH"
       - name: build every image
         run: docker buildx bake -f docker-bake.hcl --load
       - name: SBOM, non-root check, and the critical/high gate

@@ -1,0 +1,7 @@
+# Reviewed exceptions to the SAST gate (tools/ci/check_sarif.py).
+#
+# One 'file:rule' per line, then '#' and the reason. File and rule only, never a
+# line: the exception covers that rule in that file and nothing else, and the
+# finding stays visible in GitHub's code scanning view.
+#
+packages/config/src/cloudops_config/__main__.py:py/clear-text-logging-sensitive-data  # by design: prints one secret from the local .env.local to stdout for the Makefile's process substitution, so no tool needs it on disk; refuses outside the local profile. Reviewed 2026-10-30.

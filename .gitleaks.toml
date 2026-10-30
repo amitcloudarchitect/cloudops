@@ -1,0 +1,17 @@
+# gitleaks (CI secret scan, ADR 0013): the default rules, plus reviewed exceptions.
+#
+# Each exception names the file AND the exact value, so a real secret added to the
+# same file still fails. The scan covers the whole history, so an exception for a
+# fixture must match it in every commit; an inline comment would not.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Redaction test fixtures: secret-shaped strings the gateway must redact (the jwt.io sample token and invented keys). Reviewed 2026-10-30."
+condition = "AND"
+paths = ['''^services/gateway/tests/test_gateway_units\.py$''']
+regexes = [
+  '''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.dozjgNryP4J3jVmNHl0w5N''',
+  '''^abc123def456ghi789==$''',
+]

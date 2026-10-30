@@ -80,5 +80,21 @@
 - **Promotion into other registries** (LLD: production pulls only from
   `crcloudopsprdweu`): a signed copy step, built with the UAT and production
   environments.
-- **The conftest policies' unit tests first ran in CI**: the devbox's permission
-  rules refused to run a downloaded `conftest` binary.
+
+## First run (2026-10-30, `bddb3a6`)
+
+The gates stopped the release, as designed; nothing was pushed or signed.
+
+- **Secret scan:** three redaction-test fixtures (a sample JWT and invented keys) in
+  `services/gateway/tests/test_gateway_units.py`. `.gitleaks.toml` excepts those exact
+  values in that file only; a different key there still fails.
+- **SAST:** two false positives (a Key Vault secret's *name* printed by
+  `scripts/db_dev_logins.py`; the field is now `vault_entry`) and one finding kept by
+  design: `python -m cloudops_config secret` prints a local `.env.local` value for the
+  Makefile, and refuses outside the local profile. Exceptions are file-and-rule
+  entries in `tools/ci/sast_exceptions.txt`, checked by `tools/ci/check_sarif.py`;
+  the finding stays visible in code scanning.
+- **Images:** the Anchore download actions do not put `syft` and `grype` on `PATH`;
+  both workflows now add them.
+- The `conftest` policy unit tests passed (the devbox's permission rules had refused
+  to run a downloaded `conftest`, so CI was their first run).
