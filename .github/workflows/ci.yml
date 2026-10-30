@@ -1,77 +1,290 @@
+# The release gates (LLD, CI/CD; ADR 0013). Every job is a stage that fails the build.
+# Runs on every pull request, and as the first half of the main pipeline (cd.yml).
+# Third-party actions are pinned to commit SHAs; tools to versions and checksums.
 name: ci
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  CLOUDOPS_TEST_ADMIN_DSN: postgresql://postgres:ci-only-throwaway@localhost:5432/postgres
+  # The migration's no-pg_partman fallback exists for local runs only.
+  CLOUDOPS_REQUIRE_PARTMAN: "1"
+
 jobs:
-  # Release gate (LLD, CI/CD): any data access outside packages/tenancy fails the build.
-  # Standard library only, so nothing installed can influence the result.
-  data-access-boundary:
+  # Standard library only, so nothing installed can influence these results.
+  boundaries:
+    name: data access, rate card
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
-      - run: python -I tools/ci/check_data_access.py .
+      - name: no data access outside packages/tenancy (release gate)
+        run: python -I tools/ci/check_data_access.py .
+      - name: no monetary literal outside the rate card
+        run: python -I tools/ci/check_money_literals.py .
+
+  secret-scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the whole history: a secret removed in a later commit is still leaked
+      - name: gitleaks
+        run: >
+          docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/repo" -w /repo
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --redact --no-banner --exit-code 1
 
   lint-and-types:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run mypy --strict .
+      - name: runbook manifests (schema, bounds, no interpolation, rollback)
+        run: uv run python tools/ci/check_runbooks.py .
+      # apps/web is a placeholder until step 14; tsc runs once it has a lockfile.
+      - name: tsc
+        if: hashFiles('apps/web/package-lock.json') != ''
+        run: cd apps/web && npm ci && npm run typecheck
 
   tests:
+    name: unit, contract, integration, isolation
     runs-on: ubuntu-24.04
-    env:
-      CLOUDOPS_TEST_ADMIN_DSN: postgresql://postgres:ci-only-throwaway@localhost:5432/postgres
-      # The migration's no-pg_partman fallback exists for local runs only.
-      CLOUDOPS_REQUIRE_PARTMAN: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: database with pgvector and pg_partman
         run: |
           docker build -t cloudops-pg-test db/test-image
           docker run -d --name pg -p 5432:5432 -e POSTGRES_PASSWORD=ci-only-throwaway cloudops-pg-test
           for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv sync --locked
-      - name: unit and integration tests
-        run: uv run pytest -m "not isolation and not evaluation"
+      # Contract tests replay recorded fixtures (ServiceNow, Azure OpenAI); integration
+      # tests run against this database. Both are part of the suite.
+      - name: unit, contract and integration tests
+        run: uv run pytest -m "not isolation and not evaluation" --cov --cov-report=
+      - name: coverage of tenancy and calculation code (80%)
+        run: uv run coverage report --fail-under=80
       - name: isolation suite (release gate)
         run: uv run pytest -m isolation
 
-  # Release gate (LLD, Evaluation): the golden set through the real stage 1 to 3
-  # workflow, failing on any regression against evals/baseline.json and on any
-  # injection followed or cross-tenant leak.
+  # The golden set through the real stage 1 to 3 workflow, failing on any regression
+  # against evals/baseline.json and on any injection followed or cross-tenant leak.
   evaluation:
+    name: AI evaluation (release gate)
     runs-on: ubuntu-24.04
-    env:
-      CLOUDOPS_TEST_ADMIN_DSN: postgresql://postgres:ci-only-throwaway@localhost:5432/postgres
-      CLOUDOPS_REQUIRE_PARTMAN: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: database with pgvector and pg_partman
         run: |
           docker build -t cloudops-pg-test db/test-image
           docker run -d --name pg -p 5432:5432 -e POSTGRES_PASSWORD=ci-only-throwaway cloudops-pg-test
           for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv sync --locked
-      - name: AI evaluation suite (release gate)
-        run: uv run pytest -m evaluation
+      - run: uv run pytest -m evaluation
       - name: evaluation report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: evaluation-report
           path: evals/last-report.json
           if-no-files-found: ignore
+
+  # The workbook's reference case (321 CIs, 24x7, Gold, India). The reference engine
+  # compares floats within a tolerance; the exact Decimal engine and its exact gate
+  # arrive with the commercial modules (step 16, ADR 0013).
+  pricing-regression:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: python -I reference/pricing_engine.py
+
+  sast:
+    name: SAST (CodeQL, high and critical fail)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: python, actions
+          queries: security-extended
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          output: sarif
+      - name: fail on high or critical (security severity 7.0 and above)
+        run: |
+          python3 - <<'EOF'
+          import json, pathlib, sys
+          bad = []
+          for path in pathlib.Path("sarif").glob("*.sarif"):
+              run_data = json.loads(path.read_text())
+              for run in run_data["runs"]:
+                  rules = {r["id"]: r for r in run["tool"]["driver"].get("rules", [])}
+                  for ext in run["tool"].get("extensions", []):
+                      rules.update({r["id"]: r for r in ext.get("rules", [])})
+                  for res in run.get("results", []):
+                      sev = float(rules.get(res.get("ruleId"), {}).get("properties", {})
+                                  .get("security-severity", 0) or 0)
+                      if sev >= 7.0:
+                          loc = res["locations"][0]["physicalLocation"]
+                          bad.append(f'{loc["artifactLocation"]["uri"]}:{loc.get("region", {}).get("startLine")}: '
+                                     f'{res["ruleId"]} ({sev})')
+          print("\n".join(bad) or "no high or critical findings")
+          sys.exit(1 if bad else 0)
+          EOF
+
+  sca:
+    name: SCA (dependencies, high and critical fail)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: anchore/scan-action/download-grype@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        id: grype
+        with:
+          grype-version: v0.121.0
+      - name: grype over uv.lock and every manifest
+        run: ${{ steps.grype.outputs.cmd }} dir:. -c .grype.yaml --fail-on high -o table
+
+  images:
+    name: container build, scan, SBOM
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        with:
+          syft-version: v1.55.0
+      - uses: anchore/scan-action/download-grype@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
+        with:
+          grype-version: v0.121.0
+      - name: build every image
+        run: docker buildx bake -f docker-bake.hcl --load
+      - name: SBOM, non-root check, and the critical/high gate
+        run: scripts/image-check.sh cloudops/api:dev cloudops/connector-servicenow:dev cloudops/worker-ai:dev cloudops/migrate:dev
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: sbom
+          path: build/sbom/
+
+  terraform-static:
+    name: terraform fmt, validate, policy tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.0
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive infra/terraform
+      - name: validate every stack
+        run: |
+          for stack in infra/terraform/stacks/*/; do
+            echo "==> $stack"
+            terraform -chdir="$stack" init -backend=false -input=false >/dev/null
+            terraform -chdir="$stack" validate -no-color
+          done
+      - name: conftest
+        run: |
+          curl -fsSL -o conftest.tgz https://github.com/open-policy-agent/conftest/releases/download/v0.71.1/conftest_0.71.1_Linux_x86_64.tar.gz
+          echo "c3f6b2a753bd56e377a1e51a95ae3e057f926f2e9139f7d5b5dfbbaf810f7985  conftest.tgz" | sha256sum -c -
+          tar xzf conftest.tgz conftest && sudo mv conftest /usr/local/bin/
+      - name: policy unit tests
+        run: conftest verify -p policy/terraform
+
+  # Real plans against dev state, read-only (the CI identity has Reader and state
+  # read, never write; -lock=false so it never takes a lease). Skipped where GitHub
+  # gives no OIDC token (pull requests from forks) or before the identity exists.
+  terraform-plan:
+    name: terraform plan + conftest
+    needs: terraform-static
+    if: vars.AZURE_CLIENT_ID != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # tfvars: the repository variable holding the stack's own tfvars, if any.
+        include:
+          - stack: 01-network
+          - stack: 02-security
+          - stack: 03-observability
+          - stack: 03a-ai
+          - stack: 04-data
+            tfvars: TF_DEV_04_DATA_TFVARS
+          - stack: 04a-registry
+          - stack: 04b-rbac
+            tfvars: TF_DEV_04B_RBAC_TFVARS
+          - stack: 05-aks
+            tfvars: TF_DEV_05_AKS_TFVARS
+          - stack: 06-edge
+    env:
+      ARM_USE_OIDC: "true"
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.17.0
+          terraform_wrapper: false
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      # Identifiers, not secrets: subscription and group IDs, sizes. Kept as
+      # repository variables because the files are gitignored (ADR 0013).
+      - name: dev variables
+        env:
+          BACKEND_HCL: ${{ vars.TF_DEV_BACKEND_HCL }}
+          COMMON: ${{ vars.TF_DEV_COMMON_TFVARS }}
+          STACK_VARS: ${{ matrix.tfvars && vars[matrix.tfvars] || '' }}
+        run: |
+          d=infra/terraform/env/dev
+          printf '%s\n' "$BACKEND_HCL" > $d/backend.hcl
+          printf '%s\n' "$COMMON" > $d/common.tfvars
+          if [ -n "$STACK_VARS" ]; then printf '%s\n' "$STACK_VARS" > "$d/${{ matrix.stack }}.tfvars"; fi
+      - name: plan
+        working-directory: infra/terraform/stacks/${{ matrix.stack }}
+        run: |
+          terraform init -input=false -backend-config=../../env/dev/backend.hcl >/dev/null
+          extra=""
+          [ -f "../../env/dev/${{ matrix.stack }}.tfvars" ] && extra="-var-file=../../env/dev/${{ matrix.stack }}.tfvars"
+          # Write-only: never stored, never compared; any value plans the same.
+          export TF_VAR_postgres_breakglass_password_wo="plan-only-$(openssl rand -hex 16)"
+          terraform plan -input=false -lock=false -no-color -out=tfplan \
+            -var-file=../../env/dev/common.tfvars $extra
+          terraform show -json tfplan > plan.json
+      - name: mandatory tags
+        run: python3 -I tools/ci/check_terraform_tags.py infra/terraform/stacks/${{ matrix.stack }}/plan.json
+      - name: conftest
+        run: |
+          curl -fsSL -o conftest.tgz https://github.com/open-policy-agent/conftest/releases/download/v0.71.1/conftest_0.71.1_Linux_x86_64.tar.gz
+          echo "c3f6b2a753bd56e377a1e51a95ae3e057f926f2e9139f7d5b5dfbbaf810f7985  conftest.tgz" | sha256sum -c -
+          tar xzf conftest.tgz conftest
+          ./conftest test -p policy/terraform infra/terraform/stacks/${{ matrix.stack }}/plan.json

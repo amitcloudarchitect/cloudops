@@ -1,0 +1,113 @@
+# Promotion to UAT and production (LLD, Delivery: "UAT and Production approval-gated
+# with a change record"; ADR 0013). Started by hand from main with the tag dev has
+# proven. The images must carry the main pipeline's signature; the environment's
+# required reviewers approve; production also needs a change record. The release
+# bot then opens the pull request that changes the environment's overlay, and Argo
+# CD there pulls it.
+#
+# Fails closed until an environment exists: the uat and prd overlays list no
+# images yet, and their registries (LLD: production pulls only from
+# crcloudopsprdweu) are not built, so there is nothing to promote into.
+name: promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to
+        type: choice
+        options: [uat, prd]
+        required: true
+      tag:
+        description: Image tag dev runs (the commit it was built from)
+        type: string
+        required: true
+      change_ref:
+        description: Change record (ServiceNow CHG number); required for prd
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: promote-${{ inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: check the request and the signatures
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      id-token: write # reads the dev registry as the CI identity
+    env:
+      ENVIRONMENT: ${{ inputs.environment }}
+      TAG: ${{ inputs.tag }}
+      CHANGE_REF: ${{ inputs.change_ref }}
+      REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
+    steps:
+      - name: inputs
+        run: |
+          [ "$GITHUB_REF" = refs/heads/main ] || { echo "promote only from main" >&2; exit 1; }
+          [[ "$TAG" =~ ^[0-9a-f]{7,40}$ ]] || { echo "tag must be a commit hash" >&2; exit 1; }
+          if [ "$ENVIRONMENT" = prd ] && ! [[ "$CHANGE_REF" =~ ^CHG[0-9]{7,}$ ]]; then
+            echo "production needs a change record (CHG followed by its number)" >&2; exit 1
+          fi
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3.1.0
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: az acr login --name "${REGISTRY%%.*}"
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      # Only images the main pipeline built and signed on main may be promoted.
+      - name: signatures
+        run: |
+          for image in api connector-servicenow worker-ai migrate; do
+            cosign verify "$REGISTRY/$image:$TAG" \
+              --certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/main.yml@refs/heads/main" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
+            echo "verified $image:$TAG"
+          done
+
+  promote:
+    name: open the promotion
+    needs: verify
+    runs-on: ubuntu-24.04
+    # Required reviewers are set on the environment in GitHub (ADR 0013).
+    environment: ${{ inputs.environment }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: bot
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.bot.outputs.token }}
+      - name: pull request against the environment's overlay
+        env:
+          GH_TOKEN: ${{ steps.bot.outputs.token }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          TAG: ${{ inputs.tag }}
+          CHANGE_REF: ${{ inputs.change_ref }}
+          BOT: ${{ steps.bot.outputs.app-slug }}
+          APPROVED_BY: ${{ github.actor }}
+        run: |
+          python3 -I tools/ci/set_image_tag.py "$TAG" api migrate connector-servicenow worker-ai \
+            -- "infra/gitops/overlays/$ENVIRONMENT"
+          branch="promote/$ENVIRONMENT-$TAG"
+          title="Promote $TAG to $ENVIRONMENT${CHANGE_REF:+ ($CHANGE_REF)}"
+          git config user.name "$BOT[bot]"
+          git config user.email "$BOT[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git commit -am "$title" -m "Requested by $APPROVED_BY; approved on the $ENVIRONMENT environment.${CHANGE_REF:+ Change record: $CHANGE_REF.}"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" --title "$title" \
+            --body "Images signed by the main pipeline, verified before approval. Requested by $APPROVED_BY.${CHANGE_REF:+ Change record: $CHANGE_REF.}"
+          gh pr merge "$branch" --auto --squash --delete-branch

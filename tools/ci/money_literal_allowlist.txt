@@ -1,0 +1,8 @@
+# Files permitted to hold monetary literals (tools/ci/check_money_literals.py).
+#
+# One repo-relative path per line, followed by '#' and a justification. An entry
+# without one fails the gate. These are the rate cards: the one place a price lives.
+#
+services/gateway/src/cloudops_gateway/pricing.py  # the AI rate card: list prices per tier, ADR 0012
+packages/devdata/  # synthetic dataset generator (make seed): invented amounts, never product logic
+packages/evals/src/cloudops_evals/scoring.py  # the evaluation's per-case cost band, a gate threshold

@@ -100,6 +100,26 @@ resource "azurerm_user_assigned_identity" "workload" {
 
 # AKS control-plane identity. Needs Network Contributor on its subnets
 # (stack 04b-rbac) before stack 05 can create the cluster.
+# The pipeline's identity (LLD: id-cloudops-cicd, "federated to GitHub OIDC, no
+# standing secret"; ADR 0013). GitHub issues a token per workflow run; Entra trusts
+# it only for these two subjects. Pull requests from forks get no token at all.
+# Roles (push images, read for plans) are in 04b; it never applies Terraform.
+locals {
+  github_subjects = {
+    main         = "repo:${var.github_repository}:ref:refs/heads/main"
+    pull-request = "repo:${var.github_repository}:pull_request"
+  }
+}
+
+resource "azurerm_federated_identity_credential" "github" {
+  for_each  = local.github_subjects
+  name      = "github-${each.key}"
+  parent_id = azurerm_user_assigned_identity.workload["cicd"].id
+  audience  = ["api://AzureADTokenExchange"]
+  issuer    = "https://token.actions.githubusercontent.com"
+  subject   = each.value
+}
+
 resource "azurerm_user_assigned_identity" "aks" {
   name                = module.names.aks_identity
   resource_group_name = azurerm_resource_group.sec.name

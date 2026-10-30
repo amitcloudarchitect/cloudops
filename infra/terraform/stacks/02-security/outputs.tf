@@ -10,3 +10,8 @@ output "workload_identity_client_ids" {
 output "aks_identity_id" {
   value = azurerm_user_assigned_identity.aks.id
 }
+
+output "cicd_client_id" {
+  description = "For the repository variable AZURE_CLIENT_ID (an identifier, not a secret)."
+  value       = azurerm_user_assigned_identity.workload["cicd"].client_id
+}

@@ -1,0 +1,58 @@
+# The runbook path (LLD, CI/CD: "Runbooks follow a stricter path"; ADR 0013).
+#
+#   author -> static validation -> dry-run on sandbox accounts -> peer review
+#   (CODEOWNERS; the author cannot approve) -> signing by the pipeline identity on
+#   the protected branch only -> publication with a version.
+#
+# Static validation runs now. Dry-run, signing and publication belong to the
+# execution plane, which waits for the security review (CLAUDE.md), the sandbox
+# accounts (LLD L7) and the signing ceremony (LLD L9). Until then they fail closed:
+# a runbook reaching main is not signed or published, and the run says why.
+name: runbooks
+
+on:
+  pull_request:
+    paths: [runbooks/**, tools/ci/check_runbooks.py]
+  push:
+    branches: [main]
+    paths: [runbooks/**]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: static validation
+    runs-on: ubuntu-24.04
+    outputs:
+      manifests: ${{ steps.count.outputs.manifests }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: uv sync --locked
+      - run: uv run python tools/ci/check_runbooks.py .
+      - id: count
+        run: echo "manifests=$(find runbooks -name '*.yaml' | wc -l)" >> "$GITHUB_OUTPUT"
+
+  dry-run:
+    name: dry run on sandbox accounts
+    needs: validate
+    if: needs.validate.outputs.manifests != '0'
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo "Not built: dry runs need the sandbox accounts (LLD L7) and the execution plane," >&2
+          echo "which waits for the security review (ADR 0013)." >&2
+          exit 1
+
+  sign-and-publish:
+    name: sign (pipeline identity, protected branch) and publish
+    needs: [validate, dry-run]
+    # Never from a pull request or any branch but main (LLD).
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.validate.outputs.manifests != '0'
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          echo "Not built: signing needs key-runbook-signing in kv-cloudops-keys (LLD L9 ceremony)" >&2
+          echo "and the runbook registry, both part of the execution plane (ADR 0013)." >&2
+          exit 1

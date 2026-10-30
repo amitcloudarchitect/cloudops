@@ -26,6 +26,7 @@ locals {
   # LLD, App registrations and identities. The execution identity is part of
   # the execution plane and is deliberately not created before its review.
   # "migrate" runs database migrations (LLD: a dedicated role, applied by a
-  # pipeline job); federated to the pipeline in step 13.
-  workload_identities = ["api", "ingest", "telemetry", "ai", "workflow", "migrate"]
+  # pipeline job), as a Kubernetes job federated in stack 05. "cicd" is the
+  # pipeline itself (LLD: id-cloudops-cicd, federated to GitHub OIDC; ADR 0013).
+  workload_identities = ["api", "ingest", "telemetry", "ai", "workflow", "migrate", "cicd"]
 }

@@ -40,7 +40,7 @@ from uuid import UUID
 
 from sqlalchemy import text
 
-from cloudops_gateway.pricing import Deployment
+from cloudops_gateway.pricing import SPEND_BREAKER_FLOOR, Deployment
 from cloudops_gateway.providers import (
     Completion,
     Message,
@@ -95,8 +95,8 @@ class Limits:
     tool_iterations: int = 10
     breaker_recent: timedelta = timedelta(minutes=15)
     breaker_trailing: timedelta = timedelta(hours=24)
-    breaker_multiple: Decimal = Decimal(5)
-    breaker_floor: Decimal = Decimal("5.000000")  # recent spend below this never trips
+    breaker_multiple: Decimal = Decimal(5)  # not money: a ratio of spend rates
+    breaker_floor: Decimal = SPEND_BREAKER_FLOOR  # recent spend below this never trips
 
 
 @dataclass(frozen=True)

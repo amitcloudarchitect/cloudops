@@ -25,12 +25,28 @@ cloudops-evals = { workspace = true }
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
     "testcontainers[postgres]>=4.8",
     "ruff>=0.8",
     "mypy>=1.13",
     "pyyaml>=6.0",
     "types-pyyaml>=6.0",
 ]
+
+# The coverage release gate (LLD, CI/CD): 80% on tenancy and calculation code. Step 16
+# adds the commercial engine here. Measured by CI's tests job (coverage report
+# --fail-under=80 over exactly these files).
+[tool.coverage.run]
+branch = true
+source = ["packages/tenancy/src", "services/gateway/src/cloudops_gateway"]
+
+[tool.coverage.report]
+include = [
+    "packages/tenancy/src/*",
+    "services/gateway/src/cloudops_gateway/pricing.py",
+]
+show_missing = true
+skip_empty = true
 
 [tool.pytest.ini_options]
 testpaths = ["packages", "services", "connectors", "db", "tools"]

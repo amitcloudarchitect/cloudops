@@ -162,3 +162,70 @@ resource "azurerm_role_assignment" "ai_openai_user" {
   principal_type                   = "ServicePrincipal"
   skip_service_principal_aad_check = true
 }
+
+# --- The pipeline (ADR 0013): push images, read for plans, never write ----------
+#
+# Its own lookup, not part of the workload set above: that set reads the app
+# vault's secrets, and the pipeline must never.
+data "azurerm_user_assigned_identity" "cicd" {
+  provider            = azurerm.sec
+  name                = module.names.workload_identity["cicd"]
+  resource_group_name = module.names.resource_group["sec"]
+}
+
+resource "azurerm_role_assignment" "cicd_acr_push" {
+  scope                            = data.azurerm_container_registry.this.id
+  role_definition_name             = "AcrPush"
+  principal_id                     = data.azurerm_user_assigned_identity.cicd.principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+# Reader on each platform resource group (LLD: never subscription-wide), so
+# `terraform plan` can refresh; Reader cannot read secrets or keys.
+locals {
+  cicd_read_groups = {
+    for k in ["net", "sec", "obs", "data", "msg", "aks", "ai", "acr"] :
+    k => module.names.resource_group[k]
+  }
+}
+
+data "azurerm_resource_group" "cicd_read" {
+  for_each = local.cicd_read_groups
+  name     = each.value
+}
+
+resource "azurerm_role_assignment" "cicd_reader" {
+  for_each                         = data.azurerm_resource_group.cicd_read
+  scope                            = each.value.id
+  role_definition_name             = "Reader"
+  principal_id                     = data.azurerm_user_assigned_identity.cicd.principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+data "azurerm_resource_group" "aks_nodes" {
+  name = module.names.aks_node_resource_group
+}
+
+resource "azurerm_role_assignment" "cicd_reader_aks_nodes" {
+  scope                            = data.azurerm_resource_group.aks_nodes.id
+  role_definition_name             = "Reader"
+  principal_id                     = data.azurerm_user_assigned_identity.cicd.principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+# The state, read only: CI plans with -lock=false and never writes state.
+data "azurerm_storage_account" "tfstate" {
+  name                = module.names.tfstate.storage_account_name
+  resource_group_name = module.names.tfstate.resource_group_name
+}
+
+resource "azurerm_role_assignment" "cicd_state_reader" {
+  scope                            = "${data.azurerm_storage_account.tfstate.id}/blobServices/default/containers/${module.names.tfstate.container_name}"
+  role_definition_name             = "Storage Blob Data Reader"
+  principal_id                     = data.azurerm_user_assigned_identity.cicd.principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}

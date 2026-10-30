@@ -1,0 +1,18 @@
+# Code owners (ADR 0013). With branch protection's "require review from code owners",
+# a change to any path below needs an owner's approval, and GitHub never lets a pull
+# request's author approve it. The narrower rules name the places where one wrong
+# change is a cross-tenant leak or an unauthorised action: replace the owner with the
+# reviewing team for each as people join.
+
+*                       @amitcloudarchitect
+
+# The only door to the database (CLAUDE.md rule 1).
+/packages/tenancy/      @amitcloudarchitect
+# The execution plane, after the security review (LLD: review on every change).
+/execution/             @amitcloudarchitect
+/runbooks/              @amitcloudarchitect
+# Infrastructure, the GitOps tree, and what decides whether a change may ship.
+/infra/                 @amitcloudarchitect
+/policy/                @amitcloudarchitect
+/tools/ci/              @amitcloudarchitect
+/.github/               @amitcloudarchitect

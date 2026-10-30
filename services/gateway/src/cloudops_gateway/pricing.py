@@ -30,6 +30,10 @@ from cloudops_gateway.providers import Tier
 
 MONEY: Final = Decimal("0.000001")
 
+# The spend breaker's floor (ADR 0005): recent spend below this, in USD like the
+# prices below, never trips it, so a quiet tenant's first calls cannot.
+SPEND_BREAKER_FLOOR: Final = Decimal("5.000000")
+
 
 @dataclass(frozen=True, slots=True)
 class Deployment:
