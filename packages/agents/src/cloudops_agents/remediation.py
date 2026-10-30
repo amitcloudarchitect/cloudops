@@ -14,6 +14,10 @@ ingested for. The tenant comes from the request (the connector resolved it
 server-side), never from a model. The classifier's "customer" is only
 cross-checked against it.
 
+**Record.** Every run ends by storing its outcome in ``cloudops.triage_result``
+(migration 0008), under the run's own single-tenant scope, so the console can
+show it and a person can accept or override it (ADR 0014).
+
 **Failures.** Invalid agent output or a gateway refusal (quota, breaker) is
 returned as a status and routed to a human; it is not retried. Transient
 faults (a provider down, a network error) are retried by Temporal under the
@@ -32,6 +36,8 @@ from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
+    import json
+
     from sqlalchemy import text
 
     from cloudops_agents import triage
@@ -50,6 +56,7 @@ PRINCIPAL: Final = "service:triage"
 PERMISSIONS: Final = frozenset({"inventory.read", "tickets.read", "knowledge.read"})
 DB_RETRY: Final = RetryPolicy(initial_interval=timedelta(seconds=1), maximum_attempts=5)
 DB_TIMEOUT: Final = timedelta(seconds=30)
+COST_CURRENCY: Final = "USD"  # the gateway's rate card (cloudops_gateway.pricing)
 
 
 @dataclass
@@ -99,6 +106,14 @@ class TriageOutcome:
     agent_runs: list[str] = field(default_factory=list)
     cost: str = "0"
     evidence: list[str] = field(default_factory=list)
+    result_id: str | None = None  # the cloudops.triage_result row, once recorded
+
+
+@dataclass
+class RecordRequest:
+    tenant_id: str
+    workflow_id: str
+    outcome: TriageOutcome
 
 
 def _ctx(request: TriageRequest) -> CallContext:
@@ -180,14 +195,51 @@ class TriageActivities:
                          str(result.run_id), str(result.cost), result.evidence)
 
 
+    @activity.defn
+    async def record_outcome(self, req: RecordRequest) -> str:
+        """Store the outcome for the console. Idempotent per workflow run: a
+        retried activity finds its own row rather than writing a second."""
+        o = req.outcome
+        ctx = _ctx(TriageRequest(req.tenant_id, o.number))
+        async with self._db.transaction(ctx.scope) as conn:
+            existing = await conn.scalar(text(
+                "SELECT id FROM cloudops.triage_result WHERE workflow_id = :w"),
+                {"w": req.workflow_id})
+            if existing is not None:
+                return str(existing)
+            new_id = await conn.scalar(text(
+                "INSERT INTO cloudops.triage_result (tenant_id, number, resource_id, route, stage,"
+                " reasons, classification, enrichment, injection_signals, agent_run_ids, cost,"
+                " cost_currency, workflow_id) VALUES (:t, :n, :r, :route, :stage, :reasons,"
+                " CAST(:cls AS jsonb), CAST(:enr AS jsonb), CAST(:sig AS jsonb),"
+                " CAST(:runs AS uuid[]), :cost, :cur, :w) RETURNING id"),
+                {"t": UUID(req.tenant_id), "n": o.number,
+                 "r": UUID(o.resource_id) if o.resource_id else None,
+                 "route": o.route, "stage": o.stage, "reasons": o.reasons,
+                 "cls": None if o.classification is None else json.dumps(o.classification),
+                 "enr": None if o.enrichment is None else json.dumps(o.enrichment),
+                 "sig": json.dumps(o.injection_signals), "runs": o.agent_runs,
+                 "cost": Decimal(o.cost), "cur": COST_CURRENCY, "w": req.workflow_id})
+        return str(new_id)
+
+
 def activities(acts: TriageActivities) -> list[Any]:
-    return [acts.load_ticket, acts.tenant_names, acts.resolve_ci, acts.classify, acts.enrich]
+    return [acts.load_ticket, acts.tenant_names, acts.resolve_ci, acts.classify, acts.enrich,
+            acts.record_outcome]
 
 
 @workflow.defn
 class TicketTriageWorkflow:
     @workflow.run
     async def run(self, req: TriageRequest) -> TriageOutcome:
+        outcome = await self._triage(req)
+        outcome.result_id = await workflow.execute_activity_method(
+            TriageActivities.record_outcome,
+            RecordRequest(req.tenant_id, workflow.info().workflow_id, outcome),
+            start_to_close_timeout=DB_TIMEOUT, retry_policy=DB_RETRY)
+        return outcome
+
+    async def _triage(self, req: TriageRequest) -> TriageOutcome:
         acts = TriageActivities
 
         # Stage 1: intake.

@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay eval eval-baseline images image-check
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay eval eval-baseline images image-check web e2e
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -49,9 +49,16 @@ seed: $(ENV_FILE) ## load the synthetic dataset, then check isolation (refuses i
 api: env ## run the API on http://127.0.0.1:8000 (dev token issuer, OpenAPI at /openapi.json)
 	uv run python -m cloudops_api
 
-token: ## mint a dev token for a seeded principal: make token OID=<oid>
-	@test -n "$(OID)" || { echo "usage: make token OID=<oid> (make seed prints them)"; exit 2; }
-	@uv run --quiet python -m cloudops_devdata.tokens --oid $(OID)
+web: ## run the operations console on http://localhost:3000 (needs make api; apps/web/README.md)
+	npm install --ignore-scripts --no-audit --no-fund
+	npm run dev -w @cloudops/web
+
+e2e: ## Playwright journeys per role against the seeded local stack (starts api and web if needed)
+	npm run test:e2e -w @cloudops/web
+
+token: ## mint a dev token: make token PRINCIPAL=engineer-nwl-crl (or OID=<oid>)
+	@test -n "$(PRINCIPAL)$(OID)" || { echo "usage: make token PRINCIPAL=<label> or OID=<oid> (make seed lists them)"; exit 2; }
+	@uv run --quiet python -m cloudops_devdata.tokens $(if $(PRINCIPAL),--principal $(PRINCIPAL),--oid $(OID))
 
 ingest: env ## run the ServiceNow connector over the recorded fixtures (Temporal, Azurite, local DB)
 	uv run python -m cloudops_connectors.servicenow run --fixtures

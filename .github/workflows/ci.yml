@@ -56,10 +56,6 @@ jobs:
       - run: uv run mypy --strict .
       - name: runbook manifests (schema, bounds, no interpolation, rollback)
         run: uv run python tools/ci/check_runbooks.py .
-      # apps/web is a placeholder until step 14; tsc runs once it has a lockfile.
-      - name: tsc
-        if: hashFiles('apps/web/package-lock.json') != ''
-        run: cd apps/web && npm ci && npm run typecheck
 
   tests:
     name: unit, contract, integration, isolation
@@ -81,6 +77,43 @@ jobs:
         run: uv run coverage report --fail-under=80
       - name: isolation suite (release gate)
         run: uv run pytest -m isolation
+
+  # The operations console (step 14, ADR 0014): its types are the API's, it builds,
+  # and each role's critical journeys pass against the real API on a seeded database.
+  console:
+    name: console (contracts, types, build, journeys)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: uv sync --locked
+      - run: npm ci --ignore-scripts
+      - name: contracts are generated from the API, unedited
+        run: |
+          uv run python -m cloudops_api.schema > packages/contracts/openapi.json
+          npm run generate -w @cloudops/contracts
+          git diff --exit-code -- packages/contracts
+      - run: npm run typecheck -w @cloudops/web
+      - name: database, migrated and seeded (the local stack's Postgres only)
+        run: |
+          make env
+          docker compose --env-file .env.local up --detach --build --wait postgres
+          make migrate seed
+      - name: browser
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - name: journeys per role, desktop and tablet (builds the console first)
+        run: npm run test:e2e -w @cloudops/web
+      - name: report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          if-no-files-found: ignore
 
   # The golden set through the real stage 1 to 3 workflow, failing on any regression
   # against evals/baseline.json and on any injection followed or cross-tenant leak.
@@ -127,7 +160,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
-          languages: python, actions
+          languages: python, actions, javascript-typescript
           queries: security-extended
       - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:

@@ -88,7 +88,8 @@ Settings → Rules → Rulesets → New branch ruleset, target `main`, **Active*
   `unit, contract, integration, isolation`, `AI evaluation (release gate)`,
   `pricing-regression`, `SAST (CodeQL, high and critical fail)`,
   `SCA (dependencies, high and critical fail)`, `container build, scan, SBOM`,
-  `terraform fmt, validate, policy tests`, and each `terraform plan + conftest (…)`.
+  `terraform fmt, validate, policy tests`, `console (contracts, types, build, journeys)`,
+  and each `terraform plan (…)`.
 - **Bypass list**:
   - the release bot App, **Always** (its tag bumps merge after their checks without a
     human review);

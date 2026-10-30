@@ -124,6 +124,10 @@ class AuthConfig:
     Exactly one key source: ``jwks_url`` (Entra, Azure) or ``jwks_secret`` (the
     local dev issuer's public keys, from the secret store). Tokens must come from
     ``tenant_id``'s directory, for ``audience``, carrying ``required_scope``.
+
+    ``web_origins``: the browser origins the operations console is served from
+    (ADR 0014), allowed by CORS to send a bearer token. No cookies are used, so
+    credentials are never allowed cross-origin.
     """
 
     issuer: str
@@ -132,6 +136,7 @@ class AuthConfig:
     required_scope: str
     jwks_url: str | None
     jwks_secret: str | None
+    web_origins: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -304,6 +309,7 @@ LOCAL_AUTH: Final = AuthConfig(
     required_scope="access_as_user",
     jwks_url=None,
     jwks_secret="api-dev-jwks",  # noqa: S106 - a secret's name
+    web_origins=("http://localhost:3000",),  # apps/web, npm run dev
 )
 
 
@@ -358,6 +364,7 @@ TEMPORAL_NAMESPACE_VAR: Final = "CLOUDOPS_TEMPORAL_NAMESPACE"
 TEMPORAL_TLS_DIR_VAR: Final = "CLOUDOPS_TEMPORAL_TLS_DIR"
 ENTRA_TENANT_VAR: Final = "CLOUDOPS_ENTRA_TENANT_ID"
 API_AUDIENCE_VAR: Final = "CLOUDOPS_API_AUDIENCE"
+WEB_ORIGINS_VAR: Final = "CLOUDOPS_WEB_ORIGINS"  # optional, comma-separated https origins
 
 # LLD, Redis: TLS required, non-TLS port disabled.
 AZURE_REDIS_PORT: Final = 6380
@@ -432,7 +439,20 @@ def _entra(environ: Mapping[str, str]) -> AuthConfig:
         required_scope="access_as_user",  # LLD: app-cloudops-api exposes access_as_user
         jwks_url=f"https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys",
         jwks_secret=None,
+        web_origins=_web_origins(environ.get(WEB_ORIGINS_VAR, "")),
     )
+
+
+def _web_origins(value: str) -> tuple[str, ...]:
+    """Exact https origins only: no wildcard, no path, no plain http outside local."""
+    origins = tuple(o.strip() for o in value.split(",") if o.strip())
+    for origin in origins:
+        parts = urlsplit(origin)
+        if (parts.scheme != "https" or not parts.hostname or "*" in origin
+                or parts.path not in ("", "/") or parts.query or parts.fragment
+                or parts.username or parts.password):
+            raise ConfigurationError(f"{WEB_ORIGINS_VAR} entries must be exact https origins")
+    return tuple(o.rstrip("/") for o in origins)
 
 
 def _check_database_secret(store: SecretStore, login: DbLogin) -> _DatabaseDeclared:

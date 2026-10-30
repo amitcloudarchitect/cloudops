@@ -17,6 +17,7 @@ import asyncio
 import os
 from pathlib import Path
 
+import psycopg
 import pytest
 
 from cloudops_evals.cases import load_cases
@@ -51,6 +52,20 @@ async def test_the_golden_set_does_not_regress(seeded: Seeded) -> None:
         for c in cases if c.expected.reason and c.expected.reason not in raw[c.id].reasons
     ]
     assert wrong_reason == [], describe(raw)
+
+    # Every run is recorded for the console (migration 0008, ADR 0014): in the
+    # ticket's own tenant, with the route and stage the workflow returned.
+    tenant_of = {"alpha": seeded.a.id, "bravo": seeded.b.id, "charlie": seeded.c.id}
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        stored = {str(r[0]): r[1:] for r in cx.execute(
+            "SELECT id, tenant_id, number, route, stage FROM cloudops.triage_result")}
+    for c in cases:
+        result = raw[c.id]
+        if result.route == "error":
+            continue
+        assert result.result_id in stored, f"{c.id}: no triage_result recorded"
+        assert stored[result.result_id] == (
+            tenant_of[c.tenant], c.ticket.number, result.route, result.stage), c.id
 
     if os.environ.get("CLOUDOPS_EVAL_UPDATE_BASELINE") == "1":
         zero = [r for r in regressions(report, {}) if "zero tolerance" in r]

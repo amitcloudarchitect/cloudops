@@ -18,7 +18,8 @@ from cloudops_tenancy import Database
 def test_the_api_outlasts_the_proxys_idle_connections(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: dict[str, Any] = {}
     settings = SimpleNamespace(
-        auth=SimpleNamespace(jwks_secret=None, jwks_url="https://login.example/keys"),
+        auth=SimpleNamespace(jwks_secret=None, jwks_url="https://login.example/keys",
+                             web_origins=()),
         environment=Environment.AZURE,
         database_dsn=lambda login: "postgresql://app@db/cloudops",
     )
