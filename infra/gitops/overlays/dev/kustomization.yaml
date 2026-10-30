@@ -21,7 +21,7 @@ resources:
 images:
   - name: api
     newName: crcloudopsdevweu.azurecr.io/api
-    newTag: 17baeb4
+    newTag: 8277a3d
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
     newTag: c5867d0
