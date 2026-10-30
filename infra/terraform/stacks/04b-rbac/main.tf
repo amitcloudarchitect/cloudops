@@ -216,6 +216,16 @@ resource "azurerm_role_assignment" "cicd_reader_aks_nodes" {
   skip_service_principal_aad_check = true
 }
 
+# Reader on the state account's resource group: refreshing the role assignment below
+# needs to read role assignments there. Reader cannot list keys or read blob data.
+resource "azurerm_role_assignment" "cicd_reader_tfstate" {
+  scope                            = "/subscriptions/${local.subscription["net"]}/resourceGroups/${module.names.tfstate.resource_group_name}"
+  role_definition_name             = "Reader"
+  principal_id                     = data.azurerm_user_assigned_identity.cicd.principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
 # The state, read only: CI plans with -lock=false and never writes state. The
 # scope is built from names, not looked up: the CI identity, which plans this stack
 # too, has no read on the state account's resource group.
