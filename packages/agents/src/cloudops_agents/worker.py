@@ -19,7 +19,6 @@ import os
 import sys
 from contextlib import AsyncExitStack
 
-from temporalio.client import Client
 from temporalio.worker import Worker
 
 from cloudops_agents.enricher import knowledge_tool
@@ -31,6 +30,7 @@ from cloudops_agents.remediation import (
 )
 from cloudops_config import Component, ConfigurationError, DbLogin, Environment, load_settings
 from cloudops_config.probes import serve_probes
+from cloudops_config.temporal import connect, run_worker
 from cloudops_gateway.gateway import Gateway
 from cloudops_gateway.pricing import LOCAL_DEPLOYMENTS
 from cloudops_gateway.providers import MockProvider
@@ -45,8 +45,7 @@ async def _main() -> int:
         os.environ, require={Component.DATABASE_APP, Component.TEMPORAL, Component.LLM}
     )
     local = settings.environment is Environment.LOCAL
-    temporal = await Client.connect(settings.temporal.address,
-                                    namespace=settings.temporal.namespace)
+    temporal = await connect(settings.temporal)
     async with AsyncExitStack() as stack:
         db = Database.create(settings.database_dsn(DbLogin.APP), pool_size=4)
         stack.push_async_callback(db.dispose)
@@ -70,7 +69,7 @@ async def _main() -> int:
         worker = Worker(temporal, task_queue=TASK_QUEUE, workflows=[TicketTriageWorkflow],
                         activities=activities(TriageActivities(db, gateway, registry)))
         print(f"worker serving {TASK_QUEUE}")
-        await worker.run()
+        await run_worker(worker, settings.temporal)
     return 0
 
 

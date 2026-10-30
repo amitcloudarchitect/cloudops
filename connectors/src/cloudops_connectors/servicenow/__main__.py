@@ -9,9 +9,11 @@
 ``run`` and ``replay`` start a worker in this process, run one workflow on
 Temporal and print its report. ``worker`` serves the task queue until
 stopped, with liveness and readiness probes on port 8080 (readiness: the
-database, Temporal and the bronze container all answer). ``schedule``
-creates a Temporal schedule (every 5 minutes, LLD) that starts
-``ServiceNowIngest`` for an entity.
+database, Temporal and the bronze container all answer); it stops, to be
+restarted, when its Temporal client certificate is renewed (ADR 0010).
+``schedule`` creates a Temporal schedule (every 5 minutes, LLD) that starts
+``ServiceNowIngest`` for an entity, or updates it if it exists: it runs as a
+Job on every sync, so repeating it is safe.
 
 ``--fixtures`` serves recorded fixtures from an in-process fake instance:
 local profile only. Without it the connector reads the instance configured by
@@ -37,8 +39,11 @@ from temporalio.client import (
     Client,
     Schedule,
     ScheduleActionStartWorkflow,
+    ScheduleAlreadyRunningError,
     ScheduleIntervalSpec,
     ScheduleSpec,
+    ScheduleUpdate,
+    ScheduleUpdateInput,
 )
 from temporalio.worker import Worker
 
@@ -52,6 +57,7 @@ from cloudops_config import (
     load_settings,
 )
 from cloudops_config.probes import serve_probes
+from cloudops_config.temporal import connect, run_worker
 from cloudops_connectors.core.raw import BlobRawStore
 from cloudops_connectors.servicenow.auth import ClientCredentials
 from cloudops_connectors.servicenow.client import IntegrationUserError, ServiceNowClient
@@ -70,6 +76,7 @@ from cloudops_connectors.servicenow.workflows import (
 from cloudops_tenancy import Database
 
 AZURITE = "UseDevelopmentStorage=true"
+SCHEDULE_EVERY = timedelta(minutes=5)  # LLD: ServiceNow incremental sync
 
 
 def _container(settings: Settings) -> ContainerClient:
@@ -95,27 +102,18 @@ def _client(settings: Settings, fixtures: bool) -> ServiceNowClient:
 
 
 async def _main(args: argparse.Namespace) -> int:
+    if args.command == "schedule":
+        # Temporal only: the schedule job needs no database, storage or instance.
+        settings = load_settings(os.environ, require={Component.TEMPORAL})
+        temporal = await connect(settings.temporal)
+        for entity in args.entity or sorted(ENTITIES):
+            print(await _schedule(temporal, entity))
+        return 0
     wanted = {Component.DATABASE_INGEST, Component.BLOB, Component.TEMPORAL}
-    if not getattr(args, "fixtures", False) and args.command != "schedule":
+    if not args.fixtures:
         wanted.add(Component.SERVICENOW)
     settings = load_settings(os.environ, require=wanted)
-    temporal = await Client.connect(settings.temporal.address,
-                                    namespace=settings.temporal.namespace)
-    if args.command == "schedule":
-        for entity in args.entity or sorted(ENTITIES):
-            await temporal.create_schedule(
-                f"servicenow-{entity}",
-                Schedule(
-                    action=ScheduleActionStartWorkflow(
-                        ServiceNowIngest.run,
-                        IngestRequest(entity, (datetime.now(UTC) - timedelta(days=90)).isoformat()),
-                        id=f"servicenow-{entity}", task_queue=TASK_QUEUE,
-                    ),
-                    spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=timedelta(minutes=5))]),
-                ),
-            )
-            print(f"scheduled servicenow-{entity} every 5 minutes")
-        return 0
+    temporal = await connect(settings.temporal)
 
     async with AsyncExitStack() as stack:
         db = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=2)
@@ -144,7 +142,7 @@ async def _main(args: argparse.Namespace) -> int:
             )
             stack.push_async_callback(_close_server, probes)
             print(f"worker serving {TASK_QUEUE}")
-            await worker.run()
+            await run_worker(worker, settings.temporal)
             return 0
         async with worker:
             for entity in args.entity or sorted(ENTITIES):
@@ -161,6 +159,35 @@ async def _main(args: argparse.Namespace) -> int:
                     )
                 print(json.dumps(asdict(report), indent=2))
     return 0
+
+
+def _schedule_for(entity: str) -> Schedule:
+    # "since" applies only before the entity's first watermark; after that the
+    # watermark decides where each run starts.
+    since = (datetime.now(UTC) - timedelta(days=90)).isoformat()
+    return Schedule(
+        action=ScheduleActionStartWorkflow(
+            ServiceNowIngest.run, IngestRequest(entity, since),
+            id=f"servicenow-{entity}", task_queue=TASK_QUEUE,
+        ),
+        spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=SCHEDULE_EVERY)]),
+    )
+
+
+async def _schedule(temporal: Client, entity: str) -> str:
+    """Create the entity's schedule, or bring an existing one in line: the job runs
+    on every sync, so it must be safe to repeat."""
+    schedule_id = f"servicenow-{entity}"
+    wanted = _schedule_for(entity)
+    try:
+        await temporal.create_schedule(schedule_id, wanted)
+    except ScheduleAlreadyRunningError:
+        def update(_: ScheduleUpdateInput) -> ScheduleUpdate:
+            return ScheduleUpdate(schedule=wanted)
+
+        await temporal.get_schedule_handle(schedule_id).update(update)
+        return f"updated {schedule_id}: every {SCHEDULE_EVERY}"
+    return f"created {schedule_id}: every {SCHEDULE_EVERY}"
 
 
 async def _close_server(server: asyncio.Server) -> None:

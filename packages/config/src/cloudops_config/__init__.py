@@ -30,6 +30,7 @@ from cloudops_config.settings import (
     TemporalConfig,
     load_settings,
 )
+from cloudops_config.temporal_tls import TemporalTls, TlsMaterial
 
 __all__ = [
     "AuthConfig",
@@ -52,7 +53,9 @@ __all__ = [
     "Settings",
     "TelemetryConfig",
     "TemporalConfig",
+    "TemporalTls",
     "Tier",
+    "TlsMaterial",
     "WorkloadIdentity",
     "load_settings",
 ]

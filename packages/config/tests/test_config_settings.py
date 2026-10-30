@@ -47,6 +47,10 @@ def azure_env(tmp_path: Path) -> dict[str, str]:
     mount = tmp_path / "secrets"
     mount.mkdir()
     (mount / "postgres-app-dsn").write_text("postgresql://app@psql/cloudops\n", encoding="utf-8")
+    tls = tmp_path / "temporal-tls"
+    tls.mkdir()
+    for name in ("ca.crt", "tls.crt", "tls.key"):
+        (tls / name).write_text(f"-----BEGIN {name}-----\n", encoding="utf-8")
     return {
         "CLOUDOPS_ENV": "azure",
         "AZURE_CLIENT_ID": "00000000-0000-0000-0000-000000000001",
@@ -56,8 +60,9 @@ def azure_env(tmp_path: Path) -> dict[str, str]:
         "CLOUDOPS_REDIS_HOST": "redis-cloudops-dev-weu.redis.cache.windows.net",
         "CLOUDOPS_BRONZE_CONTAINER_URL": "https://stcloudopsbronzedevweu.blob.core.windows.net/bronze",
         "CLOUDOPS_REPORTS_CONTAINER_URL": "https://stcloudopsreportsdevweu.blob.core.windows.net/reports",
-        "CLOUDOPS_TEMPORAL_ADDRESS": "temporal-frontend.workflow:7233",
+        "CLOUDOPS_TEMPORAL_ADDRESS": "temporal-frontend.temporal.svc.cluster.local:7233",
         "CLOUDOPS_TEMPORAL_NAMESPACE": "cloudops",
+        "CLOUDOPS_TEMPORAL_TLS_DIR": str(tls),
     }
 
 
@@ -180,7 +185,49 @@ def test_azure_resolves_real_backends_with_workload_identity(azure_env: dict[str
     assert s.database_dsn(DbLogin.APP) == "postgresql://app@psql/cloudops"
     assert (s.redis.port, s.redis.tls, s.redis.auth) == (6380, True, AuthMode.WORKLOAD_IDENTITY)
     assert s.blob.auth is AuthMode.WORKLOAD_IDENTITY
-    assert s.temporal.tls is True
+    assert s.temporal.tls is not None
+    assert s.temporal.tls.server_name == "temporal-frontend.temporal.svc.cluster.local"
+
+
+# Temporal: mutual TLS, never plaintext (ADR 0010) -------------------------------------
+
+
+def test_azure_temporal_without_a_certificate_is_refused(azure_env: dict[str, str]) -> None:
+    del azure_env["CLOUDOPS_TEMPORAL_TLS_DIR"]
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_TEMPORAL_TLS_DIR"):
+        load_settings(azure_env, require={Component.TEMPORAL})
+
+
+@pytest.mark.parametrize("missing", ["ca.crt", "tls.crt", "tls.key"])
+def test_azure_temporal_with_an_incomplete_certificate_is_refused(
+    azure_env: dict[str, str], missing: str
+) -> None:
+    (Path(azure_env["CLOUDOPS_TEMPORAL_TLS_DIR"]) / missing).unlink()
+    with pytest.raises(ConfigurationError, match=missing.replace(".", r"\.")):
+        load_settings(azure_env, require={Component.TEMPORAL})
+
+
+@pytest.mark.parametrize("address", ["10.0.0.7:7233", "temporal:7233", ":7233"])
+def test_azure_temporal_needs_a_dns_name_the_certificate_can_prove(
+    azure_env: dict[str, str], address: str
+) -> None:
+    azure_env["CLOUDOPS_TEMPORAL_ADDRESS"] = address
+    with pytest.raises(ConfigurationError, match="DNS name"):
+        load_settings(azure_env, require={Component.TEMPORAL})
+
+
+def test_the_private_key_never_appears_in_a_repr(azure_env: dict[str, str]) -> None:
+    key = Path(azure_env["CLOUDOPS_TEMPORAL_TLS_DIR"]) / "tls.key"
+    key.write_text("PRIVATE-KEY-MATERIAL", encoding="utf-8")
+    tls = load_settings(azure_env, require={Component.TEMPORAL}).temporal.tls
+    assert tls is not None
+    material = tls.read()
+    assert material.key == b"PRIVATE-KEY-MATERIAL"
+    assert "PRIVATE-KEY-MATERIAL" not in repr(material)
+
+
+def test_local_temporal_is_plaintext_to_the_compose_container(local_env: dict[str, str]) -> None:
+    assert load_settings(local_env, require={Component.TEMPORAL}).temporal.tls is None
 
 
 # Local ---------------------------------------------------------------------------------

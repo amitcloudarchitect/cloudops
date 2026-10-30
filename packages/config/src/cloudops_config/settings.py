@@ -23,6 +23,7 @@ variables — only addresses vary.
 from __future__ import annotations
 
 import enum
+import ipaddress
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,7 @@ from cloudops_config.errors import ConfigurationError, NotBuiltError
 from cloudops_config.identity import TOKEN_FILE, WorkloadIdentity
 from cloudops_config.llm import LlmGateway, MockLlmGateway
 from cloudops_config.secrets import EnvFileSecretStore, MountedSecretStore, SecretStore
+from cloudops_config.temporal_tls import TemporalTls
 
 ENV_VAR: Final = "CLOUDOPS_ENV"
 LOCAL_SECRETS_FILE_VAR: Final = "CLOUDOPS_LOCAL_SECRETS_FILE"
@@ -75,7 +77,7 @@ _DB_COMPONENT: Final = {
 
 
 class AuthMode(enum.StrEnum):
-    NONE = "none"  # local Redis, Temporal
+    NONE = "none"  # local Redis
     AZURITE_DEV_ACCOUNT = "azurite_dev_account"  # Azurite's published dev account
     PASSWORD_SECRET = "password_secret"  # noqa: S105 - a mode name; local ClickHouse user
     WORKLOAD_IDENTITY = "workload_identity"  # every Azure backend
@@ -98,10 +100,12 @@ class BlobConfig:
 
 @dataclass(frozen=True, slots=True)
 class TemporalConfig:
+    """``tls`` is the mounted client certificate (mutual TLS, ADR 0010); ``None``
+    only in the local profile, whose Temporal container is plaintext."""
+
     address: str
     namespace: str
-    tls: bool
-    auth: AuthMode
+    tls: TemporalTls | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -251,7 +255,7 @@ LOCAL_BLOB: Final = BlobConfig(
     reports_container_url="http://127.0.0.1:10000/devstoreaccount1/reports",
     auth=AuthMode.AZURITE_DEV_ACCOUNT,
 )
-LOCAL_TEMPORAL: Final = TemporalConfig("127.0.0.1:7233", "default", tls=False, auth=AuthMode.NONE)
+LOCAL_TEMPORAL: Final = TemporalConfig("127.0.0.1:7233", "default", tls=None)
 LOCAL_TELEMETRY: Final = TelemetryConfig(
     url="http://127.0.0.1:8123",
     database="telemetry",
@@ -322,6 +326,7 @@ BRONZE_URL_VAR: Final = "CLOUDOPS_BRONZE_CONTAINER_URL"
 REPORTS_URL_VAR: Final = "CLOUDOPS_REPORTS_CONTAINER_URL"
 TEMPORAL_ADDRESS_VAR: Final = "CLOUDOPS_TEMPORAL_ADDRESS"
 TEMPORAL_NAMESPACE_VAR: Final = "CLOUDOPS_TEMPORAL_NAMESPACE"
+TEMPORAL_TLS_DIR_VAR: Final = "CLOUDOPS_TEMPORAL_TLS_DIR"
 ENTRA_TENANT_VAR: Final = "CLOUDOPS_ENTRA_TENANT_ID"
 API_AUDIENCE_VAR: Final = "CLOUDOPS_API_AUDIENCE"
 
@@ -350,13 +355,7 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
                 auth=AuthMode.WORKLOAD_IDENTITY,
             )
         elif c is Component.TEMPORAL:
-            # TLS assumed; the LLD does not yet say how Temporal is hosted in AKS.
-            components[c] = TemporalConfig(
-                _required(environ, TEMPORAL_ADDRESS_VAR),
-                _required(environ, TEMPORAL_NAMESPACE_VAR),
-                tls=True,
-                auth=AuthMode.WORKLOAD_IDENTITY,
-            )
+            components[c] = _temporal(environ)
         elif c is Component.TELEMETRY:
             raise NotBuiltError(
                 "the Azure telemetry store is undecided (LLD open item L1: ClickHouse or "
@@ -371,6 +370,26 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
                 "the Azure OpenAI gateway is not built yet (step 06); the mock is local-only"
             )
     return Settings(Environment.AZURE, store, identity, components)
+
+
+def _temporal(environ: Mapping[str, str]) -> TemporalConfig:
+    """Mutual TLS, always (ADR 0010): no certificate directory is an error, never
+    a plaintext connection. The server must prove the address's host name."""
+    address = _required(environ, TEMPORAL_ADDRESS_VAR)
+    host = urlsplit(f"//{address}").hostname
+    if not host or "." not in host or _is_ip(host):
+        raise ConfigurationError(f"{TEMPORAL_ADDRESS_VAR} must be host:port with a DNS name")
+    tls = TemporalTls(Path(_required(environ, TEMPORAL_TLS_DIR_VAR)), host)
+    tls.read()  # raises now, naming the missing file, rather than on first connect
+    return TemporalConfig(address, _required(environ, TEMPORAL_NAMESPACE_VAR), tls)
+
+
+def _is_ip(host: str) -> bool:
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return True
 
 
 def _entra(environ: Mapping[str, str]) -> AuthConfig:
