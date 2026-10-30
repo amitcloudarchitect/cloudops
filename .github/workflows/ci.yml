@@ -73,6 +73,12 @@ jobs:
           for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv sync --locked
+      # Temporal's time-skipping test server is downloaded on first use, and that
+      # download is rate-limited (HTTP 429 broke a run). Cached per lockfile.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/temporal-test-server-sdk-python-*
+          key: temporal-test-server-${{ hashFiles('uv.lock') }}
       # Contract tests replay recorded fixtures (ServiceNow, Azure OpenAI); integration
       # tests run against this database. Both are part of the suite.
       - name: unit, contract and integration tests
@@ -96,6 +102,10 @@ jobs:
           for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - run: uv sync --locked
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/temporal-test-server-sdk-python-*
+          key: temporal-test-server-${{ hashFiles('uv.lock') }}
       - run: uv run pytest -m evaluation
       - name: evaluation report
         if: always()
