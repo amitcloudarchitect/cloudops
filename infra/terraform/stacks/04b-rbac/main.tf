@@ -135,3 +135,13 @@ resource "azurerm_role_assignment" "dev_secret_writers" {
   role_definition_name = "Key Vault Secrets Officer"
   principal_id         = each.value
 }
+
+# The ServiceNow connector reads and writes its own bronze container: write for new
+# pages, read for replay. Container scope, never the account.
+resource "azurerm_role_assignment" "ingest_raw_servicenow" {
+  scope                            = "${data.azurerm_storage_account.bronze.id}/blobServices/default/containers/servicenow"
+  role_definition_name             = "Storage Blob Data Contributor"
+  principal_id                     = data.azurerm_user_assigned_identity.workload["ingest"].principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}

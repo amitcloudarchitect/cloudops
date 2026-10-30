@@ -505,6 +505,15 @@ resource "azurerm_storage_container" "capture" {
   container_access_type = "private"
 }
 
+# Raw ServiceNow pages, written before anything parses them (LLD, Connector
+# contract). One container per source, so each connector's write role is scoped to
+# its own container (04b-rbac). Pages are write-once (connectors/core/raw.py).
+resource "azurerm_storage_container" "raw_servicenow" {
+  name                  = "servicenow"
+  storage_account_id    = azurerm_storage_account.this["bronze"].id
+  container_access_type = "private"
+}
+
 module "eventhub_endpoint" {
   source              = "../../modules/private_endpoint"
   service             = "evhns"

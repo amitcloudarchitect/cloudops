@@ -17,6 +17,8 @@ against ``FakeServiceNow`` (fixtures); only the httpx transport differs.
 
 The integration user's timezone must be GMT: encoded-query date-times are read
 in the user's timezone, and ``mapping.py`` reads raw values as UTC.
+``check_integration_user`` enforces it before a real instance is read; an unset
+timezone falls back to the instance default, so it is refused too.
 """
 
 from __future__ import annotations
@@ -35,8 +37,17 @@ from cloudops_connectors.servicenow.mapping import TIME_FORMAT
 PAGE_SIZE: Final = 200  # LLD: 200 records per page
 
 
+# What ServiceNow stores for GMT/UTC in sys_user.time_zone.
+UTC_ZONES: Final = frozenset({"GMT", "UTC", "Etc/UTC", "Etc/GMT", "Etc/Universal"})
+
+
 class ThrottledError(Exception):
     """Still throttled after the allowed waits. Retryable by Temporal."""
+
+
+class IntegrationUserError(Exception):
+    """The integration user would make incremental reads wrong. Not retryable:
+    a person has to fix the account."""
 
 
 class ServiceNowClient:
@@ -96,6 +107,26 @@ class ServiceNowClient:
                 self._pending_pause = pause.seconds
             return response.content
         raise ThrottledError(table)  # pragma: no cover - loop always returns or raises
+
+    async def check_integration_user(self) -> str:
+        """The account the credentials act as, refusing one whose timezone is not
+        GMT. Watermarks are UTC; a user in another zone shifts every query."""
+        response = await self._http.get("/api/now/table/sys_user", params={
+            "sysparm_query": "user_name=javascript:gs.getUserName()",
+            "sysparm_fields": "user_name,time_zone",
+            "sysparm_limit": "2",
+        })
+        response.raise_for_status()
+        users = response.json().get("result", [])
+        if len(users) != 1:
+            raise IntegrationUserError("could not identify the integration user")
+        name, zone = str(users[0].get("user_name", "")), str(users[0].get("time_zone", ""))
+        if zone not in UTC_ZONES:
+            raise IntegrationUserError(
+                f"integration user {name!r} has time zone {zone or 'unset (instance default)'}; "
+                "set it to GMT, or every incremental query is shifted"
+            )
+        return name
 
     async def aclose(self) -> None:
         await self._http.aclose()

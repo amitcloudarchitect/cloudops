@@ -58,6 +58,7 @@ class Component(enum.StrEnum):
     TELEMETRY = "telemetry"
     LLM = "llm"
     AUTH = "auth"
+    SERVICENOW = "servicenow"
 
 
 class DbLogin(enum.StrEnum):
@@ -129,6 +130,37 @@ class AuthConfig:
     jwks_secret: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class ServiceNowConfig:
+    """A real ServiceNow instance, read with OAuth client credentials (ADR 0009).
+
+    ``instance_url`` and ``client_id`` are not secret; the client secret is read
+    from the secret store by name each time a token is fetched, so a rotated
+    secret is picked up without a restart.
+    """
+
+    instance_url: str
+    client_id: str
+    client_secret: str  # the secret's *name* in the store, never its value
+
+
+SERVICENOW_URL_VAR: Final = "CLOUDOPS_SERVICENOW_URL"
+SERVICENOW_CLIENT_ID_VAR: Final = "CLOUDOPS_SERVICENOW_CLIENT_ID"
+SERVICENOW_CLIENT_SECRET: Final = "servicenow-read-client-secret"  # noqa: S105 - a name
+
+
+def _servicenow(environ: Mapping[str, str], store: SecretStore) -> ServiceNowConfig:
+    url = _required(environ, SERVICENOW_URL_VAR).rstrip("/")
+    parts = urlsplit(url)
+    if parts.scheme != "https" or not parts.netloc or parts.path or parts.query:
+        raise ConfigurationError(
+            f"{SERVICENOW_URL_VAR} must be the instance's https:// address, with no path"
+        )
+    client_id = _required(environ, SERVICENOW_CLIENT_ID_VAR).strip()
+    store.get(SERVICENOW_CLIENT_SECRET)  # raises MissingSecretError, naming the secret
+    return ServiceNowConfig(url, client_id, SERVICENOW_CLIENT_SECRET)
+
+
 _T = TypeVar("_T")
 
 
@@ -175,6 +207,10 @@ class Settings:
     @property
     def auth(self) -> AuthConfig:
         return self._get(Component.AUTH, AuthConfig)
+
+    @property
+    def servicenow(self) -> ServiceNowConfig:
+        return self._get(Component.SERVICENOW, ServiceNowConfig)
 
     @property
     def llm(self) -> LlmGateway:
@@ -265,6 +301,17 @@ def _local(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
         elif c is Component.AUTH:
             store.get(LOCAL_AUTH.jwks_secret or "")
             components[c] = LOCAL_AUTH
+        elif c is Component.SERVICENOW:
+            # A real instance from a laptop is opt-in: the same variables as Azure,
+            # the client secret in .env.local. Recorded fixtures need none of this.
+            missing = [v for v in (SERVICENOW_URL_VAR, SERVICENOW_CLIENT_ID_VAR)
+                       if not environ.get(v, "").strip()]
+            if missing:
+                raise ConfigurationError(
+                    f"a real ServiceNow instance needs {' and '.join(missing)} (and "
+                    f"{SERVICENOW_CLIENT_SECRET} in .env.local); use --fixtures otherwise"
+                )
+            components[c] = _servicenow(environ, store)
     return Settings(Environment.LOCAL, store, None, components)
 
 
@@ -317,6 +364,8 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
             )
         elif c is Component.AUTH:
             components[c] = _entra(environ)
+        elif c is Component.SERVICENOW:
+            components[c] = _servicenow(environ, store)
         elif c is Component.LLM:
             raise NotBuiltError(
                 "the Azure OpenAI gateway is not built yet (step 06); the mock is local-only"

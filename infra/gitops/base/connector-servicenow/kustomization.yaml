@@ -1,5 +1,5 @@
-# The ServiceNow ingest worker (LLD: npingest). Not in any overlay until the
-# ServiceNow read account exists (LLD readiness gate 3): it refuses to start without one.
+# The ServiceNow ingest worker (LLD: npingest), reading with OAuth client credentials
+# (ADR 0009). In no overlay yet: it waits for Temporal mTLS (ADR 0008 open item).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: platform-ingest

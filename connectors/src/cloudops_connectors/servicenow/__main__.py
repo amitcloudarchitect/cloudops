@@ -14,9 +14,10 @@ creates a Temporal schedule (every 5 minutes, LLD) that starts
 ``ServiceNowIngest`` for an entity.
 
 ``--fixtures`` serves recorded fixtures from an in-process fake instance:
-local profile only. Against a real instance this refuses until the ServiceNow
-read account exists (LLD readiness gate 3): no credential path is invented
-here (CLAUDE.md rule 2).
+local profile only. Without it the connector reads the instance configured by
+the SERVICENOW component (``CLOUDOPS_SERVICENOW_URL``, ``_CLIENT_ID``, and the
+client secret ``servicenow-read-client-secret`` from the secret store) with
+OAuth client credentials, after checking the account's time zone (ADR 0009).
 """
 
 from __future__ import annotations
@@ -47,13 +48,13 @@ from cloudops_config import (
     ConfigurationError,
     DbLogin,
     Environment,
-    NotBuiltError,
     Settings,
     load_settings,
 )
 from cloudops_config.probes import serve_probes
 from cloudops_connectors.core.raw import BlobRawStore
-from cloudops_connectors.servicenow.client import ServiceNowClient
+from cloudops_connectors.servicenow.auth import ClientCredentials
+from cloudops_connectors.servicenow.client import IntegrationUserError, ServiceNowClient
 from cloudops_connectors.servicenow.fake import FIXTURE_HOST, FakeServiceNow
 from cloudops_connectors.servicenow.mapping import ENTITIES
 from cloudops_connectors.servicenow.workflows import (
@@ -87,15 +88,17 @@ def _client(settings: Settings, fixtures: bool) -> ServiceNowClient:
         if settings.environment is not Environment.LOCAL:
             raise ConfigurationError("--fixtures is local-only")
         return ServiceNowClient(FIXTURE_HOST, transport=FakeServiceNow.from_fixtures().transport())
-    raise NotBuiltError(
-        "no ServiceNow read account yet (LLD readiness gate 3); run with --fixtures"
-    )
+    sn = settings.servicenow
+    auth = ClientCredentials(f"{sn.instance_url}/oauth_token.do", sn.client_id,
+                             lambda: settings.secrets.get(sn.client_secret))
+    return ServiceNowClient(sn.instance_url, auth=auth)
 
 
 async def _main(args: argparse.Namespace) -> int:
-    settings = load_settings(
-        os.environ, require={Component.DATABASE_INGEST, Component.BLOB, Component.TEMPORAL}
-    )
+    wanted = {Component.DATABASE_INGEST, Component.BLOB, Component.TEMPORAL}
+    if not getattr(args, "fixtures", False) and args.command != "schedule":
+        wanted.add(Component.SERVICENOW)
+    settings = load_settings(os.environ, require=wanted)
     temporal = await Client.connect(settings.temporal.address,
                                     namespace=settings.temporal.namespace)
     if args.command == "schedule":
@@ -121,6 +124,8 @@ async def _main(args: argparse.Namespace) -> int:
         stack.push_async_callback(container.close)
         client = _client(settings, args.fixtures)
         stack.push_async_callback(client.aclose)
+        if not args.fixtures:
+            print(f"reading as {await client.check_integration_user()}")
         acts = ServiceNowActivities(db, BlobRawStore(container), client)
         worker = Worker(temporal, task_queue=TASK_QUEUE, workflows=WORKFLOWS,
                         activities=activities(acts))
@@ -179,7 +184,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         return asyncio.run(_main(args))
-    except ConfigurationError as exc:
+    except (ConfigurationError, IntegrationUserError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

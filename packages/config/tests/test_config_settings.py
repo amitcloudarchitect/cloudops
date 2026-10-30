@@ -204,7 +204,8 @@ def test_local_without_env_file_points_at_make_env(tmp_path: Path) -> None:
 
 
 def test_local_resolves_the_compose_containers(local_env: dict[str, str]) -> None:
-    s = load_settings(local_env, require=set(Component))
+    # A real ServiceNow instance is opt-in locally (tested below).
+    s = load_settings(local_env, require=set(Component) - {Component.SERVICENOW})
     assert s.environment is Environment.LOCAL
     assert s.workload_identity is None
     assert s.database_dsn(DbLogin.INGEST).startswith("postgresql://cloudops_ingest_local")
@@ -260,3 +261,49 @@ def test_local_auth_is_the_dev_issuer_and_needs_its_keys(local_env: dict[str, st
     auth = load_settings(local_env, require={Component.AUTH}).auth
     assert "login.microsoftonline.com" not in auth.issuer
     assert auth.jwks_url is None
+
+
+# --- ServiceNow (ADR 0009) ----------------------------------------------------------
+
+
+def _with_servicenow(env: dict[str, str], url: str = "https://dev1.service-now.com") -> None:
+    env["CLOUDOPS_SERVICENOW_URL"] = url
+    env["CLOUDOPS_SERVICENOW_CLIENT_ID"] = "82e09795000b4f1693138c3427623f04"
+
+
+def test_azure_servicenow_names_the_secret_and_never_holds_it(azure_env: dict[str, str]) -> None:
+    _with_servicenow(azure_env)
+    (Path(azure_env["CLOUDOPS_SECRETS_DIR"]) / "servicenow-read-client-secret").write_text(
+        "do-not-copy", encoding="utf-8")
+    sn = load_settings(azure_env, require={Component.SERVICENOW}).servicenow
+    assert sn.instance_url == "https://dev1.service-now.com"
+    assert sn.client_secret == "servicenow-read-client-secret"
+    assert "do-not-copy" not in repr(sn)
+
+
+def test_azure_servicenow_without_its_secret_refuses(azure_env: dict[str, str]) -> None:
+    _with_servicenow(azure_env)
+    with pytest.raises(MissingSecretError, match="servicenow-read-client-secret"):
+        load_settings(azure_env, require={Component.SERVICENOW})
+
+
+@pytest.mark.parametrize("url", ["http://dev1.service-now.com", "https://dev1.service-now.com/api",
+                                 "https://dev1.service-now.com?x=1", "dev1.service-now.com"])
+def test_servicenow_url_must_be_a_bare_https_instance(azure_env: dict[str, str], url: str) -> None:
+    _with_servicenow(azure_env, url)
+    (Path(azure_env["CLOUDOPS_SECRETS_DIR"]) / "servicenow-read-client-secret").write_text(
+        "x", encoding="utf-8")
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_SERVICENOW_URL"):
+        load_settings(azure_env, require={Component.SERVICENOW})
+
+
+def test_servicenow_needs_a_client_id(azure_env: dict[str, str]) -> None:
+    azure_env["CLOUDOPS_SERVICENOW_URL"] = "https://dev1.service-now.com"
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_SERVICENOW_CLIENT_ID"):
+        load_settings(azure_env, require={Component.SERVICENOW})
+
+
+def test_local_real_servicenow_is_opt_in_and_says_how(local_env: dict[str, str]) -> None:
+    with pytest.raises(ConfigurationError, match="--fixtures") as info:
+        load_settings(local_env, require={Component.SERVICENOW})
+    assert "Azure" not in str(info.value)
