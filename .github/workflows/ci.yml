@@ -222,6 +222,9 @@ jobs:
       fail-fast: false
       matrix:
         # tfvars: the repository variable holding the stack's own tfvars, if any.
+        # refresh: false where refreshing would need keys or credentials the CI
+        # identity must not hold (Redis access keys, the AKS kubeconfig). Those plans
+        # still check every change against state; they cannot see drift (ADR 0013).
         include:
           - stack: 01-network
           - stack: 02-security
@@ -229,11 +232,13 @@ jobs:
           - stack: 03a-ai
           - stack: 04-data
             tfvars: TF_DEV_04_DATA_TFVARS
+            refresh: false
           - stack: 04a-registry
           - stack: 04b-rbac
             tfvars: TF_DEV_04B_RBAC_TFVARS
           - stack: 05-aks
             tfvars: TF_DEV_05_AKS_TFVARS
+            refresh: false
           - stack: 06-edge
     env:
       ARM_USE_OIDC: "true"
@@ -271,7 +276,9 @@ jobs:
           [ -f "../../env/dev/${{ matrix.stack }}.tfvars" ] && extra="-var-file=../../env/dev/${{ matrix.stack }}.tfvars"
           # Write-only: never stored, never compared; any value plans the same.
           export TF_VAR_postgres_breakglass_password_wo="plan-only-$(openssl rand -hex 16)"
-          terraform plan -input=false -lock=false -no-color -out=tfplan \
+          refresh=""
+          [ "${{ matrix.refresh }}" = false ] && refresh="-refresh=false"
+          terraform plan -input=false -lock=false -no-color -out=tfplan $refresh \
             -var-file=../../env/dev/common.tfvars $extra
           terraform show -json tfplan > plan.json
       - name: mandatory tags

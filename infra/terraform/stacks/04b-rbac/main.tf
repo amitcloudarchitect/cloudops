@@ -216,14 +216,15 @@ resource "azurerm_role_assignment" "cicd_reader_aks_nodes" {
   skip_service_principal_aad_check = true
 }
 
-# The state, read only: CI plans with -lock=false and never writes state.
-data "azurerm_storage_account" "tfstate" {
-  name                = module.names.tfstate.storage_account_name
-  resource_group_name = module.names.tfstate.resource_group_name
-}
-
+# The state, read only: CI plans with -lock=false and never writes state. The
+# scope is built from names, not looked up: the CI identity, which plans this stack
+# too, has no read on the state account's resource group.
 resource "azurerm_role_assignment" "cicd_state_reader" {
-  scope                            = "${data.azurerm_storage_account.tfstate.id}/blobServices/default/containers/${module.names.tfstate.container_name}"
+  scope = join("/", [
+    "/subscriptions/${local.subscription["net"]}/resourceGroups/${module.names.tfstate.resource_group_name}",
+    "providers/Microsoft.Storage/storageAccounts/${module.names.tfstate.storage_account_name}",
+    "blobServices/default/containers/${module.names.tfstate.container_name}",
+  ])
   role_definition_name             = "Storage Blob Data Reader"
   principal_id                     = data.azurerm_user_assigned_identity.cicd.principal_id
   principal_type                   = "ServicePrincipal"

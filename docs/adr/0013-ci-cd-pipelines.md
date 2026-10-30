@@ -100,5 +100,10 @@ The gates stopped the release, as designed; nothing was pushed or signed.
   `repo:amitcloudarchitect@91311714/cloudops@1437077070:...`, which a re-registered
   name cannot reuse. Stack 02 trusts that form (and keeps the by-name form, so a
   change of GitHub's setting cannot lock CI out).
+- **Refresh needs more than Reader for two stacks:** refreshing Redis lists its access
+  keys, and refreshing AKS fetches a kubeconfig. Rather than give CI those rights,
+  `04-data` and `05-aks` plan with `-refresh=false` (a dev relaxation): every change
+  is still checked against state, but drift made outside Terraform is not seen there.
+  The LLD's nightly drift detection must use an identity allowed to refresh them.
 - The `conftest` policy unit tests passed (the devbox's permission rules had refused
   to run a downloaded `conftest`, so CI was their first run).
