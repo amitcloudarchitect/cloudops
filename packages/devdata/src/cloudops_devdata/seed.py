@@ -15,11 +15,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import os
 import sys
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, fields
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from typing import Any, Final
 from uuid import UUID, uuid5
 
@@ -188,6 +190,44 @@ async def principals(app: Database, ds: Dataset, admin: UUID) -> list[tuple[str,
     return created
 
 
+# Triage results for a few open incidents, so the console's triage panel has
+# something to review locally. Shaped like record_outcome's rows; never produced
+# by a model, and the reasons say so.
+SEEDED_TRIAGE: Final = 12
+_TRIAGE_SHAPES: Final[tuple[tuple[str, int, list[str], str, str, str], ...]] = (
+    ("human", 2, ["confidence 0.55 below 0.70"], "disk_space", "B", "low"),
+    ("ready_for_planning", 3, [], "service_down", "C", "medium"),
+    ("human", 3, ["action class D needs a person"], "decommission", "D", "high"),
+)
+
+
+async def triage(app: Database, ds: Dataset) -> int:
+    open_incidents = [w for w in ds.work_items
+                      if w.kind == "incident" and w.closed_at is None and w.resource_id]
+    picked = open_incidents[:SEEDED_TRIAGE]
+    for i, item in enumerate(picked):
+        route, stage, reasons, intent, action_class, risk = _TRIAGE_SHAPES[i % 3]
+        classification = {
+            "intent": intent, "affected_ci": item.configuration_item or "unknown",
+            "customer": item.company_raw, "action_class": action_class, "risk": risk,
+            "rationale": "Seeded for the local console; not a model's output.",
+            "confidence": 0.55 if route == "human" and stage == 2 else 0.86,
+        }
+        scope = TenantScope([item.tenant_id], Role.ENGINEER, "seed:local-dev")
+        async with app.transaction(scope) as conn:
+            await conn.execute(text(
+                "INSERT INTO cloudops.triage_result (tenant_id, number, resource_id, route,"
+                " stage, reasons, classification, enrichment, cost, cost_currency, workflow_id)"
+                " VALUES (:t, :n, :r, :route, :stage, :reasons, CAST(:c AS jsonb),"
+                " CAST(:e AS jsonb), :cost, 'USD', :wf)"),
+                {"t": item.tenant_id, "n": item.number, "r": item.resource_id, "route": route,
+                 "stage": stage, "reasons": ["seeded, not a model's output", *reasons],
+                 "c": json.dumps(classification),
+                 "e": None if stage < 3 else json.dumps({"similar_incidents": 2}),
+                 "cost": Decimal("0.000840"), "wf": f"seed-triage-{item.number}"})
+    return len(picked)
+
+
 async def run(anchor: date, seed: int) -> None:
     settings = load_settings(
         os.environ, require={Component.DATABASE_INGEST, Component.DATABASE_APP}
@@ -202,6 +242,7 @@ async def run(anchor: date, seed: int) -> None:
     try:
         await load(ingest, ds)
         await verify(app, ds)
+        print(f"  triage results for the console: {await triage(app, ds)}")
         print("  principals (mint a token: make token OID=<oid>):")
         for label, oid in await principals(app, ds, admin):
             print(f"    {label:<22} {oid}")

@@ -1,0 +1,8 @@
+{
+  "name": "cloudops",
+  "private": true,
+  "description": "Node workspaces: the operations console and its generated API contracts (ADR 0014).",
+  "workspaces": ["packages/contracts", "apps/web"],
+  "engines": { "node": ">=24 <25" },
+  "packageManager": "npm@11.19.1"
+}

@@ -1,6 +1,7 @@
 """Dev tokens for the local issuer. Local profile and tests only.
 
     CLOUDOPS_ENV=local python -m cloudops_devdata.tokens --oid <uuid>
+    CLOUDOPS_ENV=local python -m cloudops_devdata.tokens --principal engineer-nwl-crl
 
 Mints an RS256 access token shaped like Entra's v2 tokens, signed by the dev
 key in .env.local (``api-dev-signing-jwk``). The local API trusts that key
@@ -77,7 +78,9 @@ def mint(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m cloudops_devdata.tokens")
-    parser.add_argument("--oid", type=UUID, required=True, help="Entra object id to act as")
+    who = parser.add_mutually_exclusive_group(required=True)
+    who.add_argument("--oid", type=UUID, help="Entra object id to act as")
+    who.add_argument("--principal", help="a seeded principal's label (make seed lists them)")
     parser.add_argument("--lifetime", type=int, default=3600)
     args = parser.parse_args(argv)
     try:
@@ -88,7 +91,18 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigurationError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    print(mint(private, settings.auth, args.oid, lifetime=args.lifetime))
+    if args.principal is None:
+        oid = args.oid
+    elif args.principal == "platform-admin":
+        oid = UUID(settings.secrets.get("platform-admin-oid"))
+    else:
+        from cloudops_devdata.seed import DEMO_PRINCIPALS, demo_oid
+
+        if args.principal not in {p[0] for p in DEMO_PRINCIPALS}:
+            print(f"error: no seeded principal '{args.principal}'", file=sys.stderr)
+            return 2
+        oid = demo_oid(args.principal)
+    print(mint(private, settings.auth, oid, lifetime=args.lifetime))
     return 0
 
 

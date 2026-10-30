@@ -24,6 +24,8 @@ ACCOUNT_SCOPED = (
     "cloudops.work_item",
     "cloudops.vulnerability",
     "staging.resource_quarantine",
+    "cloudops.triage_result",  # 0008
+    "cloudops.triage_review",  # 0008, through its triage result
 )
 GROUP_ROLES = ("cloudops_app", "cloudops_ingest")
 

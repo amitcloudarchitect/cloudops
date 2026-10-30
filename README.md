@@ -247,6 +247,12 @@ keyed on the token's `oid`. Headers, query parameters and token claims never cha
 it; try sending `X-Tenant-Id`. The OpenAPI schema is at
 `http://127.0.0.1:8000/openapi.json` (local only).
 
+## The operations console
+
+`make api` in one terminal, `make web` in another, then open http://localhost:3000 and
+sign in with a dev token (`apps/web/README.md`). `make e2e` runs every role's journeys
+in a browser. Decisions: ADR 0014.
+
 ## Azure database bootstrap
 
 Before the first migration on a new server, its administrator creates the server-level

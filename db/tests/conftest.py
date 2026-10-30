@@ -244,6 +244,16 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             " VALUES (%s, 'close_note', %s, %s, %s)",
             (t.id, f"{t.name} fix", f"Close note for {t.name}", embedding(t.axis)),
         )
+        triage = cx.execute(
+            "INSERT INTO cloudops.triage_result (tenant_id, number, resource_id, route, stage,"
+            " cost_currency, workflow_id) VALUES (%s, %s, %s, 'human', 2, 'USD', %s) RETURNING id",
+            (t.id, f"INC-{t.name}", t.resource_id, f"seed-triage-{t.name}"),
+        ).fetchone()
+        cx.execute(
+            "INSERT INTO cloudops.triage_review (tenant_id, triage_result_id, decision,"
+            " reviewer_oid) VALUES (%s, %s, 'accept', gen_random_uuid())",
+            (t.id, triage[0] if triage else None),
+        )
         cx.execute(
             "INSERT INTO audit.action_log (tenant_id, actor, action)"
             " VALUES (%s, 'user:seed', 'read')",
