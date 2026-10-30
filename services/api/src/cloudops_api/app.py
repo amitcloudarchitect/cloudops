@@ -12,7 +12,7 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 
-from cloudops_api import bff, operations
+from cloudops_api import bff, mapping, operations
 from cloudops_api.access import ScopeResolver
 from cloudops_api.auth import TokenValidator
 from cloudops_api.health import PROBES
@@ -57,7 +57,7 @@ def create_app(
 
 
 # Every router the API serves. Endpoints are added to these, never to the app.
-ROUTERS: tuple[APIRouter, ...] = (bff.router, operations.router)
+ROUTERS: tuple[APIRouter, ...] = (bff.router, operations.router, mapping.router)
 
 
 def check_router(router: APIRouter) -> None:

@@ -3,6 +3,7 @@
     python -m cloudops_connectors.servicenow run --fixtures --entity incident
     python -m cloudops_connectors.servicenow replay --fixtures --entity incident \
         --start 2026-10-28 --end 2026-10-28
+    python -m cloudops_connectors.servicenow reprocess --fixtures
     python -m cloudops_connectors.servicenow worker --fixtures
     python -m cloudops_connectors.servicenow schedule --entity incident
 
@@ -11,9 +12,12 @@ Temporal and print its report. ``worker`` serves the task queue until
 stopped, with liveness and readiness probes on port 8080 (readiness: the
 database, Temporal and the bronze container all answer); it stops, to be
 restarted, when its Temporal client certificate is renewed (ADR 0010).
+``reprocess`` runs the re-process queue once: the oldest re-process request a
+person made in the console, if any (ADR 0015).
 ``schedule`` creates a Temporal schedule (every 5 minutes, LLD) that starts
-``ServiceNowIngest`` for an entity, or updates it if it exists: it runs as a
-Job on every sync, so repeating it is safe.
+``ServiceNowIngest`` for an entity, or updates it if it exists, and, when no
+entity is named, the one that runs the re-process queue every minute: it runs
+as a Job on every sync, so repeating it is safe.
 
 ``--fixtures`` serves recorded fixtures from an in-process fake instance:
 local profile only. Without it the connector reads the instance configured by
@@ -71,12 +75,16 @@ from cloudops_connectors.servicenow.workflows import (
     ServiceNowActivities,
     ServiceNowIngest,
     ServiceNowReplay,
+    ServiceNowReprocess,
     activities,
 )
 from cloudops_tenancy import Database
 
 AZURITE = "UseDevelopmentStorage=true"
 SCHEDULE_EVERY = timedelta(minutes=5)  # LLD: ServiceNow incremental sync
+# A person waits on a re-process request; an idle run is one query.
+REPROCESS_EVERY = timedelta(minutes=1)
+REPROCESS_SCHEDULE = "servicenow-reprocess"
 
 
 def _container(settings: Settings) -> ContainerClient:
@@ -108,6 +116,8 @@ async def _main(args: argparse.Namespace) -> int:
         temporal = await connect(settings.temporal)
         for entity in args.entity or sorted(ENTITIES):
             print(await _schedule(temporal, entity))
+        if not args.entity:
+            print(await _schedule_reprocess(temporal))
         return 0
     wanted = {Component.DATABASE_INGEST, Component.BLOB, Component.TEMPORAL}
     if not args.fixtures:
@@ -145,6 +155,13 @@ async def _main(args: argparse.Namespace) -> int:
             await run_worker(worker, settings.temporal)
             return 0
         async with worker:
+            if args.command == "reprocess":
+                queue = await temporal.execute_workflow(
+                    ServiceNowReprocess.run, id=f"servicenow-reprocess-{uuid.uuid4().hex[:8]}",
+                    task_queue=TASK_QUEUE,
+                )
+                print(json.dumps(asdict(queue), indent=2))
+                return 0
             for entity in args.entity or sorted(ENTITIES):
                 wf_id = f"servicenow-{args.command}-{entity}-{uuid.uuid4().hex[:8]}"
                 if args.command == "run":
@@ -177,8 +194,23 @@ def _schedule_for(entity: str) -> Schedule:
 async def _schedule(temporal: Client, entity: str) -> str:
     """Create the entity's schedule, or bring an existing one in line: the job runs
     on every sync, so it must be safe to repeat."""
-    schedule_id = f"servicenow-{entity}"
-    wanted = _schedule_for(entity)
+    return await _upsert(temporal, f"servicenow-{entity}", _schedule_for(entity),
+                         SCHEDULE_EVERY)
+
+
+async def _schedule_reprocess(temporal: Client) -> str:
+    wanted = Schedule(
+        action=ScheduleActionStartWorkflow(
+            ServiceNowReprocess.run, id=REPROCESS_SCHEDULE, task_queue=TASK_QUEUE,
+        ),
+        spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=REPROCESS_EVERY)]),
+    )
+    return await _upsert(temporal, REPROCESS_SCHEDULE, wanted, REPROCESS_EVERY)
+
+
+async def _upsert(
+    temporal: Client, schedule_id: str, wanted: Schedule, every: timedelta,
+) -> str:
     try:
         await temporal.create_schedule(schedule_id, wanted)
     except ScheduleAlreadyRunningError:
@@ -186,8 +218,8 @@ async def _schedule(temporal: Client, entity: str) -> str:
             return ScheduleUpdate(schedule=wanted)
 
         await temporal.get_schedule_handle(schedule_id).update(update)
-        return f"updated {schedule_id}: every {SCHEDULE_EVERY}"
-    return f"created {schedule_id}: every {SCHEDULE_EVERY}"
+        return f"updated {schedule_id}: every {every}"
+    return f"created {schedule_id}: every {every}"
 
 
 async def _close_server(server: asyncio.Server) -> None:
@@ -198,7 +230,7 @@ async def _close_server(server: asyncio.Server) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m cloudops_connectors.servicenow")
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("run", "replay", "worker", "schedule"):
+    for name in ("run", "replay", "reprocess", "worker", "schedule"):
         p = sub.add_parser(name)
         p.add_argument("--fixtures", action="store_true", help="serve recorded fixtures (local)")
         p.add_argument("--entity", action="append", choices=sorted(ENTITIES))

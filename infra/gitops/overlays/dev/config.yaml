@@ -16,3 +16,6 @@ metadata:
 data:
   # No password: the job uses an Entra token as id-cloudops-migrate-dev.
   dsn: postgresql://id-cloudops-migrate-dev@psql-cloudops-dev-neu.postgres.database.azure.com:5432/cloudops?sslmode=verify-full&sslrootcert=system
+  # ADR 0015: in dev one person may propose and approve a customer mapping.
+  # UAT and production never set this, so they keep the two-person rule.
+  mapping_approvers: "1"

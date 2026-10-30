@@ -15,9 +15,8 @@ export const MODULES: readonly Module[] = [
   { href: "/work", label: "Work queue", permission: "tickets.read" },
   { href: "/resources", label: "Resources", permission: "inventory.read" },
   { href: "/customers", label: "Customers", permission: "authenticated" },
-  // Step 14b: mapping source company names to tenants (HLD M1); its permission
-  // does not exist until that step adds it.
-  { href: "/mapping", label: "Customer mapping", permission: "mapping.manage", reserved: true },
+  // Step 14b: onboarding customers and mapping source company names to them (HLD M1).
+  { href: "/mapping", label: "Customer mapping", permission: "mapping.manage" },
 ];
 
 export function visibleModules(has: (permission: string) => boolean): Module[] {

@@ -19,13 +19,21 @@ A ticket whose company moves to a different tenant cannot be upserted under
 the new tenant's scope (the existing row belongs to the old one and RLS hides
 it), so the page fails loudly and is dead-lettered for a human, rather than
 the platform guessing which tenant is right.
+
+``reprocess_page`` is the same path narrowed to one company name, for an
+approved mapping's held records (ADR 0015): only that name's records, only if
+the name still resolves exactly to the tenant the request was approved for
+(checked on every page, at run time), nothing quarantined for other names and
+no watermark moved. It returns the keys of the records it newly inserted, so
+the request reports exactly how many records moved.
 """
 
 from __future__ import annotations
 
 import json
 from collections import Counter, defaultdict
-from dataclasses import fields
+from collections.abc import Mapping
+from dataclasses import dataclass, field, fields
 from datetime import datetime
 from typing import Any, Final
 from uuid import UUID
@@ -60,6 +68,13 @@ _UPSERT: Final = text(
     + ") ON CONFLICT (number, opened_at) DO UPDATE SET "
     + ", ".join(f"{c} = EXCLUDED.{c}" for c in (*_COLUMNS, "resource_id", "raw_extra"))
     + ", ingested_at = now()"
+)
+# Re-process: which of these tickets are there already, read in the transaction
+# that upserts them, so "moved" counts only records that were not.
+_EXISTING: Final = text(
+    "SELECT number, opened_at FROM cloudops.work_item"
+    " WHERE (number, opened_at) IN (SELECT * FROM unnest(CAST(:numbers AS text[]),"
+    " CAST(:opened AS timestamptz[])))"
 )
 _CANDIDATES: Final = text(
     "SELECT id, tenant_id, servicenow_ci_sys_id, name_norm FROM cloudops.resource"
@@ -135,9 +150,28 @@ async def process_page(
             by_tenant[r.tenant_id].append(t)
     counts.quarantined = sum(unmatched.values())
 
+    rows, unlinked = await _commit(db, by_tenant, unmatched, ref, entity, scope_key,
+                                   high_water if advance_watermark else None)
+    counts.written = len(rows)
+    counts.ci_unlinked = sum(unlinked.values())
+    return counts
+
+
+async def _commit(
+    db: Database,
+    by_tenant: Mapping[UUID, list[Ticket]],
+    unmatched: Counter[str],
+    ref: str,
+    entity: str,
+    scope_key: str,
+    watermark: datetime | None,
+    *,
+    returning: list[tuple[str, datetime, bool]] | None = None,
+) -> tuple[list[dict[str, Any]], Counter[tuple[UUID, str, str]]]:
+    """Step 4: one transaction scoped to exactly these tenants."""
+    rows: list[dict[str, Any]] = []
+    unlinked: Counter[tuple[UUID, str, str]] = Counter()
     async with db.transaction(TenantScope(by_tenant, Role.INGEST, PRINCIPAL)) as conn:
-        rows: list[dict[str, Any]] = []
-        unlinked: Counter[tuple[UUID, str, str]] = Counter()
         if by_tenant:
             mine = [t for ts in by_tenant.values() for t in ts]
             candidates: list[tuple[UUID, UUID, str | None, str]] = [
@@ -160,12 +194,53 @@ async def process_page(
                         key = f"ci:{t.ci_sys_id}" if t.ci_sys_id else f"ci:{t.configuration_item}"
                         unlinked[(tenant, key, t.configuration_item or "")] += 1
                     rows.append(_row(t, tenant, resource))
+            if returning is not None:
+                existing = {(str(r.number), r.opened_at) for r in await conn.execute(_EXISTING, {
+                    "numbers": [r["number"] for r in rows],
+                    "opened": [r["opened_at"] for r in rows]})}
+                returning.extend((r["number"], r["opened_at"],
+                                  (r["number"], r["opened_at"]) not in existing) for r in rows)
             await conn.execute(_UPSERT, rows)
         await state.quarantine_aliases(conn, SOURCE, unmatched, ref)
         await state.quarantine_resources(conn, SOURCE, unlinked, ref)
-        if advance_watermark and high_water is not None:
-            await state.advance_watermark(conn, SOURCE, entity, scope_key, high_water)
-    counts.written = len(rows)
-    counts.ci_unlinked = sum(unlinked.values())
-    return counts
+        if watermark is not None:
+            await state.advance_watermark(conn, SOURCE, entity, scope_key, watermark)
+    return rows, unlinked
 
+
+class ReprocessRefusedError(Exception):
+    """The name no longer resolves exactly to the approved tenant. Never retried:
+    the request ends refused, and nothing on this page was written."""
+
+
+@dataclass
+class ReprocessCounts:
+    pages: int = 0
+    matched: int = 0  # records on the page under this name
+    inserted: list[str] = field(default_factory=list)  # keys of rows that were not there
+
+
+async def reprocess_page(
+    db: Database, raw: RawStore, entity: str, ref: str, alias: str, tenant: UUID,
+) -> ReprocessCounts:
+    body = await raw.get(ref)
+    records: list[dict[str, Any]] = json.loads(body)["result"]
+    tickets: list[Ticket] = []
+    for record in records:
+        try:
+            ticket = normalise(entity, record)
+        except MalformedRecordError:
+            continue  # counted by the run that first read it; it has no company to match
+        if ticket.company_raw == alias:
+            tickets.append(ticket)
+    counts = ReprocessCounts(pages=1, matched=len(tickets))
+    if not tickets:
+        return counts
+    async with db.transaction(TenantScope((), Role.INGEST, PRINCIPAL)) as conn:
+        resolved = (await state.resolve_aliases(conn, SOURCE, [alias]))[alias]
+    if resolved.outcome != "exact" or resolved.tenant_id != tenant:
+        raise ReprocessRefusedError("mapping_changed")
+    written: list[tuple[str, datetime, bool]] = []
+    await _commit(db, {tenant: tickets}, Counter(), ref, entity, "", None, returning=written)
+    counts.inserted = sorted({f"{n}|{at.isoformat()}" for n, at, new in written if new})
+    return counts

@@ -21,6 +21,13 @@ export type MetricInt = Schemas["Metric_int_"];
 export type MetricDecimal = Schemas["Metric_Decimal_"];
 export type ApiErrorBody = { error: { code: string; request_id: string } };
 export type TriageOverrides = Schemas["TriageOverrides"];
+export type QuarantineList = Schemas["QuarantineList"];
+export type QuarantinedAlias = Schemas["QuarantinedAlias"];
+export type TenantAliases = Schemas["TenantAliases"];
+export type ProposalView = Schemas["ProposalView"];
+export type ProposalRequest = Schemas["ProposalRequest"];
+export type ReprocessView = Schemas["ReprocessView"];
+export type ReprocessPreview = Schemas["ReprocessPreview"];
 
 // The values a reviewer may choose, read from the schema itself rather than
 // copied, so a new intent in the API reaches the console by regeneration.

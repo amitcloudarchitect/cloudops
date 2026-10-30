@@ -155,16 +155,22 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     seeded: Seeded,
 ) -> None:
     """A second permissive policy ORs with tenant_isolation and widens it, so
-    each one must be known and confined to a role no login can use."""
+    each one must be known and confined to a role no login can use. Onboarding
+    (0009) inserts a tenant no scope holds yet: insert only, function owner only.
+    The re-process queue (0009) is claimed before its tenant is known: waiting
+    requests only, moved to running only, function owner only."""
     with psycopg.connect(seeded.admin_dsn) as cx:
         extra = cx.execute(
             "SELECT c.relname, p.polname, array(SELECT rolname FROM pg_roles"
             "        WHERE oid = ANY(p.polroles)) FROM pg_policy p"
             " JOIN pg_class c ON c.oid = p.polrelid"
-            " WHERE p.polpermissive AND p.polname <> 'tenant_isolation' ORDER BY 1"
+            " WHERE p.polpermissive AND p.polname <> 'tenant_isolation' ORDER BY 1, 2"
         ).fetchall()
     assert extra == [
+        ("alias_reprocess", "reprocess_queue_claim", ["cloudops_access_admin"]),
+        ("alias_reprocess", "reprocess_queue_read", ["cloudops_access_admin"]),
         ("llm_call", "spend_registry_read", ["cloudops_resolver"]),
+        ("tenant", "tenant_onboarding", ["cloudops_access_admin"]),
         ("tenant", "tenant_registry_read", ["cloudops_resolver"]),
         ("tenant_alias", "alias_registry_read", ["cloudops_resolver"]),
     ]

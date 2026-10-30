@@ -18,7 +18,7 @@ make token PRINCIPAL=engineer-nwl-crl
 ```
 
 (from the repository root; `make token OID=…` for any other principal.) Principals: `platform-admin`, `finops-all`, `engineer-nwl-crl`,
-`customer-nwl`, `customer-fab-one-sub`.
+`customer-nwl`, `customer-fab-one-sub`, `customer-master`.
 
 ## Tests
 

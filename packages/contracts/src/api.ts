@@ -63,6 +63,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mapping/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Proposals */
+        get: operations["list_proposals_v1_mapping_proposals_get"];
+        put?: never;
+        /** Propose */
+        post: operations["propose_v1_mapping_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mapping/proposals/{proposal_id}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decide
+         * @description Approve: the name maps to the tenant from the next ingest on, and its
+         *     quarantine row is cleared (its counts kept on the decision). Reject: needs a
+         *     reason. Either is final.
+         */
+        post: operations["decide_v1_mapping_proposals__proposal_id__decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mapping/proposals/{proposal_id}/reprocess": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Preview Reprocess
+         * @description What a re-process would replay, before anyone asks for it. The bound is the
+         *     sightings held at approval; the run reports the exact count.
+         */
+        get: operations["preview_reprocess_v1_mapping_proposals__proposal_id__reprocess_get"];
+        put?: never;
+        /**
+         * Request Reprocess
+         * @description Ask for the held records to be re-processed. Recorded and audited here; the
+         *     connector worker runs it, re-checking the mapping first.
+         */
+        post: operations["request_reprocess_v1_mapping_proposals__proposal_id__reprocess_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mapping/quarantine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Quarantine
+         * @description Names no tenant matched, across every source, most sighted first. Cross-tenant
+         *     by nature, so only for mapping.manage; never the raw payload reference.
+         */
+        get: operations["list_quarantine_v1_mapping_quarantine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mapping/tenants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Tenants */
+        get: operations["list_tenants_v1_mapping_tenants_get"];
+        put?: never;
+        /**
+         * Onboard Tenant
+         * @description A new customer. Every all-tenant principal can see it from its next request
+         *     (ADR 0002, D9); a principal assigned named tenants needs it granted.
+         */
+        post: operations["onboard_tenant_v1_mapping_tenants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -186,6 +295,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AliasView */
+        AliasView: {
+            /** Alias */
+            alias: string;
+            /** Confirmed At */
+            confirmed_at: string | null;
+            /** Source System */
+            source_system: string;
+        };
         /** CostLine */
         CostLine: {
             amortized: components["schemas"]["Metric_Decimal_"];
@@ -218,6 +336,41 @@ export interface components {
             resources: components["schemas"]["Metric_int_"] | null;
             sla_breached_open: components["schemas"]["Metric_int_"] | null;
             tenant: components["schemas"]["TenantView"];
+        };
+        /** DecisionRequest */
+        DecisionRequest: {
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approve" | "reject";
+            /** Reason */
+            reason?: string | null;
+        };
+        /** DecisionView */
+        DecisionView: {
+            /**
+             * Decided At
+             * Format: date-time
+             */
+            decided_at: string;
+            /**
+             * Decided By
+             * Format: uuid
+             */
+            decided_by: string;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "approve" | "reject";
+            /** Held First Seen */
+            held_first_seen: string | null;
+            /** Held Last Seen */
+            held_last_seen: string | null;
+            held_occurrences: components["schemas"]["Metric_int_"] | null;
+            /** Reason */
+            reason: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -277,6 +430,148 @@ export interface components {
             subscription_limited: boolean;
             /** Tenants */
             tenants: components["schemas"]["TenantView"][];
+        };
+        /** OnboardedTenant */
+        OnboardedTenant: {
+            /** Short Code */
+            short_code: string;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** OnboardRequest */
+        OnboardRequest: {
+            /** Canonical Name */
+            canonical_name: string;
+            /** Short Code */
+            short_code: string;
+        };
+        /** ProposalRequest */
+        ProposalRequest: {
+            /** Alias */
+            alias: string;
+            /** Note */
+            note?: string | null;
+            /** Source System */
+            source_system: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
+        /** ProposalView */
+        ProposalView: {
+            /** Alias */
+            alias: string;
+            decision: components["schemas"]["DecisionView"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** May Approve */
+            may_approve: boolean;
+            /** Note */
+            note: string | null;
+            /**
+             * Proposed At
+             * Format: date-time
+             */
+            proposed_at: string;
+            /**
+             * Proposed By
+             * Format: uuid
+             */
+            proposed_by: string;
+            /** Proposed By Me */
+            proposed_by_me: boolean;
+            reprocess: components["schemas"]["ReprocessView"] | null;
+            /** Source System */
+            source_system: string;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** QuarantinedAlias */
+        QuarantinedAlias: {
+            /** Alias */
+            alias: string;
+            /**
+             * First Seen
+             * Format: date-time
+             */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /**
+             * Last Seen
+             * Format: date-time
+             */
+            last_seen: string;
+            occurrences: components["schemas"]["Metric_int_"];
+            /** Pending Proposal Id */
+            pending_proposal_id: string | null;
+            /** Source System */
+            source_system: string;
+            suggested_tenant: components["schemas"]["TenantView"] | null;
+        };
+        /** QuarantineList */
+        QuarantineList: {
+            /**
+             * Approvers Required
+             * @enum {integer}
+             */
+            approvers_required: 1 | 2;
+            /** Items */
+            items: components["schemas"]["QuarantinedAlias"][];
+            names: components["schemas"]["Metric_int_"];
+            sightings: components["schemas"]["Metric_int_"];
+        };
+        /** ReprocessPreview */
+        ReprocessPreview: {
+            /** Available */
+            available: boolean;
+            /** Reason */
+            reason: string | null;
+            upper_bound: components["schemas"]["Metric_int_"] | null;
+            /** Window End */
+            window_end: string | null;
+            /** Window Start */
+            window_start: string | null;
+        };
+        /** ReprocessView */
+        ReprocessView: {
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            moved: components["schemas"]["Metric_int_"] | null;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /** Requested By Me */
+            requested_by_me: boolean;
+            /** Started At */
+            started_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "requested" | "running" | "succeeded" | "refused" | "failed";
+            /**
+             * Window End
+             * Format: date
+             */
+            window_end: string;
+            /**
+             * Window Start
+             * Format: date
+             */
+            window_start: string;
         };
         /** ResourceContext */
         ResourceContext: {
@@ -414,6 +709,16 @@ export interface components {
             available: boolean;
             /** Reason */
             reason: string;
+        };
+        /** TenantAliases */
+        TenantAliases: {
+            /** Aliases */
+            aliases: components["schemas"]["AliasView"][];
+            /** Short Code */
+            short_code: string;
+            /** Status */
+            status: string;
+            tenant: components["schemas"]["TenantView"];
         };
         /** TenantView */
         TenantView: {
@@ -671,6 +976,240 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerOverview"][];
+                };
+            };
+        };
+    };
+    list_proposals_v1_mapping_proposals_get: {
+        parameters: {
+            query?: {
+                status?: "pending" | "decided" | "all";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    propose_v1_mapping_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_v1_mapping_proposals__proposal_id__decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_reprocess_v1_mapping_proposals__proposal_id__reprocess_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReprocessPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_reprocess_v1_mapping_proposals__proposal_id__reprocess_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProposalView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_quarantine_v1_mapping_quarantine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuarantineList"];
+                };
+            };
+        };
+    };
+    list_tenants_v1_mapping_tenants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantAliases"][];
+                };
+            };
+        };
+    };
+    onboard_tenant_v1_mapping_tenants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardedTenant"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

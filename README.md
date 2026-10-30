@@ -220,7 +220,7 @@ anything else.
 
 ## Calling the API
 
-`make seed` also creates the default platform admin (ADR 0002, D14) and four demo
+`make seed` also creates the default platform admin (ADR 0002, D14) and five demo
 principals, and prints their Entra object ids:
 
 | Principal | What it can see |
@@ -229,6 +229,7 @@ principals, and prints their Entra object ids:
 | `engineer-nwl-crl` | Staff, Engineer role, Northwind and Contoso, no commercial data |
 | `customer-nwl` | A Northwind customer: the customer view, its own tenant only |
 | `customer-fab-one-sub` | A Fabrikam customer limited to one subscription |
+| `customer-master` | Staff, Customer master role, every tenant: the alias quarantine, onboarding and mapping (ADR 0015) |
 
 ```bash
 make api

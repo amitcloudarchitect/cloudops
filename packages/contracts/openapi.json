@@ -1,6 +1,38 @@
 {
   "components": {
     "schemas": {
+      "AliasView": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_system",
+          "alias",
+          "confirmed_at"
+        ],
+        "title": "AliasView",
+        "type": "object"
+      },
       "CostLine": {
         "additionalProperties": false,
         "properties": {
@@ -123,6 +155,115 @@
           "cost_30d"
         ],
         "title": "CustomerOverview",
+        "type": "object"
+      },
+      "DecisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "decision"
+        ],
+        "title": "DecisionRequest",
+        "type": "object"
+      },
+      "DecisionView": {
+        "additionalProperties": false,
+        "properties": {
+          "decided_at": {
+            "format": "date-time",
+            "title": "Decided At",
+            "type": "string"
+          },
+          "decided_by": {
+            "format": "uuid",
+            "title": "Decided By",
+            "type": "string"
+          },
+          "decision": {
+            "enum": [
+              "approve",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "held_first_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held First Seen"
+          },
+          "held_last_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Held Last Seen"
+          },
+          "held_occurrences": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "decision",
+          "reason",
+          "decided_by",
+          "decided_at",
+          "held_occurrences",
+          "held_first_seen",
+          "held_last_seen"
+        ],
+        "title": "DecisionView",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -262,6 +403,431 @@
           "is_modelled"
         ],
         "title": "Metric[int]",
+        "type": "object"
+      },
+      "OnboardRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "canonical_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Canonical Name",
+            "type": "string"
+          },
+          "short_code": {
+            "pattern": "^[A-Z0-9]{2,10}$",
+            "title": "Short Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "canonical_name",
+          "short_code"
+        ],
+        "title": "OnboardRequest",
+        "type": "object"
+      },
+      "OnboardedTenant": {
+        "additionalProperties": false,
+        "properties": {
+          "short_code": {
+            "title": "Short Code",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "short_code"
+        ],
+        "title": "OnboardedTenant",
+        "type": "object"
+      },
+      "ProposalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Alias",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "source_system": {
+            "pattern": "^[a-z0-9_]{1,40}$",
+            "title": "Source System",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_system",
+          "alias",
+          "tenant_id"
+        ],
+        "title": "ProposalRequest",
+        "type": "object"
+      },
+      "ProposalView": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "may_approve": {
+            "title": "May Approve",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "proposed_at": {
+            "format": "date-time",
+            "title": "Proposed At",
+            "type": "string"
+          },
+          "proposed_by": {
+            "format": "uuid",
+            "title": "Proposed By",
+            "type": "string"
+          },
+          "proposed_by_me": {
+            "title": "Proposed By Me",
+            "type": "boolean"
+          },
+          "reprocess": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReprocessView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "source_system",
+          "alias",
+          "note",
+          "proposed_by",
+          "proposed_at",
+          "proposed_by_me",
+          "decision",
+          "may_approve",
+          "reprocess"
+        ],
+        "title": "ProposalView",
+        "type": "object"
+      },
+      "QuarantineList": {
+        "additionalProperties": false,
+        "properties": {
+          "approvers_required": {
+            "enum": [
+              1,
+              2
+            ],
+            "title": "Approvers Required",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/QuarantinedAlias"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "names": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "sightings": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "items",
+          "names",
+          "sightings",
+          "approvers_required"
+        ],
+        "title": "QuarantineList",
+        "type": "object"
+      },
+      "QuarantinedAlias": {
+        "additionalProperties": false,
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "first_seen": {
+            "format": "date-time",
+            "title": "First Seen",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "occurrences": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "pending_proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Proposal Id"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "suggested_tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenantView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "source_system",
+          "alias",
+          "occurrences",
+          "first_seen",
+          "last_seen",
+          "suggested_tenant",
+          "pending_proposal_id"
+        ],
+        "title": "QuarantinedAlias",
+        "type": "object"
+      },
+      "ReprocessPreview": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "upper_bound": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "window_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window End"
+          },
+          "window_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Start"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "upper_bound",
+          "window_start",
+          "window_end"
+        ],
+        "title": "ReprocessPreview",
+        "type": "object"
+      },
+      "ReprocessView": {
+        "additionalProperties": false,
+        "properties": {
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "moved": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "requested_by_me": {
+            "title": "Requested By Me",
+            "type": "boolean"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "running",
+              "succeeded",
+              "refused",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "window_end": {
+            "format": "date",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "format": "date",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "requested_by_me",
+          "requested_at",
+          "window_start",
+          "window_end",
+          "started_at",
+          "finished_at",
+          "moved",
+          "outcome"
+        ],
+        "title": "ReprocessView",
         "type": "object"
       },
       "ResourceContext": {
@@ -665,6 +1231,37 @@
           "reason"
         ],
         "title": "TelemetryStatus",
+        "type": "object"
+      },
+      "TenantAliases": {
+        "additionalProperties": false,
+        "properties": {
+          "aliases": {
+            "items": {
+              "$ref": "#/components/schemas/AliasView"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "short_code": {
+            "title": "Short Code",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "short_code",
+          "status",
+          "aliases"
+        ],
+        "title": "TenantAliases",
         "type": "object"
       },
       "TenantView": {
@@ -1458,6 +2055,300 @@
           }
         },
         "summary": "List Customers"
+      }
+    },
+    "/v1/mapping/proposals": {
+      "get": {
+        "operationId": "list_proposals_v1_mapping_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "enum": [
+                "pending",
+                "decided",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProposalView"
+                  },
+                  "title": "Response List Proposals V1 Mapping Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Proposals"
+      },
+      "post": {
+        "operationId": "propose_v1_mapping_proposals_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Propose"
+      }
+    },
+    "/v1/mapping/proposals/{proposal_id}/decision": {
+      "post": {
+        "description": "Approve: the name maps to the tenant from the next ingest on, and its\nquarantine row is cleared (its counts kept on the decision). Reject: needs a\nreason. Either is final.",
+        "operationId": "decide_v1_mapping_proposals__proposal_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Decide"
+      }
+    },
+    "/v1/mapping/proposals/{proposal_id}/reprocess": {
+      "get": {
+        "description": "What a re-process would replay, before anyone asks for it. The bound is the\nsightings held at approval; the run reports the exact count.",
+        "operationId": "preview_reprocess_v1_mapping_proposals__proposal_id__reprocess_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReprocessPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Reprocess"
+      },
+      "post": {
+        "description": "Ask for the held records to be re-processed. Recorded and audited here; the\nconnector worker runs it, re-checking the mapping first.",
+        "operationId": "request_reprocess_v1_mapping_proposals__proposal_id__reprocess_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Reprocess"
+      }
+    },
+    "/v1/mapping/quarantine": {
+      "get": {
+        "description": "Names no tenant matched, across every source, most sighted first. Cross-tenant\nby nature, so only for mapping.manage; never the raw payload reference.",
+        "operationId": "list_quarantine_v1_mapping_quarantine_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuarantineList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Quarantine"
+      }
+    },
+    "/v1/mapping/tenants": {
+      "get": {
+        "operationId": "list_tenants_v1_mapping_tenants_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenantAliases"
+                  },
+                  "title": "Response List Tenants V1 Mapping Tenants Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Tenants"
+      },
+      "post": {
+        "description": "A new customer. Every all-tenant principal can see it from its next request\n(ADR 0002, D9); a principal assigned named tenants needs it granted.",
+        "operationId": "onboard_tenant_v1_mapping_tenants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardedTenant"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Onboard Tenant"
       }
     },
     "/v1/me": {

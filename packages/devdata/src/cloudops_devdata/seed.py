@@ -152,6 +152,8 @@ DEMO_PRINCIPALS: Final[tuple[tuple[str, str, str, tuple[str, ...], bool, bool], 
     ("engineer-nwl-crl", "staff", "Engineer", ("NWL", "CRL"), False, False),
     ("customer-nwl", "customer", "Customer viewer", ("NWL",), False, False),
     ("customer-fab-one-sub", "customer", "Customer viewer", ("FAB",), False, True),
+    # Delivery's customer master: onboards tenants and maps source names (ADR 0015).
+    ("customer-master", "staff", "Customer master", (), True, False),
 )
 
 
