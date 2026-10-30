@@ -36,10 +36,16 @@ replaced or destroyed.
    ```bash
    uv run python scripts/db_dev_logins.py
    ```
-6. **Mirror the pause image** that holds Temporal's secret mount:
+6. **Mirror the third-party images** into ACR: the pause image that holds Temporal's
+   secret mount, and every chart image at the digest its values pin (ADR 0008). For
+   example:
    ```bash
    az acr import -n crcloudopsdevweu --source registry.k8s.io/pause:3.10.1 --image pause:3.10.1
    ```
+   ```bash
+   az acr import -n crcloudopsdevweu --source quay.io/argoproj/argocd@sha256:8e5cc5bb008df8a09dba439462e58c94c55b7735888d3ebde0c25fc05e4e5335 --image argoproj/argocd:v3.5.6
+   ```
+   Docker Hub and ECR Public sometimes answer ACR with HTTP 429: wait and retry.
 7. **Push the migrate image**, set its tag in `overlays/dev`, then commit and push.
 8. **Re-run the bootstrap.** It points the root app at `applications/dev`, adds Argo CD's
    Application health check, and turns on ingress-nginx metrics:

@@ -17,6 +17,11 @@ spec:
         dashboard: { enabled: false }
         controller:
           replicas: 1
+          # Mirrored into ACR, pinned by digest (ADR 0008, third-party images).
+          image:
+            registry: crcloudopsdevweu.azurecr.io
+            repository: argoproj/argo-rollouts
+            tag: "v1.10.1@sha256:fbcc4cf0a29da25d86230992b1dfdeadf30b6f1baa74ea7c9c98e3e580769396"
           nodeSelector: { cloudops.getronics.com/pool: app }
           resources:
             requests: { cpu: 50m, memory: 128Mi }

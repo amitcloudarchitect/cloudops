@@ -76,10 +76,23 @@
 
 ## Open items
 
-- **Third-party images** (Temporal, Prometheus, Argo Rollouts, ingress-nginx, Argo CD)
-  still pull from public registries, against the LLD's "images only from the platform
-  registry". Mirror them into ACR with `az acr import` and pin digests before UAT.
-  Our own images, and the pause image, already come from ACR.
+- **Third-party images.** *Done 2026-10-30 for dev:* all 13 (Temporal server,
+  admin-tools and UI, cert-manager ×3, Argo Rollouts, Argo CD, Redis, Prometheus and its
+  config reloader, ingress-nginx and its certificate job) are imported into ACR under
+  their original repository paths, at the digests that were running, and every chart
+  pins them by digest (`tools/ci/tests/test_gitops.py` fails if one falls back to a
+  public registry). Docker Hub and ECR Public rate-limit ACR's shared import addresses
+  (HTTP 429): retry, or import the same digest from Docker Hub.
+  **Open:** the same scan our own images must pass (no critical or high) fails for 11
+  of the 13, on their latest releases:
+  - ingress-nginx controller: 50 critical / 201 high, mainly Go stdlib, OpenSSL,
+    curl and nginx 1.27.1. It is internet-facing (behind Front Door) and, as far as is
+    known, the upstream project was retired in 2026, so these may never be fixed:
+    replace the controller before UAT;
+  - Argo CD 10 / 93 and Redis 4 / 29; Temporal server 2 / 22, admin-tools 11 / 74,
+    UI 4 / 48; Argo Rollouts 1 / 9; ingress-nginx certificate job 2 / 27;
+    cert-manager controller 0 / 1; Prometheus and its reloader 0 / 3 each (none
+    fixable); cert-manager webhook and cainjector clean.
 - Entra-token database logins (decision 3), and Temporal authorization (decision 4;
   mTLS is done, ADR 0010).
 - Signed-image verification on the execution namespace (LLD) comes with the

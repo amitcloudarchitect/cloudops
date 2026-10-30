@@ -4,6 +4,12 @@
 # Link narrows the network path, the header still proves which profile is calling.
 controller:
   replicaCount: 2
+  # Mirrored into ACR at the chart's own digests (ADR 0008, third-party images).
+  image:
+    registry: crcloudopsdevweu.azurecr.io
+    image: ingress-nginx/controller
+    tag: v1.15.1
+    digest: sha256:594ceea76b01c592858f803f9ff4d2cb40542cae2060410b2c95f75907d659e1
   nodeSelector:
     cloudops.getronics.com/pool: app
   allowSnippetAnnotations: false
@@ -31,4 +37,10 @@ controller:
     prometheus.io/scrape: "true"
     prometheus.io/port: "10254"
   admissionWebhooks:
+    patch:
+      image:
+        registry: crcloudopsdevweu.azurecr.io
+        image: ingress-nginx/kube-webhook-certgen
+        tag: v1.6.9
+        digest: sha256:01038e7de14b78d702d2849c3aad72fd25903c4765af63cf16aa3398f5d5f2dd
     enabled: true

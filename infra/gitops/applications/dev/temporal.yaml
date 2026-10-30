@@ -20,7 +20,11 @@ spec:
     targetRevision: 1.7.0
     helm:
       valuesObject:
+        # Images mirrored into ACR, pinned by digest (ADR 0008, third-party images).
         server:
+          image:
+            repository: crcloudopsdevweu.azurecr.io/temporalio/server
+            tag: "1.32.0@sha256:c3e752127759616bb1615e0f9ba0e21635aeb5fdeb922de4f371c350955f46ae"
           replicaCount: 1
           nodeSelector: { cloudops.getronics.com/pool: ai }
           securityContext:
@@ -100,6 +104,10 @@ spec:
                   retention: 3d
         admintools:
           enabled: false
+          # Also the image of the schema and namespace jobs.
+          image:
+            repository: crcloudopsdevweu.azurecr.io/temporalio/admin-tools
+            tag: "1.32.0@sha256:a9f84fb9a374b2374fe2e67c8efc0468ff3f1c66c8a0b14597ec86e349e62bca"
         schema:
           containerSecurityContext:
             allowPrivilegeEscalation: false
@@ -110,6 +118,9 @@ spec:
             seccompProfile: { type: RuntimeDefault }
         web:
           enabled: true
+          image:
+            repository: crcloudopsdevweu.azurecr.io/temporalio/ui
+            tag: "2.54.1@sha256:ff0943fe532b8e33c46cd28b29e81e0ce0b6f55b9ee50a38ef1b437cc4de3fa5"
           tls:
             enabled: true
             secretName: temporal-web-tls

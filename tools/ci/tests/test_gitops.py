@@ -327,3 +327,44 @@ def test_temporal_requires_client_certificates_everywhere() -> None:
     assert web["enableHostVerification"] is True
     assert web["secretName"] in issued
     assert values["server"]["config"]["tls"]["refreshInterval"]
+
+
+# Third-party images: mirrored into ACR, pinned by digest (ADR 0008) ------------------
+
+MIRRORED = {
+    "infra/gitops/applications/dev/temporal.yaml": ["server.image", "admintools.image",
+                                                    "web.image"],
+    "infra/gitops/applications/dev/cert-manager.yaml": ["image", "webhook.image",
+                                                        "cainjector.image"],
+    "infra/gitops/applications/dev/argo-rollouts.yaml": ["controller.image"],
+    "infra/gitops/applications/dev/prometheus.yaml": ["server.image",
+                                                      "configmapReload.prometheus.image"],
+    "infra/cluster/argocd/values.yaml": ["global.image", "redis.image"],
+    "infra/cluster/ingress-nginx/values-public.yaml.tpl": [
+        "controller.image", "controller.admissionWebhooks.patch.image"],
+    "infra/cluster/ingress-nginx/values-private.yaml.tpl": [
+        "controller.image", "controller.admissionWebhooks.patch.image"],
+}
+
+
+def _values(path: str) -> dict[str, Any]:
+    doc: dict[str, Any] = yaml.safe_load((REPO_ROOT / path).read_text(encoding="utf-8"))
+    if path.startswith("infra/gitops/applications/"):
+        values: dict[str, Any] = doc["spec"]["source"]["helm"]["valuesObject"]
+        return values
+    return doc
+
+
+@pytest.mark.parametrize(("path", "key"),
+                         [(p, k) for p, keys in MIRRORED.items() for k in keys])
+def test_third_party_images_come_from_acr_by_digest(path: str, key: str) -> None:
+    """Every image a chart would otherwise pull from a public registry is set here;
+    dropping one silently falls back to the chart's default registry."""
+    values = _values(path)
+    image = values
+    for part in key.split("."):
+        image = image[part]
+    text = yaml.safe_dump(image)
+    registry = values.get("imageRegistry", "") if path.endswith("cert-manager.yaml") else text
+    assert re.search(r"crcloudops[a-z]+\.azurecr\.io", registry), (path, key)
+    assert re.search(r"sha256:[0-9a-f]{64}", text), (path, key)

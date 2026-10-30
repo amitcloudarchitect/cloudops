@@ -28,3 +28,11 @@ configs:
 global:
   nodeSelector:
     cloudops.getronics.com/pool: app
+  # Mirrored into ACR, pinned by digest (ADR 0008, third-party images).
+  image:
+    repository: crcloudopsdevweu.azurecr.io/argoproj/argocd
+    tag: "v3.5.6@sha256:8e5cc5bb008df8a09dba439462e58c94c55b7735888d3ebde0c25fc05e4e5335"
+redis:
+  image:
+    repository: crcloudopsdevweu.azurecr.io/library/redis
+    tag: "8.6.4-alpine@sha256:2cc044fc5a07c9b701f8f1255a309ae9ad7856e694ac03513bf3648c01e40763"
