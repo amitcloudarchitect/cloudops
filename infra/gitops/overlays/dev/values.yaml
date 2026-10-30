@@ -9,3 +9,5 @@ metadata:
 data:
   # snet-data-dev, where PostgreSQL's private endpoint lives (stack 01).
   dataSubnet: 10.65.32.0/24
+  # Front Door's profile id (stack 06 output frontdoor_id): sent as X-Azure-FDID.
+  frontdoorId: 18306976-76bd-44e6-814e-fa37374f9942

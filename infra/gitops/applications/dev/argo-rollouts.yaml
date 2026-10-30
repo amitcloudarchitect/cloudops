@@ -23,6 +23,32 @@ spec:
             repository: argoproj/argo-rollouts
             tag: "v1.10.1@sha256:fbcc4cf0a29da25d86230992b1dfdeadf30b6f1baa74ea7c9c98e3e580769396"
           nodeSelector: { cloudops.getronics.com/pool: app }
+          # The Gateway API traffic router (ADR 0011), from its image mirrored into ACR,
+          # never downloaded at runtime. Copied into the chart's plugin-bin directory;
+          # the controller checks the binary's SHA-256 before running it.
+          initContainers:
+            - name: copy-gatewayapi-plugin
+              image: crcloudopsdevweu.azurecr.io/argoproj-labs/rollouts-plugin-trafficrouter-gatewayapi:v0.17.0@sha256:bc40d5edf13307e455f6c18cbf9cc79715165cbee8b05a674fd88119f119d4a2
+              command: ["/bin/sh", "-c"]
+              args: ["cp /bin/rollouts-plugin-trafficrouter-gatewayapi /plugins/"]
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: { drop: [ALL] }
+              resources:
+                requests: { cpu: 10m, memory: 16Mi }
+                limits: { memory: 64Mi }
+              volumeMounts:
+                - { name: gatewayapi-plugin, mountPath: /plugins }
+          volumes:
+            - name: gatewayapi-plugin
+              emptyDir: { sizeLimit: 128Mi }
+          volumeMounts:
+            - { name: gatewayapi-plugin, mountPath: /plugins, readOnly: true }
+          trafficRouterPlugins:
+            - name: argoproj-labs/gatewayAPI
+              location: file:///plugins/rollouts-plugin-trafficrouter-gatewayapi
+              sha256: 31fac7d150b5bd2df6f55a49354dbf05123c093d02f929c409ce4edf57626103
           resources:
             requests: { cpu: 50m, memory: 128Mi }
             limits: { memory: 256Mi }

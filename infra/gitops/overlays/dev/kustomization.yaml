@@ -14,6 +14,7 @@ resources:
   - ../../base/internal-ca
   - ../../base/migrate
   - ../../base/api
+  - ../../base/edge
   - ../../base/temporal-secrets
   - ../../base/monitoring
   - values.yaml
@@ -30,6 +31,7 @@ images:
 patches:
   - path: identity.yaml
   - path: config.yaml
+  - path: edge.yaml
 replacements:
   - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.dataSubnet }
     targets:  # every policy that names the database
@@ -39,3 +41,7 @@ replacements:
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: temporal-database }
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
+  - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.frontdoorId }
+    targets:  # lock 2: only our Front Door profile reaches the API (ADR 0011)
+      - select: { kind: HTTPRoute, name: api }
+        fieldPaths: [spec.rules.1.matches.0.headers.0.value]

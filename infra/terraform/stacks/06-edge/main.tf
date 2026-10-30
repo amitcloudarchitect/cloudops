@@ -55,6 +55,21 @@ resource "azurerm_public_ip" "ingress" {
   tags                = module.tags.tags
 }
 
+# The Gateway API ingress (ADR 0011), side by side with ingress-nginx until the
+# cutover. Same resource group and the same two locks: the NSG's service tag, and the
+# X-Azure-FDID match, now on the HTTPRoute (infra/gitops/base/edge).
+resource "azurerm_public_ip" "gateway" {
+  count               = local.public ? 1 : 0
+  provider            = azurerm.aks
+  name                = module.names.gateway_public_ip
+  resource_group_name = data.azurerm_kubernetes_cluster.this.node_resource_group
+  location            = var.location
+  allocation_method   = "Static"
+  sku                 = "Standard"
+  zones               = ["1", "2", "3"]
+  tags                = module.tags.tags
+}
+
 resource "azurerm_cdn_frontdoor_profile" "this" {
   name                     = module.names.frontdoor.profile
   resource_group_name      = module.names.resource_group["net"]
@@ -93,6 +108,22 @@ resource "azurerm_cdn_frontdoor_origin" "this" {
   cdn_frontdoor_origin_group_id  = azurerm_cdn_frontdoor_origin_group.this.id
   enabled                        = true
   host_name                      = azurerm_public_ip.ingress[0].ip_address
+  http_port                      = 80
+  https_port                     = 443
+  certificate_name_check_enabled = true
+  priority                       = 1
+  weight                         = 1000
+}
+
+# Disabled until the cutover (ADR 0011, phase B): Front Door sends it nothing, so the
+# gateway can be proven inside the cluster first. The cutover enables this origin and
+# disables the one above in the same apply.
+resource "azurerm_cdn_frontdoor_origin" "gateway" {
+  count                          = local.public ? 1 : 0
+  name                           = module.names.frontdoor.gateway_origin
+  cdn_frontdoor_origin_group_id  = azurerm_cdn_frontdoor_origin_group.this.id
+  enabled                        = false
+  host_name                      = azurerm_public_ip.gateway[0].ip_address
   http_port                      = 80
   https_port                     = 443
   certificate_name_check_enabled = true

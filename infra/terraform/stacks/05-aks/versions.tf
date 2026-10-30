@@ -6,6 +6,11 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.30"
     }
+    # Only for the cluster's Gateway API settings, which azurerm cannot set yet.
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 2.0"
+    }
   }
 
   backend "azurerm" {
@@ -17,6 +22,10 @@ provider "azurerm" {
   features {}
   subscription_id     = local.subscription["aks"]
   storage_use_azuread = true
+}
+
+provider "azapi" {
+  subscription_id = local.subscription["aks"]
 }
 
 provider "azurerm" {

@@ -1,0 +1,8 @@
+# The Gateway API ingress (ADR 0011): Front Door -> this Gateway -> the API's
+# HTTPRoute (base/api). The AKS application routing add-on (GatewayClass
+# approuting-istio) generates and patches the proxy Deployment, Service, HPA and PDB.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-edge
+resources:
+  - gateway.yaml

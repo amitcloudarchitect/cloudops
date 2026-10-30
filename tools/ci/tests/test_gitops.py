@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 GITOPS = REPO_ROOT / "infra/gitops"
 WORKLOAD_KINDS = {"Deployment", "Rollout", "Job"}
 OUR_NAMESPACES = {"platform-api", "platform-ingest", "platform-ai", "platform-web",
-                  "temporal", "monitoring"}
+                  "platform-edge", "temporal", "monitoring"}
 POOLS = {"app", "ingest", "telemetry", "ai"}
 
 
@@ -336,7 +336,8 @@ MIRRORED = {
                                                     "web.image"],
     "infra/gitops/applications/dev/cert-manager.yaml": ["image", "webhook.image",
                                                         "cainjector.image"],
-    "infra/gitops/applications/dev/argo-rollouts.yaml": ["controller.image"],
+    "infra/gitops/applications/dev/argo-rollouts.yaml": ["controller.image",
+                                                         "controller.initContainers"],
     "infra/gitops/applications/dev/prometheus.yaml": ["server.image",
                                                       "configmapReload.prometheus.image"],
     "infra/cluster/argocd/values.yaml": ["global.image", "redis.image"],
@@ -368,3 +369,71 @@ def test_third_party_images_come_from_acr_by_digest(path: str, key: str) -> None
     registry = values.get("imageRegistry", "") if path.endswith("cert-manager.yaml") else text
     assert re.search(r"crcloudops[a-z]+\.azurecr\.io", registry), (path, key)
     assert re.search(r"sha256:[0-9a-f]{64}", text), (path, key)
+
+
+# The Gateway API ingress (ADR 0011) -------------------------------------------------
+
+
+def _one(kind: str, name: str) -> dict[str, Any]:
+    (doc,) = [d for d in DEV if d["kind"] == kind and d["metadata"]["name"] == name]
+    return doc
+
+
+def test_the_gateway_admits_only_front_door_and_only_the_api_namespace() -> None:
+    gateway = _one("Gateway", "api")
+    assert gateway["metadata"]["namespace"] == "platform-edge"
+    assert gateway["spec"]["gatewayClassName"] == "approuting-istio"
+    annotations = gateway["spec"]["infrastructure"]["annotations"]
+    assert annotations["service.beta.kubernetes.io/azure-allowed-service-tags"] \
+        == "AzureFrontDoor.Backend"  # lock 1
+    assert annotations["service.beta.kubernetes.io/azure-pip-name"].startswith("pip-cloudops-")
+    for listener in gateway["spec"]["listeners"]:
+        allowed = listener["allowedRoutes"]["namespaces"]
+        assert allowed["from"] == "Selector"
+        assert allowed["selector"]["matchLabels"] == {
+            "kubernetes.io/metadata.name": "platform-api"}
+
+
+def test_every_api_route_but_the_probe_requires_our_front_door() -> None:
+    """Lock 2: the NSG's service tag admits every Front Door profile in Azure, so the
+    route must also match our profile's X-Azure-FDID; only /healthz is open."""
+    route = _one("HTTPRoute", "api")
+    values = _one_values()
+    for rule in route["spec"]["rules"]:
+        for match in rule["matches"]:
+            if match["path"] == {"type": "Exact", "value": "/healthz"}:
+                assert "headers" not in match
+                continue
+            headers = {h["name"].lower(): h for h in match.get("headers", [])}
+            fdid = headers["x-azure-fdid"]
+            assert fdid["type"] == "Exact"
+            assert fdid["value"] == values["frontdoorId"]
+        # The Rollouts plugin moves weight between these two; both must be present.
+        assert {b["name"] for b in rule["backendRefs"]} == {"api", "api-canary"}
+
+
+def _one_values() -> dict[str, str]:
+    values = yaml.safe_load((GITOPS / "overlays/dev/values.yaml").read_text(encoding="utf-8"))
+    data: dict[str, str] = values["data"]
+    assert re.fullmatch(r"[0-9a-f-]{36}", data["frontdoorId"])
+    return data
+
+
+def test_only_the_ingress_reaches_the_api() -> None:
+    policy = _one("NetworkPolicy", "api")
+    sources = [peer for rule in policy["spec"]["ingress"] for peer in rule["from"]]
+    allowed = {peer["namespaceSelector"]["matchLabels"]["kubernetes.io/metadata.name"]
+               for peer in sources}
+    assert allowed == {"ingress-nginx", "platform-edge"}
+    edge = [p for p in sources if p["namespaceSelector"]["matchLabels"][
+        "kubernetes.io/metadata.name"] == "platform-edge"]
+    assert edge[0]["podSelector"]["matchLabels"] == {
+        "gateway.networking.k8s.io/gateway-name": "api"}
+
+
+def test_the_rollouts_plugin_is_local_and_pinned() -> None:
+    values = _values("infra/gitops/applications/dev/argo-rollouts.yaml")
+    (plugin,) = values["controller"]["trafficRouterPlugins"]
+    assert plugin["name"] == "argoproj-labs/gatewayAPI"
+    assert plugin["location"].startswith("file:///plugins/")  # never fetched at runtime
+    assert re.fullmatch(r"[0-9a-f]{64}", plugin["sha256"])

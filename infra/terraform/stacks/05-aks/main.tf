@@ -174,6 +174,32 @@ resource "azurerm_kubernetes_cluster" "this" {
   }
 }
 
+# Gateway API ingress (ADR 0011): the managed Gateway API CRDs and the application
+# routing add-on's Istio-based implementation (GatewayClass approuting-istio), the
+# supported successor to the retired ingress-nginx. Microsoft patches and upgrades it
+# with the cluster. azurerm has no fields for these, hence azapi, as Microsoft's own
+# Terraform sample does.
+resource "azapi_update_resource" "gateway_api" {
+  type        = "Microsoft.ContainerService/managedClusters@2026-03-01"
+  resource_id = azurerm_kubernetes_cluster.this.id
+  body = {
+    properties = {
+      ingressProfile = {
+        gatewayAPI = {
+          installation = "Standard"
+        }
+        webAppRouting = {
+          gatewayAPIImplementations = {
+            appRoutingIstio = {
+              mode = "Enabled"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 resource "azurerm_kubernetes_cluster_node_pool" "this" {
   for_each = local.user_pools
 

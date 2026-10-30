@@ -1,0 +1,12 @@
+# The gateway's static IP, created by stack 06 in the node resource group (stack 05
+# output node_resource_group). Not secrets.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: api
+  namespace: platform-edge
+spec:
+  infrastructure:
+    annotations:
+      service.beta.kubernetes.io/azure-pip-name: pip-cloudops-gateway-dev-weu
+      service.beta.kubernetes.io/azure-load-balancer-resource-group: rg-cloudops-aksnodes-dev-weu

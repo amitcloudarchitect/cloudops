@@ -1,0 +1,88 @@
+# One HTTP listener: Front Door terminates TLS and reaches the origin over HTTP in
+# public mode (stack 06 explains why). Only the API's namespace may attach routes.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: api
+spec:
+  gatewayClassName: approuting-istio
+  infrastructure:
+    # Copied onto the generated LoadBalancer Service.
+    annotations:
+      # The static IP stack 06 creates, in the cluster's node resource group, so the
+      # cluster identity can attach it without a role assignment.
+      service.beta.kubernetes.io/azure-pip-name: SET-IN-OVERLAY
+      service.beta.kubernetes.io/azure-load-balancer-resource-group: SET-IN-OVERLAY
+      # Lock 1 (stack 06): only Front Door's service tag reaches the IP. Lock 2 is
+      # the X-Azure-FDID match on the HTTPRoute.
+      service.beta.kubernetes.io/azure-allowed-service-tags: AzureFrontDoor.Backend
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: api-gateway
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-api
+---
+# Customisations of the generated proxy, within the add-on's allow list.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway
+data:
+  deployment: |
+    spec:
+      template:
+        spec:
+          nodeSelector:
+            cloudops.getronics.com/pool: app
+          containers:
+            - name: istio-proxy
+              resources:
+                requests: { cpu: 100m, memory: 128Mi }
+                limits: { memory: 512Mi }
+---
+# The proxies: Front Door in on 80 (the NSG admits only its service tag), the load
+# balancer's probe on 15021, Prometheus on 15020; out to the API and to istiod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-gateway
+spec:
+  podSelector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: api
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - ports:
+        - { protocol: TCP, port: 80 }
+        - { protocol: TCP, port: 15021 }
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - { protocol: TCP, port: 15020 }
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-api
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api
+      ports:
+        - { protocol: TCP, port: 8000 }
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: aks-istio-system
+      ports:
+        - { protocol: TCP, port: 15012 }  # istiod: configuration and certificates

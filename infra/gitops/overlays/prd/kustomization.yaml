@@ -9,6 +9,7 @@ resources:
   - ../../base/internal-ca
   - ../../base/migrate
   - ../../base/api
+  - ../../base/edge
   - ../../base/temporal-secrets
   - ../../base/monitoring
   - ../../base/connector-servicenow

@@ -45,16 +45,21 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
-  # cainjector writes the webhook's CA bundle in the cluster; it is not drift.
+  # Not drift: cainjector writes the webhook's CA bundle in the cluster, and AKS's
+  # admissions enforcer adds two namespace exclusions (control-plane, managedby=aks)
+  # to every webhook so none can block its system namespaces. Only those entries are
+  # ignored; any other change to the selector still shows.
   ignoreDifferences:
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration
       name: cert-manager-webhook
-      jqPathExpressions: [".webhooks[].clientConfig.caBundle"]
+      jqPathExpressions: &aks-webhook-drift
+        - .webhooks[].clientConfig.caBundle
+        - '.webhooks[].namespaceSelector.matchExpressions[] | select(.key == "control-plane" or .key == "kubernetes.azure.com/managedby")'
     - group: admissionregistration.k8s.io
       kind: MutatingWebhookConfiguration
       name: cert-manager-webhook
-      jqPathExpressions: [".webhooks[].clientConfig.caBundle"]
+      jqPathExpressions: *aks-webhook-drift
   syncPolicy:
     automated: { prune: true, selfHeal: true }
     syncOptions: [CreateNamespace=true, ServerSideApply=true, RespectIgnoreDifferences=true]

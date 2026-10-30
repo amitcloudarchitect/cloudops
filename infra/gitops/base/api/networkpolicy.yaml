@@ -9,11 +9,18 @@ spec:
       app.kubernetes.io/name: api
   policyTypes: [Ingress, Egress]
   ingress:
-    # Only the ingress controller reaches the API.
+    # Only the ingress reaches the API: ingress-nginx until the cutover, then the
+    # Gateway API proxies (ADR 0011).
     - from:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: ingress-nginx
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-edge
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: api
       ports:
         - { protocol: TCP, port: 8000 }
   egress:

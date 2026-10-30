@@ -15,6 +15,7 @@ resources:
   - rollout.yaml
   - services.yaml
   - ingress.yaml
+  - httproute.yaml
   - hpa.yaml
   - pdb.yaml
   - analysistemplate.yaml

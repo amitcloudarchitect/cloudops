@@ -1,7 +1,8 @@
 # Kubernetes and GitOps
 
 What runs in the cluster and how it gets there. Decisions: ADR 0008; Temporal's
-mutual TLS, ADR 0010.
+mutual TLS, ADR 0010; the Gateway API ingress replacing ingress-nginx, ADR 0011
+(phase A: both run, Front Door still sends everything to nginx).
 
 ```
 infra/gitops/
@@ -71,6 +72,16 @@ uv run python scripts/db_dev_logins.py --rotate
 
 Then restart the pods that read them: `kubectl -n platform-api rollout restart rollout api`,
 and the `temporal-secrets` and Temporal deployments.
+
+## The Gateway API ingress (ADR 0011)
+
+```bash
+kubectl -n platform-edge get gateway api
+```
+
+```bash
+kubectl -n platform-api get httproute api -o jsonpath='{.status.parents[0].conditions}'
+```
 
 ## Certificates
 

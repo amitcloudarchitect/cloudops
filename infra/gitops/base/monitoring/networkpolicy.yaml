@@ -23,6 +23,16 @@ spec:
               kubernetes.io/metadata.name: ingress-nginx
       ports:
         - { protocol: TCP, port: 10254 }
+    # The Gateway API proxies' merged metrics (ADR 0011).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-edge
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: api
+      ports:
+        - { protocol: TCP, port: 15020 }
     # The Kubernetes API, for service discovery.
     - ports:
         - { protocol: TCP, port: 443 }

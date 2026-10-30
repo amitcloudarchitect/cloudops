@@ -102,11 +102,19 @@ output "frontdoor" {
     endpoint   = "cloudops-${local.e}"
     waf_policy = "wafcloudops${local.e}"
     origin     = "aks-ingress"
+    # The Gateway API ingress (ADR 0011), side by side with origin until cutover.
+    gateway_origin = "aks-gateway"
   }
 }
 
 output "ingress_public_ip" {
   value = "pip-cloudops-ingress-${local.e}-${local.r}"
+}
+
+# The Gateway API ingress's static IP (ADR 0011). Its own name: during the migration
+# both ingresses hold an IP, and Front Door switches between them.
+output "gateway_public_ip" {
+  value = "pip-cloudops-gateway-${local.e}-${local.r}"
 }
 
 # Container registry (step 11). Alphanumeric only, globally unique: crcloudops{env}{region}
