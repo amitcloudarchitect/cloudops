@@ -40,7 +40,17 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: cert-manager
+  # cainjector writes the webhook's CA bundle in the cluster; it is not drift.
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: cert-manager-webhook
+      jqPathExpressions: [".webhooks[].clientConfig.caBundle"]
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      name: cert-manager-webhook
+      jqPathExpressions: [".webhooks[].clientConfig.caBundle"]
   syncPolicy:
     automated: { prune: true, selfHeal: true }
-    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    syncOptions: [CreateNamespace=true, ServerSideApply=true, RespectIgnoreDifferences=true]
     retry: { limit: 10, backoff: { duration: 30s, factor: 2, maxDuration: 10m } }

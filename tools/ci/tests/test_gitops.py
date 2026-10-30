@@ -120,6 +120,15 @@ def test_every_workload_has_its_own_federated_identity() -> None:
         assert sa.get("automountServiceAccountToken") is False, name
 
 
+def test_every_pod_gets_its_workload_identity_injected() -> None:
+    """Without the label the webhook injects nothing, and the Azure profile refuses
+    to start: a pod that always fails, found only in the cluster."""
+    for d in ALL_OURS:
+        if d["kind"] in WORKLOAD_KINDS:
+            labels = d["spec"]["template"]["metadata"].get("labels", {})
+            assert labels.get("azure.workload.identity/use") == "true", d["metadata"]["name"]
+
+
 def test_federated_accounts_match_terraform() -> None:
     """Stack 05 federates exactly the service accounts the bases declare."""
     tf = (REPO_ROOT / "infra/terraform/stacks/05-aks/main.tf").read_text(encoding="utf-8")

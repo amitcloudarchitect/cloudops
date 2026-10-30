@@ -218,6 +218,9 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: connector-servicenow-schedule
+        # The Azure profile refuses to start without a workload identity, even for
+        # a job that only talks to Temporal; it is the worker's own identity.
+        azure.workload.identity/use: "true"
     spec:
       restartPolicy: Never
       serviceAccountName: connector-servicenow
