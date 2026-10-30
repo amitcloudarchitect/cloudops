@@ -117,6 +117,12 @@ output "gateway_public_ip" {
   value = "pip-cloudops-gateway-${local.e}-${local.r}"
 }
 
+# Azure OpenAI (LLD, AI platform configuration; ADR 0012). Also its custom subdomain,
+# which Entra authentication and the private endpoint require.
+output "openai" {
+  value = "oai-cloudops-${local.e}-${local.r}"
+}
+
 # Container registry (step 11). Alphanumeric only, globally unique: crcloudops{env}{region}
 # (LLD, Compute: images only from crcloudopsprdweu).
 output "container_registry" {

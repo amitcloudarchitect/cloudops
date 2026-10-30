@@ -15,11 +15,12 @@ applies it (CLAUDE.md).
 | `01-network` | VNet `10.65.0.0/16`, subnets, NSGs, NAT gateway, private DNS zones | — |
 | `02-security` | Key Vaults (app Standard, keys Premium), workload and AKS identities | 01 |
 | `03-observability` | Log Analytics, Application Insights, Key Vault diagnostics | 02 |
+| `03a-ai` | Azure OpenAI: one private, keyless resource with the `cloudops-small`, `-large` and `-embed` deployments (ADR 0012) | 01, 03 |
 | `04-data` | PostgreSQL 16, Redis Premium, storage, Event Hubs | 01, 03 |
 | `04a-registry` | Container registry `crcloudops{env}{region}` in its own resource group | 03 |
-| `04b-rbac` | **Every role assignment** (User Access Administrator); after a first `05`, apply again for the kubelet's AcrPull | 02, 04, 04a |
+| `04b-rbac` | **Every role assignment** (User Access Administrator); after a first `05`, apply again for the kubelet's AcrPull | 02, 03a, 04, 04a |
 | `05-aks` | Private AKS cluster, pools npsystem/npapp/npingest/nptelemetry/npai | 01, 02, 03, 04b |
-| `06-edge` | Front Door Premium with WAF (Prevention, DRS 2.1 and bot rules), the ingress public IP in public mode | 01, 03, 05 |
+| `06-edge` | Front Door Premium with WAF (Prevention, DRS 2.1 and bot rules), the Gateway API ingress's public IP in public mode (ADR 0011) | 01, 03, 05 |
 
 ## Running a stack
 

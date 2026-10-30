@@ -1,7 +1,7 @@
 # Stack 04b — role assignments. Every Azure role assignment for stacks 01-05
 # lives here and nowhere else, so they can be reviewed as one diff and applied
 # by someone holding User Access Administrator (AZURE-ACCESS.md). Apply after
-# 04 and 04a, before 05, and once more after 05 on a first build (the kubelet's
+# 03a, 04 and 04a, before 05, and once more after 05 on a first build (the kubelet's
 # AcrPull needs the cluster). Each assignment is the narrowest scope that works.
 
 data "azurerm_user_assigned_identity" "aks" {
@@ -142,6 +142,23 @@ resource "azurerm_role_assignment" "ingest_raw_servicenow" {
   scope                            = "${data.azurerm_storage_account.bronze.id}/blobServices/default/containers/servicenow"
   role_definition_name             = "Storage Blob Data Contributor"
   principal_id                     = data.azurerm_user_assigned_identity.workload["ingest"].principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
+# The AI worker's gateway calls Azure OpenAI as itself (ADR 0012): Cognitive Services
+# OpenAI User can call the deployments, not manage them, and there are no keys to
+# read (local auth is off). Account scope: it is the only AI resource.
+data "azurerm_cognitive_account" "openai" {
+  provider            = azurerm.data
+  name                = module.names.openai
+  resource_group_name = module.names.resource_group["ai"]
+}
+
+resource "azurerm_role_assignment" "ai_openai_user" {
+  scope                            = data.azurerm_cognitive_account.openai.id
+  role_definition_name             = "Cognitive Services OpenAI User"
+  principal_id                     = data.azurerm_user_assigned_identity.workload["ai"].principal_id
   principal_type                   = "ServicePrincipal"
   skip_service_principal_aad_check = true
 }
