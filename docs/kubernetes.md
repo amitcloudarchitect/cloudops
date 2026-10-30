@@ -1,13 +1,16 @@
 # Kubernetes and GitOps
 
-What runs in the cluster and how it gets there. Decisions: ADR 0008.
+What runs in the cluster and how it gets there. Decisions: ADR 0008; Temporal's
+mutual TLS, ADR 0010.
 
 ```
 infra/gitops/
-  applications/<env>/   Argo CD Applications (Rollouts, Prometheus, platform, Temporal)
-  base/                 Kustomize bases: namespaces, api, migrate, temporal-secrets,
-                        monitoring, connector-servicenow, worker-ai
-  overlays/<env>/       Per-environment values and image tags (dev is the worked example)
+  applications/<env>/   Argo CD Applications (cert-manager, Rollouts, Prometheus,
+                        platform, Temporal, workers)
+  base/                 Kustomize bases: namespaces, internal-ca, api, migrate,
+                        temporal-secrets, monitoring, connector-servicenow, worker-ai
+  overlays/<env>/       Per-environment values and image tags (dev is the worked example);
+                        overlays/dev/workers is the workers Application's
 ```
 
 `make check` builds every overlay and checks the pod controls
@@ -45,11 +48,14 @@ replaced or destroyed.
    ```
 
 Argo CD then syncs, in order:
-1. Rollouts;
-2. Prometheus;
-3. the platform: namespaces and policies, the migration job (Argo CD waits for it
-   to complete; a failure stops the sync), then the API canary;
-4. Temporal.
+1. cert-manager;
+2. Rollouts;
+3. Prometheus;
+4. the platform: namespaces and policies, the internal CA and Temporal's
+   certificates, the migration job (Argo CD waits for it to complete; a failure stops
+   the sync), then the API canary;
+5. Temporal, with mutual TLS on every connection;
+6. the workers: `connector-servicenow`, then its schedule job (5 minutes per entity).
 
 ## Rotating dev database passwords
 
@@ -59,6 +65,22 @@ uv run python scripts/db_dev_logins.py --rotate
 
 Then restart the pods that read them: `kubectl -n platform-api rollout restart rollout api`,
 and the `temporal-secrets` and Temporal deployments.
+
+## Certificates
+
+cert-manager renews every certificate 30 days before it expires, with a new key.
+Temporal re-reads its files within the hour. A worker notices within five minutes,
+finishes what it is doing, and restarts with the new certificate.
+
+```bash
+kubectl get certificates -A
+```
+
+To force a renewal (for example after a suspected key leak), with the
+[cmctl](https://cert-manager.io/docs/reference/cmctl/) plugin:
+```bash
+cmctl renew -n platform-ingest connector-servicenow-temporal
+```
 
 ## Looking at things
 

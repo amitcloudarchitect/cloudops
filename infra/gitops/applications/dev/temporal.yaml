@@ -1,8 +1,10 @@
 # Temporal, self-hosted (ADR 0008), on the npai pool, persisting to two databases
 # on the platform's PostgreSQL server (created by scripts/db_dev_logins.py). The
 # password comes from the temporal-db Secret, synced from Key Vault by the
-# platform Application (wave 0). Inside the cluster the frontend is plaintext gRPC,
-# reachable only from the worker namespaces (NetworkPolicy); mTLS is an open item.
+# platform Application (wave 0), with the TLS certificates (ADR 0010). Every
+# connection is mutual TLS from the internal CA: workers, KEDA and the Web UI to the
+# frontend, and the services to each other. The frontend is also reachable only from
+# the worker namespaces and KEDA (NetworkPolicy).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -30,8 +32,23 @@ spec:
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { memory: 1Gi }
+          # Secrets from base/temporal-secrets/certificates.yaml (cert-manager).
+          tls:
+            internode:
+              enabled: true
+              secretName: temporal-internode-tls
+              requireClientAuth: true
+              serverName: temporal-internode.temporal.svc
+            frontend:
+              enabled: true
+              secretName: temporal-frontend-tls
+              requireClientAuth: true
+              serverName: temporal-frontend.temporal.svc.cluster.local
           config:
             logLevel: info
+            # Re-read renewed certificate files (cert-manager renews 30 days early).
+            tls:
+              refreshInterval: 1h
             persistence:
               defaultStore: default
               visibilityStore: visibility
@@ -93,6 +110,11 @@ spec:
             seccompProfile: { type: RuntimeDefault }
         web:
           enabled: true
+          tls:
+            enabled: true
+            secretName: temporal-web-tls
+            serverName: temporal-frontend.temporal.svc.cluster.local
+            enableHostVerification: true
           nodeSelector: { cloudops.getronics.com/pool: ai }
           securityContext:
             runAsNonRoot: true

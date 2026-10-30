@@ -1,8 +1,9 @@
 # Dev (crcloudopsdevweu, kv-cloudops-app-dev-weu, network_mode = "public").
 #
-# Deployed: namespaces and policies, migrations (before the API), the API, and the secret
-# sync Temporal needs. Not yet: connector-servicenow (no ServiceNow read account)
-# and worker-ai (no Azure OpenAI tiers); their bases exist and build.
+# Deployed: namespaces and policies, the internal CA, migrations (before the API), the
+# API, and the secret sync and certificates Temporal needs. The workers are a separate
+# Application after Temporal (workers/, applications/dev/workers.yaml): only
+# connector-servicenow so far; worker-ai waits for the Azure OpenAI tiers (LLD L12).
 #
 # Image tags are the only thing the pipeline changes here (step 13); Argo CD
 # reconciles. Nothing in this directory is a secret.
@@ -10,6 +11,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../base/namespaces
+  - ../../base/internal-ca
   - ../../base/migrate
   - ../../base/api
   - ../../base/temporal-secrets

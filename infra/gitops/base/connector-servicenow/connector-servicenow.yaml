@@ -16,11 +16,30 @@ data:
   CLOUDOPS_SECRETS_DIR: /mnt/secrets
   CLOUDOPS_TEMPORAL_ADDRESS: temporal-frontend.temporal.svc.cluster.local:7233
   CLOUDOPS_TEMPORAL_NAMESPACE: default
+  CLOUDOPS_TEMPORAL_TLS_DIR: /mnt/temporal-tls  # the Certificate below
   CLOUDOPS_BRONZE_CONTAINER_URL: SET-IN-OVERLAY
   CLOUDOPS_REPORTS_CONTAINER_URL: SET-IN-OVERLAY
   # Not secret (ADR 0009); the client secret is a mounted file (below).
   CLOUDOPS_SERVICENOW_URL: SET-IN-OVERLAY
   CLOUDOPS_SERVICENOW_CLIENT_ID: SET-IN-OVERLAY
+---
+# Its client certificate for Temporal (mutual TLS, ADR 0010), from the internal CA.
+# Also KEDA's, for reading this queue's depth (TriggerAuthentication below).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: connector-servicenow-temporal
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: connector-servicenow-temporal-tls
+  duration: 2160h
+  renewBefore: 720h
+  privateKey: { algorithm: ECDSA, size: 256, encoding: PKCS8, rotationPolicy: Always }
+  commonName: connector-servicenow
+  uris: [spiffe://cloudops.internal/ns/platform-ingest/sa/connector-servicenow]
+  usages: [client auth]
+  issuerRef: { group: cert-manager.io, kind: ClusterIssuer, name: cloudops-internal-ca }
 ---
 apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
@@ -64,6 +83,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 65532
         runAsGroup: 65532
+        fsGroup: 65532  # the certificate's key is group-readable only
         seccompProfile: { type: RuntimeDefault }
       affinity:
         nodeAffinity:
@@ -95,6 +115,8 @@ spec:
             timeoutSeconds: 3
           volumeMounts:
             - { name: secrets, mountPath: /mnt/secrets, readOnly: true }
+            # A whole directory, never subPath: renewed files must appear in place.
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
       volumes:
         - name: secrets
           csi:
@@ -102,12 +124,30 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: connector-servicenow
+        - name: temporal-tls
+          secret:
+            secretName: connector-servicenow-temporal-tls
+            defaultMode: 0440
 ---
-# Scale on Temporal task queue depth (KEDA's temporal scaler, the AKS add-on).
+# KEDA reads the queue depth over mutual TLS too, with the worker's certificate.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: connector-servicenow-temporal
+spec:
+  secretTargetRef:
+    - { parameter: cert, name: connector-servicenow-temporal-tls, key: tls.crt }
+    - { parameter: key, name: connector-servicenow-temporal-tls, key: tls.key }
+    - { parameter: ca, name: connector-servicenow-temporal-tls, key: ca.crt }
+---
+# Scale on Temporal task queue depth (KEDA's temporal scaler, the AKS add-on). After
+# the Deployment: a ScaledObject without its target is not healthy.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: connector-servicenow
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   scaleTargetRef:
     name: connector-servicenow
@@ -117,9 +157,12 @@ spec:
     - type: temporal
       metadata:
         endpoint: temporal-frontend.temporal.svc.cluster.local:7233
+        tlsServerName: temporal-frontend.temporal.svc.cluster.local  # checked against the certificate
         namespace: default
         taskQueue: connectors-servicenow
         targetQueueSize: "5"
+      authenticationRef:
+        name: connector-servicenow-temporal
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -156,3 +199,78 @@ spec:
         - { protocol: TCP, port: 5432 }
     - ports:
         - { protocol: TCP, port: 443 }  # Entra, and storage for the bronze layer
+---
+# Creates or updates the 5-minute schedule per entity (LLD) on every sync; safe to
+# repeat. After the worker is ready, so a first sync starts ingesting at once.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: connector-servicenow-schedule
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: connector-servicenow-schedule
+    spec:
+      restartPolicy: Never
+      serviceAccountName: connector-servicenow
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ingest] }
+      containers:
+        - name: schedule
+          image: connector-servicenow
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.servicenow", "schedule"]
+          envFrom:
+            - configMapRef: { name: connector-servicenow }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
+      volumes:
+        - name: temporal-tls
+          secret:
+            secretName: connector-servicenow-temporal-tls
+            defaultMode: 0440
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: connector-servicenow-schedule
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: connector-servicenow-schedule
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: temporal
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+      ports:
+        - { protocol: TCP, port: 7233 }

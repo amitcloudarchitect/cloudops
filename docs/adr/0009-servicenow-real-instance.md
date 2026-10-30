@@ -46,7 +46,8 @@
 ## Consequences
 
 - The worker can run in Azure once Temporal has mTLS (ADR 0008 open item). Its base
-  manifest already carries the ServiceNow settings and the mounted secret.
+  manifest already carries the ServiceNow settings and the mounted secret. *Done in
+  ADR 0010: it runs in dev, scheduled every 5 minutes per entity.*
 - The dev instance is a personal developer instance: it hibernates when idle and is
   reclaimed after long inactivity, so a reclaimed instance means a new account, OAuth
   client and recording.

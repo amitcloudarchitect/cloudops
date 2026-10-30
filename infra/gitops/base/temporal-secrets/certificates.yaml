@@ -1,0 +1,59 @@
+# Temporal's mutual TLS (ADR 0010), from the internal CA. The chart mounts these
+# Secrets itself (server.tls, web.tls in applications/<env>/temporal.yaml) and the
+# server reloads renewed files (refreshInterval). 90 days, renewed 30 days before
+# expiry; a new key every time.
+#
+# frontend: the address workers dial. Also the client certificate of the chart's
+# own CLI pods (the namespace job), hence client auth too.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: temporal-frontend
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: temporal-frontend-tls
+  duration: 2160h
+  renewBefore: 720h
+  privateKey: { algorithm: ECDSA, size: 256, encoding: PKCS8, rotationPolicy: Always }
+  dnsNames:
+    - temporal-frontend
+    - temporal-frontend.temporal
+    - temporal-frontend.temporal.svc
+    - temporal-frontend.temporal.svc.cluster.local
+  usages: [server auth, client auth]
+  issuerRef: { group: cert-manager.io, kind: ClusterIssuer, name: cloudops-internal-ca }
+---
+# internode: frontend, history, matching and worker to each other (they dial pod
+# IPs and check this name), and the system worker to the frontend.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: temporal-internode
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: temporal-internode-tls
+  duration: 2160h
+  renewBefore: 720h
+  privateKey: { algorithm: ECDSA, size: 256, encoding: PKCS8, rotationPolicy: Always }
+  dnsNames: [temporal-internode.temporal.svc]
+  usages: [server auth, client auth]
+  issuerRef: { group: cert-manager.io, kind: ClusterIssuer, name: cloudops-internal-ca }
+---
+# The Web UI is a client of the frontend like any worker.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: temporal-web
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: temporal-web-tls
+  duration: 2160h
+  renewBefore: 720h
+  privateKey: { algorithm: ECDSA, size: 256, encoding: PKCS8, rotationPolicy: Always }
+  commonName: temporal-web
+  uris: [spiffe://cloudops.internal/ns/temporal/sa/temporal-web]
+  usages: [client auth]
+  issuerRef: { group: cert-manager.io, kind: ClusterIssuer, name: cloudops-internal-ca }

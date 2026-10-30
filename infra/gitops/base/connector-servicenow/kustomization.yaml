@@ -1,5 +1,6 @@
 # The ServiceNow ingest worker (LLD: npingest), reading with OAuth client credentials
-# (ADR 0009). In no overlay yet: it waits for Temporal mTLS (ADR 0008 open item).
+# (ADR 0009), and its schedule job; Temporal over mutual TLS (ADR 0010). Deployed by
+# the workers Application, after Temporal (applications/<env>/workers.yaml).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: platform-ingest

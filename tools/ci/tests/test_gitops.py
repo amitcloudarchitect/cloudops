@@ -33,9 +33,15 @@ def _build(path: Path) -> list[dict[str, Any]]:
     return [d for d in yaml.safe_load_all(out) if d]
 
 
-DEV = _build(GITOPS / "overlays/dev")
+PLATFORM = _build(GITOPS / "overlays/dev")
+WORKERS = _build(GITOPS / "overlays/dev/workers")  # its own Application, after Temporal
+DEV = PLATFORM + WORKERS
 # Every workload we own, deployed in dev or not: the worker bases too.
-ALL_OURS = DEV + _build(GITOPS / "base/connector-servicenow") + _build(GITOPS / "base/worker-ai")
+ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
+            + _build(GITOPS / "base/worker-ai"))
+TEMPORAL_APP = yaml.safe_load(
+    (GITOPS / "applications/dev/temporal.yaml").read_text(encoding="utf-8"))
+INTERNAL_CA = "cloudops-internal-ca"
 
 
 def _workloads(docs: list[dict[str, Any]]) -> Iterator[tuple[str, dict[str, Any]]]:
@@ -92,8 +98,12 @@ def test_secrets_are_files_never_environment(name: str, pod: dict[str, Any]) -> 
             assert "secretKeyRef" not in env.get("valueFrom", {}), name
         for src in c.get("envFrom", []):
             assert "secretRef" not in src, name
+    # Key Vault through the CSI driver only. The one exception is a certificate
+    # cert-manager issues in-cluster (ADR 0010): its key never exists anywhere else.
+    issued = {d["spec"]["secretName"] for d in ALL_OURS if d["kind"] == "Certificate"}
     for v in pod.get("volumes", []):
-        assert "secret" not in v, name  # Key Vault through the CSI driver only
+        if "secret" in v:
+            assert v["secret"]["secretName"] in issued, name
         if "csi" in v:
             assert v["csi"]["driver"] == "secrets-store.csi.k8s.io"
             assert v["csi"]["readOnly"] is True
@@ -170,33 +180,34 @@ def test_migrations_run_before_the_rollout() -> None:
     """Namespaces, then the job's own objects, then the job (a hook Argo CD waits on),
     then the Rollout. Not PreSync: that runs before the namespace and the job's
     ServiceAccount exist, so the job could never start on a fresh cluster."""
-    (job,) = [d for d in DEV if d["kind"] == "Job"]
+    (job,) = [d for d in PLATFORM if d["kind"] == "Job"]
     assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "Sync"
-    (rollout,) = [d for d in DEV if d["kind"] == "Rollout"]
+    (rollout,) = [d for d in PLATFORM if d["kind"] == "Rollout"]
     assert _wave(rollout) > _wave(job)
     sa_name = job["spec"]["template"]["spec"]["serviceAccountName"]
-    needs = [d for d in DEV if d["metadata"]["name"] in {sa_name, "migrate"}
+    needs = [d for d in PLATFORM if d["metadata"]["name"] in {sa_name, "migrate"}
              and d["kind"] in {"ServiceAccount", "ConfigMap", "NetworkPolicy"}]
     assert len(needs) == 3
     assert all(_wave(d) < _wave(job) for d in needs)
-    for ns in (d for d in DEV if d["kind"] == "Namespace"):
+    for ns in (d for d in PLATFORM if d["kind"] == "Namespace"):
         assert _wave(ns) < min(_wave(d) for d in needs)
     assert "argocd.argoproj.io/hook" not in (needs[0]["metadata"].get("annotations") or {})
     env = {e["name"]: e["value"] for e in job["spec"]["template"]["spec"]["containers"][0]["env"]}
     assert env["CLOUDOPS_MIGRATION_AUTH"] == "entra"
-    (cm,) = [d for d in DEV if d["kind"] == "ConfigMap" and d["metadata"]["name"] == "migrate"]
+    (cm,) = [d for d in PLATFORM if d["kind"] == "ConfigMap" and d["metadata"]["name"] == "migrate"]
     assert ":" not in cm["data"]["dsn"].split("//", 1)[1].split("@", 1)[0]  # no password
 
 
 def test_applications_pin_their_charts_and_paths() -> None:
     apps = [yaml.safe_load(p.read_text(encoding="utf-8"))
             for p in sorted((GITOPS / "applications/dev").glob("*.yaml"))]
-    assert {a["metadata"]["name"] for a in apps} == {"argo-rollouts", "prometheus",
-                                                      "platform", "temporal"}
+    assert {a["metadata"]["name"] for a in apps} == {"argo-rollouts", "cert-manager",
+                                                      "prometheus", "platform", "temporal",
+                                                      "workers"}
     for app in apps:
         source = app["spec"]["source"]
         if "chart" in source:
-            assert re.fullmatch(r"\d+\.\d+\.\d+", source["targetRevision"]), source["chart"]
+            assert re.fullmatch(r"v?\d+\.\d+\.\d+", source["targetRevision"]), source["chart"]
         else:
             assert (REPO_ROOT / source["path"]).is_dir()
         assert "argocd.argoproj.io/sync-wave" in app["metadata"]["annotations"]
@@ -210,8 +221,100 @@ def test_other_overlays_build(env: str) -> None:
 def test_autoscalers_come_after_what_they_scale() -> None:
     """An HPA whose target does not exist yet is Degraded, and Argo CD waits for a
     sync wave to be healthy before starting the next: the target would never come."""
-    for hpa in (d for d in ALL_OURS if d["kind"] == "HorizontalPodAutoscaler"):
+    for hpa in (d for d in ALL_OURS if d["kind"] in {"HorizontalPodAutoscaler", "ScaledObject"}):
         ref = hpa["spec"]["scaleTargetRef"]
-        (target,) = [d for d in ALL_OURS if d["kind"] == ref["kind"]
+        kind = ref.get("kind", "Deployment")  # KEDA's default
+        (target,) = [d for d in ALL_OURS if d["kind"] == kind
                      and d["metadata"]["name"] == ref["name"]]
         assert _wave(hpa) > _wave(target), hpa["metadata"]["name"]
+
+
+def _app_wave(name: str) -> int:
+    app = yaml.safe_load((GITOPS / f"applications/dev/{name}.yaml").read_text(encoding="utf-8"))
+    return _wave(app)
+
+
+def test_applications_start_in_dependency_order() -> None:
+    """cert-manager's CRDs, then the CA and Temporal's certificates (platform), then
+    Temporal, then the workers that need it to be ready."""
+    assert _app_wave("cert-manager") < _app_wave("platform") < _app_wave("temporal") \
+        < _app_wave("workers")
+
+
+# Temporal mutual TLS (ADR 0010) -------------------------------------------------------
+
+
+def test_every_certificate_comes_from_the_internal_ca_with_a_fresh_key() -> None:
+    certs = [d for d in ALL_OURS if d["kind"] == "Certificate" and not d["spec"].get("isCA")]
+    assert {c["metadata"]["name"] for c in certs} >= {
+        "temporal-frontend", "temporal-internode", "temporal-web",
+        "connector-servicenow-temporal", "worker-ai-temporal"}
+    for c in certs:
+        spec, name = c["spec"], c["metadata"]["name"]
+        assert spec["issuerRef"] == {"group": "cert-manager.io", "kind": "ClusterIssuer",
+                                     "name": INTERNAL_CA}, name
+        assert spec["privateKey"]["rotationPolicy"] == "Always", name
+        assert spec["privateKey"]["encoding"] == "PKCS8", name  # the Python SDK's rustls
+        assert spec["duration"] == "2160h", name
+        if name not in {"temporal-frontend", "temporal-internode"}:
+            assert spec["usages"] == ["client auth"], name  # a client cannot serve
+
+
+def test_the_ca_is_never_pruned_and_keeps_its_key() -> None:
+    (ca,) = [d for d in DEV if d["kind"] == "Certificate" and d["spec"].get("isCA")]
+    assert ca["metadata"]["name"] == ca["spec"]["secretName"] == INTERNAL_CA
+    assert ca["metadata"]["namespace"] == "cert-manager"
+    assert ca["spec"]["privateKey"]["rotationPolicy"] == "Never"
+    assert "Prune=false" in ca["metadata"]["annotations"]["argocd.argoproj.io/sync-options"]
+    issuers = {d["metadata"]["name"]: d for d in DEV if d["kind"] == "ClusterIssuer"}
+    assert issuers[INTERNAL_CA]["spec"] == {"ca": {"secretName": INTERNAL_CA}}
+    assert _wave(issuers[INTERNAL_CA]) > _wave(ca)
+    for cert in (d for d in DEV if d["kind"] == "Certificate" and not d["spec"].get("isCA")):
+        assert _wave(cert) > _wave(issuers[INTERNAL_CA]), cert["metadata"]["name"]
+
+
+@pytest.mark.parametrize(("name", "pod"), list(_workloads(ALL_OURS)))
+def test_every_temporal_client_presents_a_certificate(name: str, pod: dict[str, Any]) -> None:
+    configs = {d["metadata"]["name"]: d["data"] for d in ALL_OURS if d["kind"] == "ConfigMap"}
+    for c in pod["containers"]:
+        env = {}
+        for src in c.get("envFrom", []):
+            env.update(configs.get(src.get("configMapRef", {}).get("name", ""), {}))
+        if "CLOUDOPS_TEMPORAL_ADDRESS" not in env:
+            continue
+        tls_dir = env["CLOUDOPS_TEMPORAL_TLS_DIR"]
+        (mount,) = [m for m in c["volumeMounts"] if m["mountPath"] == tls_dir]
+        assert "subPath" not in mount, name  # renewed files must appear in place
+        (volume,) = [v for v in pod["volumes"] if v["name"] == mount["name"]]
+        assert volume["secret"]["secretName"].endswith("-temporal-tls"), name
+
+
+def test_every_temporal_scaler_authenticates() -> None:
+    auths = {d["metadata"]["name"]: d for d in ALL_OURS if d["kind"] == "TriggerAuthentication"}
+    certs = {d["spec"]["secretName"] for d in ALL_OURS if d["kind"] == "Certificate"}
+    for so in (d for d in ALL_OURS if d["kind"] == "ScaledObject"):
+        for trigger in so["spec"]["triggers"]:
+            if trigger["type"] != "temporal":
+                continue
+            auth = auths[trigger["authenticationRef"]["name"]]
+            refs = auth["spec"]["secretTargetRef"]
+            assert {r["parameter"] for r in refs} == {"cert", "key", "ca"}
+            assert {r["name"] for r in refs} <= certs
+            assert "unsafeSsl" not in trigger["metadata"]
+            host = trigger["metadata"]["endpoint"].rsplit(":", 1)[0]
+            assert trigger["metadata"]["tlsServerName"] == host
+
+
+def test_temporal_requires_client_certificates_everywhere() -> None:
+    values = TEMPORAL_APP["spec"]["source"]["helm"]["valuesObject"]
+    tls = values["server"]["tls"]
+    for section in ("frontend", "internode"):
+        assert tls[section]["enabled"] is True, section
+        assert tls[section]["requireClientAuth"] is True, section
+    issued = {d["spec"]["secretName"] for d in DEV if d["kind"] == "Certificate"}
+    assert {tls["frontend"]["secretName"], tls["internode"]["secretName"]} <= issued
+    web = values["web"]["tls"]
+    assert web["enabled"] is True
+    assert web["enableHostVerification"] is True
+    assert web["secretName"] in issued
+    assert values["server"]["config"]["tls"]["refreshInterval"]

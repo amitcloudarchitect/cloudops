@@ -1,0 +1,34 @@
+# id-cloudops-ingest-dev (stack 05 output workload_client_ids). Not secrets.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector-servicenow
+  namespace: platform-ingest
+  annotations:
+    azure.workload.identity/client-id: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connector-servicenow
+  namespace: platform-ingest
+data:
+  # The bronze container stack 04 creates for this source; 04b grants the ingest
+  # identity Storage Blob Data Contributor on it alone.
+  CLOUDOPS_BRONZE_CONTAINER_URL: https://stcloudopsbronzedevweu.blob.core.windows.net/servicenow
+  # Required by the BLOB component; the connector never writes reports.
+  CLOUDOPS_REPORTS_CONTAINER_URL: https://stcloudopsreportsdevweu.blob.core.windows.net/reports
+  # The dev instance (ADR 0009). The account svc_cloudops_read is on GMT.
+  CLOUDOPS_SERVICENOW_URL: https://dev407774.service-now.com
+  CLOUDOPS_SERVICENOW_CLIENT_ID: 82e09795000b4f1693138c3427623f04
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: connector-servicenow
+  namespace: platform-ingest
+spec:
+  parameters:
+    clientID: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe

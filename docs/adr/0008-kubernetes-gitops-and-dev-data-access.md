@@ -53,9 +53,9 @@
      reads its SQL password from nothing else.
    - Its pods run under the namespace's baseline Pod Security, reported against
      restricted.
-   - Inside the cluster the frontend is plaintext gRPC, reachable only from the
-     worker namespaces and KEDA (NetworkPolicy). **Open:** mTLS between workers and
-     the frontend, and Temporal authorization, before production.
+   - Inside the cluster the frontend is reachable only from the worker namespaces and
+     KEDA (NetworkPolicy), and every connection is mutual TLS (ADR 0010).
+     **Open:** Temporal authorization, before production.
 5. **Canary analysis uses an in-cluster Prometheus** (decided by Amit Kumar).
    - Prometheus scrapes ingress-nginx's request metrics for the canary Service only.
    - A rollout fails on a 5xx rate of 2% or a p95 above 500 ms. With no traffic
@@ -65,7 +65,8 @@
    trusts, so a replaced cluster re-federates on apply. A test keeps the federated
    service accounts equal to the ones the manifests declare.
 7. **Workers are written but not deployed in dev.**
-   - `connector-servicenow` needs the ServiceNow read account.
+   - `connector-servicenow` needs the ServiceNow read account. *Since deployed, as
+     its own Application after Temporal (ADR 0010).*
    - `worker-ai` needs the Azure OpenAI tiers (LLD L12).
    - Their bases (Deployment, KEDA Temporal scaler, PDB, identity, policy) build,
      validate and pass the same tests.
@@ -79,7 +80,7 @@
   still pull from public registries, against the LLD's "images only from the platform
   registry". Mirror them into ACR with `az acr import` and pin digests before UAT.
   Our own images, and the pause image, already come from ACR.
-- Entra-token database logins (decision 3), and Temporal mTLS and authorization
-  (decision 4).
+- Entra-token database logins (decision 3), and Temporal authorization (decision 4;
+  mTLS is done, ADR 0010).
 - Signed-image verification on the execution namespace (LLD) comes with the
   execution plane, after the security review.

@@ -1,0 +1,47 @@
+# Bootstrap: a self-signed issuer whose only job is to sign the CA below.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  selfSigned: {}
+---
+# The CA. The key never rotates on renewal (rotationPolicy: Never): a re-issued CA
+# with the same key and subject still verifies every leaf signed before, so renewal
+# needs no coordinated rollout. Rolling the CA key is a planned operation (ADR 0010).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cloudops-internal-ca
+  namespace: cert-manager
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+    # Its Secret is owned by it, and losing the CA breaks every certificate at
+    # once: never pruned or deleted by a sync, only by hand.
+    argocd.argoproj.io/sync-options: Prune=false,Delete=false
+spec:
+  isCA: true
+  commonName: CloudOps internal CA
+  secretName: cloudops-internal-ca
+  duration: 43800h     # 5 years
+  renewBefore: 8760h   # 1 year
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Never
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: selfsigned-bootstrap
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: cloudops-internal-ca
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
+spec:
+  ca:
+    secretName: cloudops-internal-ca

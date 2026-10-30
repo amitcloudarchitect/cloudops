@@ -16,6 +16,24 @@ data:
   CLOUDOPS_SECRETS_DIR: /mnt/secrets
   CLOUDOPS_TEMPORAL_ADDRESS: temporal-frontend.temporal.svc.cluster.local:7233
   CLOUDOPS_TEMPORAL_NAMESPACE: default
+  CLOUDOPS_TEMPORAL_TLS_DIR: /mnt/temporal-tls  # the Certificate below
+---
+# Its client certificate for Temporal (mutual TLS, ADR 0010), also KEDA's.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: worker-ai-temporal
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: worker-ai-temporal-tls
+  duration: 2160h
+  renewBefore: 720h
+  privateKey: { algorithm: ECDSA, size: 256, encoding: PKCS8, rotationPolicy: Always }
+  commonName: worker-ai
+  uris: [spiffe://cloudops.internal/ns/platform-ai/sa/worker-ai]
+  usages: [client auth]
+  issuerRef: { group: cert-manager.io, kind: ClusterIssuer, name: cloudops-internal-ca }
 ---
 apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
@@ -56,6 +74,7 @@ spec:
         runAsNonRoot: true
         runAsUser: 65532
         runAsGroup: 65532
+        fsGroup: 65532  # the certificate's key is group-readable only
         seccompProfile: { type: RuntimeDefault }
       affinity:
         nodeAffinity:
@@ -87,6 +106,8 @@ spec:
             timeoutSeconds: 3
           volumeMounts:
             - { name: secrets, mountPath: /mnt/secrets, readOnly: true }
+            # A whole directory, never subPath: renewed files must appear in place.
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
       volumes:
         - name: secrets
           csi:
@@ -94,12 +115,29 @@ spec:
             readOnly: true
             volumeAttributes:
               secretProviderClass: worker-ai
+        - name: temporal-tls
+          secret:
+            secretName: worker-ai-temporal-tls
+            defaultMode: 0440
 ---
-# Scale on Temporal task queue depth (KEDA's temporal scaler, the AKS add-on).
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: worker-ai-temporal
+spec:
+  secretTargetRef:
+    - { parameter: cert, name: worker-ai-temporal-tls, key: tls.crt }
+    - { parameter: key, name: worker-ai-temporal-tls, key: tls.key }
+    - { parameter: ca, name: worker-ai-temporal-tls, key: ca.crt }
+---
+# Scale on Temporal task queue depth (KEDA's temporal scaler, the AKS add-on), after
+# the Deployment.
 apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: worker-ai
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   scaleTargetRef:
     name: worker-ai
@@ -109,9 +147,12 @@ spec:
     - type: temporal
       metadata:
         endpoint: temporal-frontend.temporal.svc.cluster.local:7233
+        tlsServerName: temporal-frontend.temporal.svc.cluster.local  # checked against the certificate
         namespace: default
         taskQueue: remediation-triage
         targetQueueSize: "5"
+      authenticationRef:
+        name: worker-ai-temporal
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

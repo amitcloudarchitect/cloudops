@@ -1,0 +1,46 @@
+# cert-manager: issues the internal CA's certificates for Temporal's mutual TLS
+# (ADR 0010). First of all applications: the CA (platform, wave 0) and every
+# Certificate after it need its CRDs. No ACME and no public issuer; nothing here
+# faces the internet.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-3"
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.21.3
+    helm:
+      valuesObject:
+        crds:
+          enabled: true
+          keep: true  # deleting the app must never delete every Certificate
+        global:
+          nodeSelector: { cloudops.getronics.com/pool: app }
+        # A deleted Certificate takes its Secret with it: no orphaned keys.
+        enableCertificateOwnerRef: true
+        resources:
+          requests: { cpu: 20m, memory: 64Mi }
+          limits: { memory: 256Mi }
+        webhook:
+          resources:
+            requests: { cpu: 10m, memory: 32Mi }
+            limits: { memory: 128Mi }
+        cainjector:
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 256Mi }
+        # A Helm post-install hook; Argo CD's health checks on the Certificates do this job.
+        startupapicheck: { enabled: false }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    syncOptions: [CreateNamespace=true, ServerSideApply=true]
+    retry: { limit: 10, backoff: { duration: 30s, factor: 2, maxDuration: 10m } }

@@ -1,0 +1,6 @@
+# The platform's private CA (ADR 0010): one ClusterIssuer every internal
+# certificate comes from. Its key lives only in the cert-manager namespace.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - internal-ca.yaml

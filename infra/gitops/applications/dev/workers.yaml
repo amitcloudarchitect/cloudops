@@ -1,0 +1,21 @@
+# The Temporal workers (overlays/dev/workers), after Temporal: a worker is not ready
+# until the frontend answers, and in the platform Application (wave 0) that would
+# hold Temporal (wave 1) back forever on a fresh cluster.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: workers
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/amitcloudarchitect/cloudops.git
+    targetRevision: main
+    path: infra/gitops/overlays/dev/workers
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated: { prune: true, selfHeal: true }
+    retry: { limit: 10, backoff: { duration: 30s, factor: 2, maxDuration: 10m } }
