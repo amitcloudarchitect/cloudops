@@ -453,6 +453,8 @@ def test_canaries_route_through_the_gateway_and_are_judged_on_its_metrics() -> N
         assert 'destination_service_name="api-canary"' in query, metric["name"]
         assert 'reporter="source"' in query, metric["name"]
         assert "nginx" not in query, metric["name"]
+        # Empty is an error to Rollouts, not a pass: every query must fall back.
+        assert re.search(r"or vector\((0|NaN)\)", query), metric["name"]
     (p95,) = [m for m in template["spec"]["metrics"] if m["name"] == "p95-latency"]
     assert "milliseconds" in p95["provider"]["prometheus"]["query"]
     assert p95["successCondition"].endswith("< 500")  # Istio reports milliseconds

@@ -2,6 +2,11 @@
 # "source"), via the in-cluster Prometheus (ADR 0008, 0011). Only the canary
 # Service's traffic is measured. No traffic yet (NaN) passes; a 5xx rate of 2% or a
 # p95 of 500 ms fails and rolls back. Istio reports latency in milliseconds.
+#
+# The gateway creates the canary's series only on its first request, and a rate
+# needs two samples, so the first minutes return nothing. Rollouts counts an empty
+# result as an error (five in a row aborted the first canary), so each query falls
+# back to NaN: "no data yet", which passes until real traffic says otherwise.
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
@@ -16,9 +21,9 @@ spec:
         prometheus:
           address: http://prometheus-server.monitoring.svc.cluster.local
           query: |
-            sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary",response_code=~"5.."}[2m]))
+            (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary",response_code=~"5.."}[2m])) or vector(0))
             /
-            sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[2m]))
+            (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[2m])) or vector(0))
     - name: p95-latency
       interval: 1m
       failureLimit: 1
@@ -28,3 +33,4 @@ spec:
           address: http://prometheus-server.monitoring.svc.cluster.local
           query: |
             histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[2m])))
+            or vector(NaN)
