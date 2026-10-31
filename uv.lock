@@ -474,6 +474,7 @@ source = { editable = "services/domain" }
 dependencies = [
     { name = "cloudops-tenancy" },
     { name = "cryptography" },
+    { name = "httpx" },
     { name = "pydantic" },
     { name = "pyyaml" },
 ]
@@ -482,6 +483,7 @@ dependencies = [
 requires-dist = [
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
     { name = "cryptography", specifier = ">=43" },
+    { name = "httpx", specifier = ">=0.28" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pyyaml", specifier = ">=6.0" },
 ]

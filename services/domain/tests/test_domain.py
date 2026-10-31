@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -40,6 +41,7 @@ from cloudops_domain.reporting.sections import (
     month_bounds,
     narrative_input,
 )
+from cloudops_tenancy.telemetry import TelemetryError
 
 # --- money -------------------------------------------------------------------------------
 
@@ -409,3 +411,35 @@ async def test_a_truncated_availability_read_is_a_gap_not_a_failed_pack() -> Non
         cast(ScopedConnection, None), TenantScope([tenant], Role.ENGINEER, "test"), tenant,
         date(2026, 9, 1), Truncated())
     assert (got.captured, got.gap) == (False, "more hourly measurements than one read returns")
+
+
+@pytest.mark.parametrize("failure", [httpx.ConnectError("refused"),
+                                     TelemetryError("telemetry store refused the request")])
+async def test_an_unreachable_telemetry_store_is_a_gap_and_a_scope_defect_is_not(
+    failure: Exception,
+) -> None:
+    from typing import cast
+
+    from cloudops_domain.reporting.availability import (
+        AvailabilityUnreachableError,
+        TelemetryAvailability,
+    )
+    from cloudops_tenancy import Role, TenantScope
+    from cloudops_tenancy.telemetry import TelemetryScopeError, TelemetryStore
+
+    class Store:
+        def __init__(self, exc: Exception) -> None:
+            self.exc = exc
+
+        async def query(self, *_: object) -> list[object]:
+            raise self.exc
+
+    scope = TenantScope([uuid4()], Role.ENGINEER, "test")
+    start = datetime(2026, 9, 1, tzinfo=UTC)
+    with pytest.raises(AvailabilityUnreachableError):
+        await TelemetryAvailability(cast(TelemetryStore, Store(failure))).availability(
+            scope, start, start + timedelta(days=30))
+    with pytest.raises(TelemetryScopeError):
+        await TelemetryAvailability(cast(TelemetryStore, Store(
+            TelemetryScopeError("outside the scope")))).availability(
+            scope, start, start + timedelta(days=30))
