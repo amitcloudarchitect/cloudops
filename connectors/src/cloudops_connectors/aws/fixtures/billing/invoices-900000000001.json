@@ -1,0 +1,80 @@
+{
+ "InvoiceSummaries": [
+  {
+   "AccountId": "499836243985",
+   "InvoiceId": "EUINGB26-009100",
+   "IssuedDate": 1790928000,
+   "DueDate": 1793520000,
+   "Entity": {
+    "InvoicingEntity": "Amazon Web Services EMEA SARL"
+   },
+   "BillingPeriod": {
+    "Month": 9,
+    "Year": 2026
+   },
+   "InvoiceType": "INVOICE",
+   "BaseCurrencyAmount": {
+    "TotalAmount": "6284.936650",
+    "TotalAmountBeforeTax": "6284.936650",
+    "CurrencyCode": "USD"
+   }
+  },
+  {
+   "AccountId": "499836243985",
+   "InvoiceId": "EUCMGB26-009100",
+   "IssuedDate": 1790928000,
+   "DueDate": 1793520000,
+   "Entity": {
+    "InvoicingEntity": "Amazon Web Services EMEA SARL"
+   },
+   "BillingPeriod": {
+    "Month": 9,
+    "Year": 2026
+   },
+   "InvoiceType": "CREDIT_MEMO",
+   "BaseCurrencyAmount": {
+    "TotalAmount": "-10.000000",
+    "TotalAmountBeforeTax": "-10.000000",
+    "CurrencyCode": "USD"
+   }
+  },
+  {
+   "AccountId": "742218507629",
+   "InvoiceId": "EUINGB26-009101",
+   "IssuedDate": 1790928000,
+   "DueDate": 1793520000,
+   "Entity": {
+    "InvoicingEntity": "Amazon Web Services EMEA SARL"
+   },
+   "BillingPeriod": {
+    "Month": 9,
+    "Year": 2026
+   },
+   "InvoiceType": "INVOICE",
+   "BaseCurrencyAmount": {
+    "TotalAmount": "8226.223966",
+    "TotalAmountBeforeTax": "8226.223966",
+    "CurrencyCode": "USD"
+   }
+  },
+  {
+   "AccountId": "313131313131",
+   "InvoiceId": "EUINGB26-009199",
+   "IssuedDate": 1790928000,
+   "DueDate": 1793520000,
+   "Entity": {
+    "InvoicingEntity": "Amazon Web Services EMEA SARL"
+   },
+   "BillingPeriod": {
+    "Month": 9,
+    "Year": 2026
+   },
+   "InvoiceType": "INVOICE",
+   "BaseCurrencyAmount": {
+    "TotalAmount": "11.000000",
+    "TotalAmountBeforeTax": "11.000000",
+    "CurrencyCode": "USD"
+   }
+  }
+ ]
+}

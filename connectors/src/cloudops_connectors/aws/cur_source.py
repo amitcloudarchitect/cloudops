@@ -60,7 +60,7 @@ from sqlalchemy import text
 from cloudops_connectors.aws import mapping
 from cloudops_connectors.aws.client import NoSuchKeyError, S3Client
 from cloudops_connectors.aws.config_source import accounts
-from cloudops_connectors.core import drift, identity, state
+from cloudops_connectors.core import assembly, drift, identity, state
 from cloudops_connectors.core.ingest import (
     Fetched,
     MissingRawError,
@@ -77,64 +77,9 @@ MANIFEST: Final = "manifest"
 DATA: Final = "data"
 MISSING: Final = "missing"
 
-_ASSEMBLY_COLUMNS: Final = (
-    "SELECT assembly_id, scope_key, invoice_period, manifest_ref, report_keys, loaded_keys,"
-    " tenant_ids, account_ids, swapped_at FROM staging.cur_assembly WHERE assembly_id = :id"
-)
-_ASSEMBLY: Final = text(_ASSEMBLY_COLUMNS)
-_ASSEMBLY_LOCKED: Final = text(_ASSEMBLY_COLUMNS + " FOR UPDATE")
-_REGISTER: Final = text(
-    "INSERT INTO staging.cur_assembly (assembly_id, scope_key, invoice_period, manifest_ref,"
-    " report_keys) VALUES (:id, :scope, :period, :ref, CAST(:keys AS text[]))"
-    " ON CONFLICT (assembly_id) DO UPDATE SET scope_key = EXCLUDED.scope_key,"
-    "   invoice_period = EXCLUDED.invoice_period, manifest_ref = EXCLUDED.manifest_ref,"
-    "   report_keys = EXCLUDED.report_keys, loaded_keys = '{}', tenant_ids = '{}',"
-    "   account_ids = '{}'"
-)
-_CLEAR_LOAD: Final = text("DELETE FROM staging.cost_fact_load WHERE assembly_id = :id")
-_SIBLINGS: Final = text(
-    "SELECT assembly_id, manifest_ref FROM staging.cur_assembly"
-    " WHERE scope_key = :scope AND invoice_period = :period AND assembly_id <> :id"
-    "   AND swapped_at IS NOT NULL"
-)
 _RESOURCES: Final = text(
     "SELECT id, account_id, native_id FROM cloudops.resource"
     " WHERE account_id = ANY(CAST(:accounts AS uuid[]))"
-)
-_LOAD: Final = text(
-    "INSERT INTO staging.cost_fact_load (tenant_id, account_id, assembly_id, object_key,"
-    " resource_id, usage_date, invoice_period, service_native, charge_class, unblended_cost,"
-    " amortized_cost, currency, raw_extra)"
-    " VALUES (:tenant_id, :account_id, :assembly_id, :object_key, :resource_id, :usage_date,"
-    "  :invoice_period, :service_native, CAST(:charge_class AS cloudops.charge_class),"
-    "  :unblended_cost, :amortized_cost, :currency, CAST(:raw_extra AS jsonb))"
-)
-_LOADED: Final = text(
-    "UPDATE staging.cur_assembly SET loaded_keys = array_append(loaded_keys, :key),"
-    " tenant_ids = ARRAY(SELECT DISTINCT t FROM unnest(tenant_ids || CAST(:tenants AS uuid[]))"
-    "                    AS t ORDER BY t),"
-    " account_ids = ARRAY(SELECT DISTINCT a FROM unnest(account_ids"
-    "                     || CAST(:accounts AS uuid[])) AS a ORDER BY a)"
-    " WHERE assembly_id = :id RETURNING report_keys, loaded_keys, tenant_ids, account_ids"
-)
-_DELETE_PERIOD: Final = text(
-    "DELETE FROM cloudops.cost_fact"
-    " WHERE account_id = ANY(CAST(:accounts AS uuid[])) AND invoice_period = :period"
-)
-_SWAP: Final = text(
-    "INSERT INTO cloudops.cost_fact (tenant_id, account_id, resource_id, usage_date,"
-    " invoice_period, service_native, charge_class, unblended_cost, amortized_cost, currency,"
-    " source_system, source_batch, raw_extra)"
-    " SELECT tenant_id, account_id, resource_id, usage_date, invoice_period, service_native,"
-    "  charge_class, sum(unblended_cost), sum(amortized_cost), currency, :source, assembly_id,"
-    "  CASE WHEN count(*) = 1 THEN (jsonb_agg(raw_extra))->0"
-    "       ELSE jsonb_build_object('parts', jsonb_agg(raw_extra ORDER BY object_key, id)) END"
-    " FROM staging.cost_fact_load WHERE assembly_id = :id"
-    " GROUP BY tenant_id, account_id, resource_id, usage_date, invoice_period, service_native,"
-    "  charge_class, currency, assembly_id"
-)
-_SWAPPED: Final = text(
-    "UPDATE staging.cur_assembly SET swapped_at = now() WHERE assembly_id = :id"
 )
 
 
@@ -208,33 +153,7 @@ async def inspect(
 # --- process -------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class Assembly:
-    assembly_id: str
-    scope_key: str
-    invoice_period: str
-    manifest_ref: str
-    report_keys: tuple[str, ...]
-    loaded_keys: tuple[str, ...]
-    tenant_ids: frozenset[UUID]
-    account_ids: frozenset[UUID]
-    swapped_at: datetime | None
-
-    @property
-    def complete(self) -> bool:
-        return set(self.report_keys) <= set(self.loaded_keys)
-
-
-async def _assembly(conn: ScopedConnection, assembly_id: str, *,
-                    lock: bool = False) -> Assembly | None:
-    row = (await conn.execute(_ASSEMBLY_LOCKED if lock else _ASSEMBLY,
-                              {"id": assembly_id})).one_or_none()
-    if row is None:
-        return None
-    r = tuple(row)
-    return Assembly(str(r[0]), str(r[1]), str(r[2]), str(r[3]), tuple(r[4]), tuple(r[5]),
-                    frozenset(UUID(str(t)) for t in r[6]),
-                    frozenset(UUID(str(a)) for a in r[7]), r[8])
+Assembly = assembly.Assembly
 
 
 def _who() -> str:
@@ -253,68 +172,33 @@ async def process(db: Database, raw: RawStore, ref: str, ctx: PageContext) -> Pa
     raise ValueError("bronze page is not a CUR listing, manifest or data file")
 
 
-def _last_modified(meta: dict[str, str], name: str) -> datetime:
-    try:
-        moment = datetime.fromisoformat(meta[name])
-    except (KeyError, ValueError):
-        raise ValueError(f"bronze metadata has no usable {name}") from None
-    if moment.tzinfo is None:
-        raise ValueError(f"bronze metadata {name} has no time zone")
-    return moment
-
-
 async def _manifest(
     db: Database, raw: RawStore, ref: str, meta: dict[str, str], ctx: PageContext
 ) -> PageOutcome:
     m = mapping.manifest(await raw.get(ref))
-    modified = _last_modified(meta, "last_modified")
+    modified = assembly.last_modified(meta, "last_modified")
     async with db.transaction(TenantScope((), Role.INGEST, _who())) as conn:
-        existing = await _assembly(conn, m.assembly_id)
+        existing = await assembly.fetch(conn, m.assembly_id)
     if existing is not None and existing.swapped_at is not None and ctx.advance:
         return PageOutcome(state.RunCounts(pages=1))  # in cost_fact already; files skip too
     tenants = existing.tenant_ids if existing is not None else frozenset()
     async with db.transaction(TenantScope(tenants, Role.INGEST, _who())) as conn:
-        await conn.execute(_CLEAR_LOAD, {"id": m.assembly_id})
-        await conn.execute(_REGISTER, {
-            "id": m.assembly_id, "scope": ctx.scope_key, "period": m.invoice_period,
-            "ref": ref, "keys": list(m.report_keys)})
+        await assembly.register(conn, m.assembly_id, ctx.scope_key, m.invoice_period, ref,
+                                list(m.report_keys))
         if not m.report_keys:  # nothing to wait for
-            registered = await _assembly(conn, m.assembly_id, lock=True)
+            registered = await assembly.fetch(conn, m.assembly_id, lock=True)
             if registered is not None:
-                superseded = await _superseded(raw, conn, registered, modified)
+                superseded = await assembly.superseded(raw, conn, registered, modified)
                 await _complete(conn, registered, superseded, modified, ctx)
     return PageOutcome(state.RunCounts(pages=1))
-
-
-async def _superseded(
-    raw: RawStore, conn: ScopedConnection, a: Assembly, modified: datetime
-) -> bool:
-    """A newer assembly of the same report and period is already swapped in."""
-    for row in await conn.execute(_SIBLINGS, {"scope": a.scope_key,
-                                              "period": a.invoice_period, "id": a.assembly_id}):
-        try:
-            theirs = _last_modified(await raw.meta(str(tuple(row)[1])), "last_modified")
-        except KeyError:
-            raise MissingRawError("a swapped CUR manifest is missing from bronze") from None
-        if theirs > modified:
-            return True
-    return False
 
 
 async def _complete(
     conn: ScopedConnection, a: Assembly, superseded: bool, modified: datetime,
     ctx: PageContext,
 ) -> None:
-    """Every file is loaded: swap the assembly in (unless superseded), atomically."""
-    if not superseded:
-        await conn.execute(_DELETE_PERIOD, {"accounts": sorted(a.account_ids),
-                                            "period": a.invoice_period})
-        await conn.execute(_SWAP, {"id": a.assembly_id, "source": mapping.SOURCE})
-        await conn.execute(_SWAPPED, {"id": a.assembly_id})
-    await conn.execute(_CLEAR_LOAD, {"id": a.assembly_id})
-    if ctx.advance:
-        await state.advance_watermark(conn, mapping.SOURCE, mapping.CUR, ctx.scope_key,
-                                      modified)
+    await assembly.complete(conn, a, superseded, modified, ctx, source=mapping.SOURCE,
+                            entity=mapping.CUR)
 
 
 @dataclass(frozen=True)
@@ -351,13 +235,13 @@ async def _data(
     db: Database, raw: RawStore, ref: str, meta: dict[str, str], ctx: PageContext
 ) -> PageOutcome:
     key, assembly_id = meta.get("object_key", ""), meta.get("assembly_id", "")
-    modified = _last_modified(meta, "manifest_last_modified")
+    modified = assembly.last_modified(meta, "manifest_last_modified")
     header, rows = mapping.cur_table(await raw.get(ref))
     found, bad = mapping.lines(rows)
     counts = state.RunCounts(pages=1, records=len(rows), rejected=bad)
 
     async with db.transaction(TenantScope((), Role.INGEST, _who())) as conn:
-        a = await _assembly(conn, assembly_id)
+        a = await assembly.fetch(conn, assembly_id)
         if a is None:
             raise MissingRawError("the CUR file's assembly is not registered: replay its manifest")
         if key not in a.report_keys:
@@ -365,14 +249,14 @@ async def _data(
         if key in a.loaded_keys:
             return PageOutcome(state.RunCounts(pages=1))  # loaded already (a retry, a re-list)
         resolved = await identity.resolve_ids(conn, mapping.SOURCE, {x.account for x in found})
-        superseded = await _superseded(raw, conn, a, modified)
+        superseded = await assembly.superseded(raw, conn, a, modified)
     tenant_of = {acct: t for acct, t in resolved.items() if t is not None}
     unmatched = Counter(x.account for x in found if x.account not in tenant_of)
     counts.quarantined = sum(unmatched.values())
     tenants = set(tenant_of.values()) | a.tenant_ids
 
     async with db.transaction(TenantScope(tenants, Role.INGEST, _who())) as conn:
-        locked = await _assembly(conn, assembly_id, lock=True)
+        locked = await assembly.fetch(conn, assembly_id, lock=True)
         if locked is None or key in locked.loaded_keys:
             return PageOutcome(state.RunCounts(pages=1))
         if not locked.tenant_ids <= tenants:
@@ -392,20 +276,14 @@ async def _data(
                     x.currency)].add(x)
         loads = [] if superseded else [_load(k, agg, assembly_id, key, locked.invoice_period)
                                        for k, agg in totals.items()]
-        if loads:
-            await conn.execute(_LOAD, loads)
-        row = tuple((await conn.execute(_LOADED, {
-            "key": key, "id": assembly_id, "tenants": sorted({k[0] for k in totals}),
-            "accounts": sorted({k[1] for k in totals})})).one())
+        await assembly.load_rows(conn, loads)
+        now = await assembly.mark_loaded(conn, locked, key, {k[0] for k in totals},
+                                         {k[1] for k in totals})
         await state.quarantine_aliases(conn, mapping.SOURCE, unmatched, ref)
         await identity.quarantine(conn, mapping.SOURCE, unlinked, ref)
         await drift.observe(conn, mapping.SOURCE, mapping.CUR, set(header),
                             mapped=mapping.CUR_MAPPED, expected=mapping.CUR_EXPECTED,
                             records=len(rows), raw_ref=ref)
-        now = Assembly(
-            locked.assembly_id, locked.scope_key, locked.invoice_period, locked.manifest_ref,
-            tuple(row[0]), tuple(row[1]), frozenset(UUID(str(t)) for t in row[2]),
-            frozenset(UUID(str(x)) for x in row[3]), locked.swapped_at)
         if not now.tenant_ids <= tenants:  # pragma: no cover - checked above
             raise ValueError("the CUR assembly's tenants are outside this transaction")
         if now.complete:

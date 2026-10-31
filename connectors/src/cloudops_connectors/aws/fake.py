@@ -15,11 +15,18 @@ It answers ListObjectsV2 (namespaced XML, ``max-keys`` and continuation tokens)
 and GetObject with ``Last-Modified``, 404 ``NoSuchKey`` for an object not
 delivered yet, and 503 ``SlowDown`` on demand. Data files are committed as
 plain CSV (reviewable) and served gzip-compressed, as AWS delivers them.
+
+``FakeCostExplorer`` and ``FakeInvoicing`` answer one payer's billing APIs
+with recorded responses (``billing/ce-<payer>.json``, keyed by the requested
+period, and ``billing/invoices-<payer>.json``), paged by ``page_size`` with
+opaque tokens, 400 ``LimitExceededException`` on demand, and a validation
+error for a period nothing was recorded for.
 """
 
 from __future__ import annotations
 
 import base64
+import copy
 import gzip
 import json
 import re
@@ -32,13 +39,16 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 
 import httpx
 
-from cloudops_connectors.aws.client import CONFIG_TARGET
+from cloudops_connectors.aws.client import CE_TARGET, CONFIG_TARGET, INVOICING_TARGET
 
 REGION: Final = "eu-west-1"
 AGGREGATOR: Final = "getronics-org-aggregator"
 CONFIG_HOST: Final = "https://config.fixture.example"
 S3_HOST: Final = "https://cur.fixture.example"
 S3_NS: Final = "http://s3.amazonaws.com/doc/2006-03-01/"
+CE_HOST: Final = "https://ce.fixture.example"
+INVOICING_HOST: Final = "https://invoicing.fixture.example"
+BILLING_DAY: Final = "2026-10-28"  # the day the billing fixtures were recorded
 _SINCE: Final = re.compile(r"configurationItemCaptureTime >= '([0-9T:.\-]+Z)'")
 
 
@@ -209,3 +219,108 @@ class FakeS3:
                 base64.b64encode(page[-1].encode()).decode())
         return httpx.Response(200, headers={"Content-Type": "application/xml"},
                               content=tostring(root, encoding="utf-8", xml_declaration=True))
+
+
+# --- billing: Cost Explorer and Invoicing -------------------------------------------------
+
+
+def _offset(token: str | None) -> int:
+    return int(base64.b64decode(token)) if token else 0
+
+
+def _token(offset: int) -> str:
+    return base64.b64encode(str(offset).encode()).decode()
+
+
+class _FakeJsonApi:
+    target: str
+
+    def __init__(self, payer: str) -> None:
+        self.payer = payer
+        self.throttle_next = 0
+        self.page_size = 100
+        self.requests: list[httpx.Request] = []
+
+    def transport(self) -> httpx.MockTransport:
+        return httpx.MockTransport(self._handle)
+
+    def _handle(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        headers = {"Content-Type": "application/x-amz-json-1.1",
+                   "x-amzn-RequestId": f"req-{len(self.requests):06d}"}
+        if self.throttle_next > 0:
+            self.throttle_next -= 1
+            return httpx.Response(400, headers=headers, content=json.dumps({
+                "__type": "LimitExceededException", "message": "Rate exceeded"}).encode())
+        if request.method != "POST" or request.headers.get("x-amz-target") != self.target:
+            return httpx.Response(400, headers=headers,
+                                  content=b'{"__type":"UnknownOperationException"}')
+        return self._answer(json.loads(request.content), headers)
+
+    def _answer(self, body: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
+        raise NotImplementedError
+
+    @staticmethod
+    def _invalid(headers: dict[str, str], message: str) -> httpx.Response:
+        return httpx.Response(400, headers=headers, content=json.dumps(
+            {"__type": "ValidationException", "message": message}).encode())
+
+
+class FakeCostExplorer(_FakeJsonApi):
+    target = CE_TARGET
+
+    def __init__(self, payer: str, responses: dict[str, dict[str, Any]]) -> None:
+        super().__init__(payer)
+        self.responses = responses  # "<start>/<end>" -> GetCostAndUsage response
+
+    @classmethod
+    def from_fixtures(cls, payer: str) -> FakeCostExplorer:
+        return cls(payer, json.loads(load_fixture(f"billing/ce-{payer}.json")))
+
+    def _answer(self, body: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
+        period = body.get("TimePeriod") or {}
+        recorded = self.responses.get(f"{period.get('Start')}/{period.get('End')}")
+        if (body.get("Granularity"), body.get("Metrics")) != ("MONTHLY", ["UnblendedCost"]):
+            return self._invalid(headers, "unexpected granularity or metrics")
+        if recorded is None:
+            return self._invalid(headers, "nothing recorded for this period")
+        out = copy.deepcopy(recorded)
+        if not isinstance(out.get("ResultsByTime"), list):
+            return httpx.Response(200, headers=headers, content=json.dumps(out).encode())
+        start = _offset(body.get("NextPageToken"))
+        groups = [(i, g) for i, r in enumerate(out["ResultsByTime"]) for g in r["Groups"]]
+        page = groups[start:start + self.page_size]
+        for i, r in enumerate(out["ResultsByTime"]):
+            r["Groups"] = [g for j, g in page if j == i]
+        if start + self.page_size < len(groups):
+            out["NextPageToken"] = _token(start + self.page_size)
+        return httpx.Response(200, headers=headers, content=json.dumps(out).encode())
+
+
+class FakeInvoicing(_FakeJsonApi):
+    target = INVOICING_TARGET
+
+    def __init__(self, payer: str, summaries: list[dict[str, Any]]) -> None:
+        super().__init__(payer)
+        self.summaries = summaries
+
+    @classmethod
+    def from_fixtures(cls, payer: str) -> FakeInvoicing:
+        doc = json.loads(load_fixture(f"billing/invoices-{payer}.json"))
+        return cls(payer, list(doc["InvoiceSummaries"]))
+
+    def _answer(self, body: dict[str, Any], headers: dict[str, str]) -> httpx.Response:
+        selector = body.get("Selector") or {}
+        if selector != {"ResourceType": "ACCOUNT_ID", "Value": self.payer}:
+            return self._invalid(headers, "the selector is not this payer")
+        window = (body.get("Filter") or {}).get("TimeInterval") or {}
+        lo, hi = window.get("StartDate"), window.get("EndDate")
+        if not isinstance(lo, int) or not isinstance(hi, int):
+            return self._invalid(headers, "TimeInterval is required")
+        matching = [s for s in self.summaries if lo <= int(s["IssuedDate"]) <= hi]
+        start = _offset(body.get("NextToken"))
+        size = min(int(body.get("MaxResults") or 100), self.page_size)
+        out: dict[str, Any] = {"InvoiceSummaries": matching[start:start + size]}
+        if start + size < len(matching):
+            out["NextToken"] = _token(start + size)
+        return httpx.Response(200, headers=headers, content=json.dumps(out).encode())

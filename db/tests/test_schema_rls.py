@@ -36,9 +36,13 @@ NON_TENANT = {
     "staging.schema_field",
     "staging.metric_allowlist",
     "staging.connector_schedule",
+    # Step 16: the platform's default anomaly thresholds, and the explicit entry
+    # an FX correction creates (reference data, like fx_rate).
+    "staging.anomaly_threshold_default",
+    "cloudops.fx_restatement",
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
-COMMERCIAL = {"cloudops.sow"}
+COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance"}
 PARTITIONED = {
     "cloudops.cost_fact",
     "cloudops.work_item",

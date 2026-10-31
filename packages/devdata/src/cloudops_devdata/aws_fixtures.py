@@ -23,7 +23,16 @@ Lines come from the synthetic AWS cost rows, split across line types and files
 unregistered account and for a resource nobody has. Data files are committed as
 plain CSV; the fake serves them gzip-compressed.
 
-``config_expectations()`` and ``cur_expectations()`` are the ground truth,
+**Billing** (``billing/``, step 16): per payer, a recorded Cost Explorer
+``GetCostAndUsage`` response for October to date as of ``BILLING_DAY`` minus
+one (``ce-<payer>.json``, keyed by the requested period) and the Invoicing
+``ListInvoiceSummaries`` for September (``invoices-<payer>.json``). They match
+the CUR rows (O2, E1; S1) to the cent, except Fabrikam's month-to-date total,
+which drifts by ``DRIFT``; Northwind's September comes as an invoice and a
+credit memo issued the same day; the unregistered account appears in both.
+
+``config_expectations()``, ``cur_expectations()`` and
+``billing_expectations()`` are the ground truth,
 computed from the dataset rather than from the connector. The committed files
 must equal ``build()`` exactly (a test checks).
 """
@@ -99,6 +108,8 @@ COLUMNS: Final = (
     "resourceTags/user:CostCentre",
 )
 EUR_EXTRA_COLUMN: Final = "lineItem/TaxType"  # only the EUR payer's report has it
+BILLING_DAY: Final = date(2026, 10, 28)  # the billing entities' run day
+DRIFT: Final = Decimal("1.012")  # Fabrikam's provider total is 1.2% above its CUR rows
 
 
 def _t(moment: datetime) -> str:
@@ -528,6 +539,103 @@ def _cur(ds: Dataset) -> tuple[dict[str, bytes], dict[str, Any], list[CurAssembl
     return files, layout, out
 
 
+# --- billing: Cost Explorer and Invoicing ----------------------------------------------
+
+
+@dataclass(frozen=True)
+class BillingExpected:
+    account: str
+    kind: str  # provider_total | invoice
+    invoice_period: str
+    as_of: date
+    amount: Decimal
+    currency: str
+    document_ref: str | None
+    tenant_code: str | None  # None: quarantined
+    ledger: Decimal  # what the CUR rows say for the same account and period
+
+
+def _epoch(d: date) -> int:
+    return int(datetime.combine(d, time(8), UTC).timestamp())
+
+
+def _billing(ds: Dataset, cur: list[CurAssembly]) -> tuple[dict[str, bytes],
+                                                             list[BillingExpected]]:
+    code = {t.id: t.short_code for t in ds.tenants}
+    tenant_of = {a.native_id: code[a.tenant_id] for a in ds.accounts if a.provider == "aws"}
+    by = {a.label: a for a in cur}
+    files: dict[str, bytes] = {}
+    expected: list[BillingExpected] = []
+    fab = next(n for n, c in tenant_of.items() if c == "FAB")
+    nwl = next(n for n, c in tenant_of.items() if c == "NWL")
+    start, end = date(2026, 10, 1), BILLING_DAY
+
+    def dump(doc: dict[str, Any]) -> bytes:
+        return (json.dumps(doc, indent=1) + "\n").encode()
+
+    # Cost Explorer: October to date, per payer.
+    for report, latest in ((USD_REPORT, by["O2"]), (EUR_REPORT, by["E1"])):
+        payer = PAYERS[report]
+        groups = []
+        for (account, ccy), (unblended, _) in sorted(latest.totals().items()):
+            amount = money(unblended * DRIFT) if account == fab else unblended
+            groups.append({"Keys": [account], "Metrics": {"UnblendedCost": {
+                "Amount": f"{amount:f}", "Unit": ccy}}})
+            expected.append(BillingExpected(account, "provider_total", "2026-10",
+                                            end - timedelta(days=1), amount, ccy, None,
+                                            tenant_of[account], unblended))
+        if latest.unknown_account_lines:
+            unknown = Decimal("5.500000") * latest.unknown_account_lines
+            groups.append({"Keys": [UNREGISTERED], "Metrics": {"UnblendedCost": {
+                "Amount": f"{unknown:f}", "Unit": "USD"}}})
+            expected.append(BillingExpected(UNREGISTERED, "provider_total", "2026-10",
+                                            end - timedelta(days=1), unknown, "USD", None, None,
+                                            unknown))
+        files[f"billing/ce-{payer}.json"] = dump({f"{start}/{end}": {
+            "GroupDefinitions": [{"Type": "DIMENSION", "Key": "LINKED_ACCOUNT"}],
+            "ResultsByTime": [{"TimePeriod": {"Start": f"{start}", "End": f"{end}"},
+                               "Total": {}, "Groups": groups, "Estimated": True}],
+            "DimensionValueAttributes": [],
+        }})
+
+    # Invoicing: September, issued on the 2nd of October.
+    issued = date(2026, 10, 2)
+    summaries: list[dict[str, Any]] = []
+
+    def summary(account: str, number: str, amount: Decimal, kind: str = "INVOICE"
+                ) -> dict[str, Any]:
+        return {
+            "AccountId": account, "InvoiceId": number, "IssuedDate": _epoch(issued),
+            "DueDate": _epoch(issued + timedelta(days=30)),
+            "Entity": {"InvoicingEntity": "Amazon Web Services EMEA SARL"},
+            "BillingPeriod": {"Month": 9, "Year": 2026}, "InvoiceType": kind,
+            "BaseCurrencyAmount": {"TotalAmount": f"{amount:f}",
+                                   "TotalAmountBeforeTax": f"{amount:f}",
+                                   "CurrencyCode": "USD"},
+        }
+
+    for n, ((account, ccy), (unblended, _)) in enumerate(sorted(by["S1"].totals().items())):
+        number = f"EUINGB26-{9100 + n:06d}"
+        if account == nwl:  # an invoice and a credit memo, issued together
+            summaries.append(summary(account, number, unblended + Decimal("10.000000")))
+            summaries.append(summary(account, f"EUCMGB26-{9100 + n:06d}",
+                                     Decimal("-10.000000"), "CREDIT_MEMO"))
+            ref = f"EUCMGB26-{9100 + n:06d},{number}"
+        else:
+            summaries.append(summary(account, number, unblended))
+            ref = number
+        expected.append(BillingExpected(account, "invoice", "2026-09", issued, unblended, ccy,
+                                        ref, tenant_of[account], unblended))
+    unknown = Decimal("5.500000") * by["S1"].unknown_account_lines
+    summaries.append(summary(UNREGISTERED, "EUINGB26-009199", unknown))
+    expected.append(BillingExpected(UNREGISTERED, "invoice", "2026-09", issued, unknown, "USD",
+                                    "EUINGB26-009199", None, unknown))
+    files[f"billing/invoices-{PAYERS[USD_REPORT]}.json"] = dump(
+        {"InvoiceSummaries": summaries})
+    files[f"billing/invoices-{PAYERS[EUR_REPORT]}.json"] = dump({"InvoiceSummaries": []})
+    return files, expected
+
+
 # --- the whole set -----------------------------------------------------------------------
 
 
@@ -536,6 +644,7 @@ class Fixtures:
     files: dict[str, bytes]  # path under the fixture directory -> bytes
     config: list[ConfigExpected]
     cur: list[CurAssembly]
+    billing: list[BillingExpected] = field(default_factory=list)
 
 
 def build() -> Fixtures:
@@ -545,7 +654,13 @@ def build() -> Fixtures:
     files = {"config/results.json": results,
              "cur/stages.json": (json.dumps(layout, indent=1) + "\n").encode()}
     files.update({f"cur/{n}": b for n, b in cur_files.items()})
-    return Fixtures(files, config, cur)
+    billing_files, billing = _billing(ds, cur)
+    files.update(billing_files)
+    return Fixtures(files, config, cur, billing)
+
+
+def billing_expectations() -> list[BillingExpected]:
+    return build().billing
 
 
 def config_expectations() -> list[ConfigExpected]:

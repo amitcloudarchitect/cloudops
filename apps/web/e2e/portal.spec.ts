@@ -226,7 +226,7 @@ test.describe("an account with no access", () => {
     const repo = new URL("../../../", import.meta.url).pathname;
     const value = execFileSync("uv", ["run", "--quiet", "python", "-m", "cloudops_devdata.tokens", "--oid", stranger], {
       cwd: repo,
-      env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: `${repo}.env.local` },
+      env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: process.env.CLOUDOPS_LOCAL_SECRETS_FILE ?? `${repo}.env.local` },
       encoding: "utf8",
     }).trim();
     await page.addInitScript((t) => window.sessionStorage.setItem("cloudops.dev-token", t), value);

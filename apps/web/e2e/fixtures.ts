@@ -5,7 +5,7 @@ import { test as base, expect, type Page } from "@playwright/test";
 
 import type { WorkItemList } from "@cloudops/contracts";
 
-import { TOKEN_DIR, type RoleName } from "./roles";
+import { localSecretsFile, TOKEN_DIR, type RoleName } from "./roles";
 
 // Overridable so a second checkout can run its own API and console beside a running pair.
 const API = process.env.CLOUDOPS_E2E_API ?? "http://127.0.0.1:8000";
@@ -27,7 +27,7 @@ export function holdName(alias: string, sightings: number): void {
   const repo = new URL("../../../", import.meta.url).pathname;
   execFileSync("uv", ["run", "--quiet", "python", "-m", "cloudops_devdata.quarantine", "--alias", alias, "--count", String(sightings)], {
     cwd: repo,
-    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: `${repo}.env.local` },
+    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: localSecretsFile(repo) },
   });
 }
 
@@ -37,7 +37,7 @@ export function raiseDrift(source: string, entity: string, field: string): void 
   const repo = new URL("../../../", import.meta.url).pathname;
   execFileSync("uv", ["run", "--quiet", "python", "-m", "cloudops_devdata.ingest_health", "--drift", source, entity, field], {
     cwd: repo,
-    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: `${repo}.env.local` },
+    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: localSecretsFile(repo) },
   });
 }
 

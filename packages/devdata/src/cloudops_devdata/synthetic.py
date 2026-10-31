@@ -103,6 +103,7 @@ class SowRow:
     contracted_slab: str
     coverage: str
     support: str
+    target_margin: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -214,6 +215,22 @@ class CostRow:
 
 
 @dataclass(frozen=True)
+class BillingTotalRow:
+    """The provider's own figure for an account and period (step 16): what
+    reconciliation compares the line items with."""
+
+    tenant_id: uuid.UUID
+    account_id: uuid.UUID
+    source_system: str
+    kind: str  # provider_total | invoice
+    invoice_period: str
+    as_of: date
+    amount: Decimal
+    currency: str
+    document_ref: str | None
+
+
+@dataclass(frozen=True)
 class FxRateRow:
     from_currency: str
     to_currency: str
@@ -293,6 +310,7 @@ class Dataset:
     work_items: list[WorkItemRow] = field(default_factory=list)
     vulnerabilities: list[VulnerabilityRow] = field(default_factory=list)
     costs: list[CostRow] = field(default_factory=list)
+    billing_totals: list[BillingTotalRow] = field(default_factory=list)
     fx_rates: list[FxRateRow] = field(default_factory=list)
     alias_quarantine: list[AliasQuarantineRow] = field(default_factory=list)
     resource_quarantine: list[ResourceQuarantineRow] = field(default_factory=list)
@@ -312,6 +330,7 @@ class Dataset:
             "cloudops.work_item": mine(self.work_items),
             "cloudops.vulnerability": mine(self.vulnerabilities),
             "cloudops.cost_fact": mine(self.costs),
+            "cloudops.billing_total": mine(self.billing_totals),
             "staging.resource_quarantine": mine(self.resource_quarantine),
         }
 
@@ -458,6 +477,7 @@ def generate(anchor: date, seed: int = 7) -> Dataset:
         _costs(ds, spec, rng)
     _number_tickets(ds)
     _fx(ds, rng)
+    _billing_totals(ds)
     _alias_quarantine(ds, rng)
     return ds
 
@@ -501,6 +521,17 @@ def _tenant(ds: Dataset, spec: _Spec, rng: random.Random) -> None:
     _resources(ds, spec, tid, accounts, rng)
 
 
+# Step 16. Woodgrove's SOW is not captured yet: margin shows "not captured", never
+# zero (HLD principle 7). Each other contract's target margin, a fraction.
+NO_SOW: Final = frozenset({"WGF"})
+TARGET_MARGIN: Final = {"NWL": Decimal("0.25"), "CRL": Decimal("0.30"), "FAB": Decimal("0.28"),
+                        "TSA": Decimal("0.20")}
+# One account whose provider total disagrees with its line items by 1.2% this
+# month, so the console has an unverified figure to show (> 0.5%, HLD).
+DRIFT_ACCOUNT: Final = ("FAB", "aws")
+DRIFT: Final = Decimal("1.012")
+
+
 def _sows(ds: Dataset, spec: _Spec, tid: uuid.UUID, start: date, rng: random.Random) -> None:
     monthly = money(rng.randrange(18_000, 95_000)) + money("0.50")
     sows: list[tuple[str, date, date | None, str, Decimal]] = [
@@ -516,7 +547,7 @@ def _sows(ds: Dataset, spec: _Spec, tid: uuid.UUID, start: date, rng: random.Ran
             (f"SOW-{spec.code}-{switch.year}-02", switch, None, "EUR", money("23100.000000")),
         ]
     for ref, frm, to, ccy, mrr in sows:
-        ds.sows.append(
+        row = (
             SowRow(
                 _id("sow", ref), tid, ref, frm, to, ccy, mrr,
                 hosting_acv=money(mrr * 4) if spec.has_aws else None,
@@ -526,8 +557,13 @@ def _sows(ds: Dataset, spec: _Spec, tid: uuid.UUID, start: date, rng: random.Ran
                 contracted_slab=rng.choice(["S1", "S2", "S3"]),
                 coverage=spec.coverage,
                 support=spec.support,
+                target_margin=TARGET_MARGIN.get(spec.code),
             )
         )
+        # Built either way so the random stream (and every recorded fixture
+        # derived from it) is unchanged; kept only for customers with a SOW.
+        if spec.code not in NO_SOW:
+            ds.sows.append(row)
 
 
 def _accounts(
@@ -1074,6 +1110,35 @@ def _fx(ds: Dataset, rng: random.Random) -> None:
                 if month_end:
                     ds.fx_rates.append(FxRateRow(a, b, rate, "closing", d, FX_SOURCE))
         d += timedelta(days=1)
+
+
+def _billing_totals(ds: Dataset) -> None:
+    """Each account's provider total for every period with cost, as of the last
+    cost day in it, and the invoice for each month that has ended. They agree
+    with the line items, except the drift account's month-to-date total."""
+    sums: dict[tuple[uuid.UUID, str], Decimal] = {}
+    last: dict[tuple[uuid.UUID, str], date] = {}
+    for c in ds.costs:
+        key = (c.account_id, c.invoice_period)
+        sums[key] = sums.get(key, Decimal(0)) + c.unblended_cost
+        last[key] = max(last.get(key, c.usage_date), c.usage_date)
+    accounts = {a.id: a for a in ds.accounts}
+    drifting = next(a.id for a in ds.accounts
+                    if a.tenant_id == tenant_id(DRIFT_ACCOUNT[0])
+                    and a.provider == DRIFT_ACCOUNT[1])
+    current = f"{ds.anchor:%Y-%m}"
+    for (account_id, period), total in sorted(sums.items(), key=lambda i: (str(i[0][0]), i[0][1])):
+        a = accounts[account_id]
+        amount = money(total * DRIFT) if (account_id, period) == (drifting, current) else total
+        ds.billing_totals.append(BillingTotalRow(
+            a.tenant_id, account_id, a.provider, "provider_total", period,
+            last[(account_id, period)], amount, a.billing_currency, None))
+        start = date.fromisoformat(f"{period}-01")
+        issued = (start + timedelta(days=32)).replace(day=3)
+        if period != current and issued <= ds.anchor:
+            ds.billing_totals.append(BillingTotalRow(
+                a.tenant_id, account_id, a.provider, "invoice", period, issued, total,
+                a.billing_currency, f"INV-{a.native_id[-6:]}-{period}"))
 
 
 def _alias_quarantine(ds: Dataset, rng: random.Random) -> None:

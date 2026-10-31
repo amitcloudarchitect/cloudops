@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay reprocess connectors telemetry-schema telemetry eval eval-baseline images image-check web e2e
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay reprocess connectors finops telemetry-schema telemetry eval eval-baseline images image-check web e2e
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -70,7 +70,10 @@ reprocess: env ## run the re-process queue once: the oldest request made in the 
 	uv run python -m cloudops_connectors.servicenow reprocess --fixtures
 
 connectors: env ## run every step 15 connector once over its recorded fixtures (Temporal, Azurite, local DB)
-	for c in qualys corestack azure aws sharepoint entra; do uv run python -m cloudops_connectors.$$c run --fixtures || exit 1; done
+	for c in qualys corestack azure aws sharepoint entra ecb; do uv run python -m cloudops_connectors.$$c run --fixtures || exit 1; done
+
+finops: env ## run the FinOps worker once: reconciliation, anomalies and margin (Temporal, local DB)
+	uv run python -m cloudops_connectors.finops run
 
 telemetry-schema: env ## apply db/telemetry to the local ClickHouse as its administrator
 	$(SECRET) clickhouse-admin-password | uv run python db/telemetry/migrate.py --url http://127.0.0.1:8123 --user cloudops_admin --password-file /dev/stdin

@@ -592,7 +592,7 @@ Steps one to eight are the walking skeleton — something deployable should exis
 | L1 | Telemetry store self-managed or managed PaaS | Before the telemetry step |
 | L2 | Dedicated managed HSM, if ever | Only if an assurance requirement demands it |
 | L3 | Metric allowlist per resource type — defines the largest cost line | Before the data tier |
-| L4 | FX rate provider and ingest method | Before the commercial modules |
+| L4 | FX rate provider and ingest method — **decided** (ADR 0019): ECB reference rates, Finance corrections recorded in `fx_restatement` | Before the commercial modules |
 | L5 | Reporting currency default per customer | Before the portal |
 | L6 | PgBouncer in-cluster or managed pooling — transaction mode mandatory either way | Before the data tier |
 | L7 | Sandbox cloud account provisioning | Before pipelines |

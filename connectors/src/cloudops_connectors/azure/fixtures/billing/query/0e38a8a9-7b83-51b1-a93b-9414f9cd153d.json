@@ -1,0 +1,27 @@
+{
+ "id": "/subscriptions/0e38a8a9-7b83-51b1-a93b-9414f9cd153d/providers/Microsoft.CostManagement/query/bd1275d2-7689-5287-8007-722be5c5fc08",
+ "name": "bd1275d2-7689-5287-8007-722be5c5fc08",
+ "type": "Microsoft.CostManagement/query",
+ "location": null,
+ "sku": null,
+ "eTag": null,
+ "properties": {
+  "nextLink": null,
+  "columns": [
+   {
+    "name": "totalCost",
+    "type": "Number"
+   },
+   {
+    "name": "Currency",
+    "type": "String"
+   }
+  ],
+  "rows": [
+   [
+    4271.922346,
+    "GBP"
+   ]
+  ]
+ }
+}

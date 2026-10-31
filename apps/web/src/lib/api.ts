@@ -23,7 +23,8 @@ type GetOk<P extends Get> = paths[P] extends {
 }
   ? R
   : never;
-// 201 for a POST that creates, 200 for one that changes and answers with the result.
+// 201 for a POST that creates; 200 for one that changes and answers with the result, or
+// that computes and stores nothing (a quote).
 type PostOk<P extends Post> = paths[P] extends {
   post: { responses: { 201: { content: { "application/json": infer R } } } };
 }

@@ -1,0 +1,72 @@
+{
+ "roots": [
+  "cost-exports/focus/getronics-eur",
+  "cost-exports/focus/getronics-gbp"
+ ],
+ "stages": [
+  {
+   "cost-exports/focus/getronics-eur/20260901-20260930/625e728d-859e-5bb8-a683-f2c210df473a/manifest.json": {
+    "file": "ES-manifest.json",
+    "last_modified": "2026-10-03T06:00:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20260901-20260930/625e728d-859e-5bb8-a683-f2c210df473a/part_0_0001.csv.gz": {
+    "file": "ES-1.csv",
+    "last_modified": "2026-10-03T05:55:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20260901-20260930/625e728d-859e-5bb8-a683-f2c210df473a/part_0_0002.csv.gz": {
+    "file": "ES-2.csv",
+    "last_modified": "2026-10-03T05:55:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20261001-20261031/28ed0320-a36a-5928-a2d0-1d4f7b21dd5b/manifest.json": {
+    "file": "EO1-manifest.json",
+    "last_modified": "2026-10-25T06:00:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20261001-20261031/28ed0320-a36a-5928-a2d0-1d4f7b21dd5b/part_0_0001.csv.gz": {
+    "file": "EO1-1.csv",
+    "last_modified": "2026-10-25T05:55:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20261001-20261031/28ed0320-a36a-5928-a2d0-1d4f7b21dd5b/part_0_0002.csv.gz": {
+    "file": "EO1-2.csv",
+    "last_modified": "2026-10-25T05:55:00Z"
+   },
+   "cost-exports/focus/getronics-gbp/20260901-20260930/d9a8df0f-48ee-5b25-a395-a7f48da8c3b2/manifest.json": {
+    "file": "GS-manifest.json",
+    "last_modified": "2026-10-03T07:00:00Z"
+   },
+   "cost-exports/focus/getronics-gbp/20260901-20260930/d9a8df0f-48ee-5b25-a395-a7f48da8c3b2/part_0_0001.csv.gz": {
+    "file": "GS-1.csv",
+    "last_modified": "2026-10-03T06:55:00Z"
+   },
+   "cost-exports/focus/getronics-gbp/20261001-20261031/e24374f8-4f15-5998-a195-39c95fa4be82/manifest.json": {
+    "file": "GO-manifest.json",
+    "last_modified": "2026-10-27T07:00:00Z"
+   },
+   "cost-exports/focus/getronics-gbp/20261001-20261031/e24374f8-4f15-5998-a195-39c95fa4be82/part_0_0001.csv.gz": {
+    "file": "GO-1.csv",
+    "last_modified": "2026-10-27T06:55:00Z"
+   }
+  },
+  {
+   "cost-exports/focus/getronics-eur/20261001-20261031/8dcce527-506d-52be-8600-e1bc3feeedd7/manifest.json": {
+    "file": "EO2-manifest.json",
+    "last_modified": "2026-10-28T06:00:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20261001-20261031/8dcce527-506d-52be-8600-e1bc3feeedd7/part_0_0001.csv.gz": {
+    "file": "EO2-1.csv",
+    "last_modified": "2026-10-28T05:55:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20261001-20261031/8dcce527-506d-52be-8600-e1bc3feeedd7/part_0_0002.csv.gz": {
+    "file": "EO2-2.csv",
+    "last_modified": "2026-10-28T05:55:00Z"
+   },
+   "cost-exports/focus/getronics-eur/20261001-20261031/8dcce527-506d-52be-8600-e1bc3feeedd7/part_0_0003.csv.gz": {
+    "file": "EO2-3.csv",
+    "last_modified": "2026-10-28T05:55:00Z"
+   },
+   "cost-exports/focus/getronics-gbp/20261001-20261031/e24374f8-4f15-5998-a195-39c95fa4be82/part_0_0002.csv.gz": {
+    "file": "GO-2.csv",
+    "last_modified": "2026-10-28T09:00:00Z"
+   }
+  }
+ ]
+}

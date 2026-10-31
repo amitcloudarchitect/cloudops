@@ -5,7 +5,7 @@ test.use({ role: "finops" });
 test("has no work queue in its navigation", async ({ signedIn: page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/resources$/);
-  expect(await navLabels(page)).toEqual(["Resources", "Customers"]);
+  expect(await navLabels(page)).toEqual(["Resources", "Customers", "FinOps", "Margin", "Pricing"]);
 });
 
 test("a typed-in work queue URL says it is not available", async ({ signedIn: page }) => {

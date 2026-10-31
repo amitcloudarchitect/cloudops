@@ -6,3 +6,4 @@
 services/gateway/src/cloudops_gateway/pricing.py  # the AI rate card: list prices per tier, ADR 0012
 packages/devdata/  # synthetic dataset generator (make seed): invented amounts, never product logic
 packages/evals/src/cloudops_evals/scoring.py  # the evaluation's per-case cost band, a gate threshold
+packages/commercial/src/cloudops_commercial/ratecard.py  # the commercial rate card: the workbook's prices, versioned and effective-dated (step 16)
