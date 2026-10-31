@@ -177,9 +177,10 @@ live. The user decided those before the build.
 - Grafana and Azure Monitor never answer "which customer": that question goes to the
   console, which asks the database under the caller's scope. On-call pivots from a
   trace id to RLS'd rows (`llm_call`, `agent_run`, `work_item`, `audit.action_log`).
-- A row-level security refusal on write is a Sev0 page, including the ServiceNow
-  page that fails because a ticket's company moved to another tenant (dead-lettered by
-  design, retried first). Whether that case should be a lower-severity event is open.
+- Any row-level security refusal on write is a `cross_tenant_attempt` and pages Sev0
+  (user, 2026-10-31). That includes a ServiceNow ticket whose company moves to another
+  tenant: that is not expected to happen, so when it does it pages, and the page is
+  still dead-lettered for a person to resolve, which is the safe handling.
 - The collector's egress is public addresses on 443 (NetworkPolicy has no FQDNs);
   an FQDN policy (Cilium) would narrow it to App Insights and Entra. With private
   links in production, the private range it then needs is added there.
