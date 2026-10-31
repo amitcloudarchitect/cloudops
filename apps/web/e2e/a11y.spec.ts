@@ -13,7 +13,7 @@ for (const theme of ["light", "dark"] as const) {
 
     test("every screen passes axe (WCAG 2.1 AA)", async ({ signedIn: page }) => {
       const number = await triagedTicket("human");
-      for (const path of ["/work", `/work/${number}`, "/performance", "/posture", "/resources", "/customers", "/connectors"]) {
+      for (const path of ["/work", `/work/${number}`, "/performance", "/posture", "/resources", "/customers", "/connectors", "/knowledge"]) {
         await page.goto(path);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await page.waitForLoadState("networkidle");

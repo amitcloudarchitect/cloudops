@@ -1,11 +1,11 @@
-# Step 19 (LLD, Observability; ADR 0021): Azure Monitor managed Prometheus and Azure
+# Step 19 (LLD, Observability; ADR 0022): Azure Monitor managed Prometheus and Azure
 # Managed Grafana. The workspace's default data collection rule receives the AKS
 # ama-metrics add-on's scrape (associated in stack 05); Grafana reads the workspace
 # and Log Analytics as its own managed identity (roles in stack 04b).
 #
 # Public network access follows network_mode: dev ("public") reaches both over the
 # internet with Entra ID; the LLD's private model ("private") puts them behind
-# private endpoints, which arrive with the private build (ADR 0021, deferred).
+# private endpoints, which arrive with the private build (ADR 0022, deferred).
 
 resource "azurerm_monitor_workspace" "this" {
   name                          = module.names.monitor_workspace

@@ -142,7 +142,7 @@ resource "azurerm_kubernetes_cluster" "this" {
     msi_auth_for_monitoring_enabled = true
   }
 
-  # Azure Monitor managed Prometheus (step 19, ADR 0021): the ama-metrics add-on
+  # Azure Monitor managed Prometheus (step 19, ADR 0022): the ama-metrics add-on
   # scrapes the OpenTelemetry Collector into the workspace of stack 03.
   dynamic "monitor_metrics" {
     for_each = var.observability_enabled ? [1] : []
@@ -265,7 +265,7 @@ locals {
     ai       = "platform-ai/worker-ai"
     workflow = "temporal/temporal-secrets"
   }
-  # Further service accounts (step 19, ADR 0021): the platform metrics job runs on
+  # Further service accounts (step 19, ADR 0022): the platform metrics job runs on
   # the ingest login, so it is the ingest identity too; the collector has its own,
   # federated once var.observability_enabled says stacks 02 and 03 are applied.
   additional_federated_service_accounts = {
@@ -314,7 +314,7 @@ resource "azurerm_federated_identity_credential" "additional" {
   subject             = "system:serviceaccount:${replace(each.value.account, "/", ":")}"
 }
 
-# --- Managed Prometheus (step 19, ADR 0021) --------------------------------------
+# --- Managed Prometheus (step 19, ADR 0022) --------------------------------------
 #
 # The add-on's samples go to the Azure Monitor workspace through the workspace's own
 # default data collection rule and endpoint, associated with this cluster.

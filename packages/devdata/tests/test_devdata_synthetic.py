@@ -258,7 +258,7 @@ def test_billing_totals_agree_except_the_drift_account_in_two_currencies(ds: Dat
 
 
 def test_the_internal_tenant_is_a_tenant_like_any_other() -> None:
-    """Step 19 (ADR 0021): the platform's own cost, for the FinOps code to process."""
+    """Step 19 (ADR 0022): the platform's own cost, for the FinOps code to process."""
     from decimal import Decimal
 
     from cloudops_devdata.seed import INTERNAL_CODE, demo_internal

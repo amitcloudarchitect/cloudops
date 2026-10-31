@@ -37,6 +37,10 @@ export const MODULES: readonly Module[] = [
   { href: "/finops", label: "FinOps", permission: "cost.read", staff: true },
   { href: "/margin", label: "Margin", permission: "commercial.read", staff: true },
   { href: "/pricing", label: "Pricing", permission: "commercial.read", staff: true },
+  // Step 17: document staleness and gaps, assessments, and monthly report packs.
+  { href: "/knowledge", label: "Knowledge", permission: "knowledge.read", staff: true },
+  { href: "/assurance", label: "Assurance", permission: "assurance.read", staff: true },
+  { href: "/reports", label: "Reports", permission: "reports.read" },
 ];
 
 export function visibleModules(has: (permission: string) => boolean, staff: boolean): Module[] {

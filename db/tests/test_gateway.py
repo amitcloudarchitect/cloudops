@@ -116,7 +116,7 @@ async def test_llm_tracing_attributes_the_tenant_only_under_rls(
 ) -> None:
     """LLD: LLM tracing per request, attributed to tenant and user. The span and
     metrics carry task, tier, tokens and cost; the tenant, the user and the
-    prompt stay in the RLS'd row, joined by trace id (ADR 0021)."""
+    prompt stay in the RLS'd row, joined by trace id (ADR 0022)."""
     mem = memory_telemetry()
     mem.spans.clear()
     c = ctx(seeded.a, names=("Asha Patel",))

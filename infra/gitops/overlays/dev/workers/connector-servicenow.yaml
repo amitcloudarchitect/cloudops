@@ -21,7 +21,7 @@ data:
   # The dev instance (ADR 0009). The account svc_cloudops_read is on GMT.
   CLOUDOPS_SERVICENOW_URL: https://dev407774.service-now.com
   CLOUDOPS_SERVICENOW_CLIENT_ID: 666769454e68469d8d39fb53b61337dc
-  # Step 19 (ADR 0021): off until the collector runs in dev (see ../config.yaml).
+  # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
   CLOUDOPS_TELEMETRY: "off"
   CLOUDOPS_DEPLOYMENT: dev
 ---

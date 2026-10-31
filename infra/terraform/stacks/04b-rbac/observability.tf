@@ -1,4 +1,4 @@
-# Step 19 (ADR 0021): the roles observability needs, behind var.observability_enabled
+# Step 19 (ADR 0022): the roles observability needs, behind var.observability_enabled
 # because each names an identity or resource stacks 02 and 03 create.
 #
 #   id-cloudops-observability   Monitoring Metrics Publisher on Application Insights:

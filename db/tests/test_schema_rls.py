@@ -40,9 +40,12 @@ NON_TENANT = {
     # an FX correction creates (reference data, like fx_rate).
     "staging.anomaly_threshold_default",
     "cloudops.fx_restatement",
+    # Step 17: the control library, loaded only through access.load_controls.
+    "cloudops.control",
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
-COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance"}
+COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance",
+              "cloudops.report_pack_commercial"}
 PARTITIONED = {
     "cloudops.cost_fact",
     "cloudops.work_item",
@@ -146,14 +149,14 @@ def test_non_tenant_tables_are_read_only_to_the_application(seeded: Seeded) -> N
         writable = cx.execute(
             "SELECT r, t FROM unnest(%s::text[]) r, unnest(%s::text[]) t"
             " WHERE has_table_privilege(r, t, 'INSERT,UPDATE,DELETE,TRUNCATE')",
-            (list(GROUP_ROLES), ["cloudops.global_knowledge_chunk"]),
+            (list(GROUP_ROLES), ["cloudops.global_knowledge_chunk", "cloudops.control"]),
         ).fetchall()
         readable = cx.execute(
             "SELECT has_table_privilege('cloudops_app', 'cloudops.global_knowledge_chunk',"
-            " 'SELECT')"
+            " 'SELECT'), has_table_privilege('cloudops_app', 'cloudops.control', 'SELECT')"
         ).fetchone()
     assert writable == []
-    assert readable == (True,)
+    assert readable == (True, True)
 
 
 def test_commercial_tables_have_the_restrictive_policy(seeded: Seeded) -> None:

@@ -134,7 +134,7 @@ output "container_registry" {
   value = "crcloudops${local.e}${local.r}"
 }
 
-# Step 19 (ADR 0021): managed Prometheus, Grafana, paging.
+# Step 19 (ADR 0022): managed Prometheus, Grafana, paging.
 output "monitor_workspace" {
   value = "amw-cloudops-${local.e}-${local.r}"
 }

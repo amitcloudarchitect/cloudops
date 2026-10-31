@@ -1,6 +1,6 @@
 # Observability: turning it on
 
-Step 19, ADR 0021. The code ships with telemetry configured as `otlp` in every base;
+Step 19, ADR 0022. The code ships with telemetry configured as `otlp` in every base;
 dev's overlay says `off` until the collector can run there, because the collector
 needs its own workload identity. These are the steps, in order. Nothing here is
 applied by CI.

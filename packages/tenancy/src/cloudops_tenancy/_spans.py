@@ -1,4 +1,4 @@
-"""A client span on every statement this package sends (step 19; ADR 0021).
+"""A client span on every statement this package sends (step 19; ADR 0022).
 
 The engine is private to this package, so this package instruments it: a span
 per statement, named for its operation, holding the statement text. Statements

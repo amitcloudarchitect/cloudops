@@ -211,7 +211,7 @@ class TriageActivities:
             parent = await conn.scalar(text(
                 "SELECT trace_parent FROM cloudops.work_item WHERE number = :n"
                 " ORDER BY opened_at DESC LIMIT 1"), {"n": o.number})
-            # One trace per ticket (ADR 0021): triage joins the trace the
+            # One trace per ticket (ADR 0022): triage joins the trace the
             # connector started at first sighting, or starts it.
             with ticket_span("triaged", parent, {"cloudops.triage.route": o.route,
                                                  "cloudops.triage.stage": o.stage}) as span:

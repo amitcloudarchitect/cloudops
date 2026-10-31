@@ -1,4 +1,4 @@
-# Stack 03b — the dashboards (step 19; LLD, Observability; ADR 0021).
+# Stack 03b — the dashboards (step 19; LLD, Observability; ADR 0022).
 #
 # Six dashboards, as code: platform health, ingest health, execution, AI operations,
 # data quality, and the platform's own cost. Each panel is a PromQL query on the
@@ -98,7 +98,7 @@ locals {
       title = "Execution"
       panels = [
         { title = "Execution plane", unit = "none", type = "text",
-        text = "The execution plane is not built (CLAUDE.md: not before the security review). These panels read Execute* workflows and stay empty until it exists. Remediation verification rate and approval latency arrive with it (ADR 0021)." },
+        text = "The execution plane is not built (CLAUDE.md: not before the security review). These panels read Execute* workflows and stay empty until it exists. Remediation verification rate and approval latency arrive with it (ADR 0022)." },
         { title = "Execution workflows completed", unit = "short", type = "timeseries",
         expr = "sum by (workflow_type) (increase(temporal_workflow_completed{workflow_type=~\"Execute.*\"}[1h]))" },
         { title = "Execution workflows failed", unit = "short", type = "timeseries",
@@ -158,7 +158,7 @@ locals {
       title = "Platform cost"
       panels = [
         { title = "How these figures are made", unit = "none", type = "text",
-        text = "The platform's own Azure cost runs through the customer FinOps code unchanged: an internal tenant, reconciled and checked for anomalies by the FinOps jobs, allocated with cloudops_commercial (ADR 0021). Amounts are month to date, amortized, in their own currency, rounded here for display." },
+        text = "The platform's own Azure cost runs through the customer FinOps code unchanged: an internal tenant, reconciled and checked for anomalies by the FinOps jobs, allocated with cloudops_commercial (ADR 0022). Amounts are month to date, amortized, in their own currency, rounded here for display." },
         { title = "Month to date by charge class", unit = "none", type = "stat",
         expr = "sum by (charge_class, currency) (cloudops_platform_cost_micros) / 1e6" },
         { title = "Reconciles with the provider this month", unit = "bool_yes_no", type = "stat",

@@ -10,9 +10,10 @@ only way a machine reads it.
 **Reconcile** (daily). For the current and previous invoice periods, each
 account's line items (unblended, as billed) are compared with the provider's
 latest month-to-date total, summing only the days that total covers, and with
-the issued invoice once there is one. Above 0.5% the check is unverified and
-alerts once per account, period, kind and day. An account with cost and no
-reference is unverified (``no_reference``) and does not page.
+the sum of every invoice document for the period issued by then (invoices,
+separate marketplace or support invoices, credit memos). Above 0.5% the check is
+unverified and alerts once per account, period, kind and day. An account with
+cost and no reference is unverified (``no_reference``) and does not page.
 
 **Anomalies** (daily). Day over day for the last ``RECENT_DAYS`` days and month
 over month through the latest one, on amortized cost per account and currency,
@@ -20,18 +21,20 @@ against the tenant's thresholds or the platform default, the absolute floor
 converted into the account's currency at the rate in force. A day that no longer
 crosses (billing restated) is removed. Spikes alert.
 
-**Margin** (daily, closed at month end). The current month is provisional, month
-to date. From ``CLOSE_DAY`` the previous month is closed. Closed months are
-reprocessed for ``RESTATE_MONTHS`` months, because billing restates after the
-fact and Finance may correct a rate: if any figure moves, a new version is
-written that names the one it restates. Nothing closed is overwritten.
+**Margin** (daily, closed at month end). One transaction per customer: one
+customer's failure stops only theirs, and the run then fails so it retries. The
+current month is provisional, month to date. From ``CLOSE_DAY`` the previous
+month is closed. Closed months are reprocessed for ``RESTATE_MONTHS`` months,
+because billing restates after the fact and Finance may correct a rate: if any
+figure moves, a new version is written that names the one it restates. Nothing
+closed is overwritten.
 """
 
 from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from collections.abc import Iterable, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
@@ -127,12 +130,27 @@ async def month_rate(conn: ScopedConnection, frm: str, to: str, start: date,
 
 # --- reconciliation ---------------------------------------------------------------------------
 
+# The provider total is a running month-to-date figure: its latest reading wins.
+# Invoices are documents: an invoice, a later credit memo, a separate marketplace
+# or support invoice all belong to the period, so every one issued by ``on`` is
+# summed. Documents in different currencies are not summed: the reference is
+# then NULL and the check is unverified (currency_mismatch).
 _REFERENCES: Final = text(
-    "SELECT DISTINCT ON (b.account_id, b.invoice_period, b.kind)"
-    "   b.tenant_id, b.account_id, b.invoice_period, b.kind, b.as_of, b.amount, b.currency"
+    "SELECT * FROM ("
+    "  SELECT DISTINCT ON (b.account_id, b.invoice_period)"
+    "    b.tenant_id, b.account_id, b.invoice_period, b.kind, b.as_of, b.amount, b.currency"
+    "  FROM cloudops.billing_total b"
+    "  WHERE b.kind = 'provider_total' AND b.invoice_period = ANY(CAST(:periods AS text[]))"
+    "    AND b.as_of <= :on"
+    "  ORDER BY b.account_id, b.invoice_period, b.as_of DESC) latest"
+    " UNION ALL"
+    " SELECT b.tenant_id, b.account_id, b.invoice_period, b.kind, max(b.as_of),"
+    "   CASE WHEN count(DISTINCT b.currency) = 1 THEN sum(b.amount) END,"
+    "   CASE WHEN count(DISTINCT b.currency) = 1 THEN min(b.currency) END"
     " FROM cloudops.billing_total b"
-    " WHERE b.invoice_period = ANY(CAST(:periods AS text[])) AND b.as_of <= :on"
-    " ORDER BY b.account_id, b.invoice_period, b.kind, b.as_of DESC"
+    " WHERE b.kind = 'invoice' AND b.invoice_period = ANY(CAST(:periods AS text[]))"
+    "   AND b.as_of <= :on"
+    " GROUP BY b.tenant_id, b.account_id, b.invoice_period, b.kind"
 )
 _LEDGER: Final = text(
     "SELECT c.tenant_id, c.account_id, c.invoice_period,"
@@ -185,7 +203,8 @@ async def reconcile(db: Database, on: date) -> ReconcileReport:
                 "periods": [period], "through": through, "account": account}))
             currencies, total = (ledger[0][3], Decimal(ledger[0][4])) if ledger else ([], 0)
             checks.append(_check(tenant, account, period, kind, on, as_of, Decimal(total),
-                                 list(currencies), Decimal(amount), ccy))
+                                 list(currencies), None if amount is None else Decimal(amount),
+                                 ccy, mixed_reference=amount is None))
             if kind == "provider_total":
                 provider_seen.add((account, period))
         for (account, period), (tenant, _a, _p, currencies, total) in sorted(
@@ -210,12 +229,14 @@ async def reconcile(db: Database, on: date) -> ReconcileReport:
 
 def _check(tenant: UUID, account: UUID, period: str, kind: str, on: date, as_of: date | None,
            ledger: Decimal, currencies: Sequence[str], reference: Decimal | None,
-           reference_ccy: str | None) -> dict[str, Any]:
+           reference_ccy: str | None, *, mixed_reference: bool = False) -> dict[str, Any]:
     ledger_ccy = currencies[0] if len(currencies) == 1 else None
     status: str
     reason: str | None
     drift: Decimal | None
-    if reference is None or reference_ccy is None:
+    if mixed_reference:
+        status, reason, drift = "unverified", "currency_mismatch", None
+    elif reference is None or reference_ccy is None:
         status, reason, drift = "unverified", "no_reference", None
     elif ledger_ccy is None and currencies:
         status, reason, drift = "unverified", "mixed_currency", None
@@ -432,6 +453,28 @@ class MarginReport:
     closed: int = 0
     restated: int = 0
     not_captured: int = 0
+    failed: int = 0
+
+
+class MarginRunError(RuntimeError):
+    """Some customers' margin failed; the others were written. Raised after the
+    run so the activity retries (recomputing is idempotent) and the failure shows."""
+
+
+async def _per_tenant(db: Database, report: MarginReport,
+                      work: Callable[[ScopedConnection, UUID], Awaitable[None]]) -> MarginReport:
+    """One transaction per customer: one customer's failure stops only theirs."""
+    for tenant in sorted(await tenants(db), key=str):
+        try:
+            async with db.transaction(_scope([tenant])) as conn:
+                await work(conn, tenant)
+        except Exception:
+            report.failed += 1
+            log.exception("finops.margin failed tenant=%s", tenant)
+            _alert("margin_failed", tenant=tenant)
+    if report.failed:
+        raise MarginRunError(f"margin failed for {report.failed} customer(s)")
+    return report
 
 
 async def _inputs(conn: ScopedConnection, tenant: UUID, period: date, through: date,
@@ -587,18 +630,18 @@ async def margins(db: Database, on: date) -> MarginReport:
     last = on - timedelta(days=1)
     this = month_start(last)
     previous = add_months(this, -1)
-    for tenant in sorted(await tenants(db), key=str):
-        # One transaction per customer: one customer's failure stops only theirs.
-        async with db.transaction(_scope([tenant])) as conn:
-            await compute_period(conn, tenant, this, last, close=False, report=report)
-            close_previous = on >= add_months(previous, 1).replace(day=CLOSE_DAY)
-            await compute_period(conn, tenant, previous, month_end(previous),
-                                 close=close_previous, report=report)
-            for k in range(1, RESTATE_MONTHS + 1):
-                older = add_months(previous, -k)
-                await compute_period(conn, tenant, older, month_end(older), close=True,
-                                     report=report)
-    return report
+    close_previous = on >= add_months(previous, 1).replace(day=CLOSE_DAY)
+
+    async def work(conn: ScopedConnection, tenant: UUID) -> None:
+        await compute_period(conn, tenant, this, last, close=False, report=report)
+        await compute_period(conn, tenant, previous, month_end(previous),
+                             close=close_previous, report=report)
+        for k in range(1, RESTATE_MONTHS + 1):
+            older = add_months(previous, -k)
+            await compute_period(conn, tenant, older, month_end(older), close=True,
+                                 report=report)
+
+    return await _per_tenant(db, report, work)
 
 
 async def reprocess(db: Database, period: date) -> MarginReport:
@@ -606,8 +649,8 @@ async def reprocess(db: Database, period: date) -> MarginReport:
     restated, or Finance corrected a rate. Restates only what moved."""
     report = MarginReport()
     start = month_start(period)
-    for tenant in sorted(await tenants(db), key=str):
-        async with db.transaction(_scope([tenant])) as conn:
-            await compute_period(conn, tenant, start, month_end(start), close=True,
-                                 report=report)
-    return report
+
+    async def work(conn: ScopedConnection, tenant: UUID) -> None:
+        await compute_period(conn, tenant, start, month_end(start), close=True, report=report)
+
+    return await _per_tenant(db, report, work)

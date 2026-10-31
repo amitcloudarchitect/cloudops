@@ -1,4 +1,4 @@
-"""What may leave a process in telemetry, and what is removed first (ADR 0021).
+"""What may leave a process in telemetry, and what is removed first (ADR 0022).
 
 Azure Monitor is platform-wide storage outside row-level security, so nothing
 that identifies a customer goes there: no tenant id, no customer name, no

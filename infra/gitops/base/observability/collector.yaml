@@ -1,4 +1,4 @@
-# OpenTelemetry Collector configuration (ADR 0021). Changes here roll the collector
+# OpenTelemetry Collector configuration (ADR 0022). Changes here roll the collector
 # (the ConfigMap is generated, so its name carries a hash of this file).
 extensions:
   health_check:

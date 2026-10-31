@@ -1,4 +1,4 @@
-"""Nothing customer-identifying or secret survives scrubbing (ADR 0021)."""
+"""Nothing customer-identifying or secret survives scrubbing (ADR 0022)."""
 
 from __future__ import annotations
 

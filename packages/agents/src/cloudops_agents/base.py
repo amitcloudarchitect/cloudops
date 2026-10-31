@@ -184,7 +184,7 @@ class Agent[O: AgentOutput]:
     ) -> AgentResult[O]:
         """One bounded agent run, as one span (``agent.run``) whose children are
         the gateway calls and tool invocations. The span names the agent and its
-        prompt version, never the tenant (ADR 0021)."""
+        prompt version, never the tenant (ADR 0022)."""
         with tracer().start_as_current_span("agent.run", attributes={
                 "cloudops.agent": self.spec.name,
                 "cloudops.agent.version": self.spec.prompt.version,

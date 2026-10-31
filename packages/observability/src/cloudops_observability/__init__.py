@@ -1,4 +1,4 @@
-"""OpenTelemetry for every CloudOps service (step 19; LLD, Observability; ADR 0021).
+"""OpenTelemetry for every CloudOps service (step 19; LLD, Observability; ADR 0022).
 
     from cloudops_observability import init
     telemetry = init("api", os.environ)

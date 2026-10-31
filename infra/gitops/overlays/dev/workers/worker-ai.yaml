@@ -15,7 +15,7 @@ metadata:
   namespace: platform-ai
 data:
   CLOUDOPS_AZURE_OPENAI_ENDPOINT: https://oai-cloudops-dev-weu.openai.azure.com/
-  # Step 19 (ADR 0021): off until the collector runs in dev (see ../config.yaml).
+  # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
   CLOUDOPS_TELEMETRY: "off"
   CLOUDOPS_DEPLOYMENT: dev
 ---

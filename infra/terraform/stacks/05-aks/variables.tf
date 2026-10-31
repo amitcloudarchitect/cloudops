@@ -114,7 +114,7 @@ variable "observability_enabled" {
   type        = bool
   default     = false
   description = <<-EOT
-    Step 19 (ADR 0021): managed Prometheus on this cluster and the collector's
+    Step 19 (ADR 0022): managed Prometheus on this cluster and the collector's
     federated identity. Set true once stacks 02 (id-cloudops-observability) and 03
     (the Azure Monitor workspace) are applied: before that, their lookups fail.
   EOT

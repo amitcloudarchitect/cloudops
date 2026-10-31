@@ -21,7 +21,7 @@ One call, in this order. Each refusal is traced before it is raised:
    set, tool calls, tokens, latency and cost. The ledger and the trace are the
    same row. It carries the OpenTelemetry trace id; the span (``llm.complete``,
    ``llm.embed``) and the metrics carry task, tier, tokens, cost and outcome but
-   never the tenant, the user or the prompt (ADR 0021).
+   never the tenant, the user or the prompt (ADR 0022).
 
 Every database access runs under ``ctx.scope``: the conversation's single
 tenant, checked server-side against the caller's resolved scope. Nothing a

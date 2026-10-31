@@ -512,7 +512,7 @@ async def test_ordinary_errors_are_not_security_events(
     assert _security_events(caplog) == []
 
 
-# --- a span per statement (step 19, ADR 0021) -------------------------------------
+# --- a span per statement (step 19, ADR 0022) -------------------------------------
 
 
 async def test_statements_are_spans_with_text_never_values(

@@ -11,23 +11,20 @@ spec:
     matchLabels:
       app.kubernetes.io/name: web
   strategy:
-    canary:
-      stableService: web
-      canaryService: web-canary
-      # As for the API (ADR 0011): the Gateway API plugin sets the weights on the
-      # HTTPRoute, and the platform Application ignores them.
-      trafficRouting:
-        plugins:
-          argoproj-labs/gatewayAPI:
-            httpRoute: web
-            namespace: platform-web
-      analysis:
+    # Blue-green, not a canary (ADR 0017, decision 10). Every build names its CSS and
+    # JS by content hash and serves only its own; with two versions behind one
+    # Service, a page from one asks the other for files it lacks (404: an unstyled
+    # page that never loads, seen 2026-10-31). The new ReplicaSet comes up behind
+    # web-preview, must pass its readiness probe, then takes all traffic at once. The
+    # previous one stays up for the analysis window, so a failure switches back.
+    blueGreen:
+      activeService: web
+      previewService: web-preview
+      autoPromotionEnabled: true
+      scaleDownDelaySeconds: 600
+      postPromotionAnalysis:
         templates:
-          - templateName: web-canary-health
-        startingStep: 1
-      steps:
-        - setWeight: 10
-        - pause: { duration: 15m }
+          - templateName: web-release-health
   template:
     metadata:
       labels:

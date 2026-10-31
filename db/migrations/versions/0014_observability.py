@@ -1,17 +1,17 @@
 """Observability: the ticket's trace, LLM trace ids, the internal tenant (expand).
 
 Revision ID: 0014
-Revises: 0012
+Revises: 0013
 Create Date: 2026-10-31
 
-Step 19, LLD Observability; ADR 0021.
+Step 19, LLD Observability; ADR 0022.
 
 - ``cloudops.work_item.trace_parent``: the W3C traceparent of the ticket's root
   span, written at first sighting, so every later stage (update, triage,
   closure) opens its span in the same trace. Random, never derived from the
   tenant or the ticket number. Under the table's existing RLS.
 - ``cloudops.llm_call.trace_id`` and ``cloudops.agent_run.trace_id``: the trace
-  a call or run belongs to. Azure Monitor holds no tenant attribute (ADR 0021),
+  a call or run belongs to. Azure Monitor holds no tenant attribute (ADR 0022),
   so per-tenant LLM attribution (prompt, retrieval set, tool calls, tokens, cost,
   user) stays here under RLS, and the trace id is how an engineer gets from one
   to the other.
@@ -22,8 +22,6 @@ Step 19, LLD Observability; ADR 0021.
 The customer database role (0011) gets no grant on any new column: none is
 for customers.
 
-Revises 0012 on this branch. Step 17 adds 0013 in parallel; whichever merges
-second sets ``down_revision`` to the other.
 """
 
 from __future__ import annotations
@@ -31,7 +29,7 @@ from __future__ import annotations
 from alembic import op
 
 revision = "0014"
-down_revision = "0012"
+down_revision = "0013"
 branch_labels = None
 depends_on = None
 

@@ -1,4 +1,4 @@
-# Step 19: alert rules as code (LLD, Observability; ADR 0021).
+# Step 19: alert rules as code (LLD, Observability; ADR 0022).
 #
 #   Sev0  always pages, any hour: a cross-tenant query attempt, an unsigned runbook
 #         execution attempt, a credential mint without a valid approval, a signing-key
@@ -211,7 +211,7 @@ locals {
       text = "A cost reconciliation check drifted more than 0.5% from the provider's figure."
     }
     RollbackRateBreach = {
-      # ADR 0021: two or more aborted canaries in a day breaches the rollback rate.
+      # ADR 0022: two or more aborted canaries in a day breaches the rollback rate.
       expr = "sum(increase(rollout_events_total{reason=\"RolloutAborted\"}[1d])) >= 2"
       for  = "PT0M"
       text = "Two or more canaries were aborted and rolled back in the last day."

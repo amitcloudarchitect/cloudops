@@ -1,4 +1,4 @@
-"""Platform gauges from the database (step 19; ADR 0021): connector health,
+"""Platform gauges from the database (step 19; ADR 0022): connector health,
 quarantine depth, reconciliation and the platform's own cost, with no tenant
 anywhere in a label."""
 

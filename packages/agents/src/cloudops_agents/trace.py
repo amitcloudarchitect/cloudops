@@ -3,7 +3,7 @@
 One row per run, written under the conversation's scope through
 packages/tenancy, so a run is visible to exactly the people who could see
 the tenant it was about. It carries the trace id of the ``agent.run`` span:
-the span holds no tenant (ADR 0021), so this row is where the run is
+the span holds no tenant (ADR 0022), so this row is where the run is
 attributed to its tenant and user. ``MemoryTraceSink`` is for tests.
 """
 

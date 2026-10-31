@@ -1,6 +1,6 @@
 """Traces: export through the scrubber, sampling hints, the per-ticket trace.
 
-Sampling is decided by the collector, not here (ADR 0021). Every span is sent;
+Sampling is decided by the collector, not here (ADR 0022). Every span is sent;
 the collector's tail sampler keeps 100% of traces with an error, 100% of traces
 containing an execution span, and 10% of the rest by trace id. A trace id
 always gets the same probabilistic decision, so a ticket's trace, whose spans

@@ -17,7 +17,7 @@ regexes = [
 ]
 
 [[allowlists]]
-description = "Telemetry scrubbing test fixtures (step 19, ADR 0021): invented secret-shaped strings the log and span scrubber must remove. Reviewed 2026-10-31."
+description = "Telemetry scrubbing test fixtures (step 19, ADR 0022): invented secret-shaped strings the log and span scrubber must remove. Reviewed 2026-10-31."
 condition = "AND"
 paths = ['''^packages/observability/tests/test_observability_scrub\.py$''']
 regexes = [

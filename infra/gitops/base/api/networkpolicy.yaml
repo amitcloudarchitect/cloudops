@@ -29,7 +29,7 @@ spec:
     # FQDNs; the cluster's egress path is the boundary.
     - ports:
         - { protocol: TCP, port: 443 }
-    # OTLP to the OpenTelemetry Collector (step 19, ADR 0021).
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
     - to:
         - namespaceSelector:
             matchLabels:

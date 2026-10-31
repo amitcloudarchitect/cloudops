@@ -20,9 +20,9 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
    Front Door). Next.js `standalone` runs on distroless Node as UID 65532, with a
    read-only root filesystem and every capability dropped. Its only writable path is
    Next's cache, an `emptyDir`. CI builds, scans and writes an SBOM for it; `main`
-   pushes and signs it with the others; the release bot bumps its dev tag. It is an
-   Argo Rollouts canary like the API (10% for 15 minutes, judged on the gateway's
-   5xx rate and p95 for `web-canary`), with an HPA (2 to 4) and a PDB. It runs in
+   pushes and signs it with the others; the release bot bumps its dev tag. It is
+   released by Argo Rollouts blue-green (decision 10; it started as a canary like
+   the API), with an HPA (2 to 4) and a PDB. It runs in
    `platform-web` on the app pool. A static export was rejected: it needs a second
    publishing path outside the signed images and GitOps, and Next's response
    headers, the CSP included, would have to move into Front Door rules.
@@ -114,6 +114,25 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
    with no token or user detail. The full error goes to the browser console. One
    MSAL client is shared by every caller in the page, so two cannot race to consume
    the same redirect response.
+
+10. **The console releases blue-green, not by canary** (added 2026-10-31). Each
+    build names its CSS and JS by content hash and serves only its own. During the
+    first canary, a page from one version asked pods of the other for its files and
+    got 404s, which left the page unstyled and stuck on "Loading your access". Front
+    Door's cache masked it only once a file was cached.
+    - The new ReplicaSet comes up behind `web-preview` and must pass its readiness
+      probe. Then `web` switches to it all at once, so one version serves every
+      request.
+    - A five-minute post-promotion analysis checks the live Service's 5xx rate and
+      p95, using the API's queries.
+    - The previous ReplicaSet stays up for ten minutes (`scaleDownDelaySeconds`),
+      so a failed analysis switches back.
+    - The API keeps its canary: its responses don't depend on files from another
+      request.
+    - Still possible: a page loaded just before a switch can ask for a chunk that
+      only the old build had, and Next.js then reloads the page. The cure for that
+      is serving every build's static files from storage that keeps them all. That
+      was considered and deferred.
 
 ## Manual steps (Key Vault, before the administrator job's first run)
 

@@ -1,4 +1,4 @@
-# The OpenTelemetry Collector (step 19; LLD, Observability; ADR 0021). Every service
+# The OpenTelemetry Collector (step 19; LLD, Observability; ADR 0022). Every service
 # sends OTLP here; the collector tail-samples traces (100% errors, 100% execution,
 # 10% the rest), applies the same attribute allowlist as the services a second
 # time, and exports traces and logs to Application Insights as its own workload
@@ -6,7 +6,7 @@
 # managed Prometheus to scrape (ama-metrics-prometheus-config.yaml).
 #
 # One replica: tail sampling needs every span of a trace on the same collector. At
-# production volume, a load-balancing tier routed by trace id goes in front (ADR 0021).
+# production volume, a load-balancing tier routed by trace id goes in front (ADR 0022).
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

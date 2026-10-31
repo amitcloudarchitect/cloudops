@@ -15,7 +15,7 @@ the ingest path itself, fed from bronze instead of the source.
    unmatched companies and unlinked CIs with counts; advance the watermark.
    All or nothing: a failure leaves the watermark where it was.
 
-Each ticket written gets a span in its own trace (ADR 0021): ``ticket`` at first
+Each ticket written gets a span in its own trace (ADR 0022): ``ticket`` at first
 sighting, whose traceparent is stored on the row, then ``ticket.updated`` or
 ``ticket.closed`` on later pages, so a ticket from first sighting through triage
 to closure is one trace. Each span links to the page's batch span.

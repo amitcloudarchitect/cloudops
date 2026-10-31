@@ -8,7 +8,10 @@ the rate card's currency (EUR):
   from quoting the customer's priced CIs and the month's consumption;
 - **actual** = observed effort hours x loaded day rate + tooling, the hours
   being ServiceNow's ``actual_hours`` (step 16 decision: nothing estimated from
-  durations; work items without hours make the actual figure *partial*).
+  durations; work items without hours make the actual figure *partial*). A
+  month with no work items, or no hours at all, is *incomplete* too: no
+  effort recorded is a gap (an instance not connected, a mapping hole), never
+  zero cost, so the band falls back to the modelled basis.
 
 **Margin is computed in the contract currency first, then converted** (HLD,
 Multi-currency). Each cost is converted from the rate card's currency into the
@@ -143,12 +146,14 @@ def compute(inputs: MarginInputs, card: RateCard) -> MarginFigures:
     items = sum(b.items for b in inputs.effort)
     missing = sum(b.items_without_hours for b in inputs.effort)
     location = _location(inputs.location, card)
+    # Zero items or zero hours is a gap, not free delivery (HLD principle 7).
+    complete = items > 0 and hours > 0 and missing == 0
 
     def empty(reason: NotCaptured) -> MarginFigures:
         return MarginFigures(
             inputs.period, card.version, inputs.contract_currency, reason, inputs.revenue,
             None, None, None, None, None, None, None, None, inputs.target_margin, None, None,
-            None, None, hours, items, missing, missing == 0, inputs.unpriced_cis, False,
+            None, None, hours, items, missing, complete, inputs.unpriced_cis, False,
             inputs.rate, inputs.prior_rate, ())
 
     if inputs.revenue is None:
@@ -177,7 +182,6 @@ def compute(inputs: MarginInputs, card: RateCard) -> MarginFigures:
     revenue = inputs.revenue
     modelled = conv(modelled_eur, inputs.rate)
     actual = conv(actual_eur, inputs.rate)
-    complete = missing == 0
     basis: Literal["actual", "modelled"] = "actual" if complete else "modelled"
     basis_eur = actual_eur if complete else modelled_eur
     basis_margin = revenue - conv(basis_eur, inputs.rate)

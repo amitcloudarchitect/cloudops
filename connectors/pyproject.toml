@@ -7,6 +7,7 @@ dependencies = [
     "cloudops-tenancy",
     "cloudops-commercial",
     "cloudops-config[temporal]",
+    "cloudops-domain",
     "cloudops-observability[httpx,temporal]",
     "httpx>=0.28",
     "temporalio>=1.34",
@@ -21,6 +22,7 @@ dependencies = [
 cloudops-tenancy = { workspace = true }
 cloudops-commercial = { workspace = true }
 cloudops-config = { workspace = true }
+cloudops-domain = { workspace = true }
 cloudops-observability = { workspace = true }
 
 [build-system]

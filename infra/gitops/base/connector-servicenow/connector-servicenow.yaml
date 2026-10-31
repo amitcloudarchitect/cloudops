@@ -183,7 +183,7 @@ spec:
         - { protocol: TCP, port: 5432 }
     - ports:
         - { protocol: TCP, port: 443 }  # Entra, and storage for the bronze layer
-    # OTLP to the OpenTelemetry Collector (step 19, ADR 0021).
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
     - to:
         - namespaceSelector:
             matchLabels:
@@ -275,7 +275,7 @@ spec:
               app.kubernetes.io/component: frontend
       ports:
         - { protocol: TCP, port: 7233 }
-    # OTLP to the OpenTelemetry Collector (step 19, ADR 0021).
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
     - to:
         - namespaceSelector:
             matchLabels:

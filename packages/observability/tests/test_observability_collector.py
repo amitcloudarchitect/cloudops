@@ -1,4 +1,4 @@
-"""The collector's allowlist and the services' agree (ADR 0021): the collector
+"""The collector's allowlist and the services' agree (ADR 0022): the collector
 must not drop what a service is allowed to send, and every ``cloudops.*``
 attribute the code sets must be both allowed by the services and listed there."""
 

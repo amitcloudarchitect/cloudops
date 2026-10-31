@@ -1,4 +1,4 @@
-# ADR 0021: Observability instrumentation
+# ADR 0022: Observability instrumentation
 
 - **Status:** Accepted, 2026-10-31
 - **Decided by:** Amit Kumar
@@ -167,5 +167,3 @@ live. The user decided those before the build.
   approval latency) have alert rules or dashboard panels waiting for emitters.
 - The web console (browser) is not instrumented: its requests appear as API server
   spans. Browser telemetry would need its own allowlist and a CSP change.
-- Migration 0014 revises 0012; step 17 adds 0013 in parallel, and whichever merges
-  second changes its `down_revision`.

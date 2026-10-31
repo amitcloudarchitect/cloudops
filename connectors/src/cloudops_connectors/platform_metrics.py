@@ -5,7 +5,7 @@
 Connector health is state, not an event, so it is read from the run log every
 ``INTERVAL`` seconds and reported as gauges (``cloudops_observability.gauges``)
 that the collector exposes to managed Prometheus. Every figure is per connector,
-per quarantine kind, or platform-wide: **never per tenant** (ADR 0021). Per-tenant
+per quarantine kind, or platform-wide: **never per tenant** (ADR 0022). Per-tenant
 health is the console's (``/v1/connectors``), under RLS.
 
 It runs on the ingest login, like the FinOps worker, with a scope covering every

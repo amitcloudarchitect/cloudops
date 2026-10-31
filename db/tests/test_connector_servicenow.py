@@ -229,7 +229,7 @@ async def test_a_ticket_is_one_trace_from_first_sighting_to_closure(
     env: WorkflowEnvironment, ingest_db: Database, synthetic: Synthetic
 ) -> None:
     """LLD, Observability: a ticket traceable from arrival to closure as one
-    trace (ADR 0021). The trace parent is stored at first sighting and never
+    trace (ADR 0022). The trace parent is stored at first sighting and never
     replaced; a later page's span joins that trace; no span names the tenant."""
     mem = memory_telemetry()
     mem.spans.clear()

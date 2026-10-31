@@ -215,6 +215,50 @@ async def test_reconcile_compares_only_the_days_the_provider_total_covers(
     assert status == [("verified",)]
 
 
+async def test_invoice_documents_issued_on_different_days_are_summed(
+    fdb: Db, ingest: Database
+) -> None:
+    """September's invoice, issued 3 Oct, and a credit memo of -10 issued on
+    12 Oct are one reference of 31,490: within 0.5% of the ledger, verified. The
+    latest document alone (-10) would page a healthy account."""
+    day = ON + timedelta(days=2)
+    with psycopg.connect(fdb.admin, autocommit=True) as cx:
+        cx.execute("INSERT INTO cloudops.billing_total (tenant_id, account_id, source_system,"
+                   " kind, invoice_period, as_of, amount, currency, document_ref) VALUES"
+                   " (%s, %s, 'azure', 'invoice', '2026-09', '2026-10-12', -10, 'EUR',"
+                   " 'CN-EUR-09')", (fdb.eur.id, fdb.eur.account))
+        try:
+            r = await jobs.reconcile(ingest, day)
+        finally:
+            cx.execute("DELETE FROM cloudops.billing_total WHERE document_ref = 'CN-EUR-09'")
+    rows = q(fdb.admin, "SELECT status, reason, reference_amount, reference_as_of,"
+             " alerted_at IS NOT NULL FROM cloudops.cost_reconciliation WHERE account_id = %s"
+             " AND invoice_period = '2026-09' AND kind = 'invoice' AND checked_on = %s",
+             fdb.eur.account, day)
+    assert rows == [("verified", None, Decimal(1050 * 30 - 10), date(2026, 10, 12), False)]
+    assert r.alerted == 1  # gbp's drifting provider total only
+
+
+async def test_invoice_documents_in_two_currencies_are_never_summed(
+    fdb: Db, ingest: Database
+) -> None:
+    day = ON + timedelta(days=3)
+    with psycopg.connect(fdb.admin, autocommit=True) as cx:
+        cx.execute("INSERT INTO cloudops.billing_total (tenant_id, account_id, source_system,"
+                   " kind, invoice_period, as_of, amount, currency, document_ref) VALUES"
+                   " (%s, %s, 'azure', 'invoice', '2026-09', '2026-10-12', 25, 'USD',"
+                   " 'MP-USD-09')", (fdb.eur.id, fdb.eur.account))
+        try:
+            await jobs.reconcile(ingest, day)
+        finally:
+            cx.execute("DELETE FROM cloudops.billing_total WHERE document_ref = 'MP-USD-09'")
+    rows = q(fdb.admin, "SELECT status, reason, reference_amount, alerted_at IS NOT NULL"
+             " FROM cloudops.cost_reconciliation WHERE account_id = %s"
+             " AND invoice_period = '2026-09' AND kind = 'invoice' AND checked_on = %s",
+             fdb.eur.account, day)
+    assert rows == [("unverified", "currency_mismatch", None, True)]
+
+
 # --- anomalies -------------------------------------------------------------------------------
 
 
@@ -436,3 +480,23 @@ def test_only_the_ingest_login_can_list_every_tenant(fdb: Db) -> None:
             " 'cloudops.finops_tenants()', 'EXECUTE'), has_function_privilege('public',"
             " 'cloudops.finops_tenants()', 'EXECUTE')").fetchone()
     assert row == (False, True, False)
+
+
+async def test_one_customers_margin_failure_stops_only_theirs(
+    fdb: Db, ingest: Database, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Every other customer's figures are written; the run then fails so it retries."""
+    real = jobs.compute_period
+    seen: list[UUID] = []
+
+    async def flaky(conn: Any, tenant: UUID, *a: Any, **kw: Any) -> None:
+        if tenant == fdb.gbp.id:
+            raise RuntimeError("boom")
+        seen.append(tenant)
+        await real(conn, tenant, *a, **kw)
+
+    monkeypatch.setattr(jobs, "compute_period", flaky)
+    with pytest.raises(jobs.MarginRunError):
+        await jobs.margins(ingest, ON)
+    assert {fdb.eur.id, fdb.nosow.id, fdb.mixed.id} <= set(seen)
+    assert fdb.gbp.id not in seen

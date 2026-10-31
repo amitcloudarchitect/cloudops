@@ -299,7 +299,7 @@ def demo_spike(ds: Dataset) -> None:
         else b for b in ds.billing_totals]
 
 
-# Step 19 (ADR 0021): Getronics itself, so the platform-cost dashboard has figures
+# Step 19 (ADR 0022): Getronics itself, so the platform-cost dashboard has figures
 # made by the customer FinOps code. Its cost is a quarter of the first customer's
 # first account, re-tagged as the platform's, and the provider's total agrees.
 INTERNAL_NAME: Final = "Getronics CloudOps platform"

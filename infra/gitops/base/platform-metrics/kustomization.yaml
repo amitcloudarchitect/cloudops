@@ -1,4 +1,4 @@
-# Platform gauges from the database (step 19; ADR 0021): connector health, quarantine
+# Platform gauges from the database (step 19; ADR 0022): connector health, quarantine
 # depth, reconciliation and the platform's own cost, per connector and platform-wide,
 # never per tenant. The connectors image, its own command, the ingest login.
 apiVersion: kustomize.config.k8s.io/v1beta1
