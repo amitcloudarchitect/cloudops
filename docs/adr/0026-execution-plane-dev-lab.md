@@ -59,7 +59,19 @@ are in the private pack, owned by the user.
 
 ## Consent (D2)
 
-*(To be written by the user.)*
+Given by the user (Amit Kumar, lab owner) in writing on 2026-10-31: **"Consent
+given."** That statement answers the questions put to them that day, and on that basis
+it covers:
+
+- **Action classes A and B only**, which are phases 1 and 2. Classes C and D need an
+  amendment to this consent first. Class E is never agent-initiated.
+- **The dev test customer's subscription, which the user has declared a test estate.**
+  Other users' resources in it are included. The platform's own resources are
+  excluded.
+- **No end date was stated.** The consent is withdrawn or narrowed by amending this
+  ADR.
+
+The security review sign-off below is a separate act and is still to be completed.
 
 ## Review sign-off
 
