@@ -1,0 +1,1183 @@
+{
+ "id": "/subscriptions/0e38a8a9-7b83-51b1-a93b-9414f9cd153d/providers/Microsoft.CostManagement/query/d8cc4030-7928-5fa8-bd63-daa79a67d4db",
+ "name": "d8cc4030-7928-5fa8-bd63-daa79a67d4db",
+ "type": "Microsoft.CostManagement/query",
+ "location": null,
+ "sku": null,
+ "eTag": null,
+ "properties": {
+  "nextLink": null,
+  "columns": [
+   {
+    "name": "Cost",
+    "type": "Number"
+   },
+   {
+    "name": "UsageDate",
+    "type": "Number"
+   },
+   {
+    "name": "ServiceName",
+    "type": "String"
+   },
+   {
+    "name": "ChargeType",
+    "type": "String"
+   },
+   {
+    "name": "Currency",
+    "type": "String"
+   }
+  ],
+  "rows": [
+   [
+    319.625919823319,
+    20260920,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    39.6768138019006,
+    20260920,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    7.6026936276413,
+    20260920,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    151.5766334498356,
+    20260920,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    135.1916853311184,
+    20260921,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    106.7270380006266,
+    20260921,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    280.0520438868906,
+    20260921,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    207.4738171032034,
+    20260921,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    230.6092334401507,
+    20260922,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    44.1719747744957,
+    20260922,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    364.7115413925616,
+    20260922,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    317.1991096230684,
+    20260922,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    160.1790017775664,
+    20260923,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    349.589692259604,
+    20260923,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    269.0275844519287,
+    20260923,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    226.4967655101056,
+    20260923,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    184.9371104735371,
+    20260924,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    224.0592604831442,
+    20260924,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    202.8327147871315,
+    20260924,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    250.8689931182035,
+    20260924,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    49.9945273358084,
+    20260925,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    226.7220901929592,
+    20260925,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    80.4080021720221,
+    20260925,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    49.2308628871759,
+    20260925,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    122.476273193701,
+    20260926,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    257.9919511369393,
+    20260926,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    375.328875987775,
+    20260926,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    63.4997553876723,
+    20260926,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    275.7835715844458,
+    20260927,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    259.3908762981823,
+    20260927,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    363.750415980269,
+    20260927,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    178.2405727694466,
+    20260927,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    391.8920775476996,
+    20260928,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    127.0847340435022,
+    20260928,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    364.6204638491113,
+    20260928,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    138.6217167562047,
+    20260928,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    88.1845153252334,
+    20260929,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    397.6924831254431,
+    20260929,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    309.0087554315282,
+    20260929,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    360.3987846492407,
+    20260929,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    121.6936628445329,
+    20260930,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    249.5347067007498,
+    20260930,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    108.4864041795686,
+    20260930,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    61.612621325067,
+    20260930,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    209.0884082862596,
+    20261001,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    131.6760074085248,
+    20261001,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    207.1200268135187,
+    20261001,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    86.6786388667808,
+    20261001,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    113.3950750059378,
+    20261002,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    288.3858014515454,
+    20261002,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    341.6743450169128,
+    20261002,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    315.6055625281229,
+    20261002,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    119.3842203812199,
+    20261003,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    70.0869203941133,
+    20261003,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    357.2540469822205,
+    20261003,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    271.4388284305553,
+    20261003,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    108.4330020739693,
+    20261004,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    280.2164858449693,
+    20261004,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    328.1851189857986,
+    20261004,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    28.5850239082851,
+    20261004,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    10.9249648066382,
+    20261005,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    195.2898520609087,
+    20261005,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    308.4164052449229,
+    20261005,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    240.8196142064542,
+    20261005,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    27.6728238200419,
+    20261006,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    41.6952645001516,
+    20261006,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    355.643087546285,
+    20261006,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    245.6098043106759,
+    20261006,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    67.6150700094585,
+    20261007,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    250.0464070964007,
+    20261007,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    92.1316758002904,
+    20261007,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    104.9604169685418,
+    20261007,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    178.3140287355297,
+    20261008,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    104.4113805873447,
+    20261008,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    127.5623125980558,
+    20261008,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    189.4845372318412,
+    20261008,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    191.9908920332128,
+    20261009,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    283.9536859125697,
+    20261009,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    372.2468528426297,
+    20261009,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    396.4007912726873,
+    20261009,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    79.577762023897,
+    20261010,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    240.1666662276732,
+    20261010,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    255.1482358483561,
+    20261010,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    223.5187123438659,
+    20261010,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    107.9885885355274,
+    20261011,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    175.2867039045218,
+    20261011,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    68.0559815579656,
+    20261011,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    208.2074383386103,
+    20261011,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    173.6896628300606,
+    20261012,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    241.6075877304232,
+    20261012,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    211.4913913851264,
+    20261012,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    11.0179068600393,
+    20261012,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    276.3168755481365,
+    20261013,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    373.0608679127404,
+    20261013,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    49.4882115390391,
+    20261013,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    324.5560890340645,
+    20261013,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    10.504123118091,
+    20261014,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    247.7300104923284,
+    20261014,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    9.2101843962247,
+    20261014,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    393.4393785671635,
+    20261014,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    59.3369944567518,
+    20261015,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    300.1210448174126,
+    20261015,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    65.8829935092176,
+    20261015,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    388.2579508985929,
+    20261015,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    130.7913583108189,
+    20261016,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    34.9485318702602,
+    20261016,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    170.5737804904913,
+    20261016,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    218.6797451925353,
+    20261016,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    8.951409661996,
+    20261017,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    172.6456936618866,
+    20261017,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    155.7766004186674,
+    20261017,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    361.3720588528641,
+    20261017,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    104.3868274548907,
+    20261018,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    1.2226120061766,
+    20261018,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    95.332640853516,
+    20261018,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    266.5905043593637,
+    20261018,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    260.23919832502,
+    20261019,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    236.7714806907383,
+    20261019,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    127.4004510560881,
+    20261019,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    370.5661749103724,
+    20261019,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    321.5702410723923,
+    20261020,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    253.3832482277898,
+    20261020,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    213.2664088183799,
+    20261020,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    295.9060457143501,
+    20261020,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    156.4937884769445,
+    20261021,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    57.027763118953,
+    20261021,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    262.3214654814824,
+    20261021,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    229.8813323617183,
+    20261021,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    370.7441821193829,
+    20261022,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    322.3437019323626,
+    20261022,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    95.1212459495371,
+    20261022,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    34.3550660400829,
+    20261022,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    290.3285700287175,
+    20261023,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    366.562874104373,
+    20261023,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    345.1582433111181,
+    20261023,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    102.9865958197669,
+    20261023,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    92.5514706472212,
+    20261024,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    114.1889103888224,
+    20261024,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    282.7381697167994,
+    20261024,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    284.9268848174292,
+    20261024,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    249.7328995172015,
+    20261025,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    146.7445677077906,
+    20261025,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    117.4237138961876,
+    20261025,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    317.300542658811,
+    20261025,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    274.0198014978826,
+    20261026,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    132.0898890048102,
+    20261026,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    128.248760583092,
+    20261026,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    306.4034295571536,
+    20261026,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    37.9640319555543,
+    20261027,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    254.1920309284892,
+    20261027,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    318.4016301973438,
+    20261027,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    388.2210160602129,
+    20261027,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    223.7352875215134,
+    20261028,
+    "Virtual Machines",
+    "Usage",
+    "GBP"
+   ],
+   [
+    68.5778503291856,
+    20261028,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    70.9293344532495,
+    20261028,
+    "Log Analytics",
+    "Usage",
+    "GBP"
+   ],
+   [
+    363.4433286916154,
+    20261028,
+    "Virtual Machines Licenses",
+    "Usage",
+    "GBP"
+   ],
+   [
+    25.56975833097,
+    20261005,
+    "Support",
+    "Purchase",
+    "GBP"
+   ],
+   [
+    -5.9859517741274,
+    20261010,
+    "Virtual Machines",
+    "Refund",
+    "GBP"
+   ],
+   [
+    -0.0000000412,
+    20261010,
+    "Virtual Machines",
+    "RoundingAdjustment",
+    "GBP"
+   ],
+   [
+    3.7586514153025,
+    20261012,
+    "Virtual Machines",
+    "UnusedReservation",
+    "GBP"
+   ],
+   [
+    1.9177966066468,
+    20261014,
+    "Azure DNS",
+    "Unbilled",
+    "GBP"
+   ],
+   [
+    null,
+    20261015,
+    "Storage",
+    "Usage",
+    "GBP"
+   ],
+   [
+    1.9911565900764,
+    20261015,
+    "Storage",
+    "Usage",
+    "gbp"
+   ],
+   [
+    1.9055256871557,
+    2026101,
+    "Storage",
+    "Usage",
+    "GBP"
+   ]
+  ]
+ }
+}

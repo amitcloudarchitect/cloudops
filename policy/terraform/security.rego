@@ -70,12 +70,42 @@ deny contains msg if {
 }
 
 # LLD, Identity: assignments at resource group scope or narrower, never
-# subscription-wide.
+# subscription-wide. Two read-only roles are the recorded exception (ADR 0023): Cost
+# Management's month-to-date total exists only per subscription, and CI must read
+# that assignment back to refresh stack 04b. Neither reads a resource or its data.
+subscription_roles_allowed := {
+	"Cost Management Reader",
+	"CloudOps role assignment reader (dev)",
+	"CloudOps role assignment reader (uat)",
+	"CloudOps role assignment reader (prd)",
+}
+
+# A role named in the exception. An assignment without a role name is not.
+subscription_role_allowed(rc) if {
+	rc.change.after.role_definition_name in subscription_roles_allowed
+}
+
 deny contains msg if {
 	some rc in changed
 	rc.type == "azurerm_role_assignment"
 	regex.match(`^/subscriptions/[^/]+/?$`, rc.change.after.scope)
+	not subscription_role_allowed(rc)
 	msg := sprintf("%s: subscription-wide role assignments are not allowed", [rc.address])
+}
+
+# The exception's custom role reads role assignments and definitions, nothing more.
+deny contains msg if {
+	some rc in changed
+	rc.type == "azurerm_role_definition"
+	startswith(rc.change.after.name, "CloudOps role assignment reader")
+	some p in rc.change.after.permissions
+	some field in ["actions", "data_actions"]
+	listed := object.get(p, field, [])
+	is_array(listed) # the plan says null for an empty list
+	some action in listed
+	not action in {"Microsoft.Authorization/roleAssignments/read",
+		"Microsoft.Authorization/roleDefinitions/read"}
+	msg := sprintf("%s: the role assignment reader may only read role assignments", [rc.address])
 }
 
 # Data a plan must never destroy unreviewed: a delete or replacement of a stateful

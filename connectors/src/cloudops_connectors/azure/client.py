@@ -21,6 +21,10 @@ parses them. The same code runs against ARM and ``FakeAzure``.
   providers/Microsoft.CostManagement/query``, ``ActualCost`` month to date,
   the sum of cost with its currency (``COST_QUERY``). A 429 there waits the
   ``x-ms-ratelimit-microsoft.costmanagement-*-retry-after`` headers too.
+- Daily cost (entity ``cost_daily``, ADR 0023): the same query endpoint,
+  ``ActualCost`` for a fixed custom period, daily, grouped by ServiceName and
+  ChargeType (``daily_query``). A ``nextLink`` is followed only on this
+  client's own host, with the same body.
 - Billing invoices (entity ``invoice``): ``GET /providers/Microsoft.Billing/
   billingAccounts/{acct}/billingSubscriptions/{id}/invoices`` for a window of
   invoice periods, ``nextLink`` followed only on this client's own host.
@@ -59,6 +63,26 @@ COST_QUERY: Final[dict[str, Any]] = {
     "dataset": {"granularity": "None",
                 "aggregation": {"totalCost": {"name": "Cost", "function": "Sum"}}},
 }
+# Fixed apart from its period: daily cost by service and charge type, as billed.
+# Two groupings is the query API's limit; the subscription is the request's scope.
+DAILY_GROUPING: Final = ("ServiceName", "ChargeType")
+
+
+def daily_query(start: date, end: date) -> dict[str, Any]:
+    """``ActualCost`` from ``start`` to ``end`` inclusive, by day, service and charge type."""
+    if end < start:
+        raise ValueError("a period ends after it starts")
+    return {
+        "type": "ActualCost",
+        "timeframe": "Custom",
+        "timePeriod": {"from": f"{start.isoformat()}T00:00:00Z",
+                       "to": f"{end.isoformat()}T23:59:59Z"},
+        "dataset": {"granularity": "Daily",
+                    "aggregation": {"totalCost": {"name": "Cost", "function": "Sum"}},
+                    "grouping": [{"type": "Dimension", "name": n} for n in DAILY_GROUPING]},
+    }
+
+
 _SUBSCRIPTION: Final = re.compile(r"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")
 _BILLING_ACCOUNT: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9:_.\-]{0,199}")
 _COST_RETRY: Final = tuple(
@@ -185,6 +209,17 @@ class AzureClient:
     async def cost_query(self, subscription: str) -> bytes:
         return await self._send("POST", cost_query_path(_subscription(subscription)),
                                 {"api-version": COST_QUERY_API}, COST_QUERY)
+
+    async def cost_daily(self, subscription: str, start: date, end: date,
+                         next_link: str | None = None) -> bytes:
+        body = daily_query(start, end)
+        if next_link is not None:
+            link = httpx.URL(next_link)
+            if f"{link.scheme}://{link.netloc.decode()}" != self.base_url:
+                raise ValueError("nextLink points away from the management endpoint")
+            return await self._send("POST", str(link), None, body)
+        return await self._send("POST", cost_query_path(_subscription(subscription)),
+                                {"api-version": COST_QUERY_API}, body)
 
     async def invoices(self, billing_account: str, subscription: str, start: date,
                        end: date, next_link: str | None = None) -> bytes:

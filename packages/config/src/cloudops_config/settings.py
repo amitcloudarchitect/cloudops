@@ -61,6 +61,7 @@ class Component(enum.StrEnum):
     LLM = "llm"
     AUTH = "auth"
     SERVICENOW = "servicenow"
+    AZURE_COST = "azure_cost"
 
 
 class DbLogin(enum.StrEnum):
@@ -165,6 +166,61 @@ class AzureOpenAIConfig:
 AZURE_OPENAI_ENDPOINT_VAR: Final = "CLOUDOPS_AZURE_OPENAI_ENDPOINT"
 
 
+@dataclass(frozen=True, slots=True)
+class AzureCostConfig:
+    """Where the Azure connector reads the platform's own line-item cost (ADR 0023).
+
+    ``lines`` is ``export`` (Cost Management exports: the storage account's blob
+    endpoint and the export roots in it, each ``<container>/<root folder>/<export
+    name>``) or ``query`` (the query API's daily cost, for a subscription that cannot
+    have an export; no storage). Not secret; authentication is the workload
+    identity's Entra token. Azure only: on a laptop, ``--fixtures``."""
+
+    lines: str
+    export_account_url: str | None = None
+    export_roots: tuple[str, ...] = ()
+
+
+AZURE_COST_LINES_VAR: Final = "CLOUDOPS_AZURE_COST_LINES"  # export | query
+AZURE_COST_ACCOUNT_VAR: Final = "CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"
+AZURE_COST_ROOTS_VAR: Final = "CLOUDOPS_AZURE_COST_EXPORT_ROOTS"  # comma-separated
+
+
+def _azure_cost(environ: Mapping[str, str]) -> AzureCostConfig:
+    lines = _required(environ, AZURE_COST_LINES_VAR)
+    if lines == "query":
+        named = [v for v in (AZURE_COST_ACCOUNT_VAR, AZURE_COST_ROOTS_VAR)
+                 if environ.get(v, "").strip()]
+        if named:
+            raise ConfigurationError(
+                f"{', '.join(named)} set with {AZURE_COST_LINES_VAR}=query: say export, "
+                "or remove them"
+            )
+        return AzureCostConfig("query")
+    if lines != "export":
+        raise ConfigurationError(f"{AZURE_COST_LINES_VAR} must be 'export' or 'query'")
+    url = _required(environ, AZURE_COST_ACCOUNT_VAR).rstrip("/")
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    if (parts.scheme != "https" or parts.path or parts.query or parts.port is not None
+            or not host.endswith(".blob.core.windows.net")):
+        raise ConfigurationError(
+            f"{AZURE_COST_ACCOUNT_VAR} must be the account's https://<name>.blob.core.windows.net "
+            "address, with no path"
+        )
+    roots = tuple(r.strip() for r in _required(environ, AZURE_COST_ROOTS_VAR).split(","))
+    for root in roots:
+        container, _, path = root.partition("/")
+        if (not container or not path or path.startswith("/") or path.endswith("/")
+                or ".." in path.split("/")):
+            raise ConfigurationError(
+                f"{AZURE_COST_ROOTS_VAR}: each root is <container>/<root folder>/<export name>"
+            )
+    if len(set(roots)) != len(roots):
+        raise ConfigurationError(f"{AZURE_COST_ROOTS_VAR} names a root twice")
+    return AzureCostConfig("export", f"https://{host}", roots)
+
+
 def _azure_openai(environ: Mapping[str, str]) -> AzureOpenAIConfig:
     url = _required(environ, AZURE_OPENAI_ENDPOINT_VAR).rstrip("/")
     parts = urlsplit(url)
@@ -245,6 +301,10 @@ class Settings:
     @property
     def servicenow(self) -> ServiceNowConfig:
         return self._get(Component.SERVICENOW, ServiceNowConfig)
+
+    @property
+    def azure_cost(self) -> AzureCostConfig:
+        return self._get(Component.AZURE_COST, AzureCostConfig)
 
     @property
     def llm(self) -> LlmGateway:
@@ -351,6 +411,12 @@ def _local(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
                     f"{SERVICENOW_CLIENT_SECRET} in .env.local); use --fixtures otherwise"
                 )
             components[c] = _servicenow(environ, store)
+        elif c is Component.AZURE_COST:
+            # The live cost feed reads Azure with the pod's workload identity, which
+            # a laptop does not have (ADR 0023). Fixtures need none of this.
+            raise ConfigurationError(
+                "the live Azure cost feed runs in Azure only; use --fixtures locally"
+            )
     return Settings(Environment.LOCAL, store, None, components)
 
 
@@ -401,6 +467,8 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
             components[c] = _entra(environ)
         elif c is Component.SERVICENOW:
             components[c] = _servicenow(environ, store)
+        elif c is Component.AZURE_COST:
+            components[c] = _azure_cost(environ)
         elif c is Component.LLM:
             components[c] = _azure_openai(environ)
     return Settings(Environment.AZURE, store, identity, components)

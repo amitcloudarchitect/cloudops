@@ -76,6 +76,20 @@ def test_untaggable_deleted_and_unchanged_resources_are_ignored() -> None:
     assert tags_check.violations(plan) == []
 
 
+def test_only_named_untaggable_azapi_types_are_exempt() -> None:
+    def azapi(arm_type: str) -> dict[str, Any]:
+        return {"address": f"azapi_resource.{arm_type.split('/')[1][:6]}", "type": "azapi_resource",
+                "change": {"actions": ["create"], "after": {"type": arm_type, "tags": {}}}}
+
+    plan = {"errored": False, "resource_changes": [
+        azapi("Microsoft.CostManagement/exports@2025-03-01"),
+        azapi("Microsoft.Storage/storageAccounts@2023-05-01"),
+    ]}
+    found = tags_check.violations(plan)
+    assert len(found) == 1
+    assert "storag" in found[0]
+
+
 @pytest.mark.parametrize(
     "plan",
     [

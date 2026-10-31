@@ -1,10 +1,13 @@
-"""Azure through the connector contract (``core/ingest.py``): four entities.
+"""Azure through the connector contract (``core/ingest.py``): five entities.
 
 - ``resource``: Resource Graph, below.
 - ``cost_export``: Cost Management FOCUS exports -> cost_fact (``cost_source.py``),
   one scope per export root.
 - ``cost_total``, ``invoice``: provider totals and invoices -> billing_total
   (``billing_source.py``).
+- ``cost_daily``: the query API's daily cost -> cost_fact, for a subscription that
+  cannot have an export (``daily_source.py``). An account's period comes from one
+  of ``cost_export`` and ``cost_daily``, never both: each swap replaces the period.
 
 The rest of this docstring is the ``resource`` entity.
 
@@ -60,6 +63,7 @@ from cloudops_connectors.azure import cost_source, focus, mapping
 from cloudops_connectors.azure.billing_source import AzureBilling
 from cloudops_connectors.azure.blob import BlobClient
 from cloudops_connectors.azure.client import AzureClient
+from cloudops_connectors.azure.daily_source import AzureDaily
 from cloudops_connectors.core import drift, identity, state
 from cloudops_connectors.core.ingest import (
     Fetched,
@@ -115,11 +119,16 @@ class AzureSource(Source):
         self, client: AzureClient, *, batch_size: int = BATCH,
         exports: BlobClient | None = None, export_roots: Sequence[str] = (),
         billing_account: str | None = None, today: Callable[[], date] | None = None,
+        entities: frozenset[str] = mapping.ENTITIES,
     ) -> None:
         """``exports`` reads the storage account the FOCUS exports land in;
         ``export_roots`` are ``<container>/<root path>``, one export each.
         ``billing_account`` names the billing account whose invoices are read.
-        ``today`` is the run's day for the billing entities (UTC by default)."""
+        ``today`` is the run's day for the billing entities (UTC by default).
+        ``entities`` narrows what this source serves (the live path, ADR 0023):
+        any other is refused before a request is made."""
+        if not entities or not entities <= mapping.ENTITIES:
+            raise ValueError("entities must be among the Azure entities")
         if batch_size < 1:
             raise ValueError("batch_size must be at least 1")
         for root in export_roots:
@@ -130,13 +139,14 @@ class AzureSource(Source):
         self._batch = batch_size
         self._exports = exports
         self._roots = list(export_roots)
-        self._billing = AzureBilling(client, billing_account,
-                                     today or (lambda: datetime.now(UTC).date()))
+        day = today or (lambda: datetime.now(UTC).date())
+        self._billing = AzureBilling(client, billing_account, day)
+        self._daily = AzureDaily(client, day)
         self.instance = client.base_url
+        self.entities = entities
 
-    @staticmethod
-    def _check(entity: str) -> None:
-        if entity not in mapping.ENTITIES:
+    def _check(self, entity: str) -> None:
+        if entity not in self.entities:
             raise ValueError(f"unknown entity {entity!r}")
 
     async def scopes(self, db: Database, entity: str) -> list[str]:
@@ -156,6 +166,8 @@ class AzureSource(Source):
             return await cost_source.fetch(self._exports, scope, cursor)
         if entity in (mapping.COST_TOTAL, mapping.INVOICE):
             return await self._billing.fetch(entity, cursor)
+        if entity == mapping.COST_DAILY:
+            return await self._daily.fetch(cursor)
         at = json.loads(cursor) if cursor else {}
         if not at or "next" in at:
             body = await self._client.subscriptions(at.get("next"))
@@ -172,6 +184,8 @@ class AzureSource(Source):
             return await cost_source.inspect(raw, scope, ref, body, cursor)
         if entity in (mapping.COST_TOTAL, mapping.INVOICE):
             return await self._billing.inspect(raw, entity, ref, body, cursor)
+        if entity == mapping.COST_DAILY:
+            return await self._daily.inspect(raw, ref, body, cursor)
         at = json.loads(cursor) if cursor else {}
         subs: list[str] = list(at.get("subs", []))
         if ref.endswith(SUBS_SUFFIX):
@@ -201,6 +215,8 @@ class AzureSource(Source):
             return await cost_source.process(db, raw, ref, ctx)
         if entity in (mapping.COST_TOTAL, mapping.INVOICE):
             return await self._billing.process(db, raw, entity, ref, ctx)
+        if entity == mapping.COST_DAILY:
+            return await self._daily.process(db, raw, ref, ctx)
         body = await raw.get(ref)
         if ref.endswith(SUBS_SUFFIX):
             return await self._listing(db, raw, ref, ctx, body)

@@ -13,7 +13,9 @@ can add or remove resources, force 429s with ``Retry-After``, or failures.
 It also answers the billing entities' two APIs with recorded responses
 (``billing/query/<sub>.json``, ``billing/invoices/<sub>.json``): the Cost
 Management query per subscription (an empty result for one with nothing
-recorded) and the billing account's invoices per subscription.
+recorded) and the billing account's invoices per subscription. A query grouped
+by day (``cost_daily``) gets the recorded rows of ``billing/daily/<sub>.json``
+inside its timePeriod, ``daily_page`` rows a page, the next by ``nextLink``.
 
 ``FakeBlobStore`` is the storage account the FOCUS exports land in, in
 *stages* like ``FakeS3``: each stage adds or overwrites blobs (a restating run,
@@ -21,6 +23,10 @@ a part that lands late). It answers List Blobs (XML, ``maxresults`` and
 markers) and Get Blob with ``Last-Modified``, 404 ``BlobNotFound`` for a blob
 not delivered yet, and 503 ``ServerBusy`` on demand. Parts are committed as
 plain CSV (reviewable) and served gzip-compressed, as the export writes them.
+
+Both check the bearer token when ``bearer`` is set (the live path's contract,
+ADR 0023): a request without exactly that token gets the service's own 401,
+``AuthenticationFailed`` from ARM, ``NoAuthenticationInformation`` from Storage.
 """
 
 from __future__ import annotations
@@ -79,6 +85,10 @@ def _offset(token: str | None) -> int:
     return int(json.loads(base64.urlsafe_b64decode(token.encode()))["offset"])
 
 
+def _authorised(request: httpx.Request, bearer: str | None) -> bool:
+    return bearer is None or request.headers.get("Authorization") == f"Bearer {bearer}"
+
+
 def _id(row: Any) -> str:
     return str(row.get("id") or "") if isinstance(row, dict) else ""
 
@@ -86,8 +96,11 @@ def _id(row: Any) -> str:
 class FakeAzure:
     def __init__(self, subscriptions: bytes, resources_: bytes, *, quota: int = 15,
                  subs_page: int = 100, queries: dict[str, bytes] | None = None,
-                 invoices: dict[str, bytes] | None = None) -> None:
+                 invoices: dict[str, bytes] | None = None,
+                 daily: dict[str, bytes] | None = None, daily_page: int = 1000) -> None:
         self.queries = dict(queries or {})  # subscription -> recorded query response
+        self.daily = dict(daily or {})  # subscription -> recorded daily response
+        self.daily_page = daily_page
         self.invoices = dict(invoices or {})  # subscription -> recorded invoice listing
         self.subscriptions: list[dict[str, Any]] = json.loads(subscriptions)["value"]
         self.rows: list[Any] = json.loads(resources_)["data"]
@@ -96,13 +109,15 @@ class FakeAzure:
         self.subs_page = subs_page
         self.throttle_next = 0
         self.fail_next = 0
+        self.bearer: str | None = None  # when set, every request must carry it
         self.requests: list[httpx.Request] = []
 
     @classmethod
     def from_fixtures(cls, **kwargs: int) -> FakeAzure:
         return cls(load_fixture("subscriptions.json"), load_fixture("resources.json"),
                    queries=_fixtures_in("billing/query"),
-                   invoices=_fixtures_in("billing/invoices"), **kwargs)
+                   invoices=_fixtures_in("billing/invoices"),
+                   daily=_fixtures_in("billing/daily"), **kwargs)
 
     def remove(self, native_id: str) -> dict[str, Any]:
         """The resource is gone from Azure."""
@@ -134,6 +149,9 @@ class FakeAzure:
 
     def _handle(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if not _authorised(request, self.bearer):
+            return httpx.Response(401, json={"error": {"code": "AuthenticationFailed"}},
+                                  headers={"WWW-Authenticate": 'Bearer error="invalid_token"'})
         if self.throttle_next > 0:
             self.throttle_next -= 1
             return httpx.Response(429, headers={**self._quota(), "Retry-After": "7"},
@@ -153,6 +171,8 @@ class FakeAzure:
         query = _COST_QUERY.fullmatch(path)
         if query and request.method == "POST":
             body = json.loads(request.content)
+            if (body.get("dataset") or {}).get("grouping"):
+                return self._daily(request, query.group(1), body)
             if (body.get("type"), body.get("timeframe")) != ("ActualCost", "MonthToDate"):
                 return httpx.Response(400, json={"error": {"code": "BadRequest"}})
             return httpx.Response(200, content=self.queries.get(query.group(1), _EMPTY_QUERY),
@@ -168,6 +188,37 @@ class FakeAzure:
                                                                  b'{"value": []}'),
                                   headers={"Content-Type": "application/json"})
         return httpx.Response(404, json={"error": {"code": "NotFound"}})
+
+    def _daily(self, request: httpx.Request, sub: str, body: dict[str, Any]) -> httpx.Response:
+        grouping = [g.get("name") for g in body["dataset"]["grouping"]]
+        period = body.get("timePeriod") or {}
+        if (body.get("type"), body.get("timeframe"), body["dataset"].get("granularity"),
+                grouping) != ("ActualCost", "Custom", "Daily", ["ServiceName", "ChargeType"]):
+            return httpx.Response(400, json={"error": {"code": "BadRequest"}})
+        start, end = (int(str(period.get(k, ""))[:10].replace("-", "") or 0)
+                      for k in ("from", "to"))
+        recorded = json.loads(self.daily.get(sub, b'{"properties": {"rows": [], "columns": '
+                                                  b'[{"name": "Cost"}, {"name": "UsageDate"},'
+                                                  b' {"name": "ServiceName"}, {"name": '
+                                                  b'"ChargeType"}, {"name": "Currency"}]}}'),
+                              parse_float=str)
+        props = recorded["properties"]
+        # A malformed date is the connector's to reject: it passes the period filter.
+        rows = [r for r in props["rows"]
+                if not 19000101 <= int(r[1]) <= 29991231 or start <= int(r[1]) <= end]
+        offset = _offset(request.url.params.get("$skiptoken"))
+        page = rows[offset:offset + self.daily_page]
+        more = offset + self.daily_page < len(rows)
+        link = (str(request.url.copy_with(params={"api-version": "2023-11-01",
+                                                  "$skiptoken": _token(offset +
+                                                                       self.daily_page)}))
+                if more else None)
+        text = json.dumps({**recorded, "properties": {**props, "rows": page,
+                                                      "nextLink": link}})
+        # Amounts were read as strings to keep every digit; send them as numbers again.
+        text = re.sub(r'"(-?\d+\.\d+)"', r"\1", text)
+        return httpx.Response(200, content=text.encode(),
+                              headers={"Content-Type": "application/json"})
 
     def _subscriptions(self, params: httpx.QueryParams) -> dict[str, Any]:
         start = _offset(params.get("$skiptoken"))
@@ -219,6 +270,7 @@ class FakeBlobStore:
         self.blobs: dict[str, _Stored] = {}  # "<container>/<name>"
         self.stage = -1
         self.busy_next = 0
+        self.bearer: str | None = None  # when set, every request must carry it
         self.requests: list[httpx.Request] = []
         self.advance()
 
@@ -247,6 +299,11 @@ class FakeBlobStore:
 
     def _handle(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if not _authorised(request, self.bearer):
+            return httpx.Response(401, headers={"Content-Type": "application/xml",
+                                                "x-ms-error-code": "NoAuthenticationInformation"},
+                                  content=b"<?xml version=\"1.0\" encoding=\"utf-8\"?><Error>"
+                                          b"<Code>NoAuthenticationInformation</Code></Error>")
         if self.busy_next > 0:
             self.busy_next -= 1
             return httpx.Response(503, content=b"<?xml version=\"1.0\" encoding=\"utf-8\"?>"

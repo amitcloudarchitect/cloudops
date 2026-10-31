@@ -26,6 +26,10 @@ data "terraform_remote_state" "data" {
     key              = "04-data.tfstate"
     use_azuread_auth = true
   })
+  # Until 04-data is applied with the platform cost export (ADR 0023), no grants for it.
+  defaults = {
+    platform_cost_export_principal_ids = {}
+  }
 }
 
 data "azurerm_storage_account" "bronze" {

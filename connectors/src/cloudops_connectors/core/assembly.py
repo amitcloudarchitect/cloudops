@@ -7,6 +7,8 @@ each later assembly of the same period restates it in full.
 
 - ``register`` records the assembly in ``staging.cur_assembly`` (the table is
   named for the CUR, which came first) and clears any earlier partial load.
+- ``expect`` adds a file to a registered assembly: for a source that learns its
+  files as it goes (the Azure query API's pages, ``azure/daily_source.py``).
 - ``load_rows`` stages one file's rows in ``staging.cost_fact_load``;
   ``mark_loaded`` records the file and the tenants and accounts it touched.
 - ``complete``: when the last file is in, the same transaction deletes the
@@ -66,6 +68,10 @@ _LOAD: Final = text(
     " VALUES (:tenant_id, :account_id, :assembly_id, :object_key, :resource_id, :usage_date,"
     "  :invoice_period, :service_native, CAST(:charge_class AS cloudops.charge_class),"
     "  :unblended_cost, :amortized_cost, :currency, CAST(:raw_extra AS jsonb))"
+)
+_EXPECT: Final = text(
+    "UPDATE staging.cur_assembly SET report_keys = array_append(report_keys, :key)"
+    " WHERE assembly_id = :id AND NOT (:key = ANY(report_keys))"
 )
 _LOADED: Final = text(
     "UPDATE staging.cur_assembly SET loaded_keys = array_append(loaded_keys, :key),"
@@ -134,6 +140,11 @@ async def register(conn: ScopedConnection, assembly_id: str, scope_key: str, per
     await conn.execute(_CLEAR_LOAD, {"id": assembly_id})
     await conn.execute(_REGISTER, {"id": assembly_id, "scope": scope_key, "period": period,
                                    "ref": manifest_ref, "keys": keys})
+
+
+async def expect(conn: ScopedConnection, assembly_id: str, key: str) -> None:
+    """One more file before the assembly is complete (idempotent)."""
+    await conn.execute(_EXPECT, {"id": assembly_id, "key": key})
 
 
 async def load_rows(conn: ScopedConnection, rows: list[dict[str, Any]]) -> None:

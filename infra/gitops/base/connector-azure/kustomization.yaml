@@ -1,0 +1,17 @@
+# The Azure connector's live path (ADR 0023): the platform's own cost into the
+# internal tenant, cost_export and cost_total only, read with the ingest identity's
+# Entra token. The connectors image, its Azure entry point. Deployed by the workers
+# Application, after Temporal (applications/<env>/workers.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-ingest
+resources:
+  - connector-azure.yaml
+configMapGenerator:
+  # Generated, so a changed setting renames it and rolls the pods (as connector-servicenow).
+  - name: connector-azure
+    envs: [config.env]
+    options:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous

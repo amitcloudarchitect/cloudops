@@ -6,6 +6,13 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.30"
     }
+    # Only for the platform's Cost Management export (platform_cost.tf): azurerm's
+    # export resource cannot give an export the managed identity a firewalled
+    # storage account needs.
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 2.0"
+    }
   }
 
   backend "azurerm" {
@@ -24,6 +31,10 @@ provider "azurerm" {
   }
   subscription_id     = local.subscription["data"]
   storage_use_azuread = true
+}
+
+provider "azapi" {
+  subscription_id = local.subscription["data"]
 }
 
 provider "azurerm" {

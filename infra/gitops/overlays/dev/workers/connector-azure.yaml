@@ -1,0 +1,39 @@
+# id-cloudops-ingest-dev (stack 05 output workload_client_ids). Not secrets.
+# The live cost feed of the platform's own subscription into the internal tenant
+# (ADR 0023). Needs stacks 04-data, 04b and 05 applied first (docs/platform-cost-feed.md).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector-azure
+  namespace: platform-ingest
+  annotations:
+    azure.workload.identity/client-id: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connector-azure
+  namespace: platform-ingest
+data:
+  # The bronze container stack 04 creates for this source; 04b grants the ingest
+  # identity Storage Blob Data Contributor on it alone.
+  CLOUDOPS_BRONZE_CONTAINER_URL: https://stcloudopsbronzedevweu.blob.core.windows.net/azure
+  # Required by the BLOB component; the connector never writes reports.
+  CLOUDOPS_REPORTS_CONTAINER_URL: https://stcloudopsreportsdevweu.blob.core.windows.net/reports
+  # The dev subscription is a Sponsorship offer ("WebDirect"): Azure refuses every
+  # Cost Management export for it, so its line items come from the query API.
+  CLOUDOPS_AZURE_COST_LINES: query
+  # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
+  CLOUDOPS_TELEMETRY: "off"
+  CLOUDOPS_DEPLOYMENT: dev
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: connector-azure
+  namespace: platform-ingest
+spec:
+  parameters:
+    clientID: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe

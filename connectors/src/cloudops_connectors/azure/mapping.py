@@ -29,7 +29,8 @@ ENTITY: Final = "resource"
 COST_EXPORT: Final = "cost_export"  # FOCUS exports -> cost_fact (cost_source.py)
 COST_TOTAL: Final = "cost_total"  # month-to-date totals -> billing_total (billing_source.py)
 INVOICE: Final = "invoice"  # issued invoices -> billing_total (billing_source.py)
-ENTITIES: Final = frozenset({ENTITY, COST_EXPORT, COST_TOTAL, INVOICE})
+COST_DAILY: Final = "cost_daily"  # query API, daily -> cost_fact (daily_source.py)
+ENTITIES: Final = frozenset({ENTITY, COST_EXPORT, COST_TOTAL, INVOICE, COST_DAILY})
 OTHER: Final = "other"
 
 # Fixed: the connector asks for exactly these columns. ``id`` must be projected

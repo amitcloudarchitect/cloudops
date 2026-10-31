@@ -1,0 +1,1183 @@
+{
+ "id": "/subscriptions/89ef84c7-bf5f-5ef2-9bdf-3b4e0ce59a7f/providers/Microsoft.CostManagement/query/a38d613c-b1ac-541c-9a16-80d9fe002970",
+ "name": "a38d613c-b1ac-541c-9a16-80d9fe002970",
+ "type": "Microsoft.CostManagement/query",
+ "location": null,
+ "sku": null,
+ "eTag": null,
+ "properties": {
+  "nextLink": null,
+  "columns": [
+   {
+    "name": "Cost",
+    "type": "Number"
+   },
+   {
+    "name": "UsageDate",
+    "type": "Number"
+   },
+   {
+    "name": "ServiceName",
+    "type": "String"
+   },
+   {
+    "name": "ChargeType",
+    "type": "String"
+   },
+   {
+    "name": "Currency",
+    "type": "String"
+   }
+  ],
+  "rows": [
+   [
+    236.055395311982,
+    20260920,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    86.5322203479018,
+    20260920,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    186.8417277644987,
+    20260920,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    239.5790973717355,
+    20260920,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    267.5526427340891,
+    20260921,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    225.3571615339645,
+    20260921,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    309.9694977213515,
+    20260921,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    184.6608912360681,
+    20260921,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    154.5827999862755,
+    20260922,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    9.9037806278405,
+    20260922,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    199.8754849125562,
+    20260922,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    210.2956662601022,
+    20260922,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    160.8483607947547,
+    20260923,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    107.9083226129648,
+    20260923,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    157.0552346268203,
+    20260923,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    12.2176440092401,
+    20260923,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    55.5752569629948,
+    20260924,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    327.6796829032625,
+    20260924,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    68.1621119982621,
+    20260924,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    144.5370588387661,
+    20260924,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    84.084751933124,
+    20260925,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    70.5537557983486,
+    20260925,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    329.8159109581706,
+    20260925,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    350.5891510192685,
+    20260925,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    284.6825907556261,
+    20260926,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    287.9627032339161,
+    20260926,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    315.497787858573,
+    20260926,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    338.2653116629143,
+    20260926,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    201.4188796321741,
+    20260927,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    137.9918791122432,
+    20260927,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    173.1263209843083,
+    20260927,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    227.9964184330341,
+    20260927,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    180.8321831203363,
+    20260928,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    114.4089934440186,
+    20260928,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    158.2836649583702,
+    20260928,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    24.0309607438641,
+    20260928,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    106.7432643547922,
+    20260929,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    22.5228089264096,
+    20260929,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    124.8300543703484,
+    20260929,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    132.3207740761261,
+    20260929,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    148.4615210487235,
+    20260930,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    246.3978936482962,
+    20260930,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    96.876039423983,
+    20260930,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    116.8875874373933,
+    20260930,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    62.1915415754321,
+    20261001,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    31.8872095648546,
+    20261001,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    93.771948744385,
+    20261001,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    87.2561928571546,
+    20261001,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    8.2092114600294,
+    20261002,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    6.8888083541501,
+    20261002,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    316.9059844982972,
+    20261002,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    108.6804129032138,
+    20261002,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    113.1333793797613,
+    20261003,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    306.1088008777404,
+    20261003,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    170.3207438057376,
+    20261003,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    252.7041533240917,
+    20261003,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    55.5350870919414,
+    20261004,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    307.0903191881369,
+    20261004,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    272.4422890530636,
+    20261004,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    63.1518710063012,
+    20261004,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    212.5083350611884,
+    20261005,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    88.937312616622,
+    20261005,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    165.0519985187802,
+    20261005,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    367.9185356760363,
+    20261005,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    374.6077214083159,
+    20261006,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    3.066139358542,
+    20261006,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    274.6645849269516,
+    20261006,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    9.8797556132734,
+    20261006,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    139.4694188843097,
+    20261007,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    93.5529288595791,
+    20261007,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    287.4494416684341,
+    20261007,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    179.225231433796,
+    20261007,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    117.2554998689078,
+    20261008,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    124.7641370997288,
+    20261008,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    368.2153455638324,
+    20261008,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    122.2395913635982,
+    20261008,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    354.7435484184756,
+    20261009,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    363.5158928100236,
+    20261009,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    251.4317249229822,
+    20261009,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    9.8099009786978,
+    20261009,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    216.7204305188862,
+    20261010,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    221.3598174226633,
+    20261010,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    262.3088313170389,
+    20261010,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    293.285276974727,
+    20261010,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    324.2382288376594,
+    20261011,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    107.1256451990721,
+    20261011,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    312.4598305314065,
+    20261011,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    391.9910560976966,
+    20261011,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    305.6998593680746,
+    20261012,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    186.898742924933,
+    20261012,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    8.272917138851,
+    20261012,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    63.5068918188795,
+    20261012,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    67.7358635730912,
+    20261013,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    260.5673692641235,
+    20261013,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    292.4019073710721,
+    20261013,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    321.6368126282943,
+    20261013,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    378.513651732215,
+    20261014,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    42.5454865340945,
+    20261014,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    6.8183568555948,
+    20261014,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    286.131110682557,
+    20261014,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    272.9935900878032,
+    20261015,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    222.8747124840807,
+    20261015,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    246.2688525158367,
+    20261015,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    300.6214485610146,
+    20261015,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    331.4796951882855,
+    20261016,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    79.0814572673105,
+    20261016,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    54.6731584297906,
+    20261016,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    235.5231580698572,
+    20261016,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    307.8421070285759,
+    20261017,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    175.4085077540876,
+    20261017,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    134.1362810215233,
+    20261017,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    307.5970983784958,
+    20261017,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    271.6872636818968,
+    20261018,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    265.8354539368778,
+    20261018,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    297.0938601995987,
+    20261018,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    218.3294560783904,
+    20261018,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    242.5049992542841,
+    20261019,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    179.9221133287241,
+    20261019,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    59.6976162701061,
+    20261019,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    68.6473632265488,
+    20261019,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    368.7134116739759,
+    20261020,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    316.1526220492335,
+    20261020,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    50.9150972134538,
+    20261020,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    134.7428588199087,
+    20261020,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    169.0286370552188,
+    20261021,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    83.2637017898001,
+    20261021,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    249.7379367997551,
+    20261021,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    341.5122834309176,
+    20261021,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    175.8782910036644,
+    20261022,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    135.299295631557,
+    20261022,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    91.6074647785531,
+    20261022,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    98.3386842674393,
+    20261022,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    105.1676653581445,
+    20261023,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    11.3004947853903,
+    20261023,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    265.8489849235592,
+    20261023,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    294.2277134022294,
+    20261023,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    173.0510409212969,
+    20261024,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    92.3336003323143,
+    20261024,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    325.2849247749678,
+    20261024,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    341.6981236951335,
+    20261024,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    325.0213729170063,
+    20261025,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    354.0425604825026,
+    20261025,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    276.0704971725857,
+    20261025,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    173.3316196515963,
+    20261025,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    245.7617280574704,
+    20261026,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    65.7294357123237,
+    20261026,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    297.2717051317385,
+    20261026,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    169.2176954421143,
+    20261026,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    173.7482193803049,
+    20261027,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    298.7741663588375,
+    20261027,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    66.8817371660595,
+    20261027,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    203.7978906510887,
+    20261027,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    220.2028234722373,
+    20261028,
+    "Virtual Machines",
+    "Usage",
+    "EUR"
+   ],
+   [
+    209.1696304905462,
+    20261028,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    355.4068216225097,
+    20261028,
+    "Log Analytics",
+    "Usage",
+    "EUR"
+   ],
+   [
+    325.6206888223086,
+    20261028,
+    "Virtual Machines Licenses",
+    "Usage",
+    "EUR"
+   ],
+   [
+    28.2220270100769,
+    20261005,
+    "Support",
+    "Purchase",
+    "EUR"
+   ],
+   [
+    -6.0131203375703,
+    20261010,
+    "Virtual Machines",
+    "Refund",
+    "EUR"
+   ],
+   [
+    -0.0000000412,
+    20261010,
+    "Virtual Machines",
+    "RoundingAdjustment",
+    "EUR"
+   ],
+   [
+    3.6722126651657,
+    20261012,
+    "Virtual Machines",
+    "UnusedReservation",
+    "EUR"
+   ],
+   [
+    1.4855246891724,
+    20261014,
+    "Azure DNS",
+    "Unbilled",
+    "EUR"
+   ],
+   [
+    null,
+    20261015,
+    "Storage",
+    "Usage",
+    "EUR"
+   ],
+   [
+    1.2414541996729,
+    20261015,
+    "Storage",
+    "Usage",
+    "eur"
+   ],
+   [
+    1.2227401307337,
+    2026101,
+    "Storage",
+    "Usage",
+    "EUR"
+   ]
+  ]
+ }
+}

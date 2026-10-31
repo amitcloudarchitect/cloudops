@@ -6,7 +6,10 @@ this makes it impossible not to use it. Run against a plan rendered as JSON:
     terraform plan -out=tfplan ... && terraform show -json tfplan > plan.json
     python tools/ci/check_terraform_tags.py plan.json
 
-A resource is taggable when its planned state has a ``tags`` attribute. Fails
+A resource is taggable when its planned state has a ``tags`` attribute, except
+the ``azapi_resource`` types in ``UNTAGGABLE_AZAPI``, whose ARM type refuses tags
+though azapi always plans the attribute (named exactly; any other azapi type is
+checked). Fails
 (exit 1) on any created or updated resource whose tags lack a mandatory key,
 carry an empty value, or claim a managedby other than terraform. Also fails
 on NSG rules listing "*" inside a port list, which plans cleanly but Azure
@@ -22,6 +25,16 @@ from typing import Any
 
 MANDATORY = ("owner", "environment", "costcentre", "application", "dataclass", "managedby")
 CHECKED_ACTIONS = {"create", "update"}
+# ARM types that take no tags at all (azapi's schema validation refuses them).
+UNTAGGABLE_AZAPI = frozenset({
+    "Microsoft.CostManagement/exports",  # the platform cost export (ADR 0023)
+})
+
+
+def _untaggable(rc: dict[str, Any], after: dict[str, Any]) -> bool:
+    if rc.get("type") != "azapi_resource":
+        return False
+    return str(after.get("type", "")).split("@", 1)[0] in UNTAGGABLE_AZAPI
 
 
 def violations(plan: dict[str, Any]) -> list[str]:
@@ -35,7 +48,7 @@ def violations(plan: dict[str, Any]) -> list[str]:
         if not CHECKED_ACTIONS & set(change.get("actions", [])):
             continue
         after = change.get("after") or {}
-        if "tags" not in after:
+        if "tags" not in after or _untaggable(rc, after):
             continue  # not a taggable resource type
         for rule in after.get("security_rule") or []:
             if "*" in (rule.get("destination_port_ranges") or []) or "*" in (

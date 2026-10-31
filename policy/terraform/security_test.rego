@@ -48,6 +48,47 @@ test_subscription_wide_role_is_denied if {
 		{"scope": "/subscriptions/00000000-0000-0000-0000-000000000000"})
 }
 
+test_subscription_wide_owner_is_denied_even_by_name if {
+	count(deny) == 1 with input as plan("azurerm_role_assignment", ["create"], {
+		"scope": "/subscriptions/00000000-0000-0000-0000-000000000000",
+		"role_definition_name": "Owner",
+	})
+}
+
+test_subscription_wide_cost_reader_is_the_recorded_exception if {
+	count(deny) == 0 with input as plan("azurerm_role_assignment", ["create"], {
+		"scope": "/subscriptions/00000000-0000-0000-0000-000000000000",
+		"role_definition_name": "Cost Management Reader",
+	})
+}
+
+test_subscription_wide_role_assignment_reader_is_the_recorded_exception if {
+	count(deny) == 0 with input as plan("azurerm_role_assignment", ["create"], {
+		"scope": "/subscriptions/00000000-0000-0000-0000-000000000000",
+		"role_definition_name": "CloudOps role assignment reader (dev)",
+	})
+}
+
+test_the_role_assignment_reader_reads_nothing_else if {
+	count(deny) == 1 with input as plan("azurerm_role_definition", ["create"], {
+		"name": "CloudOps role assignment reader (dev)",
+		"permissions": [{"actions": [
+			"Microsoft.Authorization/roleAssignments/read",
+			"Microsoft.Resources/subscriptions/resourceGroups/read",
+		], "data_actions": []}],
+	})
+}
+
+test_the_role_assignment_reader_as_built_passes if {
+	count(deny) == 0 with input as plan("azurerm_role_definition", ["create"], {
+		"name": "CloudOps role assignment reader (dev)",
+		"permissions": [{"actions": [
+			"Microsoft.Authorization/roleAssignments/read",
+			"Microsoft.Authorization/roleDefinitions/read",
+		], "data_actions": []}],
+	})
+}
+
 test_resource_group_role_passes if {
 	count(deny) == 0 with input as plan("azurerm_role_assignment", ["create"],
 		{"scope": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-x"})
