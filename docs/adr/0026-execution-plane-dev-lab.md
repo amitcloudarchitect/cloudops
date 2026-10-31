@@ -50,12 +50,18 @@ This ADR records the shape of the decision. The pack holds the detail.
 | D2 | Action classes consented to | **A and B only, for now.** That covers phases 1 and 2. Phase 3 (classes C and D) needs an amendment to the consent below before it starts |
 | — | Dev credential | **A managed identity, federated to the executor's workload. No stored secret.** ADR 0003 stays read-only |
 | — | Who signs | **The user, as lab owner, for dev.** A named Getronics security reviewer, other than the user, signs before UAT or any real customer |
+| — | Execution host in dev | **A dedicated, isolated node pool and namespace in the dev cluster.** A dev-only deviation from the LLD's separate subscription, which is required before UAT |
+| — | ServiceNow close | **The platform resolves after verification.** ServiceNow's own auto-close closes the incident |
+| — | Transcript retention in dev | **Write-once, 30 days, unlocked.** UAT and production keep the LLD's locked 7 years |
+| L10 | Transcript redaction | **Runbook scripts emit structured state only**, and stored requests and responses are redacted by secret pattern |
+| L9 | Signing key | **Created by Terraform that the user applies.** Only the CI pipeline identity may sign. The ceremony record and the key-compromise procedure are written before first use |
+| — | Separation of duties | **One-person control accepted for dev only.** Class D stays off until a second named human can approve. A second human is required before UAT |
 
 ## Still open
 
-Where the execution plane runs in dev, ServiceNow close behaviour, transcript retention
-and redaction (LLD L10), the signing ceremony (LLD L9), and separation of duties. All
-are in the private pack, owned by the user.
+Nothing blocks phase 0 except the review sign-off below. The private pack lists smaller
+tuning questions (rate limits, timeouts, work-note content), and the build may settle
+them with the user.
 
 ## Consent (D2)
 
