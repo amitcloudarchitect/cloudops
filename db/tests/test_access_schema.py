@@ -38,6 +38,14 @@ ACCOUNT_SCOPED = (
     "cloudops.margin_snapshot",  # 0012: per customer, so all-accounts scopes only
     "cloudops.margin_variance",  # 0012, likewise
     "cloudops.anomaly_threshold",  # 0012, likewise
+    # 0013: an assessment and a report pack answer for the whole estate.
+    "cloudops.assessment",
+    "cloudops.control_response",
+    "cloudops.evidence",
+    "cloudops.evidence_pack",
+    "cloudops.report_pack",
+    "cloudops.report_narrative",
+    "cloudops.report_pack_commercial",
 )
 GROUP_ROLES = ("cloudops_app", "cloudops_ingest")
 
@@ -172,7 +180,9 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     The re-process queue (0009) is claimed before its tenant is known: waiting
     requests only, moved to running only, function owner only. Portal
     onboarding (0011) is read by the resolver before any scope exists and
-    written by the access functions' owner only."""
+    written by the access functions' owner only. The drafting queue (0013)
+    lists requested drafts across tenants: requested only, three columns,
+    function owner only."""
     with psycopg.connect(seeded.admin_dsn) as cx:
         extra = cx.execute(
             "SELECT c.relname, p.polname, array(SELECT rolname FROM pg_roles"
@@ -183,11 +193,13 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     assert extra == [
         ("alias_reprocess", "reprocess_queue_claim", ["cloudops_access_admin"]),
         ("alias_reprocess", "reprocess_queue_read", ["cloudops_access_admin"]),
+        ("control_response", "draft_queue_read", ["cloudops_resolver"]),
         ("llm_call", "spend_registry_read", ["cloudops_resolver"]),
         ("portal_onboarding", "access_admin_all", ["cloudops_access_admin"]),
         ("portal_onboarding", "resolver_read", ["cloudops_resolver"]),
         ("portal_role_agreement", "access_admin_all", ["cloudops_access_admin"]),
         ("portal_role_agreement", "resolver_read", ["cloudops_resolver"]),
+        ("report_narrative", "draft_queue_read", ["cloudops_resolver"]),
         ("tenant", "tenant_onboarding", ["cloudops_access_admin"]),
         ("tenant", "tenant_registry_read", ["cloudops_resolver"]),
         ("tenant_alias", "alias_registry_read", ["cloudops_resolver"]),

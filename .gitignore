@@ -37,3 +37,4 @@ next-env.d.ts
 apps/web/test-results/
 apps/web/playwright-report/
 apps/web/e2e/.tokens/
+evals/drafting/last-report.json

@@ -10,6 +10,7 @@ members = [
     "cloudops-config",
     "cloudops-connectors",
     "cloudops-devdata",
+    "cloudops-domain",
     "cloudops-evals",
     "cloudops-gateway",
     "cloudops-platform",
@@ -347,6 +348,7 @@ dependencies = [
     { name = "azure-core", extra = ["aio"] },
     { name = "azure-identity" },
     { name = "cloudops-config", extra = ["temporal"] },
+    { name = "cloudops-domain" },
     { name = "cloudops-gateway" },
     { name = "cloudops-tenancy" },
     { name = "pydantic" },
@@ -358,6 +360,7 @@ requires-dist = [
     { name = "azure-core", extras = ["aio"], specifier = ">=1.32" },
     { name = "azure-identity", specifier = ">=1.19" },
     { name = "cloudops-config", extras = ["temporal"], editable = "packages/config" },
+    { name = "cloudops-domain", editable = "services/domain" },
     { name = "cloudops-gateway", editable = "services/gateway" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
     { name = "pydantic", specifier = ">=2.9" },
@@ -371,6 +374,7 @@ source = { editable = "services/api" }
 dependencies = [
     { name = "cloudops-commercial" },
     { name = "cloudops-config" },
+    { name = "cloudops-domain" },
     { name = "cloudops-tenancy" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -382,6 +386,7 @@ dependencies = [
 requires-dist = [
     { name = "cloudops-commercial", editable = "packages/commercial" },
     { name = "cloudops-config", editable = "packages/config" },
+    { name = "cloudops-domain", editable = "services/domain" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", specifier = ">=0.28" },
@@ -419,6 +424,7 @@ dependencies = [
     { name = "azure-storage-blob", extra = ["aio"] },
     { name = "cloudops-commercial" },
     { name = "cloudops-config", extra = ["temporal"] },
+    { name = "cloudops-domain" },
     { name = "cloudops-tenancy" },
     { name = "defusedxml" },
     { name = "httpx" },
@@ -433,6 +439,7 @@ requires-dist = [
     { name = "azure-storage-blob", extras = ["aio"], specifier = ">=12.24" },
     { name = "cloudops-commercial", editable = "packages/commercial" },
     { name = "cloudops-config", extras = ["temporal"], editable = "packages/config" },
+    { name = "cloudops-domain", editable = "services/domain" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
     { name = "defusedxml", specifier = ">=0.7" },
     { name = "httpx", specifier = ">=0.28" },
@@ -458,6 +465,27 @@ requires-dist = [
     { name = "cloudops-connectors", editable = "connectors" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10" },
+]
+
+[[package]]
+name = "cloudops-domain"
+version = "0.1.0"
+source = { editable = "services/domain" }
+dependencies = [
+    { name = "cloudops-tenancy" },
+    { name = "cryptography" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cloudops-tenancy", editable = "packages/tenancy" },
+    { name = "cryptography", specifier = ">=43" },
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "pyyaml", specifier = ">=6.0" },
 ]
 
 [[package]]
@@ -512,6 +540,7 @@ dependencies = [
     { name = "cloudops-config" },
     { name = "cloudops-connectors" },
     { name = "cloudops-devdata" },
+    { name = "cloudops-domain" },
     { name = "cloudops-evals" },
     { name = "cloudops-gateway" },
     { name = "cloudops-tenancy" },
@@ -539,6 +568,7 @@ requires-dist = [
     { name = "cloudops-config", editable = "packages/config" },
     { name = "cloudops-connectors", editable = "connectors" },
     { name = "cloudops-devdata", editable = "packages/devdata" },
+    { name = "cloudops-domain", editable = "services/domain" },
     { name = "cloudops-evals", editable = "packages/evals" },
     { name = "cloudops-gateway", editable = "services/gateway" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },

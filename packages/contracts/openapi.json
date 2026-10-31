@@ -273,6 +273,52 @@
         "title": "AnomalyView",
         "type": "object"
       },
+      "Approval": {
+        "additionalProperties": false,
+        "properties": {
+          "narrative_seen": {
+            "anyOf": [
+              {
+                "maxLength": 8000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrative Seen"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "result": {
+            "enum": [
+              "compliant",
+              "partially_compliant",
+              "non_compliant",
+              "not_applicable",
+              "manual"
+            ],
+            "title": "Result",
+            "type": "string"
+          }
+        },
+        "required": [
+          "result",
+          "narrative_seen"
+        ],
+        "title": "Approval",
+        "type": "object"
+      },
       "Approvals": {
         "additionalProperties": false,
         "properties": {
@@ -298,6 +344,148 @@
           "count"
         ],
         "title": "Approvals",
+        "type": "object"
+      },
+      "AssessmentDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "library_version": {
+            "title": "Library Version",
+            "type": "string"
+          },
+          "responses": {
+            "items": {
+              "$ref": "#/components/schemas/ResponseView"
+            },
+            "title": "Responses",
+            "type": "array"
+          },
+          "score": {
+            "$ref": "#/components/schemas/ScoreView"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "framework",
+          "library_version",
+          "title",
+          "status",
+          "created_at",
+          "score",
+          "responses"
+        ],
+        "title": "AssessmentDetail",
+        "type": "object"
+      },
+      "AssessmentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "framework": {
+            "pattern": "^[a-z0-9_]{1,40}$",
+            "title": "Framework",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "framework",
+          "title"
+        ],
+        "title": "AssessmentRequest",
+        "type": "object"
+      },
+      "AssessmentSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "library_version": {
+            "title": "Library Version",
+            "type": "string"
+          },
+          "score": {
+            "$ref": "#/components/schemas/ScoreView"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "framework",
+          "library_version",
+          "title",
+          "status",
+          "created_at",
+          "score"
+        ],
+        "title": "AssessmentSummary",
         "type": "object"
       },
       "BandRules": {
@@ -409,6 +597,139 @@
           "converted"
         ],
         "title": "ChargeLine",
+        "type": "object"
+      },
+      "CitationView": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_id": {
+            "format": "uuid",
+            "title": "Chunk Id",
+            "type": "string"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "document_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Name"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "source_kind": {
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Ref"
+          },
+          "web_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Url"
+          }
+        },
+        "required": [
+          "chunk_id",
+          "label",
+          "source_kind",
+          "source_ref",
+          "document_id",
+          "document_name",
+          "web_url",
+          "page"
+        ],
+        "title": "CitationView",
+        "type": "object"
+      },
+      "CollectedView": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "control_code": {
+            "title": "Control Code",
+            "type": "string"
+          },
+          "evidence_id": {
+            "format": "uuid",
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "proposed_result": {
+            "anyOf": [
+              {
+                "enum": [
+                  "compliant",
+                  "partially_compliant",
+                  "non_compliant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Result"
+          },
+          "query_name": {
+            "title": "Query Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "control_code",
+          "query_name",
+          "proposed_result",
+          "basis",
+          "evidence_id"
+        ],
+        "title": "CollectedView",
         "type": "object"
       },
       "ConnectorHealth": {
@@ -655,6 +976,208 @@
         "title": "ConnectorHealthList",
         "type": "object"
       },
+      "ControlDefinition": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "enum": [
+              "automated",
+              "narrative",
+              "manual"
+            ],
+            "title": "Assessment",
+            "type": "string"
+          },
+          "code": {
+            "pattern": "^[A-Z0-9][A-Z0-9._-]{1,39}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "domain": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Domain",
+            "type": "string"
+          },
+          "evidence_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Query"
+          },
+          "evidence_source": {
+            "enum": [
+              "azure",
+              "aws",
+              "servicenow",
+              "qualys",
+              "corestack",
+              "entra",
+              "sharepoint",
+              "policy_library",
+              "human"
+            ],
+            "title": "Evidence Source",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "requirement": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Requirement",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "domain",
+          "title",
+          "requirement",
+          "assessment",
+          "evidence_source"
+        ],
+        "title": "ControlDefinition",
+        "type": "object"
+      },
+      "ControlLibrary": {
+        "additionalProperties": false,
+        "properties": {
+          "controls": {
+            "items": {
+              "$ref": "#/components/schemas/ControlDefinition"
+            },
+            "minItems": 1,
+            "title": "Controls",
+            "type": "array"
+          },
+          "expected_count": {
+            "minimum": 1.0,
+            "title": "Expected Count",
+            "type": "integer"
+          },
+          "framework": {
+            "pattern": "^[a-z0-9_]{1,40}$",
+            "title": "Framework",
+            "type": "string"
+          },
+          "version": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "framework",
+          "version",
+          "expected_count",
+          "controls"
+        ],
+        "title": "ControlLibrary",
+        "type": "object"
+      },
+      "ControlNarrativeEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "keep_draft_citations": {
+            "default": false,
+            "title": "Keep Draft Citations",
+            "type": "boolean"
+          },
+          "narrative": {
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Narrative",
+            "type": "string"
+          }
+        },
+        "required": [
+          "narrative"
+        ],
+        "title": "ControlNarrativeEdit",
+        "type": "object"
+      },
+      "ControlView": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment": {
+            "enum": [
+              "automated",
+              "narrative",
+              "manual"
+            ],
+            "title": "Assessment",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "evidence_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Query"
+          },
+          "evidence_source": {
+            "title": "Evidence Source",
+            "type": "string"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "library_version": {
+            "title": "Library Version",
+            "type": "string"
+          },
+          "requirement": {
+            "title": "Requirement",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "framework",
+          "domain",
+          "title",
+          "requirement",
+          "assessment",
+          "evidence_source",
+          "evidence_query",
+          "library_version"
+        ],
+        "title": "ControlView",
+        "type": "object"
+      },
       "CostLine": {
         "additionalProperties": false,
         "properties": {
@@ -705,6 +1228,44 @@
           "lines"
         ],
         "title": "CostSummary",
+        "type": "object"
+      },
+      "CoverageView": {
+        "additionalProperties": false,
+        "properties": {
+          "design": {
+            "enum": [
+              "current",
+              "stale",
+              "missing"
+            ],
+            "title": "Design",
+            "type": "string"
+          },
+          "handover": {
+            "enum": [
+              "current",
+              "stale",
+              "missing"
+            ],
+            "title": "Handover",
+            "type": "string"
+          },
+          "has_gap": {
+            "title": "Has Gap",
+            "type": "boolean"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "design",
+          "handover",
+          "has_gap"
+        ],
+        "title": "CoverageView",
         "type": "object"
       },
       "CustomerCost": {
@@ -972,6 +1533,129 @@
         "title": "DecisionView",
         "type": "object"
       },
+      "DocumentList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "rules": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "object"
+          },
+          "stale": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "items",
+          "stale",
+          "rules"
+        ],
+        "title": "DocumentList",
+        "type": "object"
+      },
+      "DocumentView": {
+        "additionalProperties": false,
+        "properties": {
+          "doc_kind": {
+            "enum": [
+              "design",
+              "handover",
+              "runbook",
+              "policy"
+            ],
+            "title": "Doc Kind",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "modified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Modified At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "enum": [
+                "removed_resources",
+                "estate_changed",
+                "not_updated"
+              ],
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "removed_resources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed Resources",
+            "type": "array"
+          },
+          "resources_added_since": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "resources_named": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "stale": {
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "web_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Web Url"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "name",
+          "doc_kind",
+          "web_url",
+          "modified_at",
+          "stale",
+          "reasons",
+          "removed_resources",
+          "resources_named",
+          "resources_added_since"
+        ],
+        "title": "DocumentView",
+        "type": "object"
+      },
       "DriftList": {
         "additionalProperties": false,
         "properties": {
@@ -1080,6 +1764,116 @@
         "title": "Effort",
         "type": "object"
       },
+      "EvidencePackSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "format": "uuid",
+            "title": "Created By",
+            "type": "string"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_id": {
+            "title": "Key Id",
+            "type": "string"
+          },
+          "manifest_sha256": {
+            "title": "Manifest Sha256",
+            "type": "string"
+          },
+          "signature_alg": {
+            "title": "Signature Alg",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "framework",
+          "manifest_sha256",
+          "signature_alg",
+          "key_id",
+          "created_by",
+          "created_at"
+        ],
+        "title": "EvidencePackSummary",
+        "type": "object"
+      },
+      "EvidenceView": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "query_name": {
+            "title": "Query Name",
+            "type": "string"
+          },
+          "query_ref": {
+            "title": "Query Ref",
+            "type": "string"
+          },
+          "query_text": {
+            "title": "Query Text",
+            "type": "string"
+          },
+          "raw_value": {
+            "additionalProperties": true,
+            "title": "Raw Value",
+            "type": "object"
+          },
+          "retrieved_at": {
+            "format": "date-time",
+            "title": "Retrieved At",
+            "type": "string"
+          },
+          "retrieved_by": {
+            "title": "Retrieved By",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_system",
+          "query_name",
+          "query_ref",
+          "query_text",
+          "parameters",
+          "raw_value",
+          "retrieved_at",
+          "retrieved_by",
+          "sha256"
+        ],
+        "title": "EvidenceView",
+        "type": "object"
+      },
       "FederationRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1116,6 +1910,71 @@
           "domains"
         ],
         "title": "FederationRequest",
+        "type": "object"
+      },
+      "FigureSnapshot": {
+        "additionalProperties": false,
+        "description": "A figure as generated: the value is unrounded text (an int, or a Decimal\nin ``unit`` for money); presentation rounds it once.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "count",
+              "percent",
+              "days",
+              "hours",
+              "money",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "query_ref": {
+            "title": "Query Ref",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "value",
+          "kind",
+          "unit",
+          "source_system",
+          "query_ref",
+          "note"
+        ],
+        "title": "FigureSnapshot",
         "type": "object"
       },
       "FinOpsOverview": {
@@ -1179,6 +2038,41 @@
           "role"
         ],
         "title": "FirstAdminRequest",
+        "type": "object"
+      },
+      "FrameworkView": {
+        "additionalProperties": false,
+        "properties": {
+          "automated": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "controls": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "library_version": {
+            "title": "Library Version",
+            "type": "string"
+          },
+          "manual": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "narrative": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "framework",
+          "library_version",
+          "controls",
+          "automated",
+          "narrative",
+          "manual"
+        ],
+        "title": "FrameworkView",
         "type": "object"
       },
       "FxCorrectionRequest": {
@@ -1303,6 +2197,27 @@
         "title": "FxCorrectionView",
         "type": "object"
       },
+      "GenerateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "period": {
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+            "title": "Period",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "period"
+        ],
+        "title": "GenerateRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1328,6 +2243,29 @@
           "live"
         ],
         "title": "LiveRequest",
+        "type": "object"
+      },
+      "LoadResult": {
+        "additionalProperties": false,
+        "properties": {
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "library_version": {
+            "title": "Library Version",
+            "type": "string"
+          },
+          "loaded": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "framework",
+          "library_version",
+          "loaded"
+        ],
+        "title": "LoadResult",
         "type": "object"
       },
       "MarginDetail": {
@@ -1846,6 +2784,115 @@
         "title": "MonthPerformance",
         "type": "object"
       },
+      "NarrativeView": {
+        "additionalProperties": false,
+        "properties": {
+          "draft_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Note"
+          },
+          "draft_state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "requested",
+                  "drafting",
+                  "drafted",
+                  "declined",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft State"
+          },
+          "draft_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Text"
+          },
+          "drafted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drafted At"
+          },
+          "edited_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited At"
+          },
+          "edited_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited By"
+          },
+          "section": {
+            "title": "Section",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "section",
+          "draft_state",
+          "draft_text",
+          "drafted_at",
+          "draft_note",
+          "text",
+          "edited_by",
+          "edited_at"
+        ],
+        "title": "NarrativeView",
+        "type": "object"
+      },
       "OnboardRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2231,6 +3278,94 @@
           "sla_breached_open"
         ],
         "title": "Performance",
+        "type": "object"
+      },
+      "PortfolioLine": {
+        "additionalProperties": false,
+        "properties": {
+          "consumption": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap"
+          },
+          "incidents_opened": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_high_vulnerabilities": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "consumption",
+          "gap",
+          "incidents_opened",
+          "open_high_vulnerabilities"
+        ],
+        "title": "PortfolioLine",
+        "type": "object"
+      },
+      "PortfolioView": {
+        "additionalProperties": false,
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/PortfolioLine"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "incidents_opened": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_high_vulnerabilities": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "reporting_currency": {
+            "title": "Reporting Currency",
+            "type": "string"
+          },
+          "total_consumption": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "period",
+          "reporting_currency",
+          "complete",
+          "total_consumption",
+          "incidents_opened",
+          "open_high_vulnerabilities",
+          "customers"
+        ],
+        "title": "PortfolioView",
         "type": "object"
       },
       "Posture": {
@@ -2749,6 +3884,187 @@
         "title": "RateCardView",
         "type": "object"
       },
+      "ReportPackSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "contract_currency": {
+            "title": "Contract Currency",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "approved",
+              "published",
+              "superseded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "period",
+          "version",
+          "status",
+          "contract_currency",
+          "generated_at",
+          "approved_at",
+          "published_at"
+        ],
+        "title": "ReportPackSummary",
+        "type": "object"
+      },
+      "ReportPackView": {
+        "additionalProperties": false,
+        "properties": {
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "contract_currency": {
+            "title": "Contract Currency",
+            "type": "string"
+          },
+          "data_as_of": {
+            "format": "date-time",
+            "title": "Data As Of",
+            "type": "string"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "narratives": {
+            "items": {
+              "$ref": "#/components/schemas/NarrativeView"
+            },
+            "title": "Narratives",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "releasable": {
+            "title": "Releasable",
+            "type": "boolean"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionSnapshot"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "approved",
+              "published",
+              "superseded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "period",
+          "version",
+          "status",
+          "contract_currency",
+          "generated_at",
+          "approved_at",
+          "published_at",
+          "data_as_of",
+          "sections",
+          "narratives",
+          "releasable"
+        ],
+        "title": "ReportPackView",
+        "type": "object"
+      },
       "Reported": {
         "additionalProperties": false,
         "description": "The contract-currency margin converted for the viewer, FX impact apart.",
@@ -3177,6 +4493,210 @@
         "title": "ResourceView",
         "type": "object"
       },
+      "ResponseView": {
+        "additionalProperties": false,
+        "properties": {
+          "approval_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Note"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "citations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "control": {
+            "$ref": "#/components/schemas/ControlView"
+          },
+          "draft_citations": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Draft Citations",
+            "type": "array"
+          },
+          "draft_narrative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Narrative"
+          },
+          "draft_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Note"
+          },
+          "draft_state": {
+            "enum": [
+              "none",
+              "requested",
+              "drafting",
+              "drafted",
+              "declined",
+              "failed"
+            ],
+            "title": "Draft State",
+            "type": "string"
+          },
+          "draft_sufficiency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sufficient",
+                  "partial",
+                  "insufficient"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Draft Sufficiency"
+          },
+          "drafted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drafted At"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceView"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "narrative": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Narrative"
+          },
+          "proposed_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Basis"
+          },
+          "proposed_result": {
+            "anyOf": [
+              {
+                "enum": [
+                  "compliant",
+                  "partially_compliant",
+                  "non_compliant"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Result"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "enum": [
+                  "compliant",
+                  "partially_compliant",
+                  "non_compliant",
+                  "not_applicable",
+                  "manual"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          }
+        },
+        "required": [
+          "control",
+          "proposed_result",
+          "proposed_basis",
+          "draft_state",
+          "draft_narrative",
+          "draft_citations",
+          "draft_sufficiency",
+          "drafted_at",
+          "draft_note",
+          "narrative",
+          "citations",
+          "result",
+          "approved_by",
+          "approved_at",
+          "approval_note",
+          "evidence"
+        ],
+        "title": "ResponseView",
+        "type": "object"
+      },
       "ReviewRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3346,6 +4866,151 @@
         "title": "RoleOption",
         "type": "object"
       },
+      "RoutingView": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parameters": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Parameters",
+            "type": "array"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "source_system",
+          "description",
+          "direction",
+          "parameters"
+        ],
+        "title": "RoutingView",
+        "type": "object"
+      },
+      "ScoreView": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Metric_int_"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "excluded": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "pending": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scorable": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "percent",
+          "scorable",
+          "pending",
+          "excluded",
+          "counts"
+        ],
+        "title": "ScoreView",
+        "type": "object"
+      },
+      "SectionNarrativeEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "maxLength": 6000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SectionNarrativeEdit",
+        "type": "object"
+      },
+      "SectionSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "captured": {
+            "title": "Captured",
+            "type": "boolean"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/FigureSnapshot"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/TableSnapshot"
+            },
+            "title": "Tables",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "captured",
+          "gap",
+          "figures",
+          "tables"
+        ],
+        "title": "SectionSnapshot",
+        "type": "object"
+      },
       "SeverityCount": {
         "additionalProperties": false,
         "properties": {
@@ -3411,6 +5076,60 @@
           "monthly_manage_revenue"
         ],
         "title": "SowView",
+        "type": "object"
+      },
+      "TableSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kinds": {
+            "items": {
+              "enum": [
+                "count",
+                "percent",
+                "days",
+                "hours",
+                "money",
+                "text"
+              ],
+              "type": "string"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "columns",
+          "kinds",
+          "rows"
+        ],
+        "title": "TableSnapshot",
         "type": "object"
       },
       "TeamLine": {
@@ -4474,6 +6193,578 @@
         "summary": "Approvals"
       }
     },
+    "/v1/assurance/assessments": {
+      "get": {
+        "operationId": "list_assessments_v1_assurance_assessments_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssessmentSummary"
+                  },
+                  "title": "Response List Assessments V1 Assurance Assessments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Assessments"
+      },
+      "post": {
+        "operationId": "open_assessment_v1_assurance_assessments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssessmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Open Assessment"
+      }
+    },
+    "/v1/assurance/assessments/{assessment_id}": {
+      "get": {
+        "operationId": "get_assessment_v1_assurance_assessments__assessment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Assessment"
+      }
+    },
+    "/v1/assurance/assessments/{assessment_id}/collect": {
+      "post": {
+        "description": "Run every automated control's evidence query now, and store what came back.",
+        "operationId": "collect_evidence_v1_assurance_assessments__assessment_id__collect_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CollectedView"
+                  },
+                  "title": "Response Collect Evidence V1 Assurance Assessments  Assessment Id  Collect Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Collect Evidence"
+      }
+    },
+    "/v1/assurance/assessments/{assessment_id}/drafts": {
+      "post": {
+        "description": "Ask the drafting worker for drafts of the narrative controls (all, or one).",
+        "operationId": "request_drafts_v1_assurance_assessments__assessment_id__drafts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "control",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Control"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Metric_int_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Drafts"
+      }
+    },
+    "/v1/assurance/assessments/{assessment_id}/evidence-packs": {
+      "get": {
+        "operationId": "list_packs_v1_assurance_assessments__assessment_id__evidence_packs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvidencePackSummary"
+                  },
+                  "title": "Response List Packs V1 Assurance Assessments  Assessment Id  Evidence Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Packs"
+      },
+      "post": {
+        "description": "Build, sign and record the evidence pack. Returns the signed document.",
+        "operationId": "export_pack_v1_assurance_assessments__assessment_id__evidence_packs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Export Pack V1 Assurance Assessments  Assessment Id  Evidence Packs Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Pack"
+      }
+    },
+    "/v1/assurance/assessments/{assessment_id}/responses/{code}/approve": {
+      "post": {
+        "operationId": "approve_response_v1_assurance_assessments__assessment_id__responses__code__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Approval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Response"
+      }
+    },
+    "/v1/assurance/assessments/{assessment_id}/responses/{code}/narrative": {
+      "post": {
+        "description": "A person's narrative. Editing an approved response withdraws its approval.",
+        "operationId": "edit_narrative_v1_assurance_assessments__assessment_id__responses__code__narrative_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assessment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assessment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ControlNarrativeEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Narrative"
+      }
+    },
+    "/v1/assurance/evidence-packs/{pack_id}": {
+      "get": {
+        "description": "The pack exactly as signed: verifiable with the signing key's public half.",
+        "operationId": "get_pack_v1_assurance_evidence_packs__pack_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Pack V1 Assurance Evidence Packs  Pack Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pack"
+      }
+    },
+    "/v1/assurance/evidence-routing": {
+      "get": {
+        "operationId": "evidence_routing_v1_assurance_evidence_routing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoutingView"
+                  },
+                  "title": "Response Evidence Routing V1 Assurance Evidence Routing Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Evidence Routing"
+      }
+    },
+    "/v1/assurance/frameworks": {
+      "get": {
+        "operationId": "list_frameworks_v1_assurance_frameworks_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FrameworkView"
+                  },
+                  "title": "Response List Frameworks V1 Assurance Frameworks Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Frameworks"
+      }
+    },
+    "/v1/assurance/frameworks/{framework}/controls": {
+      "get": {
+        "operationId": "list_controls_v1_assurance_frameworks__framework__controls_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "framework",
+            "required": true,
+            "schema": {
+              "title": "Framework",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ControlView"
+                  },
+                  "title": "Response List Controls V1 Assurance Frameworks  Framework  Controls Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Controls"
+      }
+    },
+    "/v1/assurance/library": {
+      "post": {
+        "operationId": "load_library_v1_assurance_library_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ControlLibrary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoadResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Load Library"
+      }
+    },
     "/v1/commercial/margin": {
       "get": {
         "description": "Every customer in scope for one month: modelled and actual margin in the\ncontract currency, the band, the gap to target and the trend. A customer\nwithout a SOW is listed as not captured, never as zero.",
@@ -5028,6 +7319,136 @@
           }
         },
         "summary": "Finops Overview"
+      }
+    },
+    "/v1/knowledge/chunks/{chunk_id}/citation": {
+      "get": {
+        "operationId": "chunk_citation_v1_knowledge_chunks__chunk_id__citation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "chunk_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Chunk Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CitationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Chunk Citation"
+      }
+    },
+    "/v1/knowledge/documents": {
+      "get": {
+        "operationId": "list_documents_v1_knowledge_documents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "design",
+                    "handover",
+                    "runbook",
+                    "policy"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stale",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stale"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Documents"
+      }
+    },
+    "/v1/knowledge/gaps": {
+      "get": {
+        "operationId": "coverage_gaps_v1_knowledge_gaps_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoverageView"
+                  },
+                  "title": "Response Coverage Gaps V1 Knowledge Gaps Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Coverage Gaps"
       }
     },
     "/v1/mapping/proposals": {
@@ -5620,6 +8041,463 @@
           }
         },
         "summary": "Posture"
+      }
+    },
+    "/v1/reports/packs": {
+      "get": {
+        "operationId": "list_packs_v1_reports_packs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ReportPackSummary"
+                  },
+                  "title": "Response List Packs V1 Reports Packs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Packs"
+      },
+      "post": {
+        "operationId": "generate_pack_v1_reports_packs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Pack"
+      }
+    },
+    "/v1/reports/packs/{pack_id}": {
+      "get": {
+        "operationId": "get_pack_v1_reports_packs__pack_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pack"
+      }
+    },
+    "/v1/reports/packs/{pack_id}/approve": {
+      "post": {
+        "operationId": "approve_pack_v1_reports_packs__pack_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Pack"
+      }
+    },
+    "/v1/reports/packs/{pack_id}/narratives/{section}": {
+      "post": {
+        "description": "A person's text for a section: written, or the draft accepted as it stands.",
+        "operationId": "edit_narrative_v1_reports_packs__pack_id__narratives__section__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SectionNarrativeEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Narrative"
+      }
+    },
+    "/v1/reports/packs/{pack_id}/narratives/{section}/draft": {
+      "post": {
+        "operationId": "request_draft_v1_reports_packs__pack_id__narratives__section__draft_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "section",
+            "required": true,
+            "schema": {
+              "title": "Section",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Draft"
+      }
+    },
+    "/v1/reports/packs/{pack_id}/pdf": {
+      "get": {
+        "description": "The pack as printed: a person's narrative only, and a draft banner until\nit is published.",
+        "operationId": "pack_pdf_v1_reports_packs__pack_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pack Pdf"
+      }
+    },
+    "/v1/reports/packs/{pack_id}/publish": {
+      "post": {
+        "operationId": "publish_pack_v1_reports_packs__pack_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportPackView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish Pack"
+      }
+    },
+    "/v1/reports/packs/{pack_id}/text": {
+      "get": {
+        "description": "The PDF's lines as text, one per printed line: what the acceptance diff\ncompares against the manually assembled pack.",
+        "operationId": "pack_text_v1_reports_packs__pack_id__text_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pack Text"
+      }
+    },
+    "/v1/reports/portfolio": {
+      "get": {
+        "operationId": "portfolio_v1_reports_portfolio_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": true,
+            "schema": {
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "title": "Period",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": true,
+            "schema": {
+              "pattern": "^[A-Z]{3}$",
+              "title": "Currency",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortfolioView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portfolio"
       }
     },
     "/v1/resources": {
