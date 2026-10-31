@@ -1,6 +1,34 @@
 {
   "components": {
     "schemas": {
+      "AcknowledgeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "entity": {
+            "pattern": "^[a-z0-9_]{1,40}$",
+            "title": "Entity",
+            "type": "string"
+          },
+          "field": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Field",
+            "type": "string"
+          },
+          "source": {
+            "pattern": "^[a-z0-9_]{1,40}$",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "entity",
+          "field"
+        ],
+        "title": "AcknowledgeRequest",
+        "type": "object"
+      },
       "AliasView": {
         "additionalProperties": false,
         "properties": {
@@ -31,6 +59,272 @@
           "confirmed_at"
         ],
         "title": "AliasView",
+        "type": "object"
+      },
+      "BandRules": {
+        "additionalProperties": false,
+        "description": "The thresholds the bands were computed with, so a screen explains them\nwithout restating them.",
+        "properties": {
+          "failing_run_rate": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "late_after_intervals": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "outage_after_intervals": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "late_after_intervals",
+          "outage_after_intervals",
+          "failing_run_rate"
+        ],
+        "title": "BandRules",
+        "type": "object"
+      },
+      "ConnectorHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "alias_quarantine_depth": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "band": {
+            "enum": [
+              "healthy",
+              "watch",
+              "at-risk",
+              "critical",
+              "unknown"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "dead_letters_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "drift_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "expected_every": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "failed_run_rate_24h": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failed_runs_24h": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "intervals_since_success": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_lag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "last_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "running",
+                  "succeeded",
+                  "dead_lettered",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status"
+          },
+          "last_success_age": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "quarantined_24h": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "reasons": {
+            "items": {
+              "enum": [
+                "late",
+                "outage",
+                "never_run",
+                "no_success",
+                "failing",
+                "failed_runs",
+                "last_run_failed",
+                "rejected_records",
+                "dead_letters",
+                "schema_drift"
+              ],
+              "type": "string"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "records_24h": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "rejected_24h": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "rejected_record_rate_24h": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resource_quarantine_depth": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "runs_24h": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "timeliness": {
+            "enum": [
+              "on_time",
+              "late",
+              "outage",
+              "never_run"
+            ],
+            "title": "Timeliness",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_system",
+          "entity",
+          "band",
+          "timeliness",
+          "reasons",
+          "expected_every",
+          "last_success_at",
+          "last_success_age",
+          "intervals_since_success",
+          "last_run_at",
+          "last_status",
+          "last_lag",
+          "runs_24h",
+          "failed_runs_24h",
+          "records_24h",
+          "rejected_24h",
+          "quarantined_24h",
+          "failed_run_rate_24h",
+          "rejected_record_rate_24h",
+          "dead_letters_open",
+          "alias_quarantine_depth",
+          "resource_quarantine_depth",
+          "drift_open"
+        ],
+        "title": "ConnectorHealth",
+        "type": "object"
+      },
+      "ConnectorHealthList": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "attention": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ConnectorHealth"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "late": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "never_run": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "outages": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/BandRules"
+          }
+        },
+        "required": [
+          "items",
+          "as_of",
+          "rules",
+          "outages",
+          "late",
+          "attention",
+          "never_run"
+        ],
+        "title": "ConnectorHealthList",
         "type": "object"
       },
       "CostLine": {
@@ -264,6 +558,77 @@
           "held_last_seen"
         ],
         "title": "DecisionView",
+        "type": "object"
+      },
+      "DriftList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DriftView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "items",
+          "open"
+        ],
+        "title": "DriftList",
+        "type": "object"
+      },
+      "DriftView": {
+        "additionalProperties": false,
+        "properties": {
+          "drift": {
+            "enum": [
+              "added",
+              "missing"
+            ],
+            "title": "Drift",
+            "type": "string"
+          },
+          "drift_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Drift At"
+          },
+          "entity": {
+            "title": "Entity",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "occurrences": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_system",
+          "entity",
+          "field",
+          "drift",
+          "drift_at",
+          "occurrences"
+        ],
+        "title": "DriftView",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -1990,6 +2355,79 @@
           }
         },
         "summary": "List Sows"
+      }
+    },
+    "/v1/connectors/drift": {
+      "get": {
+        "description": "Fields a source added, or stopped sending, that nobody has acknowledged yet.\nField names only: never a value from a payload.",
+        "operationId": "schema_drift_v1_connectors_drift_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DriftList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Schema Drift"
+      }
+    },
+    "/v1/connectors/drift/acknowledge": {
+      "post": {
+        "description": "A person has seen the drift. The next drift on the same field raises it again.",
+        "operationId": "acknowledge_drift_v1_connectors_drift_acknowledge_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcknowledgeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No open drift on that field"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Acknowledge Drift"
+      }
+    },
+    "/v1/connectors/health": {
+      "get": {
+        "description": "Every scheduled connector, worst first, with its band and why.",
+        "operationId": "connector_health_v1_connectors_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorHealthList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Connector Health"
       }
     },
     "/v1/cost/summary": {

@@ -28,6 +28,7 @@ from uuid import UUID, uuid5
 from sqlalchemy import text
 
 from cloudops_config import Component, ConfigurationError, DbLogin, Environment, load_settings
+from cloudops_devdata import ingest_health
 from cloudops_devdata.synthetic import NAMESPACE, Dataset, as_json, generate
 from cloudops_tenancy import Database, Role, ScopedConnection, TenantScope
 
@@ -245,6 +246,7 @@ async def run(anchor: date, seed: int) -> None:
         await load(ingest, ds)
         await verify(app, ds)
         print(f"  triage results for the console: {await triage(app, ds)}")
+        print(f"  connector runs for the console: {await ingest_health.record(ingest)}")
         print("  principals (mint a token: make token OID=<oid>):")
         for label, oid in await principals(app, ds, admin):
             print(f"    {label:<22} {oid}")

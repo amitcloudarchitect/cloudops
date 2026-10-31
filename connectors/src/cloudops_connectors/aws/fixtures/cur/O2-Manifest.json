@@ -1,0 +1,102 @@
+{
+ "assemblyId": "a3b4e5f2-00a5-5a66-baa6-b94dc494c555",
+ "account": "900000000001",
+ "bucket": "getronics-cur-fixture",
+ "reportName": "cur-usd",
+ "reportId": "86bb89a30f8f5cfc997897e48066df40",
+ "billingPeriod": {
+  "start": "20261001T000000.000Z",
+  "end": "20261101T000000.000Z"
+ },
+ "charset": "UTF-8",
+ "compression": "GZIP",
+ "contentType": "text/csv",
+ "columns": [
+  {
+   "category": "identity",
+   "name": "LineItemId"
+  },
+  {
+   "category": "identity",
+   "name": "TimeInterval"
+  },
+  {
+   "category": "bill",
+   "name": "PayerAccountId"
+  },
+  {
+   "category": "bill",
+   "name": "BillingEntity"
+  },
+  {
+   "category": "bill",
+   "name": "BillingPeriodStartDate"
+  },
+  {
+   "category": "bill",
+   "name": "BillingPeriodEndDate"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageAccountId"
+  },
+  {
+   "category": "lineItem",
+   "name": "LineItemType"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageStartDate"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageEndDate"
+  },
+  {
+   "category": "lineItem",
+   "name": "ProductCode"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageAmount"
+  },
+  {
+   "category": "lineItem",
+   "name": "UnblendedCost"
+  },
+  {
+   "category": "lineItem",
+   "name": "CurrencyCode"
+  },
+  {
+   "category": "lineItem",
+   "name": "ResourceId"
+  },
+  {
+   "category": "lineItem",
+   "name": "LineItemDescription"
+  },
+  {
+   "category": "product",
+   "name": "ProductName"
+  },
+  {
+   "category": "reservation",
+   "name": "EffectiveCost"
+  },
+  {
+   "category": "savingsPlan",
+   "name": "SavingsPlanEffectiveCost"
+  },
+  {
+   "category": "resourceTags",
+   "name": "user:CostCentre"
+  }
+ ],
+ "reportKeys": [
+  "cur/getronics/cur-usd/20261001-20261101/a3b4e5f2-00a5-5a66-baa6-b94dc494c555/cur-usd-00001.csv.gz",
+  "cur/getronics/cur-usd/20261001-20261101/a3b4e5f2-00a5-5a66-baa6-b94dc494c555/cur-usd-00002.csv.gz",
+  "cur/getronics/cur-usd/20261001-20261101/a3b4e5f2-00a5-5a66-baa6-b94dc494c555/cur-usd-00003.csv.gz"
+ ],
+ "additionalArtifactKeys": []
+}

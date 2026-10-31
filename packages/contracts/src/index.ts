@@ -28,6 +28,11 @@ export type ProposalView = Schemas["ProposalView"];
 export type ProposalRequest = Schemas["ProposalRequest"];
 export type ReprocessView = Schemas["ReprocessView"];
 export type ReprocessPreview = Schemas["ReprocessPreview"];
+export type ConnectorHealthList = Schemas["ConnectorHealthList"];
+export type ConnectorHealth = Schemas["ConnectorHealth"];
+export type DriftList = Schemas["DriftList"];
+export type DriftView = Schemas["DriftView"];
+export type AcknowledgeRequest = Schemas["AcknowledgeRequest"];
 
 // The values a reviewer may choose, read from the schema itself rather than
 // copied, so a new intent in the API reaches the console by regeneration.

@@ -31,6 +31,16 @@ export function holdName(alias: string, sightings: number): void {
   });
 }
 
+/** Raise schema drift on one field as a connector would (local only), so a journey
+ * acknowledges drift of its own and never uses up the seeded rows. */
+export function raiseDrift(source: string, entity: string, field: string): void {
+  const repo = new URL("../../../", import.meta.url).pathname;
+  execFileSync("uv", ["run", "--quiet", "python", "-m", "cloudops_devdata.ingest_health", "--drift", source, entity, field], {
+    cwd: repo,
+    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: `${repo}.env.local` },
+  });
+}
+
 export async function triagedTicket(route: "human" | "ready_for_planning"): Promise<string> {
   const list = await api<WorkItemList>("engineer", "/v1/work-items?status=open");
   const item = list.items.find((w) => w.triage_route === route);

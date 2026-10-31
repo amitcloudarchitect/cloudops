@@ -9,6 +9,10 @@ Fails (exit 1) when any file outside ``packages/tenancy/``:
 - mentions the scope settings ``app.tenant_ids`` / ``app.role`` /
   ``app.account_ids`` or
   ``set_config`` in a string — scope is set by the tenancy package alone;
+- names a telemetry-store table, or speaks the column store's HTTP dialect
+  (``JSONEachRow``, ``X-ClickHouse-*`` headers), in a string: the store has no
+  row-level security, so the tenancy package's query wrapper is the isolation
+  and a hand-built query anywhere else is a bypass (LLD, Telemetry store);
 - in TypeScript/JavaScript, imports a database client at all — the web tier
   never talks to the database;
 - declares a database driver as a dependency in pyproject.toml or package.json.
@@ -76,6 +80,10 @@ DYNAMIC_IMPORTERS = frozenset({"import_module", "__import__"})
 
 SCOPE_STRING = re.compile(
     r"\bapp\.(tenant_ids|role|account_ids)\b|\bset_config\b", re.IGNORECASE
+)
+
+TELEMETRY_STRING = re.compile(
+    r"\b(metric_sample|metric_5m|metric_1h)\b|\bJSONEachRow\b|\bX-ClickHouse-", re.IGNORECASE
 )
 
 BANNED_JS_PACKAGES = (
@@ -154,6 +162,10 @@ def check_python_source(rel: str, source: str) -> list[Violation]:
             m = SCOPE_STRING.search(node.value)
             if m:
                 out.append(Violation(rel, line, f"mentions {m.group(0)}; scope is tenancy's job"))
+            t = TELEMETRY_STRING.search(node.value)
+            if t:
+                out.append(Violation(rel, line, f"mentions {t.group(0)}; telemetry is read and "
+                                                "written through cloudops_tenancy.telemetry"))
     return out
 
 

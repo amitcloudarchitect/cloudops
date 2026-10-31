@@ -192,3 +192,36 @@ async def dead_letter(
         # The error is ours (an exception type and message), never payload text.
         {"run": run_id, "source": source, "entity": entity, "ref": raw_ref, "error": error[:2000]},
     )
+
+
+# --- Continuation state (Graph delta links), beside the time watermark --------
+
+_READ_CURSOR: Final = text(
+    "SELECT cursor FROM staging.ingest_cursor"
+    " WHERE source_system = :source AND entity = :entity AND scope_key = :scope"
+)
+_ADVANCE_CURSOR: Final = text(
+    "INSERT INTO staging.ingest_cursor (source_system, entity, scope_key, cursor)"
+    " VALUES (:source, :entity, :scope, :cursor)"
+    " ON CONFLICT (source_system, entity, scope_key) DO UPDATE"
+    " SET cursor = EXCLUDED.cursor, updated_at = now()"
+)
+
+
+async def read_cursor(
+    conn: ScopedConnection, source: str, entity: str, scope_key: str
+) -> str | None:
+    value = await conn.scalar(
+        _READ_CURSOR, {"source": source, "entity": entity, "scope": scope_key}
+    )
+    return value if isinstance(value, str) else None
+
+
+async def advance_cursor(
+    conn: ScopedConnection, source: str, entity: str, scope_key: str, cursor: str
+) -> None:
+    """Only inside the transaction that commits the page the cursor ends."""
+    await conn.execute(
+        _ADVANCE_CURSOR,
+        {"source": source, "entity": entity, "scope": scope_key, "cursor": cursor},
+    )

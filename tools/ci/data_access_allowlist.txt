@@ -7,3 +7,4 @@
 #
 db/migrations/  # schema owner role, pipeline job only; DDL and RLS policies name app.role
 db/tests/  # isolation suite: must open raw and unscoped connections to prove they see nothing
+db/telemetry/  # column-store schema, applied by the pipeline as the store's admin user; DDL names the tables

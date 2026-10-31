@@ -29,6 +29,13 @@ NON_TENANT = {
     "staging.legal_suffix",
     "staging.ingest_run",
     "staging.ingest_dead_letter",
+    # Step 15: continuation state, CUR assembly progress, the field registry and
+    # configuration. Field names and object keys, never a customer's values.
+    "staging.ingest_cursor",
+    "staging.cur_assembly",
+    "staging.schema_field",
+    "staging.metric_allowlist",
+    "staging.connector_schedule",
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
 COMMERCIAL = {"cloudops.sow"}

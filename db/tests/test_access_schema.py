@@ -26,6 +26,12 @@ ACCOUNT_SCOPED = (
     "staging.resource_quarantine",
     "cloudops.triage_result",  # 0008
     "cloudops.triage_review",  # 0008, through its triage result
+    "cloudops.cost_finding",  # 0010, by account
+    "staging.cost_fact_load",  # 0010, by account
+    "cloudops.directory_principal",  # 0010: tenant-wide, so all-accounts scopes only
+    "cloudops.directory_role_assignment",  # 0010, likewise
+    "cloudops.sharepoint_site",  # 0010, likewise
+    "cloudops.document",  # 0010, likewise
 )
 GROUP_ROLES = ("cloudops_app", "cloudops_ingest")
 

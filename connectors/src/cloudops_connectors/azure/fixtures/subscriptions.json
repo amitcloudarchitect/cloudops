@@ -1,0 +1,206 @@
+{
+ "value": [
+  {
+   "id": "/subscriptions/0e38a8a9-7b83-51b1-a93b-9414f9cd153d",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "0e38a8a9-7b83-51b1-a93b-9414f9cd153d",
+   "tenantId": "ca123865-378c-5c7b-87dd-c5d650b78851",
+   "displayName": "Prod",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/24d687ed-7d94-5719-9e82-399991d7df4d",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "24d687ed-7d94-5719-9e82-399991d7df4d",
+   "tenantId": "546c3610-88d2-52e0-9340-83d533b6f3d2",
+   "displayName": "WGF Non-Prod",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/56cc6d81-8172-5967-a8b8-e3c2ff8d7c8f",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "56cc6d81-8172-5967-a8b8-e3c2ff8d7c8f",
+   "tenantId": "546c3610-88d2-52e0-9340-83d533b6f3d2",
+   "displayName": "wgf-prod-sub",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "tenantId": "cf43ae44-e55f-57af-bcb6-e41796c51565",
+   "displayName": "Prod",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/89ef84c7-bf5f-5ef2-9bdf-3b4e0ce59a7f",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "89ef84c7-bf5f-5ef2-9bdf-3b4e0ce59a7f",
+   "tenantId": "67676553-12bf-5a1b-91ca-a2607481ba5b",
+   "displayName": "NWL Production",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/904efd64-fc03-52ee-b2d5-664dbdccbcb8",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "904efd64-fc03-52ee-b2d5-664dbdccbcb8",
+   "tenantId": "67676553-12bf-5a1b-91ca-a2607481ba5b",
+   "displayName": "DEV/TEST",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/a9e4d6b4-d2f6-5acc-bcd1-c8276271f6dc",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "a9e4d6b4-d2f6-5acc-bcd1-c8276271f6dc",
+   "tenantId": "ca123865-378c-5c7b-87dd-c5d650b78851",
+   "displayName": "crl-nonprod",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/ab269a61-ba51-5710-bdfe-31f2f061bdff",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "ab269a61-ba51-5710-bdfe-31f2f061bdff",
+   "tenantId": "cf43ae44-e55f-57af-bcb6-e41796c51565",
+   "displayName": "DEV/TEST",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/c2ba4a49-5026-5e46-bed2-086d2eeb1785",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "c2ba4a49-5026-5e46-bed2-086d2eeb1785",
+   "tenantId": "cd272aae-15bd-5c44-aa38-aff89a357bd0",
+   "displayName": "Prod",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/f5af9787-fd84-5d55-a695-153cc93eae2b",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "f5af9787-fd84-5d55-a695-153cc93eae2b",
+   "tenantId": "cd272aae-15bd-5c44-aa38-aff89a357bd0",
+   "displayName": "tsa-nonprod",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  },
+  {
+   "id": "/subscriptions/130b5aba-0621-5bf0-82ea-4702e45bc0b4",
+   "authorizationSource": "RoleBased",
+   "managedByTenants": [
+    {
+     "tenantId": "16d6f29d-4df8-5730-8780-565e58a69ea7"
+    }
+   ],
+   "subscriptionId": "130b5aba-0621-5bf0-82ea-4702e45bc0b4",
+   "tenantId": "f1c2c8e2-9791-5e00-88b9-71da0920526c",
+   "displayName": "Woodgrove Sandbox",
+   "state": "Enabled",
+   "subscriptionPolicies": {
+    "locationPlacementId": "Public_2014-09-01",
+    "quotaId": "EnterpriseAgreement_2014-09-01",
+    "spendingLimit": "Off"
+   }
+  }
+ ],
+ "count": {
+  "type": "Total",
+  "value": 11
+ }
+}

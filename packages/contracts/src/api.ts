@@ -25,6 +25,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/connectors/drift": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Schema Drift
+         * @description Fields a source added, or stopped sending, that nobody has acknowledged yet.
+         *     Field names only: never a value from a payload.
+         */
+        get: operations["schema_drift_v1_connectors_drift_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors/drift/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acknowledge Drift
+         * @description A person has seen the drift. The next drift on the same field raises it again.
+         */
+        post: operations["acknowledge_drift_v1_connectors_drift_acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/connectors/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Connector Health
+         * @description Every scheduled connector, worst first, with its band and why.
+         */
+        get: operations["connector_health_v1_connectors_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/cost/summary": {
         parameters: {
             query?: never;
@@ -295,6 +356,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AcknowledgeRequest */
+        AcknowledgeRequest: {
+            /** Entity */
+            entity: string;
+            /** Field */
+            field: string;
+            /** Source */
+            source: string;
+        };
         /** AliasView */
         AliasView: {
             /** Alias */
@@ -303,6 +373,71 @@ export interface components {
             confirmed_at: string | null;
             /** Source System */
             source_system: string;
+        };
+        /**
+         * BandRules
+         * @description The thresholds the bands were computed with, so a screen explains them
+         *     without restating them.
+         */
+        BandRules: {
+            failing_run_rate: components["schemas"]["Metric_Decimal_"];
+            late_after_intervals: components["schemas"]["Metric_int_"];
+            outage_after_intervals: components["schemas"]["Metric_int_"];
+        };
+        /** ConnectorHealth */
+        ConnectorHealth: {
+            alias_quarantine_depth: components["schemas"]["Metric_int_"];
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "healthy" | "watch" | "at-risk" | "critical" | "unknown";
+            dead_letters_open: components["schemas"]["Metric_int_"];
+            drift_open: components["schemas"]["Metric_int_"];
+            /** Entity */
+            entity: string;
+            expected_every: components["schemas"]["Metric_int_"];
+            failed_run_rate_24h: components["schemas"]["Metric_Decimal_"] | null;
+            failed_runs_24h: components["schemas"]["Metric_int_"];
+            intervals_since_success: components["schemas"]["Metric_Decimal_"] | null;
+            last_lag: components["schemas"]["Metric_int_"] | null;
+            /** Last Run At */
+            last_run_at: string | null;
+            /** Last Status */
+            last_status: ("running" | "succeeded" | "dead_lettered" | "failed") | null;
+            last_success_age: components["schemas"]["Metric_int_"] | null;
+            /** Last Success At */
+            last_success_at: string | null;
+            quarantined_24h: components["schemas"]["Metric_int_"];
+            /** Reasons */
+            reasons: ("late" | "outage" | "never_run" | "no_success" | "failing" | "failed_runs" | "last_run_failed" | "rejected_records" | "dead_letters" | "schema_drift")[];
+            records_24h: components["schemas"]["Metric_int_"];
+            rejected_24h: components["schemas"]["Metric_int_"];
+            rejected_record_rate_24h: components["schemas"]["Metric_Decimal_"] | null;
+            resource_quarantine_depth: components["schemas"]["Metric_int_"];
+            runs_24h: components["schemas"]["Metric_int_"];
+            /** Source System */
+            source_system: string;
+            /**
+             * Timeliness
+             * @enum {string}
+             */
+            timeliness: "on_time" | "late" | "outage" | "never_run";
+        };
+        /** ConnectorHealthList */
+        ConnectorHealthList: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            attention: components["schemas"]["Metric_int_"];
+            /** Items */
+            items: components["schemas"]["ConnectorHealth"][];
+            late: components["schemas"]["Metric_int_"];
+            never_run: components["schemas"]["Metric_int_"];
+            outages: components["schemas"]["Metric_int_"];
+            rules: components["schemas"]["BandRules"];
         };
         /** CostLine */
         CostLine: {
@@ -371,6 +506,29 @@ export interface components {
             held_occurrences: components["schemas"]["Metric_int_"] | null;
             /** Reason */
             reason: string | null;
+        };
+        /** DriftList */
+        DriftList: {
+            /** Items */
+            items: components["schemas"]["DriftView"][];
+            open: components["schemas"]["Metric_int_"];
+        };
+        /** DriftView */
+        DriftView: {
+            /**
+             * Drift
+             * @enum {string}
+             */
+            drift: "added" | "missing";
+            /** Drift At */
+            drift_at: string | null;
+            /** Entity */
+            entity: string;
+            /** Field */
+            field: string;
+            occurrences: components["schemas"]["Metric_int_"];
+            /** Source System */
+            source_system: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -925,6 +1083,84 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SowView"][];
+                };
+            };
+        };
+    };
+    schema_drift_v1_connectors_drift_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DriftList"];
+                };
+            };
+        };
+    };
+    acknowledge_drift_v1_connectors_drift_acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcknowledgeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No open drift on that field */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connector_health_v1_connectors_health_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorHealthList"];
                 };
             };
         };

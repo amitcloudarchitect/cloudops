@@ -14,6 +14,9 @@ const SOURCE_LABEL: Record<string, string> = {
   cloud_cost: "Cloud billing",
   platform_inventory: "Platform inventory",
   cloudops_ai_gateway: "AI gateway",
+  cloudops_ingest: "Ingest run log",
+  cloudops_policy: "Platform policy",
+  cloudops_quarantine: "Quarantine",
 };
 
 export function sourceLabel(source: string): string {

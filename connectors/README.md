@@ -29,6 +29,59 @@ Orchestration is Temporal (CLAUDE.md rule 3). The connector is a workflow starte
 Temporal schedule (every 5 minutes for ServiceNow), not a cron job. Workflow code only
 orchestrates; every side effect is an activity.
 
+## The step 15 connectors (ADR 0016)
+
+Qualys, CoreStack, Azure management, AWS management, SharePoint and Entra ID run
+on one shared orchestration, `core/ingest.py` (`ConnectorIngest`,
+`ConnectorReplay`). Each source supplies a `Source` with `fetch` (one page as
+sent), `inspect` (after bronze: record count, next cursor, companion payloads),
+and `process` (the contract's steps 5 to 8 for one page). `core/identity.py`,
+`core/drift.py` and `core/cli.py` are shared by all of them.
+
+| Source | Entities | Cadence | Notes |
+| --- | --- | --- | --- |
+| `qualys` | `host_detection` | daily | FQDN naming: resources match on asset id, then `name_norm` plus IP, then `name_norm`. KnowledgeBase entries are stored in bronze beside each page. Customer from the `Customer:` host tag. |
+| `corestack` | `finding` | daily | Writes `cost_finding` only, never `cost_fact`: cost comes from the providers' raw exports (HLD). API shape assumed until CoreStack docs and a sandbox exist (`corestack/mapping.py`). |
+| `azure` | `resource` | 15 min | Resource Graph in subscription batches, honouring `x-ms-user-quota-remaining`. The snapshot is authoritative per subscription: resources not seen in a complete run are closed. |
+| `aws` | `config`, `cur` | 15 min, daily | Config aggregator queries; CUR from S3, each assembly staged and swapped into `cost_fact` atomically, so a restatement replaces the period. |
+| `sharepoint` | `drive_item` | nightly | Per-site selected consent, delta sync per site. Deletion, or a site's consent withdrawn, removes its chunks. |
+| `entra` | `user`, `role_assignment` | daily | Users by delta; role assignments as a snapshot, removals closed. |
+
+Cloud account and directory ids resolve only through an exact, approved alias
+(`azure`, `aws`, `entra`): an unknown one shows up in the customer mapping
+console. None of these has a credential path yet: without `--fixtures` they
+refuse to start (CLAUDE.md rule 2).
+
+```bash
+make connectors        # every step 15 connector once over its fixtures
+```
+
+## Telemetry (not the batch medallion)
+
+```
+Event Hubs (evh-metrics) ──> consumer ──> normalise ──> resolve ──> allowlist
+        │                                                              │
+        └── Capture: bronze copy, in parallel           cloudops_tenancy.telemetry
+                                                        (tenant predicate injected)
+                                                                       │
+                                                              column store (ClickHouse)
+```
+
+- `telemetry/normalise.py`: Azure Monitor diagnostic records and CloudWatch
+  metric streams map to the canonical metric model.
+- `telemetry/resolve.py`: an account resolves only by an exact alias, and a
+  resource only within its tenant. Answers, negative ones included, are cached for
+  five minutes. Only `staging.metric_allowlist` pairs are stored.
+- `telemetry/consumer.py`: the checkpoint moves only after the batch is stored.
+  A batch is retried five times, then the consumer halts rather than skip it.
+  Writes carry the partition and sequence range as a deduplication token, so
+  redelivery stores nothing twice.
+- `telemetry/eventhub.py`: the SDK binding (managed identity, blob
+  checkpoints). It is not wired to a command until LLD open item L1 is decided.
+- Locally, `make telemetry` applies `db/telemetry` and streams the recorded
+  events through the in-memory hub (`telemetry/hub.py`), whose `Capture`
+  writes each event to Azurite as it is published.
+
 ## Writing the next connector
 
 1. Add `src/cloudops_connectors/<source>/` with `mapping.py`, `client.py`, `fake.py`,
@@ -74,5 +127,13 @@ encoded-query date-times are read in the user's timezone.
 - **Quarantine counts are sightings, not tickets.** A ticket seen again in the
   five-minute overlap, or replayed, counts again. The counts are for spotting a rising
   trend, not for exact figures.
+- **Account and resource ids are matched as sent.** Azure ids are
+  case-insensitive, but rows keep the casing Resource Graph sends. If it changes a
+  resource group's casing, the result is a new row, and the old row is closed.
+- **A listed subscription that returns no rows has its inventory closed.** The
+  snapshot is authoritative. Partial permissions that still list a subscription
+  would empty it.
+- **An approved mapping for a non-ServiceNow source applies from the next run.**
+  Only ServiceNow re-processes held records on request (ADR 0015).
 - **Offset paging over a moving dataset.** A record updated mid-run can shift between
   pages. The overlap and idempotent upserts cover it on the next run.

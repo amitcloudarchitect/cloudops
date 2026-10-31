@@ -238,7 +238,8 @@ def test_the_customer_master_role_and_its_holders(seeded: Seeded) -> None:
         cls = cx.execute("SELECT role_class FROM access.role_definition"
                          " WHERE name = 'Customer master'").fetchone()
     assert holders == {"Customer master", "Platform administrator"}
-    assert perms == {"mapping.manage", "tickets.read", "inventory.read"}
+    # connectors.read since 0010: the customer master watches the alias quarantine.
+    assert perms == {"mapping.manage", "tickets.read", "inventory.read", "connectors.read"}
     assert cls == ("delivery_lead",)
 
 

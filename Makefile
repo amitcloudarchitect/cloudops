@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay reprocess eval eval-baseline images image-check web e2e
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay reprocess connectors telemetry-schema telemetry eval eval-baseline images image-check web e2e
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -68,6 +68,15 @@ replay: env ## reprocess today's ServiceNow bronze pages without re-fetching
 
 reprocess: env ## run the re-process queue once: the oldest request made in the console (ADR 0015)
 	uv run python -m cloudops_connectors.servicenow reprocess --fixtures
+
+connectors: env ## run every step 15 connector once over its recorded fixtures (Temporal, Azurite, local DB)
+	for c in qualys corestack azure aws sharepoint entra; do uv run python -m cloudops_connectors.$$c run --fixtures || exit 1; done
+
+telemetry-schema: env ## apply db/telemetry to the local ClickHouse as its administrator
+	$(SECRET) clickhouse-admin-password | uv run python db/telemetry/migrate.py --url http://127.0.0.1:8123 --user cloudops_admin --password-file /dev/stdin
+
+telemetry: telemetry-schema ## stream the recorded metric events through the pipeline into the local ClickHouse
+	uv run python -m cloudops_connectors.telemetry run --fixtures
 
 # Tests provision their own throwaway databases on the local server, so they
 # never touch seeded data. pg_partman is required, as in CI.

@@ -1,0 +1,101 @@
+{
+ "assemblyId": "55dca333-30c0-5660-89ab-35b6746af030",
+ "account": "900000000002",
+ "bucket": "getronics-cur-fixture",
+ "reportName": "cur-eur",
+ "reportId": "7320210ec63e50d083b3ad4eeddc7cbb",
+ "billingPeriod": {
+  "start": "20261001T000000.000Z",
+  "end": "20261101T000000.000Z"
+ },
+ "charset": "UTF-8",
+ "compression": "GZIP",
+ "contentType": "text/csv",
+ "columns": [
+  {
+   "category": "identity",
+   "name": "LineItemId"
+  },
+  {
+   "category": "identity",
+   "name": "TimeInterval"
+  },
+  {
+   "category": "bill",
+   "name": "PayerAccountId"
+  },
+  {
+   "category": "bill",
+   "name": "BillingEntity"
+  },
+  {
+   "category": "bill",
+   "name": "BillingPeriodStartDate"
+  },
+  {
+   "category": "bill",
+   "name": "BillingPeriodEndDate"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageAccountId"
+  },
+  {
+   "category": "lineItem",
+   "name": "LineItemType"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageStartDate"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageEndDate"
+  },
+  {
+   "category": "lineItem",
+   "name": "ProductCode"
+  },
+  {
+   "category": "lineItem",
+   "name": "UsageAmount"
+  },
+  {
+   "category": "lineItem",
+   "name": "UnblendedCost"
+  },
+  {
+   "category": "lineItem",
+   "name": "CurrencyCode"
+  },
+  {
+   "category": "lineItem",
+   "name": "ResourceId"
+  },
+  {
+   "category": "lineItem",
+   "name": "LineItemDescription"
+  },
+  {
+   "category": "product",
+   "name": "ProductName"
+  },
+  {
+   "category": "reservation",
+   "name": "EffectiveCost"
+  },
+  {
+   "category": "savingsPlan",
+   "name": "SavingsPlanEffectiveCost"
+  },
+  {
+   "category": "resourceTags",
+   "name": "user:CostCentre"
+  }
+ ],
+ "reportKeys": [
+  "cur/getronics/cur-eur/20261001-20261101/55dca333-30c0-5660-89ab-35b6746af030/cur-eur-00001.csv.gz",
+  "cur/getronics/cur-eur/20261001-20261101/55dca333-30c0-5660-89ab-35b6746af030/cur-eur-00002.csv.gz"
+ ],
+ "additionalArtifactKeys": []
+}
