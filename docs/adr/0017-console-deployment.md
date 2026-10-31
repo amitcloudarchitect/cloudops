@@ -156,6 +156,21 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
     - A staff principal assigned named tenants, none granted, is still refused.
     - Tested in `services/api/tests/test_access_resolver.py`.
 
+13. **A request with an empty scope is audited on a platform log** (added 2026-10-31,
+    user). Decision 12 was not enough on its own: every request is recorded in
+    `audit.action_log`, one row per tenant in scope, and with no tenant the write
+    failed, so the API withheld every response (500 `audit_failed`). The console
+    loaded nothing, and the first customer still could not be onboarded. Dev hit it.
+    - `audit.action_log` keeps a `tenant_id` that is never null (ADR 0001).
+    - A request whose scope holds no tenant is recorded once in
+      `audit.platform_action_log` (migration 0020): actor, route, path parameters,
+      outcome, time. No tenant, no request body.
+    - Row-level security, forced: a row can be inserted only from an empty scope, so
+      a scoped request cannot record itself there instead of under its tenants. Only
+      the auditor role class reads it. Append-only for everyone, by privilege and by
+      trigger.
+    - Tested in `db/tests/test_platform_action_log.py`.
+
 ## Manual steps (Key Vault, before the administrator job's first run)
 
 Create the secret holding your Entra object id. An object id is an identifier, not a

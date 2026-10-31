@@ -42,6 +42,9 @@ NON_TENANT = {
     "cloudops.fx_restatement",
     # Step 17: the control library, loaded only through access.load_controls.
     "cloudops.control",
+    # Migration 0020: what a principal with no tenant in scope did. Insert only from
+    # an empty scope, read only by auditors (test_platform_action_log.py).
+    "audit.platform_action_log",
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
 COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance",
