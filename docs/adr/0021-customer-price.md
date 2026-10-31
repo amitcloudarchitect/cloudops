@@ -5,7 +5,7 @@
 - **Amends:** ADR 0018 (the customer role's grant on `cost_fact`)
 - **Implements:** ADR 0002 D10 (commercial data never reaches a customer role); CLAUDE.md
   rule 5 (money). Migrations `0014_customer_price` (expand) and `0015_revoke_customer_cost`
-  (contract), `services/api/.../bff.py` (`/v1/cost/summary`), `operations.py`
+  (contract), `0016_pack_customer_price`, `services/api/.../bff.py` (`/v1/cost/summary`), `operations.py`
   (`/v1/customers`), the console's customer overview, the synthetic SOWs.
 
 ## Context
@@ -111,15 +111,34 @@ inferred.
 7. **Synthetic data.** Northwind 8%, Contoso 6%, Fabrikam 10% and Tailspin 7% (both of
    its SOWs). Woodgrove has no SOW, so its customers would see "Not yet priced".
 
+8. **Report packs take the price at generation (user decision, 2026-10-31; migration
+   `0016_pack_customer_price`).** Packs are generated under a staff scope, which cannot
+   call `customer_price`. The alternative, pricing when a customer opens a published pack,
+   was rejected: a published pack would change silently when cost is restated or an uplift
+   edited, and the approver would never see the customer's figure.
+   - `cloudops.pack_customer_price(tenant, from, to)` wraps `customer_price` for one tenant
+     and returns one price per usage date and transaction currency. A day with any
+     unpriced line is NULL for the whole day. It is SECURITY DEFINER, owned by
+     `cloudops_resolver`, and executable by `cloudops_app` only. It raises unless
+     `app.role` is one of the roles `commercial_visibility` admits. Those roles may read
+     the SOW, so seeing price beside cost tells them nothing new. Every role holding
+     `reports.manage` is one of them. `cloudops_customer` gets no grant.
+   - The executive summary carries "Cloud consumption" (`customer_price`) in the contract
+     currency. Each day is converted at the average rate on its usage date, and nothing is
+     rounded before presentation. Any unpriced day or missing rate makes the whole figure
+     a named gap, never a partial total and never the cost.
+   - The customer-readable copy (`report_pack.sections`) keeps the price and drops the
+     cost. `report_pack_commercial` keeps both, so staff still see cloud cost and the
+     approver sees what the customer will see.
+
 ## Consequences
 
 - **Commercial must set each customer's uplift on its SOW before that customer's portal
   shows a price.** Until then the customer sees "Not yet priced". There is no capture
   screen for SOW fields yet (ADR 0019: SOW capture is a dependency), so it is set by
   migration or seed for now.
-- **Customer report packs (step 17, ADR 0020) omit cloud cost.** A pack can now show this
-  price instead, read through `cloudops.customer_price` under the customer's scope (as
-  `cloudops_customer`). That is a step 17 follow-up, not part of this change.
+- **Customer report packs (step 17, ADR 0020) show this price where the cost was.** See
+  decision 8.
 - **The gateway tool `get_cost_trend` reads `amortized_cost`.** A customer scope calling it
   now gets permission denied (fail closed). If customers reach the assistant, the tool
   should read `cloudops.customer_price` for them instead.

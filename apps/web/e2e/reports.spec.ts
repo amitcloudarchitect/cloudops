@@ -40,6 +40,11 @@ test.describe("platform administrator", () => {
     await expect(page.getByRole("region", { name: "Revenue mix" })).toContainText(
       /Monthly manage revenue: [A-Z]{3} [\d,.-]+|Not captured: /,
     );
+    // Staff see Getronics' cost beside the price the customer will see (ADR 0021),
+    // or the price's named gap: never the cost in its place.
+    const summary = page.getByRole("region", { name: "Executive summary" });
+    await expect(summary).toContainText(/Cloud cost: /);
+    await expect(summary).toContainText(/Cloud consumption: ([A-Z]{3} [\d,.-]+|not available \(not captured: )/);
     await expect(page.getByRole("region", { name: "Customer satisfaction" })).toContainText("Not captured");
     await expect(page.getByRole("region", { name: "Volumetrics" })).toContainText("Incidents opened");
     const approve = page.getByRole("button", { name: "Approve" });

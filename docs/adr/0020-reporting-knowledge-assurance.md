@@ -126,9 +126,9 @@ Step 16 (FinOps, pricing, margin) was built in parallel and merged first (ADR 00
    - **Cloud cost is Getronics' cost** (user decision): `cost_fact.unblended_cost`
      is what the provider bills Getronics, not the customer's price. Staff packs
      show it as "Cloud cost"; it is stored with the commercial sections, and the
-     copy any reader of the pack sees (a customer, once published) says it is not
-     in the customer's pack, and why. A customer price figure is later work of
-     its own. The portfolio, which sums it, is staff-only.
+     copy any reader of the pack sees (a customer, once published) carries the
+     customer's price, "Cloud consumption", instead, or its named gap (ADR 0021,
+     decision 8). The portfolio, which sums it, is staff-only.
    - **Never auto-published.** The narrator drafts the captured summary sections from
      figures and tables only (no ticket or document text). A draft is never printed.
      Approval and publication need staff holding `reports.publish`, and every
