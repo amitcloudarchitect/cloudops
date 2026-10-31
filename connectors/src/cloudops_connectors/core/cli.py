@@ -12,10 +12,13 @@ entity at the source's cadence (HLD, Integration), safe to repeat. Temporal's
 default overlap policy (skip) keeps it to one run at a time per entity: the
 LLD's "one report pull at a time" for Qualys.
 
-**Fixtures only.** No customer credentials exist yet (CLAUDE.md rule 2; ADR
-0003), so these connectors have no credential path: without ``--fixtures`` they
-refuse to start rather than reach for one. ``--fixtures`` serves recorded
-fixtures from an in-process fake, in the local profile only.
+**Fixtures, or the platform's own identity.** No customer credentials exist yet
+(CLAUDE.md rule 2; ADR 0003), so a connector without a ``Live`` path refuses to
+start without ``--fixtures`` rather than reach for one. ``--fixtures`` serves
+recorded fixtures from an in-process fake, in the local profile only. A ``Live``
+path (Azure, ADR 0023) reads with the pod's workload identity, in the Azure
+profile only, and only its own entities: ``run`` and ``schedule`` default to
+them and refuse any other.
 """
 
 from __future__ import annotations
@@ -28,7 +31,7 @@ import sys
 import uuid
 from collections.abc import Callable, Mapping
 from contextlib import AsyncExitStack
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 
 from azure.storage.blob.aio import ContainerClient
@@ -101,6 +104,28 @@ def _fixture_source(settings: Settings, fixtures: bool, name: str,
     return factory()
 
 
+@dataclass(frozen=True)
+class Live:
+    """A source's live path: the components it needs beyond the database, bronze
+    and Temporal, the entities it serves, and how to build it. ``build`` pushes
+    anything it opens onto the stack."""
+
+    requires: frozenset[Component]
+    entities: frozenset[str]
+    build: Callable[[Settings, AsyncExitStack], Source]
+
+
+def _entities(args: argparse.Namespace, entities: Mapping[str, timedelta],
+              live: Live | None) -> list[str]:
+    if live is None:
+        return list(args.entity or sorted(entities))
+    wanted = list(args.entity or sorted(live.entities))
+    other = sorted(set(wanted) - live.entities)
+    if other:
+        raise ConfigurationError(f"the live path does not serve {', '.join(other)}")
+    return wanted
+
+
 async def _upsert(temporal: Client, schedule_id: str, wanted: Schedule) -> str:
     try:
         await temporal.create_schedule(schedule_id, wanted)
@@ -114,12 +139,13 @@ async def _upsert(temporal: Client, schedule_id: str, wanted: Schedule) -> str:
 
 
 async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, timedelta],
-                factory: Callable[[], Source]) -> int:
+                factory: Callable[[], Source], live: Live | None = None) -> int:
     queue = task_queue(name)
     if args.command == "schedule":
         settings = load_settings(os.environ, require={Component.TEMPORAL})
         temporal = await connect(settings.temporal, **temporal_options())
-        for entity in args.entity or sorted(entities):
+        azure_live = live if settings.environment is Environment.AZURE else None
+        for entity in _entities(args, entities, azure_live):
             since = (datetime.now(UTC) - timedelta(days=90)).isoformat()
             wanted = Schedule(
                 action=ScheduleActionStartWorkflow(
@@ -130,11 +156,19 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
             print(f"{await _upsert(temporal, f'{name}-{entity}', wanted)}: every "
                   f"{entities[entity]}")
         return 0
-    settings = load_settings(os.environ, require={Component.DATABASE_INGEST, Component.BLOB,
-                                                  Component.TEMPORAL})
-    source = _fixture_source(settings, args.fixtures, name, factory)
+    live = None if args.fixtures else live
+    settings = load_settings(os.environ, require={
+        Component.DATABASE_INGEST, Component.BLOB, Component.TEMPORAL,
+        *(live.requires if live is not None else ())})
+    if live is None:
+        source = _fixture_source(settings, args.fixtures, name, factory)
+    elif settings.environment is not Environment.AZURE:  # pragma: no cover - load refuses
+        raise ConfigurationError("the live path runs in the Azure profile only")
+    run_entities = _entities(args, entities, live)
     temporal = await connect(settings.temporal, **temporal_options())
     async with AsyncExitStack() as stack:
+        if live is not None:
+            source = live.build(settings, stack)
         db = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=2)
         stack.push_async_callback(db.dispose)
         container = _container(settings)
@@ -165,7 +199,7 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
             await run_worker(worker, settings.temporal)
             return 0
         async with worker:
-            for entity in args.entity or sorted(entities):
+            for entity in run_entities:
                 wf_id = f"{name}-{args.command}-{entity}-{uuid.uuid4().hex[:8]}"
                 if args.command == "run":
                     report = await temporal.execute_workflow(
@@ -180,8 +214,9 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
 
 
 def main(name: str, entities: Mapping[str, timedelta], factory: Callable[[], Source],
-         argv: list[str] | None = None) -> int:
-    """``entities`` maps each entity to its schedule interval."""
+         argv: list[str] | None = None, live: Live | None = None) -> int:
+    """``entities`` maps each entity to its schedule interval; ``factory`` builds
+    the fixture source, ``live`` the source's live path if it has one."""
     parser = argparse.ArgumentParser(prog=f"python -m cloudops_connectors.{name}")
     sub = parser.add_subparsers(dest="command", required=True)
     for command in ("run", "replay", "worker", "schedule"):
@@ -198,7 +233,7 @@ def main(name: str, entities: Mapping[str, timedelta], factory: Callable[[], Sou
     try:
         telemetry = start(f"connector-{name}", os.environ)
         try:
-            return asyncio.run(_main(args, name, entities, factory))
+            return asyncio.run(_main(args, name, entities, factory, live))
         finally:
             telemetry.shutdown()
     except (ConfigurationError, TelemetryConfigError) as exc:

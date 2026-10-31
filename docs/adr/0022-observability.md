@@ -150,7 +150,8 @@ live. The user decided those before the build.
     seed adds "Getronics CloudOps platform" (GTX). **Deferred:** the live feed. The
     Azure connector runs on fixtures only and has no workload-identity token path, and
     a Cost Management export cannot land in the bronze account (public network access
-    disabled; the export resource takes no managed identity). Both are a follow-up.
+    disabled; the export resource takes no managed identity). Both are a follow-up,
+    delivered by ADR 0023.
 
 12. **Rollout in two steps.** In the Azure profile `CLOUDOPS_TELEMETRY` must be explicit
     (`otlp` or `off`), and `off` is refused outside dev. The bases say `otlp`; dev's

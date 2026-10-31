@@ -268,8 +268,11 @@ locals {
   # Further service accounts (step 19, ADR 0022): the platform metrics job runs on
   # the ingest login, so it is the ingest identity too; the collector has its own,
   # federated once var.observability_enabled says stacks 02 and 03 are applied.
+  # The Azure connector's live path (ADR 0023) reads the platform's own cost as the
+  # ingest identity too.
   additional_federated_service_accounts = {
     ingest-platform-metrics      = { identity = "ingest", account = "platform-ingest/platform-metrics" }
+    ingest-connector-azure       = { identity = "ingest", account = "platform-ingest/connector-azure" }
     observability-otel-collector = { identity = "observability", account = "observability/otel-collector" }
   }
   additional_enabled = {

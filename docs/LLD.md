@@ -215,7 +215,7 @@ User-assigned managed identities, one per workload, federated to the Kubernetes 
 
 ### Platform RBAC
 
-Assignments at resource group scope, never subscription-wide, always to groups. `grp-cloudops-platform-admin` holds Contributor via PIM with 8-hour activation and approval; engineers hold Contributor in non-production and Reader plus namespace-scoped operator in production; security holds Security Reader and Key Vault Reader metadata only; `grp-cloudops-break-glass` holds Owner on the execution subscription via PIM with 1-hour activation, **dual approval** and alerting on activation. **No standing production write access for any human.** Quarterly access recertification.
+Assignments at resource group scope, never subscription-wide, always to groups. One recorded exception (ADR 0023): Cost Management Reader for the ingest identity and a role-assignment reader for the pipeline identity, both read-only, on the platform's own subscriptions, for the live feed of the platform's cost. `grp-cloudops-platform-admin` holds Contributor via PIM with 8-hour activation and approval; engineers hold Contributor in non-production and Reader plus namespace-scoped operator in production; security holds Security Reader and Key Vault Reader metadata only; `grp-cloudops-break-glass` holds Owner on the execution subscription via PIM with 1-hour activation, **dual approval** and alerting on activation. **No standing production write access for any human.** Quarterly access recertification.
 
 ### Customer environment access
 

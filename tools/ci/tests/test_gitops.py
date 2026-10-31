@@ -42,6 +42,7 @@ DEV = PLATFORM + WORKERS
 # Every workload we own, deployed in dev or not: the worker bases too.
 WEB = [d for d in PLATFORM if d["metadata"].get("namespace") == "platform-web"]  # ADR 0017
 ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
+            + _build(GITOPS / "base/connector-azure")  # ADR 0023
             + _build(GITOPS / "base/worker-ai")
             # Step 19 (ADR 0022): in dev once id-cloudops-observability-dev exists.
             + _build(GITOPS / "base/observability") + _build(GITOPS / "base/platform-metrics"))

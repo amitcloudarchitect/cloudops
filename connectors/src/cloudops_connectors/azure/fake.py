@@ -21,6 +21,10 @@ a part that lands late). It answers List Blobs (XML, ``maxresults`` and
 markers) and Get Blob with ``Last-Modified``, 404 ``BlobNotFound`` for a blob
 not delivered yet, and 503 ``ServerBusy`` on demand. Parts are committed as
 plain CSV (reviewable) and served gzip-compressed, as the export writes them.
+
+Both check the bearer token when ``bearer`` is set (the live path's contract,
+ADR 0023): a request without exactly that token gets the service's own 401,
+``AuthenticationFailed`` from ARM, ``NoAuthenticationInformation`` from Storage.
 """
 
 from __future__ import annotations
@@ -79,6 +83,10 @@ def _offset(token: str | None) -> int:
     return int(json.loads(base64.urlsafe_b64decode(token.encode()))["offset"])
 
 
+def _authorised(request: httpx.Request, bearer: str | None) -> bool:
+    return bearer is None or request.headers.get("Authorization") == f"Bearer {bearer}"
+
+
 def _id(row: Any) -> str:
     return str(row.get("id") or "") if isinstance(row, dict) else ""
 
@@ -96,6 +104,7 @@ class FakeAzure:
         self.subs_page = subs_page
         self.throttle_next = 0
         self.fail_next = 0
+        self.bearer: str | None = None  # when set, every request must carry it
         self.requests: list[httpx.Request] = []
 
     @classmethod
@@ -134,6 +143,9 @@ class FakeAzure:
 
     def _handle(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if not _authorised(request, self.bearer):
+            return httpx.Response(401, json={"error": {"code": "AuthenticationFailed"}},
+                                  headers={"WWW-Authenticate": 'Bearer error="invalid_token"'})
         if self.throttle_next > 0:
             self.throttle_next -= 1
             return httpx.Response(429, headers={**self._quota(), "Retry-After": "7"},
@@ -219,6 +231,7 @@ class FakeBlobStore:
         self.blobs: dict[str, _Stored] = {}  # "<container>/<name>"
         self.stage = -1
         self.busy_next = 0
+        self.bearer: str | None = None  # when set, every request must carry it
         self.requests: list[httpx.Request] = []
         self.advance()
 
@@ -247,6 +260,11 @@ class FakeBlobStore:
 
     def _handle(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
+        if not _authorised(request, self.bearer):
+            return httpx.Response(401, headers={"Content-Type": "application/xml",
+                                                "x-ms-error-code": "NoAuthenticationInformation"},
+                                  content=b"<?xml version=\"1.0\" encoding=\"utf-8\"?><Error>"
+                                          b"<Code>NoAuthenticationInformation</Code></Error>")
         if self.busy_next > 0:
             self.busy_next -= 1
             return httpx.Response(503, content=b"<?xml version=\"1.0\" encoding=\"utf-8\"?>"

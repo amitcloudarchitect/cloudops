@@ -88,3 +88,16 @@ variable "postgres_breakglass_password_wo" {
     error_message = "In dev, pass a generated password of at least 32 characters via TF_VAR_postgres_breakglass_password_wo."
   }
 }
+
+variable "platform_cost_export_from" {
+  type        = string
+  default     = "2026-11-01T00:00:00Z"
+  description = <<-EOT
+    First day of the platform cost export's daily schedule (ADR 0023). Cost Management
+    refuses a start in the past, so a re-creation after this date needs a later one.
+  EOT
+  validation {
+    condition     = can(regex("^\\d{4}-\\d{2}-\\d{2}T00:00:00Z$", var.platform_cost_export_from))
+    error_message = "platform_cost_export_from is a UTC midnight, YYYY-MM-DDT00:00:00Z."
+  }
+}

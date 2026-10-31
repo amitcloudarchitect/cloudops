@@ -251,8 +251,10 @@ def test_local_without_env_file_points_at_make_env(tmp_path: Path) -> None:
 
 
 def test_local_resolves_the_compose_containers(local_env: dict[str, str]) -> None:
-    # A real ServiceNow instance is opt-in locally (tested below).
-    s = load_settings(local_env, require=set(Component) - {Component.SERVICENOW})
+    # A real ServiceNow instance is opt-in locally, and the live Azure cost feed is
+    # Azure-only (both tested below).
+    s = load_settings(local_env,
+                      require=set(Component) - {Component.SERVICENOW, Component.AZURE_COST})
     assert s.environment is Environment.LOCAL
     assert s.workload_identity is None
     assert s.database_dsn(DbLogin.INGEST).startswith("postgresql://cloudops_ingest_local")
@@ -384,3 +386,61 @@ def test_azure_llm_endpoint_must_be_an_azure_openai_account(
     azure_env["CLOUDOPS_AZURE_OPENAI_ENDPOINT"] = url
     with pytest.raises(ConfigurationError, match=r"openai\.azure\.com"):
         load_settings(azure_env, require={Component.LLM})
+
+
+# The live Azure cost feed (ADR 0023) ----------------------------------------------
+
+_EXPORTS = "https://stcloudopsbronzedevweu.blob.core.windows.net"
+_ROOT = "cost-exports-platform/focus/cloudops-platform-dev-0a1b2c3d"
+
+
+def test_azure_cost_names_the_export_account_and_roots(azure_env: dict[str, str]) -> None:
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = _EXPORTS + "/"
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = f"{_ROOT}, {_ROOT}-2"
+    cost = load_settings(azure_env, require={Component.AZURE_COST}).azure_cost
+    assert cost.export_account_url == _EXPORTS
+    assert cost.export_roots == (_ROOT, f"{_ROOT}-2")
+
+
+@pytest.mark.parametrize("url", [
+    "http://stcloudopsbronzedevweu.blob.core.windows.net",
+    "https://stcloudopsbronzedevweu.blob.core.windows.net/cost-exports-platform",
+    "https://stcloudopsbronzedevweu.blob.core.windows.net:8443",
+    "https://evil.example/stcloudopsbronzedevweu.blob.core.windows.net",
+    "https://stcloudopsbronzedevweu.blob.core.windows.net.evil.example",
+])
+def test_azure_cost_account_must_be_a_bare_blob_endpoint(
+    azure_env: dict[str, str], url: str
+) -> None:
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = url
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = _ROOT
+    with pytest.raises(ConfigurationError, match=r"blob\.core\.windows\.net"):
+        load_settings(azure_env, require={Component.AZURE_COST})
+
+
+@pytest.mark.parametrize("roots", [
+    "cost-exports-platform", "/focus/x", "cost-exports-platform/../servicenow",
+    "cost-exports-platform/focus/", f"{_ROOT},", f"{_ROOT},{_ROOT}",
+])
+def test_azure_cost_roots_are_container_and_path_each_once(
+    azure_env: dict[str, str], roots: str
+) -> None:
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = _EXPORTS
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = roots
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_COST_EXPORT_ROOTS"):
+        load_settings(azure_env, require={Component.AZURE_COST})
+
+
+def test_azure_cost_needs_both_variables(azure_env: dict[str, str]) -> None:
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"):
+        load_settings(azure_env, require={Component.AZURE_COST})
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = _EXPORTS
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_COST_EXPORT_ROOTS"):
+        load_settings(azure_env, require={Component.AZURE_COST})
+
+
+def test_local_has_no_live_cost_feed(local_env: dict[str, str]) -> None:
+    local_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = _EXPORTS
+    local_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = _ROOT
+    with pytest.raises(ConfigurationError, match="--fixtures"):
+        load_settings(local_env, require={Component.AZURE_COST})

@@ -115,11 +115,16 @@ class AzureSource(Source):
         self, client: AzureClient, *, batch_size: int = BATCH,
         exports: BlobClient | None = None, export_roots: Sequence[str] = (),
         billing_account: str | None = None, today: Callable[[], date] | None = None,
+        entities: frozenset[str] = mapping.ENTITIES,
     ) -> None:
         """``exports`` reads the storage account the FOCUS exports land in;
         ``export_roots`` are ``<container>/<root path>``, one export each.
         ``billing_account`` names the billing account whose invoices are read.
-        ``today`` is the run's day for the billing entities (UTC by default)."""
+        ``today`` is the run's day for the billing entities (UTC by default).
+        ``entities`` narrows what this source serves (the live path, ADR 0023):
+        any other is refused before a request is made."""
+        if not entities or not entities <= mapping.ENTITIES:
+            raise ValueError("entities must be among the Azure entities")
         if batch_size < 1:
             raise ValueError("batch_size must be at least 1")
         for root in export_roots:
@@ -133,10 +138,10 @@ class AzureSource(Source):
         self._billing = AzureBilling(client, billing_account,
                                      today or (lambda: datetime.now(UTC).date()))
         self.instance = client.base_url
+        self.entities = entities
 
-    @staticmethod
-    def _check(entity: str) -> None:
-        if entity not in mapping.ENTITIES:
+    def _check(self, entity: str) -> None:
+        if entity not in self.entities:
             raise ValueError(f"unknown entity {entity!r}")
 
     async def scopes(self, db: Database, entity: str) -> list[str]:
