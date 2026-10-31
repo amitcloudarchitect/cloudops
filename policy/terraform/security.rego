@@ -80,11 +80,16 @@ subscription_roles_allowed := {
 	"CloudOps role assignment reader (prd)",
 }
 
+# A role named in the exception. An assignment without a role name is not.
+subscription_role_allowed(rc) if {
+	rc.change.after.role_definition_name in subscription_roles_allowed
+}
+
 deny contains msg if {
 	some rc in changed
 	rc.type == "azurerm_role_assignment"
 	regex.match(`^/subscriptions/[^/]+/?$`, rc.change.after.scope)
-	not rc.change.after.role_definition_name in subscription_roles_allowed
+	not subscription_role_allowed(rc)
 	msg := sprintf("%s: subscription-wide role assignments are not allowed", [rc.address])
 }
 
