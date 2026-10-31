@@ -63,8 +63,8 @@ live. The user decided those before the build.
    - In the collector, the `redaction` processor with the same allowlist and the URL,
      UUID and e-mail patterns on traces and logs, and an `attributes` processor on
      metrics that deletes host, URL and person-shaped keys. OTLP is accepted only from
-     the instrumented namespaces (platform-api, -ingest, -ai), so the console's pods
-     cannot write a security event. A test keeps the two lists in step with each other and with
+     the exporting pods (api, connector-servicenow and its schedule job, worker-ai,
+     platform-metrics), so the console's pods cannot write a security event. A test keeps the two lists in step with each other and with
      every `cloudops.*` key the code sets; it caught `cloudops.agent.prompt_version`,
      which the services' rule dropped, now `cloudops.agent.version`.
    Customer names cannot be found by pattern; code must not put one in a message
@@ -179,9 +179,9 @@ live. The user decided those before the build.
 - A row-level security refusal on write is a Sev0 page, including the ServiceNow
   page that fails because a ticket's company moved to another tenant (dead-lettered by
   design, retried first). Whether that case should be a lower-severity event is open.
-- The collector's egress is any destination on 443 (NetworkPolicy has no FQDNs), as
-  for the other workloads; an FQDN policy (Cilium) would narrow it to App Insights and
-  Entra.
+- The collector's egress is public addresses on 443 (NetworkPolicy has no FQDNs);
+  an FQDN policy (Cilium) would narrow it to App Insights and Entra. With private
+  links in production, the private range it then needs is added there.
 - A dropped attribute is silent by design. A new `cloudops.*` attribute must be added
   to the collector's allowlist (a test fails otherwise).
 - Execution-plane signals (unsigned runbook, credential mint, verification rate,
