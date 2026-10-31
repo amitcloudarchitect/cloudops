@@ -119,13 +119,16 @@ async def accounts(
 async def store(
     db: Database, ref: str, ctx: PageContext, *, source: str, entity: str,
     totals: Iterable[Total], records: int, rejected: int = 0,
+    binding: identity.Binding | None = None,
 ) -> PageOutcome:
-    """Write one page's totals (see the module docstring)."""
+    """Write one page's totals (see the module docstring). ``binding``: a
+    customer credential's run, whose accounts resolve to its tenant only."""
     merged, conflicting = merge(totals)
     counts = state.RunCounts(pages=1, records=records, rejected=rejected + conflicting)
     who = principal(source)
     async with db.transaction(TenantScope((), Role.INGEST, who)) as conn:
-        resolved = await identity.resolve_ids(conn, source, {t.account for t in merged})
+        resolved = await identity.resolve_ids(conn, source, {t.account for t in merged},
+                                              binding)
     tenant_of = {a: t for a, t in resolved.items() if t is not None}
     unmatched = Counter(t.account for t in merged if t.account not in tenant_of)
     mine = [t for t in merged if t.account in tenant_of]

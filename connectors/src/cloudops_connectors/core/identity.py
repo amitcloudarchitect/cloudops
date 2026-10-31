@@ -12,6 +12,14 @@ quarantined, so it shows in the mapping console; nothing it carries is written
 until a person maps it. Once mapped, the connector keeps ``cloud_account`` in
 step with what the provider reports.
 
+Customer, by a stored credential (ADR 0003, ADR 0027): a run made with a
+customer's own credential is bound to that customer. Its ``Binding`` names the
+tenant and the ids the credential was onboarded for; those resolve to the tenant
+without consulting the alias map, and any other id the credential can see
+resolves to nobody, so it is quarantined and never read. The same id may then be
+held by the internal tenant through its alias (the platform's own subscription,
+ADR 0023): one id, two tenants, each through its own credential.
+
 Resource (Qualys, CoreStack, CUR): external key, then ``name_norm`` plus IP,
 then ``name_norm`` alone, each only if exactly one resource in the tenant
 matches; otherwise unlinked and counted for the resource quarantine.
@@ -36,7 +44,7 @@ _UPSERT_ACCOUNT: Final = text(
     " VALUES (:tenant_id, :provider, :native_id,"
     "         coalesce(CAST(:display_name AS text), :native_id), :region, now(), 'healthy',"
     "         now())"
-    " ON CONFLICT (provider, native_id) DO UPDATE SET"
+    " ON CONFLICT (tenant_id, provider, native_id) DO UPDATE SET"
     "   display_name = coalesce(CAST(:display_name AS text),"
     "                           cloudops.cloud_account.display_name),"
     "   region_default = coalesce(EXCLUDED.region_default,"
@@ -55,10 +63,41 @@ def name_norm(name: str) -> str:
     return name.split(".", 1)[0].lower()
 
 
+@dataclass(frozen=True, slots=True)
+class Binding:
+    """What a stored customer credential reaches (ADR 0003, guardrail 5): one
+    tenant, and the provider ids it was onboarded for."""
+
+    tenant_id: UUID
+    native_ids: frozenset[str]
+
+    def __post_init__(self) -> None:
+        if not self.native_ids:
+            raise ValueError("a binding names at least one account")
+
+    def admits(self, native_id: str) -> bool:
+        return native_id in self.native_ids
+
+
+class TargetOutOfScopeError(ValueError):
+    """A call for an account the credential is not bound to. Refused before it
+    is made; never retried (a ``ValueError``)."""
+
+
+def admit(binding: Binding | None, native_ids: Iterable[str]) -> list[str]:
+    """The ids a run may call the provider for, sorted: all of them, unbound;
+    bound, only the binding's."""
+    ids = sorted(set(native_ids))
+    return ids if binding is None else [i for i in ids if binding.admits(i)]
+
+
 async def resolve_ids(
-    conn: ScopedConnection, source: str, ids: Iterable[str]
+    conn: ScopedConnection, source: str, ids: Iterable[str], binding: Binding | None = None,
 ) -> dict[str, UUID | None]:
-    """Account or directory ids to tenants, exact matches only."""
+    """Account or directory ids to tenants, exact matches only. Bound: the
+    binding's ids to its tenant, every other id to nobody, the alias map unread."""
+    if binding is not None:
+        return {i: (binding.tenant_id if binding.admits(i) else None) for i in set(ids)}
     resolved = await state.resolve_aliases(conn, source, ids)
     return {k: (r.tenant_id if r.outcome == "exact" else None) for k, r in resolved.items()}
 
@@ -75,8 +114,9 @@ async def upsert_accounts(
     seen: Iterable[AccountSeen],
 ) -> dict[str, UUID]:
     """``cloud_account`` ids for accounts already resolved to tenants, created on
-    first sight. Must run in a transaction scoped to those tenants: an account
-    held by another tenant is invisible here and the upsert fails loudly."""
+    first sight. Must run in a transaction scoped to those tenants. An account
+    another customer holds fails loudly (the database's ``CAOWN``); one the
+    internal tenant holds is shared and marked so on both rows (ADR 0027)."""
     out: dict[str, UUID] = {}
     for a in sorted(seen, key=lambda x: x.native_id):
         tenant = tenant_of.get(a.native_id)
@@ -91,12 +131,29 @@ async def upsert_accounts(
 
 
 async def known_accounts(
-    conn: ScopedConnection, provider: str, ids: Iterable[str]
+    conn: ScopedConnection, provider: str, ids: Iterable[str] | Mapping[str, UUID]
 ) -> dict[str, tuple[UUID, UUID]]:
-    """native id -> (account id, tenant id), for accounts visible in scope."""
-    rows = [tuple(r) for r in await conn.execute(
-        _ACCOUNTS, {"provider": provider, "ids": sorted(set(ids))})]
-    return {str(r[0]): (UUID(str(r[1])), UUID(str(r[2]))) for r in rows}
+    """native id -> (account id, tenant id), for accounts visible in scope.
+
+    An id may be held by two tenants (the platform's own subscription, also a
+    customer's: ADR 0027). Given ``{id: tenant}``, each id's row is its tenant's.
+    Given bare ids, an id held by two tenants in scope is ambiguous and raises,
+    rather than picking one."""
+    wanted = dict(ids) if isinstance(ids, Mapping) else None
+    held: dict[str, dict[UUID, UUID]] = {}
+    for r in await conn.execute(_ACCOUNTS, {"provider": provider, "ids": sorted(set(ids))}):
+        row = tuple(r)
+        held.setdefault(str(row[0]), {})[UUID(str(row[2]))] = UUID(str(row[1]))
+    out: dict[str, tuple[UUID, UUID]] = {}
+    for native, by_tenant in held.items():
+        if wanted is not None and wanted[native] in by_tenant:
+            out[native] = (by_tenant[wanted[native]], wanted[native])
+        elif len(by_tenant) > 1:
+            raise ValueError("an account id is held by two tenants in scope")
+        else:  # held by one tenant: when not the wanted one, the caller decides
+            tenant, account = next(iter(by_tenant.items()))
+            out[native] = (account, tenant)
+    return out
 
 
 @dataclass(frozen=True, slots=True)

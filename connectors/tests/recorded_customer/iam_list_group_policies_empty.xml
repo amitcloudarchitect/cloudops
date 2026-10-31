@@ -1,0 +1,4 @@
+<ListGroupPoliciesResponse xmlns="https://iam.amazonaws.com/doc/2010-05-08/">
+  <ListGroupPoliciesResult><PolicyNames/><IsTruncated>false</IsTruncated></ListGroupPoliciesResult>
+  <ResponseMetadata><RequestId>req-5</RequestId></ResponseMetadata>
+</ListGroupPoliciesResponse>

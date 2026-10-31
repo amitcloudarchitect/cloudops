@@ -1,6 +1,8 @@
 # ADR 0023: The platform's own Azure cost, live
 
 - **Status:** Accepted, 2026-10-31
+- **Amended by:** ADR 0027: the dev subscription is also a customer's ("Azure
+  Sponsorship"), read with its own credential; its cost is in both tenants (below).
 - **Decided by:** Amit Kumar
 - **Implements:** the follow-up deferred by ADR 0022, decision 11. `connectors/.../azure/auth.py`,
   the live path in `azure/__main__.py` and `core/cli.py`, `cloudops_config` component
@@ -110,3 +112,29 @@ the platform's own subscriptions with the platform's own workload identity.
   transaction (`azure/focus.py`, `core/assembly.py`).
 - Nothing in the product marks a tenant `internal` in Azure (only the dev seed does).
   Until it does, it is a manual step (`docs/platform-cost-feed.md`).
+
+## Amendment (ADR 0027): the same subscription under a customer too
+
+The user onboarded "Azure Sponsorship" (`azsponsor`) with the dev subscription
+`cd12743c-f76e-4284-aa62-eb8bd576ac91`, the platform's own, through an app registration
+(ADR 0003), and accepted that the platform's cost then appears under both tenants.
+
+- **Two feeds, two tenants, one subscription.** This feed keeps reading it with the
+  ingest identity, through its alias, into the internal tenant. The customer's
+  credential reads it into `azsponsor`, by its binding, never by the alias. Each has its
+  own `cloud_account` row (unique per tenant since migrations 0021 and 0022), its own
+  watermarks, and its own daily-cost statements: a newer statement supersedes only its
+  own tenant's, so neither feed replaces the other's month.
+- **Visible.** Both rows are `shared_with_platform`. The credential view, FinOps'
+  per-account reconciliation and the staff cost summary say so; the summary carries the
+  shared part of each line, because a total across tenants counts it twice.
+- **Reconciliation is untouched.** It is per account, so each tenant reconciles its
+  own ledger against the provider total its own feed fetched. The two never add up.
+  `db/tests/test_connector_customer.py` runs both feeds and checks this.
+- **Only the internal tenant may share.** A database trigger admits a second tenant on
+  the same id only when one of them is the internal tenant, and never two customers;
+  the internal tenant cannot stop being internal while it shares. So step 2 of
+  `docs/platform-cost-feed.md` (mark the tenant internal) must be done before the
+  customer's first check binds the subscription, or the check is refused
+  (`account_held_by_another_tenant`).
+

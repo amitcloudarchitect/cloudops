@@ -246,6 +246,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cloud-onboarding/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Credentials
+         * @description The inventory (ADR 0003, guardrail 6): every stored credential in scope,
+         *     revoked ones included, soonest expiry first.
+         */
+        get: operations["list_credentials_v1_cloud_onboarding_credentials_get"];
+        put?: never;
+        /**
+         * Onboard
+         * @description Record a credential's identifiers and queue its check. The secret goes into
+         *     Key Vault under the returned ``secret_names``, never here.
+         */
+        post: operations["onboard_v1_cloud_onboarding_credentials_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-onboarding/credentials/{credential_id}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Check
+         * @description Check again: after creating the secret, after fixing a role, or with a new
+         *     expiry after rotating the secret under the same name.
+         */
+        post: operations["request_check_v1_cloud_onboarding_credentials__credential_id__checks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-onboarding/credentials/{credential_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke
+         * @description Stop using it now. Delete the Key Vault secret and the app registration's
+         *     secret (or deactivate the access key) out of band; the row stays as the record.
+         */
+        post: operations["revoke_v1_cloud_onboarding_credentials__credential_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/margin": {
         parameters: {
             query?: never;
@@ -1177,6 +1245,8 @@ export interface components {
             /** Reason */
             reason: string | null;
             reference: components["schemas"]["Metric_Decimal_"] | null;
+            /** Shared With Platform */
+            shared_with_platform: boolean;
             /**
              * Status
              * @enum {string}
@@ -1343,6 +1413,58 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** AwsCredentialRequest */
+        AwsCredentialRequest: {
+            /** Access Key Id */
+            access_key_id: string;
+            /** Account Id */
+            account_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "aws";
+            /**
+             * Secret Expires At
+             * Format: date-time
+             */
+            secret_expires_at: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
+        /** AzureCredentialRequest */
+        AzureCredentialRequest: {
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /**
+             * Directory Id
+             * Format: uuid
+             */
+            directory_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "azure";
+            /**
+             * Secret Expires At
+             * Format: date-time
+             */
+            secret_expires_at: string;
+            /** Subscription Ids */
+            subscription_ids: string[];
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
         /**
          * BandRules
          * @description The thresholds the bands were computed with, so a screen explains them
@@ -1375,6 +1497,42 @@ export interface components {
             /** Feeds Margin */
             feeds_margin: boolean;
             unblended: components["schemas"]["Metric_Decimal_"];
+        };
+        /** CheckRequest */
+        CheckRequest: {
+            /** Secret Expires At */
+            secret_expires_at?: string | null;
+        };
+        /** CheckView */
+        CheckView: {
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            } | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "onboard" | "rotation" | "recheck";
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "requested" | "running" | "passed" | "refused" | "failed";
         };
         /** CitationView */
         CitationView: {
@@ -1552,6 +1710,7 @@ export interface components {
             currency: string;
             /** Provider */
             provider: string;
+            shared_with_platform?: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** CostSummary */
         CostSummary: {
@@ -1585,6 +1744,65 @@ export interface components {
             /** Has Gap */
             has_gap: boolean;
             tenant: components["schemas"]["TenantView"];
+        };
+        /** CredentialView */
+        CredentialView: {
+            /** Access Key Id */
+            access_key_id: string | null;
+            /** Account Ids */
+            account_ids: string[];
+            /** Client Id */
+            client_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Credential Source
+             * @constant
+             */
+            credential_source: "stored_key";
+            days_to_expiry: components["schemas"]["Metric_int_"];
+            /** Directory Id */
+            directory_id: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            latest_check: components["schemas"]["CheckView"] | null;
+            /** Owned By Me */
+            owned_by_me: boolean;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "azure" | "aws";
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Secret Names */
+            secret_names: string[];
+            /**
+             * Secret Set At
+             * Format: date-time
+             */
+            secret_set_at: string;
+            /** Shared With Platform */
+            shared_with_platform: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "active" | "refused" | "revoked";
+            tenant: components["schemas"]["TenantView"];
+            /** Validated At */
+            validated_at: string | null;
         };
         /** CustomerCost */
         CustomerCost: {
@@ -3547,6 +3765,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LoadResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_credentials_v1_cloud_onboarding_credentials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"][];
+                };
+            };
+        };
+    };
+    onboard_v1_cloud_onboarding_credentials_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AzureCredentialRequest"] | components["schemas"]["AwsCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_check_v1_cloud_onboarding_credentials__credential_id__checks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                credential_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_v1_cloud_onboarding_credentials__credential_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                credential_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"];
                 };
             };
             /** @description Validation Error */

@@ -183,7 +183,10 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     onboarding (0011) is read by the resolver before any scope exists and
     written by the access functions' owner only. The drafting queue (0013)
     lists requested drafts across tenants: requested only, three columns,
-    function owner only."""
+    function owner only. Cloud onboarding (0021): the credential check queue as
+    the re-process queue; the credential registry, unrevoked only; and the
+    shared-account trigger, which reads every tenant's account ids and marks the
+    shared flag, and reads which tenant is internal. Function owner only."""
     with psycopg.connect(seeded.admin_dsn) as cx:
         extra = cx.execute(
             "SELECT c.relname, p.polname, array(SELECT rolname FROM pg_roles"
@@ -197,13 +200,20 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     assert extra == [
         ("alias_reprocess", "reprocess_queue_claim", ["cloudops_access_admin"]),
         ("alias_reprocess", "reprocess_queue_read", ["cloudops_access_admin"]),
+        # Migration 0021 (ADR 0027): the shared-account check and the credential queue.
+        ("cloud_account", "account_sharing_mark", ["cloudops_access_admin"]),
+        ("cloud_account", "account_sharing_read", ["cloudops_access_admin"]),
         ("control_response", "draft_queue_read", ["cloudops_resolver"]),
+        ("credential_check", "check_queue_claim", ["cloudops_access_admin"]),
+        ("credential_check", "check_queue_read", ["cloudops_access_admin"]),
+        ("customer_credential", "credential_registry_read", ["cloudops_access_admin"]),
         ("llm_call", "spend_registry_read", ["cloudops_resolver"]),
         ("portal_onboarding", "access_admin_all", ["cloudops_access_admin"]),
         ("portal_onboarding", "resolver_read", ["cloudops_resolver"]),
         ("portal_role_agreement", "access_admin_all", ["cloudops_access_admin"]),
         ("portal_role_agreement", "resolver_read", ["cloudops_resolver"]),
         ("report_narrative", "draft_queue_read", ["cloudops_resolver"]),
+        ("tenant", "internal_tenant_read", ["cloudops_access_admin"]),
         ("tenant", "tenant_onboarding", ["cloudops_access_admin"]),
         ("tenant", "tenant_registry_read", ["cloudops_resolver"]),
         ("tenant_alias", "alias_registry_read", ["cloudops_resolver"]),

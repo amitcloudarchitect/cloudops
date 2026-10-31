@@ -79,6 +79,26 @@ uv run python -m cloudops_connectors.ecb run --fixtures              # step 16: 
 uv run python -m cloudops_connectors.azure run --fixtures --entity cost_export
 ```
 
+## A customer's own credential (ADR 0027, under ADR 0003)
+
+Non-production only. `cloudops_connectors.customer` reads a customer's Azure
+subscriptions with an app registration's secret, or an AWS account with an access
+key, read-only. The secret is a Key Vault secret read through the `SecretStore` by
+name (`customer-<code>-azure-secret`), never stored anywhere else.
+
+- **Check first.** An onboarding (`/v1/cloud-onboarding`) queues a check; the worker
+  claims it, confirms the credential reaches exactly its accounts with read roles only
+  (`customer/check.py`), binds the accounts to the tenant and starts the first sync.
+- **Bound sources.** The ordinary sources, built with an `identity.Binding`: the
+  accounts resolve to the credential's tenant (never through the alias map), the Azure
+  client refuses any other subscription before calling (`allowed`), and the source's
+  `instance` names the credential (own watermarks; replays skip other instances' pages).
+- **One worker per credential**, on `connectors-<provider>-customer-<code>`, with
+  schedules `customer-<provider>-<code>-<entity>`.
+- `stored_key` is refused in `prd` (`cloudops_config`, `CUSTOMER_ACCESS`).
+
+Instructions: `docs/cloud-onboarding.md`.
+
 ## Telemetry (not the batch medallion)
 
 ```

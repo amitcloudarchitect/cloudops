@@ -15,6 +15,7 @@ from fastapi.routing import APIRoute
 from cloudops_api import (
     assurance,
     bff,
+    cloud_onboarding,
     commercial,
     connectors,
     knowledge,
@@ -80,6 +81,7 @@ def create_app(
 ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
     commercial.router, knowledge.router, assurance.router, reports.router,
+    cloud_onboarding.router,
 )
 
 

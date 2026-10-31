@@ -29,7 +29,7 @@ from typing import Any, Final
 
 from cloudops_connectors.azure import mapping
 from cloudops_connectors.azure.client import AzureClient
-from cloudops_connectors.core import billing
+from cloudops_connectors.core import billing, identity
 from cloudops_connectors.core.ingest import Fetched, PageContext, PageInfo, PageOutcome
 from cloudops_connectors.core.raw import RawStore
 from cloudops_tenancy import Database
@@ -168,8 +168,9 @@ class AzureBilling:
     """The two entities' fetch, inspect and process, for ``AzureSource``."""
 
     def __init__(self, client: AzureClient, billing_account: str | None,
-                 today: Callable[[], date]) -> None:
+                 today: Callable[[], date], binding: identity.Binding | None = None) -> None:
         self._client = client
+        self._binding = binding
         self._account = billing_account
         self._today = today
 
@@ -210,7 +211,9 @@ class AzureBilling:
                                                        "found": subs}, *rest]))
             window = {"as_of": meta["as_of"]} if entity == mapping.COST_TOTAL else {
                 "start": meta["start"], "end": meta["end"]}
-            return PageInfo(len(listed), _cursor([{"sub": s, **window} for s in subs] + rest))
+            return PageInfo(len(listed), _cursor([{"sub": s, **window}
+                                                  for s in identity.admit(self._binding, subs)]
+                                                 + rest))
         # A response that does not parse is left for ``process`` to fail, so the
         # page dead-letters with its bronze reference.
         try:
@@ -233,7 +236,8 @@ class AzureBilling:
         if kind == SUBSCRIPTIONS:
             listed = mapping.subscriptions(body)
             return await billing.store(db, ref, ctx, source=mapping.SOURCE, entity=entity,
-                                       totals=[], records=len(listed))
+                                       totals=[], records=len(listed),
+                                       binding=self._binding)
         sub = meta.get("subscription", "")
         if kind == COST_QUERY and entity == mapping.COST_TOTAL:
             totals, bad = cost_totals(body, sub, date.fromisoformat(meta["as_of"]))
@@ -242,5 +246,6 @@ class AzureBilling:
         else:
             raise ValueError("bronze page is not this entity's billing response")
         return await billing.store(db, ref, ctx, source=mapping.SOURCE, entity=entity,
-                                   totals=totals, records=len(totals) + bad, rejected=bad)
+                                   totals=totals, records=len(totals) + bad, rejected=bad,
+                                   binding=self._binding)
 

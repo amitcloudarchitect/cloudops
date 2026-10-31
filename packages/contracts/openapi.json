@@ -60,6 +60,10 @@
               }
             ]
           },
+          "shared_with_platform": {
+            "title": "Shared With Platform",
+            "type": "boolean"
+          },
           "status": {
             "enum": [
               "verified",
@@ -78,7 +82,8 @@
           "checked_on",
           "ledger",
           "reference",
-          "drift"
+          "drift",
+          "shared_with_platform"
         ],
         "title": "AccountCheck",
         "type": "object"
@@ -488,6 +493,95 @@
         "title": "AssessmentSummary",
         "type": "object"
       },
+      "AwsCredentialRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "access_key_id": {
+            "pattern": "^AKIA[A-Z0-9]{16}$",
+            "title": "Access Key Id",
+            "type": "string"
+          },
+          "account_id": {
+            "pattern": "^[0-9]{12}$",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "provider": {
+            "const": "aws",
+            "title": "Provider",
+            "type": "string"
+          },
+          "secret_expires_at": {
+            "format": "date-time",
+            "title": "Secret Expires At",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "tenant_id",
+          "account_id",
+          "access_key_id",
+          "secret_expires_at"
+        ],
+        "title": "AwsCredentialRequest",
+        "type": "object"
+      },
+      "AzureCredentialRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "directory_id": {
+            "format": "uuid",
+            "title": "Directory Id",
+            "type": "string"
+          },
+          "provider": {
+            "const": "azure",
+            "title": "Provider",
+            "type": "string"
+          },
+          "secret_expires_at": {
+            "format": "date-time",
+            "title": "Secret Expires At",
+            "type": "string"
+          },
+          "subscription_ids": {
+            "items": {
+              "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Subscription Ids",
+            "type": "array"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "tenant_id",
+          "directory_id",
+          "client_id",
+          "subscription_ids",
+          "secret_expires_at"
+        ],
+        "title": "AzureCredentialRequest",
+        "type": "object"
+      },
       "BandRules": {
         "additionalProperties": false,
         "description": "The thresholds the bands were computed with, so a screen explains them\nwithout restating them.",
@@ -597,6 +691,106 @@
           "converted"
         ],
         "title": "ChargeLine",
+        "type": "object"
+      },
+      "CheckRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "secret_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Expires At"
+          }
+        },
+        "title": "CheckRequest",
+        "type": "object"
+      },
+      "CheckView": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "reason": {
+            "enum": [
+              "onboard",
+              "rotation",
+              "recheck"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "running",
+              "passed",
+              "refused",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "status",
+          "requested_at",
+          "finished_at",
+          "outcome",
+          "detail"
+        ],
+        "title": "CheckView",
         "type": "object"
       },
       "CitationView": {
@@ -1202,6 +1396,16 @@
           "provider": {
             "title": "Provider",
             "type": "string"
+          },
+          "shared_with_platform": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -1290,6 +1494,177 @@
           "has_gap"
         ],
         "title": "CoverageView",
+        "type": "object"
+      },
+      "CredentialView": {
+        "additionalProperties": false,
+        "properties": {
+          "access_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Key Id"
+          },
+          "account_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Account Ids",
+            "type": "array"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credential_source": {
+            "const": "stored_key",
+            "title": "Credential Source",
+            "type": "string"
+          },
+          "days_to_expiry": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "directory_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory Id"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheckView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owned_by_me": {
+            "title": "Owned By Me",
+            "type": "boolean"
+          },
+          "provider": {
+            "enum": [
+              "azure",
+              "aws"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "secret_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Secret Names",
+            "type": "array"
+          },
+          "secret_set_at": {
+            "format": "date-time",
+            "title": "Secret Set At",
+            "type": "string"
+          },
+          "shared_with_platform": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared With Platform",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "active",
+              "refused",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "validated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validated At"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "provider",
+          "credential_source",
+          "directory_id",
+          "client_id",
+          "access_key_id",
+          "account_ids",
+          "secret_names",
+          "owned_by_me",
+          "created_at",
+          "secret_set_at",
+          "expires_at",
+          "days_to_expiry",
+          "status",
+          "validated_at",
+          "revoked_at",
+          "shared_with_platform",
+          "latest_check"
+        ],
+        "title": "CredentialView",
         "type": "object"
       },
       "CustomerCost": {
@@ -6972,6 +7347,173 @@
           }
         },
         "summary": "Load Library"
+      }
+    },
+    "/v1/cloud-onboarding/credentials": {
+      "get": {
+        "description": "The inventory (ADR 0003, guardrail 6): every stored credential in scope,\nrevoked ones included, soonest expiry first.",
+        "operationId": "list_credentials_v1_cloud_onboarding_credentials_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CredentialView"
+                  },
+                  "title": "Response List Credentials V1 Cloud Onboarding Credentials Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Credentials"
+      },
+      "post": {
+        "description": "Record a credential's identifiers and queue its check. The secret goes into\nKey Vault under the returned ``secret_names``, never here.",
+        "operationId": "onboard_v1_cloud_onboarding_credentials_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "aws": "#/components/schemas/AwsCredentialRequest",
+                    "azure": "#/components/schemas/AzureCredentialRequest"
+                  },
+                  "propertyName": "provider"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AzureCredentialRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AwsCredentialRequest"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Onboard"
+      }
+    },
+    "/v1/cloud-onboarding/credentials/{credential_id}/checks": {
+      "post": {
+        "description": "Check again: after creating the secret, after fixing a role, or with a new\nexpiry after rotating the secret under the same name.",
+        "operationId": "request_check_v1_cloud_onboarding_credentials__credential_id__checks_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Check"
+      }
+    },
+    "/v1/cloud-onboarding/credentials/{credential_id}/revoke": {
+      "post": {
+        "description": "Stop using it now. Delete the Key Vault secret and the app registration's\nsecret (or deactivate the access key) out of band; the row stays as the record.",
+        "operationId": "revoke_v1_cloud_onboarding_credentials__credential_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke"
       }
     },
     "/v1/commercial/margin": {

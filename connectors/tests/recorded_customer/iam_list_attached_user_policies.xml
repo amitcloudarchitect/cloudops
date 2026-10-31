@@ -1,0 +1,9 @@
+<ListAttachedUserPoliciesResponse xmlns="https://iam.amazonaws.com/doc/2010-05-08/">
+  <ListAttachedUserPoliciesResult>
+    <AttachedPolicies>
+      <member><PolicyName>ReadOnlyAccess</PolicyName><PolicyArn>arn:aws:iam::aws:policy/ReadOnlyAccess</PolicyArn></member>
+    </AttachedPolicies>
+    <IsTruncated>false</IsTruncated>
+  </ListAttachedUserPoliciesResult>
+  <ResponseMetadata><RequestId>req-1</RequestId></ResponseMetadata>
+</ListAttachedUserPoliciesResponse>

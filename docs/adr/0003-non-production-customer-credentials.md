@@ -4,6 +4,9 @@
 - **Decided by:** Amit Kumar
 - **Departs from:** CLAUDE.md rule 2 and LLD, Customer environment access
 - **Expires:** before the first production deployment, which this ADR blocks
+- **Implemented by:** ADR 0027 (2026-10-31): the `stored_key` setting and its refusal in
+  `prd`, the inventory (`cloudops.customer_credential`), the read-only check, the
+  target-scope check, and `docs/cloud-onboarding.md`
 
 ## Decision
 
