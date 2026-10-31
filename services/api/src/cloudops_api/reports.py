@@ -178,9 +178,13 @@ class PortfolioView(ApiModel):
 _PACK_COLS: Final = (
     "p.id, p.tenant_id, t.canonical_name, p.period, p.version, p.status, p.contract_currency,"
     " p.generated_at, p.approved_at, p.published_at, p.data_as_of,"
-    # The commercial sections join in only where commercial_visibility lets the
-    # scope read them (migration 0013); anyone else gets the pack without them.
-    " p.sections || coalesce((SELECT c.sections FROM cloudops.report_pack_commercial c"
+    # The customer's price joins in where price_visibility lets the scope read it
+    # (commercial roles; a customer once published, migration 0016), and the
+    # commercial sections where commercial_visibility does (0013), each section by
+    # section over the one before. Anyone else gets the pack without them.
+    " p.sections || coalesce((SELECT r.sections FROM cloudops.report_pack_price r"
+    "  WHERE r.pack_id = p.id AND r.tenant_id = p.tenant_id), '{}'::jsonb)"
+    " || coalesce((SELECT c.sections FROM cloudops.report_pack_commercial c"
     "  WHERE c.pack_id = p.id AND c.tenant_id = p.tenant_id), '{}'::jsonb)"
 )
 _PACK: Final = text(
@@ -259,8 +263,10 @@ async def generate_pack(request: Request, body: GenerateRequest, access: AccessD
             contract_currency=str(currency).strip(), now=now,
             availability_source=p.availability, financial=p.financial)
         # Margin, SOW revenue and Getronics' cloud cost are stored apart, where only
-        # commercial roles read them (ADR 0020): never in what a customer can read.
-        public, restricted = sections.for_storage(content)
+        # commercial roles read them (ADR 0020); the customer's price apart again,
+        # where only they and the customer do (ADR 0021): neither in what every
+        # reports.read holder reads.
+        stored = sections.for_storage(content)
         # A new version supersedes the unpublished ones; a published pack stays
         # published until its successor is.
         await conn.execute(text(
@@ -275,11 +281,13 @@ async def generate_pack(request: Request, body: GenerateRequest, access: AccessD
             " sections, data_as_of, generated_by) VALUES (:t, :p, :v, :c, CAST(:s AS jsonb),"
             " :at, :by) RETURNING id"),
             {"t": body.tenant_id, "p": period, "v": version, "c": content.contract_currency,
-             "s": json.dumps(public), "at": now, "by": access.identity.oid})
-        await conn.execute(text(
-            "INSERT INTO cloudops.report_pack_commercial (pack_id, tenant_id, sections)"
-            " VALUES (:p, :t, CAST(:s AS jsonb))"),
-            {"p": pack, "t": body.tenant_id, "s": json.dumps(restricted)})
+             "s": json.dumps(stored.public), "at": now, "by": access.identity.oid})
+        for table, part in (("report_pack_price", stored.priced),
+                            ("report_pack_commercial", stored.commercial)):
+            await conn.execute(text(
+                f"INSERT INTO cloudops.{table} (pack_id, tenant_id, sections)"  # noqa: S608
+                " VALUES (:p, :t, CAST(:s AS jsonb))"),
+                {"p": pack, "t": body.tenant_id, "s": json.dumps(part)})
         wanted = sections.narrative_sections(content)
         if wanted:
             await conn.execute(text(

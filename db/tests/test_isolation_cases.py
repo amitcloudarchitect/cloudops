@@ -109,6 +109,8 @@ TENANT_TABLES = (
     "cloudops.report_pack",
     "cloudops.report_narrative",
     "cloudops.report_pack_commercial",
+    # Step 17 follow-up (ADR 0021).
+    "cloudops.report_pack_price",
 )
 # Written by people and the drafting worker through the application login only.
 NOT_INGESTED = frozenset({
@@ -119,6 +121,7 @@ NOT_INGESTED = frozenset({
     "cloudops.report_pack",
     "cloudops.report_narrative",
     "cloudops.report_pack_commercial",
+    "cloudops.report_pack_price",
 })
 
 

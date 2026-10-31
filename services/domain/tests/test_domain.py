@@ -366,13 +366,21 @@ def test_storage_gives_the_customer_the_price_and_commercial_roles_the_cost() ->
                          "cloud_billing", "q", "not captured: no consumption uplift agreed")):
         content = replace(base, sections=(replace(summary, figures=(*summary.figures, price)),
                                           *base.sections[1:]))
-        public, restricted = for_storage(content)
-        readable = {f["key"]: f for f in public["executive_summary"]["figures"]}
-        assert "cloud_cost" not in readable
-        assert readable["customer_price"] == asdict(price)
-        staff = {f["key"] for f in restricted["executive_summary"]["figures"]}
-        assert {"cloud_cost", "customer_price"} <= staff
-        assert set(public) == {"executive_summary", "volumetrics", "csat"}
+        stored = for_storage(content)
+
+        def keys(part: dict[str, Any]) -> set[str]:
+            return {f["key"] for f in part["executive_summary"]["figures"]}
+
+        # Every reports.read holder: neither, since price over cost is the uplift.
+        assert keys(stored.public).isdisjoint({"cloud_cost", "customer_price"})
+        assert set(stored.public) == {"executive_summary", "volumetrics", "csat"}
+        # The customer: the price (or its gap) in the cost's place.
+        assert set(stored.priced) == {"executive_summary"}
+        priced = {f["key"]: f for f in stored.priced["executive_summary"]["figures"]}
+        assert "cloud_cost" not in priced
+        assert priced["customer_price"] == asdict(price)
+        # Commercial roles: both.
+        assert {"cloud_cost", "customer_price"} <= keys(stored.commercial)
 
 
 def test_narrative_input_is_figures_and_tables_only() -> None:
