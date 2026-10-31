@@ -18,3 +18,8 @@ export const ROLES = {
 export type RoleName = keyof typeof ROLES;
 
 export const TOKEN_DIR = new URL("./.tokens/", import.meta.url);
+
+/** The local secrets file the helpers run with: an override, or the repository's own. */
+export function localSecretsFile(repo: string): string {
+  return process.env.CLOUDOPS_LOCAL_SECRETS_FILE || `${repo}.env.local`;
+}

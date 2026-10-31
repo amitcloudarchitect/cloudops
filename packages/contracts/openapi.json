@@ -1,6 +1,88 @@
 {
   "components": {
     "schemas": {
+      "AccountCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "checked_on": {
+            "format": "date",
+            "title": "Checked On",
+            "type": "string"
+          },
+          "drift": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "provider_total",
+              "invoice"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "ledger": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "unverified"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_name",
+          "kind",
+          "status",
+          "reason",
+          "checked_on",
+          "ledger",
+          "reference",
+          "drift"
+        ],
+        "title": "AccountCheck",
+        "type": "object"
+      },
       "AcknowledgeRequest": {
         "additionalProperties": false,
         "properties": {
@@ -82,6 +164,113 @@
           "confirmed_at"
         ],
         "title": "AliasView",
+        "type": "object"
+      },
+      "AllocationLine": {
+        "additionalProperties": false,
+        "properties": {
+          "amortized": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "dimension": {
+            "enum": [
+              "application",
+              "cost_centre"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "dimension",
+          "value",
+          "currency",
+          "amortized"
+        ],
+        "title": "AllocationLine",
+        "type": "object"
+      },
+      "AnomalyView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "direction": {
+            "enum": [
+              "spike",
+              "drop"
+            ],
+            "title": "Direction",
+            "type": "string"
+          },
+          "granularity": {
+            "enum": [
+              "day",
+              "month"
+            ],
+            "title": "Granularity",
+            "type": "string"
+          },
+          "observed": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "observed_on": {
+            "format": "date",
+            "title": "Observed On",
+            "type": "string"
+          },
+          "ratio": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "account_id",
+          "account_name",
+          "granularity",
+          "observed_on",
+          "direction",
+          "currency",
+          "observed",
+          "baseline",
+          "ratio"
+        ],
+        "title": "AnomalyView",
         "type": "object"
       },
       "Approval": {
@@ -352,6 +541,49 @@
           "permissions"
         ],
         "title": "CatalogueRole",
+        "type": "object"
+      },
+      "ChargeLine": {
+        "additionalProperties": false,
+        "properties": {
+          "amortized": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "charge_class": {
+            "title": "Charge Class",
+            "type": "string"
+          },
+          "converted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "feeds_margin": {
+            "title": "Feeds Margin",
+            "type": "boolean"
+          },
+          "unblended": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "charge_class",
+          "feeds_margin",
+          "currency",
+          "amortized",
+          "unblended",
+          "converted"
+        ],
+        "title": "ChargeLine",
         "type": "object"
       },
       "CitationView": {
@@ -1023,6 +1255,90 @@
         "title": "CoverageView",
         "type": "object"
       },
+      "CustomerCost": {
+        "additionalProperties": false,
+        "properties": {
+          "anomalies": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "charges": {
+            "items": {
+              "$ref": "#/components/schemas/ChargeLine"
+            },
+            "title": "Charges",
+            "type": "array"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/AccountCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "unallocated": {
+            "items": {
+              "$ref": "#/components/schemas/Unallocated"
+            },
+            "title": "Unallocated",
+            "type": "array"
+          },
+          "verification": {
+            "enum": [
+              "verified",
+              "unverified"
+            ],
+            "title": "Verification",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant",
+          "period",
+          "verification",
+          "charges",
+          "checks",
+          "unallocated",
+          "anomalies"
+        ],
+        "title": "CustomerCost",
+        "type": "object"
+      },
+      "CustomerFinOps": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationLine"
+            },
+            "title": "Allocation",
+            "type": "array"
+          },
+          "anomalies": {
+            "items": {
+              "$ref": "#/components/schemas/AnomalyView"
+            },
+            "title": "Anomalies",
+            "type": "array"
+          },
+          "cost": {
+            "$ref": "#/components/schemas/CustomerCost"
+          }
+        },
+        "required": [
+          "cost",
+          "allocation",
+          "anomalies"
+        ],
+        "title": "CustomerFinOps",
+        "type": "object"
+      },
       "CustomerOverview": {
         "additionalProperties": false,
         "properties": {
@@ -1398,6 +1714,43 @@
         "title": "DriftView",
         "type": "object"
       },
+      "Effort": {
+        "additionalProperties": false,
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "hours": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "items": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items_without_hours": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "modelled_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "hours",
+          "modelled_hours",
+          "items",
+          "items_without_hours",
+          "complete"
+        ],
+        "title": "Effort",
+        "type": "object"
+      },
       "EvidencePackSummary": {
         "additionalProperties": false,
         "properties": {
@@ -1610,6 +1963,40 @@
         "title": "FigureSnapshot",
         "type": "object"
       },
+      "FinOpsOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerCost"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
+          }
+        },
+        "required": [
+          "period",
+          "reporting_currency",
+          "customers"
+        ],
+        "title": "FinOpsOverview",
+        "type": "object"
+      },
       "FirstAdminRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1672,6 +2059,128 @@
           "manual"
         ],
         "title": "FrameworkView",
+        "type": "object"
+      },
+      "FxCorrectionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "from_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "From Currency",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Rate"
+          },
+          "rate_type": {
+            "enum": [
+              "closing",
+              "average"
+            ],
+            "title": "Rate Type",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "to_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "To Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_currency",
+          "to_currency",
+          "rate_type",
+          "effective_date",
+          "rate",
+          "reason"
+        ],
+        "title": "FxCorrectionRequest",
+        "type": "object"
+      },
+      "FxCorrectionView": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "entered_at": {
+            "format": "date-time",
+            "title": "Entered At",
+            "type": "string"
+          },
+          "from_currency": {
+            "title": "From Currency",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "new_rate": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "previous_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rate_type": {
+            "title": "Rate Type",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "to_currency": {
+            "title": "To Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "from_currency",
+          "to_currency",
+          "rate_type",
+          "effective_date",
+          "previous_rate",
+          "new_rate",
+          "source",
+          "reason",
+          "entered_at"
+        ],
+        "title": "FxCorrectionView",
         "type": "object"
       },
       "GenerateRequest": {
@@ -1743,6 +2252,337 @@
           "loaded"
         ],
         "title": "LoadResult",
+        "type": "object"
+      },
+      "MarginDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "margin": {
+            "$ref": "#/components/schemas/MarginView"
+          },
+          "variance": {
+            "items": {
+              "$ref": "#/components/schemas/VarianceView"
+            },
+            "title": "Variance",
+            "type": "array"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionView"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "margin",
+          "variance",
+          "versions"
+        ],
+        "title": "MarginDetail",
+        "type": "object"
+      },
+      "MarginOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/MarginView"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
+          }
+        },
+        "required": [
+          "period",
+          "reporting_currency",
+          "customers"
+        ],
+        "title": "MarginOverview",
+        "type": "object"
+      },
+      "MarginView": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "actual_margin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band"
+          },
+          "band_basis": {
+            "anyOf": [
+              {
+                "enum": [
+                  "actual",
+                  "modelled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band Basis"
+          },
+          "contract_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Currency"
+          },
+          "effort": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Effort"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exceeds_slab": {
+            "title": "Exceeds Slab",
+            "type": "boolean"
+          },
+          "gap_to_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "margin_pct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelled_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "modelled_margin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "not_captured": {
+            "anyOf": [
+              {
+                "enum": [
+                  "no_sow",
+                  "no_people_cost",
+                  "no_fx_rate",
+                  "no_cost_data",
+                  "not_computed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Captured"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "rate_card_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Card Version"
+          },
+          "reported": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Reported"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "restated": {
+            "title": "Restated",
+            "type": "boolean"
+          },
+          "revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "provisional",
+                  "closed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "target_margin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Through"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "title": "Trend",
+            "type": "array"
+          },
+          "unpriced_cis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tenant",
+          "period",
+          "not_captured",
+          "status",
+          "through",
+          "version",
+          "restated",
+          "rate_card_version",
+          "contract_currency",
+          "revenue",
+          "modelled_cost",
+          "actual_cost",
+          "modelled_margin",
+          "actual_margin",
+          "margin_pct",
+          "band",
+          "band_basis",
+          "target_margin",
+          "gap_to_target",
+          "effort",
+          "unpriced_cis",
+          "exceeds_slab",
+          "reported",
+          "trend"
+        ],
+        "title": "MarginView",
         "type": "object"
       },
       "MeView": {
@@ -2774,6 +3614,262 @@
         "title": "QuarantinedAlias",
         "type": "object"
       },
+      "QuoteRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "corestack": {
+            "default": true,
+            "title": "Corestack",
+            "type": "boolean"
+          },
+          "coverage": {
+            "default": "24x7",
+            "enum": [
+              "8x5",
+              "16x5",
+              "24x7"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "inventory": {
+            "additionalProperties": {
+              "maximum": 1000000.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "maxProperties": 64,
+            "title": "Inventory",
+            "type": "object"
+          },
+          "location": {
+            "default": "India",
+            "enum": [
+              "India",
+              "Budapest"
+            ],
+            "title": "Location",
+            "type": "string"
+          },
+          "monthly_consumption": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Monthly Consumption"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On"
+          },
+          "support_model": {
+            "default": "Gold",
+            "enum": [
+              "Bronze",
+              "Silver",
+              "Gold"
+            ],
+            "title": "Support Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "inventory",
+          "monthly_consumption",
+          "currency"
+        ],
+        "title": "QuoteRequest",
+        "type": "object"
+      },
+      "QuoteView": {
+        "additionalProperties": false,
+        "properties": {
+          "base_pack": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "cis_until_next_slab": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cloud_services_cost": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "critical_cis": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "fte": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "next_slab": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Slab"
+          },
+          "platform_cost": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "price_per_ci": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "rate_card_version": {
+            "title": "Rate Card Version",
+            "type": "string"
+          },
+          "repricing_due": {
+            "title": "Repricing Due",
+            "type": "boolean"
+          },
+          "service_cost": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "slab": {
+            "title": "Slab",
+            "type": "string"
+          },
+          "team": {
+            "items": {
+              "$ref": "#/components/schemas/TeamLine"
+            },
+            "title": "Team",
+            "type": "array"
+          },
+          "total_monthly": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "transition_weeks": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "rate_card_version",
+          "currency",
+          "critical_cis",
+          "slab",
+          "service_cost",
+          "base_pack",
+          "cloud_services_cost",
+          "platform_cost",
+          "total_monthly",
+          "price_per_ci",
+          "fte",
+          "team",
+          "transition_weeks",
+          "next_slab",
+          "cis_until_next_slab",
+          "repricing_due"
+        ],
+        "title": "QuoteView",
+        "type": "object"
+      },
+      "RateCardView": {
+        "additionalProperties": false,
+        "properties": {
+          "coverages": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Coverages",
+            "type": "array"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "locations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Locations",
+            "type": "array"
+          },
+          "resource_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Resource Types",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "support_models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Support Models",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "effective_from",
+          "effective_to",
+          "currency",
+          "source",
+          "resource_types",
+          "coverages",
+          "support_models",
+          "locations"
+        ],
+        "title": "RateCardView",
+        "type": "object"
+      },
       "ReportPackSummary": {
         "additionalProperties": false,
         "properties": {
@@ -2953,6 +4049,33 @@
           "releasable"
         ],
         "title": "ReportPackView",
+        "type": "object"
+      },
+      "Reported": {
+        "additionalProperties": false,
+        "description": "The contract-currency margin converted for the viewer, FX impact apart.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "fx_impact": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "margin": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "margin_at_prior_rates": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "currency",
+          "margin",
+          "margin_at_prior_rates",
+          "fx_impact"
+        ],
+        "title": "Reported",
         "type": "object"
       },
       "ReprocessPreview": {
@@ -3994,6 +5117,24 @@
         "title": "TableSnapshot",
         "type": "object"
       },
+      "TeamLine": {
+        "additionalProperties": false,
+        "properties": {
+          "fte": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "fte"
+        ],
+        "title": "TeamLine",
+        "type": "object"
+      },
       "TelemetryStatus": {
         "additionalProperties": false,
         "properties": {
@@ -4150,6 +5291,52 @@
           "name"
         ],
         "title": "TenantView",
+        "type": "object"
+      },
+      "TrendPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Band"
+          },
+          "margin_pct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "provisional",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "status",
+          "margin_pct",
+          "band"
+        ],
+        "title": "TrendPoint",
         "type": "object"
       },
       "TriageOverrides": {
@@ -4340,6 +5527,48 @@
         "title": "TriageView",
         "type": "object"
       },
+      "Unallocated": {
+        "additionalProperties": false,
+        "properties": {
+          "allocated": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "dimension": {
+            "enum": [
+              "application",
+              "cost_centre"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unallocated": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "dimension",
+          "currency",
+          "allocated",
+          "unallocated",
+          "share"
+        ],
+        "title": "Unallocated",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -4378,6 +5607,99 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VarianceView": {
+        "additionalProperties": false,
+        "properties": {
+          "activity": {
+            "title": "Activity",
+            "type": "string"
+          },
+          "excess_cost": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "excess_hours": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "hours": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "items": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items_without_hours": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "share": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "workgroup": {
+            "title": "Workgroup",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workgroup",
+          "activity",
+          "hours",
+          "items",
+          "items_without_hours",
+          "share",
+          "excess_hours",
+          "excess_cost"
+        ],
+        "title": "VarianceView",
+        "type": "object"
+      },
+      "VersionView": {
+        "additionalProperties": false,
+        "properties": {
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "margin_pct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "restates_version": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "provisional",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "version",
+          "status",
+          "computed_at",
+          "restates_version",
+          "margin_pct"
+        ],
+        "title": "VersionView",
         "type": "object"
       },
       "VulnerabilityView": {
@@ -5428,6 +6750,203 @@
         "summary": "Load Library"
       }
     },
+    "/v1/commercial/margin": {
+      "get": {
+        "description": "Every customer in scope for one month: modelled and actual margin in the\ncontract currency, the band, the gap to target and the trend. A customer\nwithout a SOW is listed as not captured, never as zero.",
+        "operationId": "margin_overview_v1_commercial_margin_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarginOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Margin Overview"
+      }
+    },
+    "/v1/commercial/margin/{tenant_id}": {
+      "get": {
+        "description": "One customer-month: variance by workgroup and activity type, and every\nversion of the figure (restatements are versions, never overwrites).",
+        "operationId": "margin_detail_v1_commercial_margin__tenant_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarginDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Margin Detail"
+      }
+    },
+    "/v1/commercial/quotes": {
+      "post": {
+        "description": "The pricing engine on the rate card in force. Computes; stores nothing.",
+        "operationId": "quote_v1_commercial_quotes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Quote"
+      }
+    },
+    "/v1/commercial/rate-card": {
+      "get": {
+        "operationId": "rate_card_view_v1_commercial_rate_card_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateCardView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rate Card View"
+      }
+    },
     "/v1/commercial/sows": {
       "get": {
         "operationId": "list_sows_v1_commercial_sows_get",
@@ -5586,6 +7105,205 @@
           }
         },
         "summary": "List Customers"
+      }
+    },
+    "/v1/finops/customers/{tenant_id}": {
+      "get": {
+        "operationId": "finops_customer_v1_finops_customers__tenant_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerFinOps"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Finops Customer"
+      }
+    },
+    "/v1/finops/fx-corrections": {
+      "get": {
+        "description": "Every correction and source revision of a rate: the explicit entries.",
+        "operationId": "list_fx_corrections_v1_finops_fx_corrections_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/FxCorrectionView"
+                  },
+                  "title": "Response List Fx Corrections V1 Finops Fx Corrections Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Fx Corrections"
+      },
+      "post": {
+        "description": "Finance corrects a rate. The closed months it touches are restated by the\nnext month-end reprocessing, as new versions; nothing closed is overwritten.",
+        "operationId": "correct_fx_rate_v1_finops_fx_corrections_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FxCorrectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FxCorrectionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Correct Fx Rate"
+      }
+    },
+    "/v1/finops/overview": {
+      "get": {
+        "description": "Every customer in scope for one invoice period: cost by charge class, the\nreconciliation verdict, unallocated spend and recent anomalies. Staff work:\na customer reads its own cost through the portal (step 18).",
+        "operationId": "finops_overview_v1_finops_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "period",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Period"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinOpsOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Finops Overview"
       }
     },
     "/v1/knowledge/chunks/{chunk_id}/citation": {

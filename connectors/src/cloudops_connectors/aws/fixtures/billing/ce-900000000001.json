@@ -1,0 +1,56 @@
+{
+ "2026-10-01/2026-10-28": {
+  "GroupDefinitions": [
+   {
+    "Type": "DIMENSION",
+    "Key": "LINKED_ACCOUNT"
+   }
+  ],
+  "ResultsByTime": [
+   {
+    "TimePeriod": {
+     "Start": "2026-10-01",
+     "End": "2026-10-28"
+    },
+    "Total": {},
+    "Groups": [
+     {
+      "Keys": [
+       "499836243985"
+      ],
+      "Metrics": {
+       "UnblendedCost": {
+        "Amount": "6054.179119",
+        "Unit": "USD"
+       }
+      }
+     },
+     {
+      "Keys": [
+       "742218507629"
+      ],
+      "Metrics": {
+       "UnblendedCost": {
+        "Amount": "7224.701596",
+        "Unit": "USD"
+       }
+      }
+     },
+     {
+      "Keys": [
+       "313131313131"
+      ],
+      "Metrics": {
+       "UnblendedCost": {
+        "Amount": "11.000000",
+        "Unit": "USD"
+       }
+      }
+     }
+    ],
+    "Estimated": true
+   }
+  ],
+  "DimensionValueAttributes": []
+ }
+}

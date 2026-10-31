@@ -3,13 +3,13 @@ name = "cloudops-platform"
 version = "0.0.0"
 description = "Getronics CloudOps platform monorepo root"
 requires-python = ">=3.12,<3.13"
-dependencies = ["cloudops-tenancy", "cloudops-config", "cloudops-devdata", "cloudops-api", "cloudops-connectors", "cloudops-gateway", "cloudops-agents", "cloudops-evals", "cloudops-domain", "alembic>=1.14"]
+dependencies = ["cloudops-tenancy", "cloudops-config", "cloudops-devdata", "cloudops-api", "cloudops-connectors", "cloudops-gateway", "cloudops-agents", "cloudops-evals", "cloudops-commercial", "cloudops-domain", "alembic>=1.14"]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
-members = ["packages/tenancy", "packages/config", "packages/devdata", "services/api", "connectors", "services/gateway", "packages/agents", "packages/evals", "services/domain"]
+members = ["packages/tenancy", "packages/config", "packages/devdata", "services/api", "connectors", "services/gateway", "packages/agents", "packages/evals", "packages/commercial", "services/domain"]
 
 [tool.uv.sources]
 cloudops-tenancy = { workspace = true }
@@ -21,6 +21,7 @@ cloudops-gateway = { workspace = true }
 cloudops-agents = { workspace = true }
 cloudops-evals = { workspace = true }
 cloudops-domain = { workspace = true }
+cloudops-commercial = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -35,17 +36,19 @@ dev = [
     "types-defusedxml>=0.7",
 ]
 
-# The coverage release gate (LLD, CI/CD): 80% on tenancy and calculation code. Step 16
-# adds the commercial engine here. Measured by CI's tests job (coverage report
+# The coverage release gate (LLD, CI/CD): 80% on tenancy and calculation code, the
+# commercial engine included (step 16). Measured by CI's tests job (coverage report
 # --fail-under=80 over exactly these files).
 [tool.coverage.run]
 branch = true
-source = ["packages/tenancy/src", "services/gateway/src/cloudops_gateway"]
+source = ["packages/tenancy/src", "services/gateway/src/cloudops_gateway",
+          "packages/commercial/src"]
 
 [tool.coverage.report]
 include = [
     "packages/tenancy/src/*",
     "services/gateway/src/cloudops_gateway/pricing.py",
+    "packages/commercial/src/*",
 ]
 show_missing = true
 skip_empty = true
@@ -71,7 +74,7 @@ extend-exclude = ["reference"]
 select = ["E", "F", "W", "I", "B", "UP", "S", "N", "SIM", "RUF", "ASYNC", "PT"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["cloudops_tenancy", "cloudops_config", "cloudops_devdata", "cloudops_api", "cloudops_connectors", "cloudops_gateway", "cloudops_agents", "cloudops_evals", "cloudops_domain"]
+known-first-party = ["cloudops_tenancy", "cloudops_config", "cloudops_devdata", "cloudops_api", "cloudops_connectors", "cloudops_gateway", "cloudops_agents", "cloudops_evals", "cloudops_commercial", "cloudops_domain"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["S101", "S105", "S106", "S608"]
@@ -83,7 +86,7 @@ strict = true
 python_version = "3.12"
 exclude = ["^reference/", "^\\.venv/"]
 explicit_package_bases = true
-mypy_path = "packages/tenancy/src:packages/config/src:packages/devdata/src:services/api/src:connectors/src:services/gateway/src:packages/agents/src:packages/evals/src:services/domain/src"
+mypy_path = "packages/tenancy/src:packages/config/src:packages/devdata/src:services/api/src:connectors/src:services/gateway/src:packages/agents/src:packages/evals/src:packages/commercial/src:services/domain/src"
 
 [[tool.mypy.overrides]]
 module = ["testcontainers.*", "jsonschema.*"]

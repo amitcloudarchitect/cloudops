@@ -8,9 +8,9 @@ import { EmptyState } from "./EmptyState";
 
 // A screen checks its permission itself: a typed-in URL reaches the screen even
 // without a link. The API refuses regardless; this keeps the page honest.
-export function Require({ permission, children }: { permission: string; children: ReactNode }) {
+export function Require({ permission, staff = false, children }: { permission: string; staff?: boolean; children: ReactNode }) {
   const me = useMe();
-  if (!can(me, permission)) {
+  if (!can(me, permission) || (staff && me.kind !== "staff")) {
     return (
       <EmptyState
         title="Not available to your role"

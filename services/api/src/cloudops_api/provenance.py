@@ -52,6 +52,16 @@ class Metric(ApiModel, Generic[V]):  # noqa: UP046 - pydantic generic model
             raise ValueError("metric values are Decimal or int, never float or bool")
         return v
 
+    @field_validator("value", mode="after")
+    @classmethod
+    def _plain_zero(cls, v: V) -> V:
+        # A zero with more than six places (a numeric(14,8) zero reads back as
+        # Decimal("0E-8")) serialises in exponent form; carry it at six places.
+        # Every other value keeps its scale.
+        if isinstance(v, Decimal) and v == 0 and "E" in str(v):
+            return Decimal("0.000000")
+        return v
+
     @field_validator("unit", "source_system", "query_ref")
     @classmethod
     def _non_empty(cls, v: str) -> str:

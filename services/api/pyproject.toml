@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "cloudops-tenancy",
     "cloudops-config",
+    "cloudops-commercial",
     "cloudops-domain",
     "fastapi>=0.115",
     "uvicorn>=0.32",
@@ -16,6 +17,7 @@ dependencies = [
 [tool.uv.sources]
 cloudops-tenancy = { workspace = true }
 cloudops-config = { workspace = true }
+cloudops-commercial = { workspace = true }
 cloudops-domain = { workspace = true }
 
 [build-system]

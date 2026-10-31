@@ -19,7 +19,7 @@ import json
 import os
 import sys
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict, fields
+from dataclasses import asdict, fields, replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Final
@@ -29,7 +29,7 @@ from sqlalchemy import text
 
 from cloudops_config import Component, ConfigurationError, DbLogin, Environment, load_settings
 from cloudops_devdata import ingest_health
-from cloudops_devdata.synthetic import NAMESPACE, Dataset, as_json, generate
+from cloudops_devdata.synthetic import NAMESPACE, CostRow, Dataset, as_json, generate
 from cloudops_tenancy import Database, Role, ScopedConnection, TenantScope
 
 PRINCIPAL: Final = "seed:local-dev"
@@ -279,6 +279,41 @@ async def triage(app: Database, ds: Dataset) -> int:
     return len(picked)
 
 
+def demo_spike(ds: Dataset) -> None:
+    """One cost spike on the last cost day of Northwind's first account, so the
+    console has an anomaly to show (the synthetic series is smooth by design).
+    Added here, not in ``generate``: the recorded connector fixtures derive from
+    that dataset and must not move."""
+    account = next(a for a in ds.accounts if a.tenant_id == ds.tenants[0].id)
+    daily = sum((c.amortized_cost for c in ds.costs
+                 if c.account_id == account.id and c.usage_date == ds.anchor), Decimal(0))
+    ds.costs.append(CostRow(
+        account.tenant_id, account.id, None, ds.anchor, f"{ds.anchor:%Y-%m}",
+        "Demo: runaway batch job", None, "consumption", daily, daily,
+        account.billing_currency, None))
+    # The provider saw it too: its month-to-date total still agrees.
+    period = f"{ds.anchor:%Y-%m}"
+    ds.billing_totals = [
+        replace(b, amount=b.amount + daily)
+        if (b.account_id, b.kind, b.invoice_period) == (account.id, "provider_total", period)
+        else b for b in ds.billing_totals]
+
+
+async def finops(ingest: Database, anchor: date) -> str:
+    """The FinOps worker's daily run for the day after the last cost day, so the
+    console has reconciliation, anomalies and margin to show (the worker's own
+    code, as Temporal would run it)."""
+    from cloudops_connectors.finops import jobs
+
+    on = anchor + timedelta(days=1)
+    recon = await jobs.reconcile(ingest, on)
+    found = await jobs.anomalies(ingest, on)
+    margins = await jobs.margins(ingest, on)
+    return (f"{recon.checked} reconciliation checks ({recon.unverified} unverified),"
+            f" {found.found} anomalies, {margins.computed} customer-months of margin"
+            f" ({margins.not_captured} not captured)")
+
+
 async def run(anchor: date, seed: int) -> None:
     settings = load_settings(
         os.environ, require={Component.DATABASE_INGEST, Component.DATABASE_APP}
@@ -286,6 +321,7 @@ async def run(anchor: date, seed: int) -> None:
     if settings.environment is not Environment.LOCAL:
         raise SeedError("the synthetic seed is local-only; it must never touch Azure")
     ds = generate(anchor, seed)
+    demo_spike(ds)
     print(f"seeding synthetic data: cost {anchor - timedelta(days=89)} .. {anchor}, seed {seed}")
     ingest = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=1)
     app = Database.create(settings.database_dsn(DbLogin.APP), pool_size=1)
@@ -295,6 +331,7 @@ async def run(anchor: date, seed: int) -> None:
         await verify(app, ds)
         print(f"  triage results for the console: {await triage(app, ds)}")
         print(f"  connector runs for the console: {await ingest_health.record(ingest)}")
+        print(f"  finops (step 16): {await finops(ingest, anchor)}")
         print("  principals (mint a token: make token OID=<oid>):")
         for label, oid in await principals(app, ds, admin):
             print(f"    {label:<22} {oid}")

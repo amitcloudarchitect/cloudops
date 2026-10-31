@@ -15,6 +15,7 @@ from fastapi.routing import APIRoute
 from cloudops_api import (
     assurance,
     bff,
+    commercial,
     connectors,
     knowledge,
     mapping,
@@ -81,7 +82,7 @@ def create_app(
 # Every router the API serves. Endpoints are added to these, never to the app.
 ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
-    knowledge.router, assurance.router, reports.router,
+    commercial.router, knowledge.router, assurance.router, reports.router,
 )
 
 

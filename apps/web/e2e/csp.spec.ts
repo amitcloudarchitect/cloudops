@@ -17,7 +17,7 @@ function violations(page: Page): string[] {
 
 test("every module works under the CSP, with no violation", async ({ signedIn: page }) => {
   const seen = violations(page);
-  for (const path of ["/", "/work", "/performance", "/posture", "/approvals", "/resources", "/customers", "/mapping", "/onboarding", "/connectors"]) {
+  for (const path of ["/", "/work", "/performance", "/posture", "/approvals", "/resources", "/customers", "/mapping", "/onboarding", "/connectors", "/finops", "/margin", "/pricing"]) {
     const response = await page.goto(path);
     const csp = response?.headers()["content-security-policy"] ?? "";
     expect(csp).toContain("default-src 'none'");

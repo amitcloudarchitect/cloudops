@@ -37,6 +37,17 @@ spec:
 apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
 metadata:
+  name: bootstrap-admin
+  namespace: platform-api
+spec:
+  parameters:
+    clientID: b30fad8a-e050-4077-9152-dbe1d30f51b3
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
   name: temporal-db
   namespace: temporal
 spec:

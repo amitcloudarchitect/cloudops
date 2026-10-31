@@ -5,6 +5,7 @@ description = "Source connectors: raw to bronze first, then normalise, resolve i
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "cloudops-tenancy",
+    "cloudops-commercial",
     "cloudops-config[temporal]",
     "cloudops-domain",
     "httpx>=0.28",
@@ -18,6 +19,7 @@ dependencies = [
 
 [tool.uv.sources]
 cloudops-tenancy = { workspace = true }
+cloudops-commercial = { workspace = true }
 cloudops-config = { workspace = true }
 cloudops-domain = { workspace = true }
 

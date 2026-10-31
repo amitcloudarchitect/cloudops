@@ -9,25 +9,64 @@ of the requested subscriptions only, in id order, ``$top`` per page with an
 opaque ``$skipToken``. Resource Graph responses carry the user quota headers;
 the quota refills once spent (the client is expected to have waited). Tests
 can add or remove resources, force 429s with ``Retry-After``, or failures.
+
+It also answers the billing entities' two APIs with recorded responses
+(``billing/query/<sub>.json``, ``billing/invoices/<sub>.json``): the Cost
+Management query per subscription (an empty result for one with nothing
+recorded) and the billing account's invoices per subscription.
+
+``FakeBlobStore`` is the storage account the FOCUS exports land in, in
+*stages* like ``FakeS3``: each stage adds or overwrites blobs (a restating run,
+a part that lands late). It answers List Blobs (XML, ``maxresults`` and
+markers) and Get Blob with ``Last-Modified``, 404 ``BlobNotFound`` for a blob
+not delivered yet, and 503 ``ServerBusy`` on demand. Parts are committed as
+plain CSV (reviewable) and served gzip-compressed, as the export writes them.
 """
 
 from __future__ import annotations
 
 import base64
 import copy
+import gzip
 import json
+import re
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from email.utils import format_datetime
 from importlib import resources
 from typing import Any, Final
+from urllib.parse import unquote
+from xml.etree.ElementTree import Element, SubElement, tostring
 
 import httpx
 
 from cloudops_connectors.azure.client import GRAPH_PATH, SUBSCRIPTIONS_PATH
 
 FIXTURE_HOST: Final = "https://management.azure.fixture.example"
+BLOB_HOST: Final = "https://exports.blob.fixture.example"
+BILLING_ACCOUNT: Final = "12345678:getronics-fixture_2019-05-31"
+BILLING_DAY: Final = "2026-10-28"  # the day the billing fixtures were recorded
+_COST_QUERY: Final = re.compile(
+    r"/subscriptions/([0-9a-f-]{36})/providers/Microsoft\.CostManagement/query")
+_INVOICES: Final = re.compile(
+    r"/providers/Microsoft\.Billing/billingAccounts/([^/]+)/billingSubscriptions/"
+    r"([0-9a-f-]{36})/invoices")
+_EMPTY_QUERY: Final = (b'{"properties": {"nextLink": null, "columns": [{"name": "totalCost",'
+                       b' "type": "Number"}, {"name": "Currency", "type": "String"}],'
+                       b' "rows": []}}')
 
 
 def load_fixture(name: str) -> bytes:
     return resources.files("cloudops_connectors.azure").joinpath(f"fixtures/{name}").read_bytes()
+
+
+def _fixtures_in(folder: str) -> dict[str, bytes]:
+    """``{stem: bytes}`` for every file in a fixture folder (none: empty)."""
+    base = resources.files("cloudops_connectors.azure").joinpath(f"fixtures/{folder}")
+    if not base.is_dir():
+        return {}
+    return {f.name.removesuffix(".json"): f.read_bytes() for f in base.iterdir()
+            if f.name.endswith(".json")}
 
 
 def _token(offset: int) -> str:
@@ -46,7 +85,10 @@ def _id(row: Any) -> str:
 
 class FakeAzure:
     def __init__(self, subscriptions: bytes, resources_: bytes, *, quota: int = 15,
-                 subs_page: int = 100) -> None:
+                 subs_page: int = 100, queries: dict[str, bytes] | None = None,
+                 invoices: dict[str, bytes] | None = None) -> None:
+        self.queries = dict(queries or {})  # subscription -> recorded query response
+        self.invoices = dict(invoices or {})  # subscription -> recorded invoice listing
         self.subscriptions: list[dict[str, Any]] = json.loads(subscriptions)["value"]
         self.rows: list[Any] = json.loads(resources_)["data"]
         self.quota = quota
@@ -58,7 +100,9 @@ class FakeAzure:
 
     @classmethod
     def from_fixtures(cls, **kwargs: int) -> FakeAzure:
-        return cls(load_fixture("subscriptions.json"), load_fixture("resources.json"), **kwargs)
+        return cls(load_fixture("subscriptions.json"), load_fixture("resources.json"),
+                   queries=_fixtures_in("billing/query"),
+                   invoices=_fixtures_in("billing/invoices"), **kwargs)
 
     def remove(self, native_id: str) -> dict[str, Any]:
         """The resource is gone from Azure."""
@@ -106,6 +150,23 @@ class FakeAzure:
             self.remaining -= 1
             return httpx.Response(200, headers=self._quota(),
                                   content=self._graph(json.loads(request.content)))
+        query = _COST_QUERY.fullmatch(path)
+        if query and request.method == "POST":
+            body = json.loads(request.content)
+            if (body.get("type"), body.get("timeframe")) != ("ActualCost", "MonthToDate"):
+                return httpx.Response(400, json={"error": {"code": "BadRequest"}})
+            return httpx.Response(200, content=self.queries.get(query.group(1), _EMPTY_QUERY),
+                                  headers={"Content-Type": "application/json"})
+        invoices = _INVOICES.fullmatch(path)
+        if invoices and request.method == "GET":
+            if unquote(invoices.group(1)) != BILLING_ACCOUNT:
+                return httpx.Response(404, json={"error": {"code": "BillingAccountNotFound"}})
+            if not (request.url.params.get("periodStartDate")
+                    and request.url.params.get("periodEndDate")):
+                return httpx.Response(400, json={"error": {"code": "BadRequest"}})
+            return httpx.Response(200, content=self.invoices.get(invoices.group(2),
+                                                                 b'{"value": []}'),
+                                  headers={"Content-Type": "application/json"})
         return httpx.Response(404, json={"error": {"code": "NotFound"}})
 
     def _subscriptions(self, params: httpx.QueryParams) -> dict[str, Any]:
@@ -134,3 +195,101 @@ class FakeAzure:
         if start + top < len(matching):
             out["$skipToken"] = _token(start + top)
         return json.dumps(out).encode()
+
+
+# --- the export storage account ---------------------------------------------------------
+
+
+def _time(text: str) -> datetime:
+    return datetime.fromisoformat(text.replace("Z", "+00:00")).astimezone(UTC)
+
+
+@dataclass(frozen=True)
+class _Stored:
+    file: str
+    last_modified: datetime
+
+
+class FakeBlobStore:
+    def __init__(self, stages: list[dict[str, _Stored]], files: dict[str, bytes],
+                 roots: tuple[str, ...] = ()) -> None:
+        self.roots = roots  # the export roots the fixtures hold: <container>/<path>
+        self.stages = stages
+        self.files = files
+        self.blobs: dict[str, _Stored] = {}  # "<container>/<name>"
+        self.stage = -1
+        self.busy_next = 0
+        self.requests: list[httpx.Request] = []
+        self.advance()
+
+    @classmethod
+    def from_fixtures(cls) -> FakeBlobStore:
+        layout = json.loads(load_fixture("exports/stages.json"))
+        stages = [{k: _Stored(v["file"], _time(v["last_modified"])) for k, v in s.items()}
+                  for s in layout["stages"]]
+        names = {o.file for s in stages for o in s.values()}
+        return cls(stages, {n: load_fixture(f"exports/{n}") for n in names},
+                   tuple(layout["roots"]))
+
+    def advance(self) -> None:
+        """The account as the exports leave it at the next stage."""
+        self.stage += 1
+        self.blobs.update(self.stages[self.stage])
+
+    def body(self, path: str) -> bytes:
+        """What Get Blob returns: CSV parts are served gzip-compressed."""
+        name = self.blobs[path].file
+        data = self.files[name]
+        return gzip.compress(data, mtime=0) if name.endswith(".csv") else data
+
+    def transport(self) -> httpx.MockTransport:
+        return httpx.MockTransport(self._handle)
+
+    def _handle(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        if self.busy_next > 0:
+            self.busy_next -= 1
+            return httpx.Response(503, content=b"<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+                                               b"<Error><Code>ServerBusy</Code></Error>")
+        path = unquote(request.url.path).removeprefix("/")
+        params = request.url.params
+        if "/" not in path and params.get("comp") == "list":
+            return self._list(path, params)
+        if path not in self.blobs:
+            root = Element("Error")
+            SubElement(root, "Code").text = "BlobNotFound"
+            SubElement(root, "Message").text = "The specified blob does not exist."
+            return httpx.Response(404, headers={"Content-Type": "application/xml",
+                                                "x-ms-error-code": "BlobNotFound"},
+                                  content=tostring(root, encoding="utf-8", xml_declaration=True))
+        modified = format_datetime(self.blobs[path].last_modified, usegmt=True)
+        return httpx.Response(200, headers={"Last-Modified": modified,
+                                            "Content-Type": "application/octet-stream"},
+                              content=self.body(path))
+
+    def _list(self, container: str, params: httpx.QueryParams) -> httpx.Response:
+        prefix = params.get("prefix", "")
+        limit = int(params.get("maxresults", "5000"))
+        after = params.get("marker")
+        start_after = base64.b64decode(after).decode() if after else ""
+        mine = f"{container}/"
+        names = sorted(k.removeprefix(mine) for k in self.blobs if k.startswith(mine))
+        names = [n for n in names if n.startswith(prefix) and n > start_after]
+        page, rest = names[:limit], names[limit:]
+        root = Element("EnumerationResults", ServiceEndpoint=f"{BLOB_HOST}/",
+                       ContainerName=container)
+        SubElement(root, "Prefix").text = prefix
+        SubElement(root, "MaxResults").text = str(limit)
+        blobs = SubElement(root, "Blobs")
+        for n in page:
+            b = SubElement(blobs, "Blob")
+            SubElement(b, "Name").text = n
+            props = SubElement(b, "Properties")
+            SubElement(props, "Last-Modified").text = format_datetime(
+                self.blobs[mine + n].last_modified, usegmt=True)
+            SubElement(props, "Content-Length").text = str(len(self.body(mine + n)))
+            SubElement(props, "BlobType").text = "BlockBlob"
+        SubElement(root, "NextMarker").text = (
+            base64.b64encode(page[-1].encode()).decode() if rest else None)
+        return httpx.Response(200, headers={"Content-Type": "application/xml"},
+                              content=tostring(root, encoding="utf-8", xml_declaration=True))

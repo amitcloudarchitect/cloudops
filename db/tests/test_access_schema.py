@@ -32,6 +32,12 @@ ACCOUNT_SCOPED = (
     "cloudops.directory_role_assignment",  # 0010, likewise
     "cloudops.sharepoint_site",  # 0010, likewise
     "cloudops.document",  # 0010, likewise
+    "cloudops.billing_total",  # 0012, by account
+    "cloudops.cost_reconciliation",  # 0012, by account
+    "cloudops.cost_anomaly",  # 0012, by account
+    "cloudops.margin_snapshot",  # 0012: per customer, so all-accounts scopes only
+    "cloudops.margin_variance",  # 0012, likewise
+    "cloudops.anomaly_threshold",  # 0012, likewise
     # 0013: an assessment and a report pack answer for the whole estate.
     "cloudops.assessment",
     "cloudops.control_response",

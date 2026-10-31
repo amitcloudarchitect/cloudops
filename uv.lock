@@ -6,6 +6,7 @@ requires-python = "==3.12.*"
 members = [
     "cloudops-agents",
     "cloudops-api",
+    "cloudops-commercial",
     "cloudops-config",
     "cloudops-connectors",
     "cloudops-devdata",
@@ -371,6 +372,7 @@ name = "cloudops-api"
 version = "0.1.0"
 source = { editable = "services/api" }
 dependencies = [
+    { name = "cloudops-commercial" },
     { name = "cloudops-config" },
     { name = "cloudops-domain" },
     { name = "cloudops-tenancy" },
@@ -382,6 +384,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cloudops-commercial", editable = "packages/commercial" },
     { name = "cloudops-config", editable = "packages/config" },
     { name = "cloudops-domain", editable = "services/domain" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
@@ -390,6 +393,11 @@ requires-dist = [
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10" },
     { name = "uvicorn", specifier = ">=0.32" },
 ]
+
+[[package]]
+name = "cloudops-commercial"
+version = "0.1.0"
+source = { editable = "packages/commercial" }
 
 [[package]]
 name = "cloudops-config"
@@ -414,6 +422,7 @@ dependencies = [
     { name = "azure-eventhub-checkpointstoreblob-aio" },
     { name = "azure-identity" },
     { name = "azure-storage-blob", extra = ["aio"] },
+    { name = "cloudops-commercial" },
     { name = "cloudops-config", extra = ["temporal"] },
     { name = "cloudops-domain" },
     { name = "cloudops-tenancy" },
@@ -428,6 +437,7 @@ requires-dist = [
     { name = "azure-eventhub-checkpointstoreblob-aio", specifier = ">=1.2" },
     { name = "azure-identity", specifier = ">=1.19" },
     { name = "azure-storage-blob", extras = ["aio"], specifier = ">=12.24" },
+    { name = "cloudops-commercial", editable = "packages/commercial" },
     { name = "cloudops-config", extras = ["temporal"], editable = "packages/config" },
     { name = "cloudops-domain", editable = "services/domain" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
@@ -443,6 +453,7 @@ source = { editable = "packages/devdata" }
 dependencies = [
     { name = "azure-storage-blob" },
     { name = "cloudops-config" },
+    { name = "cloudops-connectors" },
     { name = "cloudops-tenancy" },
     { name = "pyjwt", extra = ["crypto"] },
 ]
@@ -451,6 +462,7 @@ dependencies = [
 requires-dist = [
     { name = "azure-storage-blob", specifier = ">=12.24" },
     { name = "cloudops-config", editable = "packages/config" },
+    { name = "cloudops-connectors", editable = "connectors" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10" },
 ]
@@ -522,6 +534,7 @@ dependencies = [
     { name = "alembic" },
     { name = "cloudops-agents" },
     { name = "cloudops-api" },
+    { name = "cloudops-commercial" },
     { name = "cloudops-config" },
     { name = "cloudops-connectors" },
     { name = "cloudops-devdata" },
@@ -549,6 +562,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14" },
     { name = "cloudops-agents", editable = "packages/agents" },
     { name = "cloudops-api", editable = "services/api" },
+    { name = "cloudops-commercial", editable = "packages/commercial" },
     { name = "cloudops-config", editable = "packages/config" },
     { name = "cloudops-connectors", editable = "connectors" },
     { name = "cloudops-devdata", editable = "packages/devdata" },

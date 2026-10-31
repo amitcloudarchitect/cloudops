@@ -1,0 +1,21 @@
+{
+ "properties": {
+  "nextLink": null,
+  "columns": [
+   {
+    "name": "totalCost",
+    "type": "Number"
+   },
+   {
+    "name": "Currency",
+    "type": "String"
+   }
+  ],
+  "rows": [
+   [
+    14.500000,
+    "EUR"
+   ]
+  ]
+ }
+}

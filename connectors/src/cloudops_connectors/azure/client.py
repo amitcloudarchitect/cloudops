@@ -17,14 +17,24 @@ parses them. The same code runs against ARM and ``FakeAzure``.
   ``x-ms-user-quota-resets-after`` (hh:mm:ss) before its next call instead of
   spending a refusal; a 429 waits ``Retry-After`` (else the quota reset) and
   tries again. At most two requests are in flight per client.
+- Cost Management query (entity ``cost_total``): ``POST /subscriptions/{id}/
+  providers/Microsoft.CostManagement/query``, ``ActualCost`` month to date,
+  the sum of cost with its currency (``COST_QUERY``). A 429 there waits the
+  ``x-ms-ratelimit-microsoft.costmanagement-*-retry-after`` headers too.
+- Billing invoices (entity ``invoice``): ``GET /providers/Microsoft.Billing/
+  billingAccounts/{acct}/billingSubscriptions/{id}/invoices`` for a window of
+  invoice periods, ``nextLink`` followed only on this client's own host.
 - Anything else non-2xx raises; Temporal's retry policy owns those retries.
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import Awaitable, Callable, Mapping
+from datetime import date
 from typing import Any, Final
+from urllib.parse import quote
 
 import httpx
 
@@ -39,6 +49,36 @@ SUBSCRIPTIONS_API: Final = "2022-12-01"
 GRAPH_PATH: Final = "/providers/Microsoft.ResourceGraph/resources"
 GRAPH_API: Final = "2022-10-01"
 DEFAULT_WAIT: Final = 5.0  # Resource Graph's quota window is five seconds
+COST_QUERY_API: Final = "2023-11-01"
+BILLING_API: Final = "2024-04-01"
+# Fixed: the connector asks for exactly this. The total cost of the month so
+# far, as billed (ActualCost), with its currency.
+COST_QUERY: Final[dict[str, Any]] = {
+    "type": "ActualCost",
+    "timeframe": "MonthToDate",
+    "dataset": {"granularity": "None",
+                "aggregation": {"totalCost": {"name": "Cost", "function": "Sum"}}},
+}
+_SUBSCRIPTION: Final = re.compile(r"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")
+_BILLING_ACCOUNT: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9:_.\-]{0,199}")
+_COST_RETRY: Final = tuple(
+    f"x-ms-ratelimit-microsoft.costmanagement-{k}-retry-after"
+    for k in ("qpu", "entity", "tenant", "client"))
+
+
+def cost_query_path(subscription: str) -> str:
+    return f"/subscriptions/{subscription}/providers/Microsoft.CostManagement/query"
+
+
+def invoices_path(billing_account: str, subscription: str) -> str:
+    return (f"/providers/Microsoft.Billing/billingAccounts/{quote(billing_account, safe='')}"
+            f"/billingSubscriptions/{subscription}/invoices")
+
+
+def _subscription(value: str) -> str:
+    if not _SUBSCRIPTION.fullmatch(value):
+        raise ValueError("not a subscription id")
+    return value
 
 
 class ThrottledError(Exception):
@@ -66,6 +106,9 @@ def to_wait(status: int, headers: Mapping[str, str]) -> float | None:
     reset = _seconds(headers.get("x-ms-user-quota-resets-after"))
     if status == 429:
         wait = _seconds(headers.get("retry-after"))
+        if wait is None:
+            cost = [w for w in (_seconds(headers.get(h)) for h in _COST_RETRY) if w is not None]
+            wait = max(cost) if cost else None
         wait = wait if wait is not None else reset
         return min(wait if wait is not None else DEFAULT_WAIT, MAX_WAIT_SECONDS)
     remaining = headers.get("x-ms-user-quota-remaining")
@@ -138,6 +181,27 @@ class AzureClient:
             "POST", GRAPH_PATH, {"api-version": GRAPH_API},
             {"subscriptions": subscriptions, "query": QUERY, "options": options},
         )
+
+    async def cost_query(self, subscription: str) -> bytes:
+        return await self._send("POST", cost_query_path(_subscription(subscription)),
+                                {"api-version": COST_QUERY_API}, COST_QUERY)
+
+    async def invoices(self, billing_account: str, subscription: str, start: date,
+                       end: date, next_link: str | None = None) -> bytes:
+        if next_link is not None:
+            return await self._own(next_link)
+        if not _BILLING_ACCOUNT.fullmatch(billing_account):
+            raise ValueError("not a billing account name")
+        return await self._send(
+            "GET", invoices_path(billing_account, _subscription(subscription)),
+            {"api-version": BILLING_API, "periodStartDate": start.isoformat(),
+             "periodEndDate": end.isoformat()}, None)
+
+    async def _own(self, link_text: str) -> bytes:
+        link = httpx.URL(link_text)
+        if f"{link.scheme}://{link.netloc.decode()}" != self.base_url:
+            raise ValueError("nextLink points away from the management endpoint")
+        return await self._send("GET", str(link), None, None)
 
     async def aclose(self) -> None:
         await self._http.aclose()

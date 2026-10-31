@@ -17,9 +17,16 @@ const SOURCE_LABEL: Record<string, string> = {
   cloudops_ingest: "Ingest run log",
   cloudops_policy: "Platform policy",
   cloudops_quarantine: "Quarantine",
+  billing_exports: "Billing exports",
+  provider_billing: "Provider billing total",
+  reconciliation: "Reconciliation",
+  margin_engine: "Margin engine",
+  sow_register: "SOW register",
+  ecb: "ECB reference rates",
 };
 
 export function sourceLabel(source: string): string {
+  if (source.startsWith("rate_card:")) return `Rate card ${source.slice("rate_card:".length)}`;
   return SOURCE_LABEL[source] ?? source;
 }
 

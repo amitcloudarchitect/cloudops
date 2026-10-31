@@ -1,10 +1,15 @@
-"""AWS clients: Config aggregator advanced queries and S3 for the CUR.
+"""AWS clients: Config aggregator advanced queries, S3 for the CUR, and the
+billing APIs (Cost Explorer, Invoicing) for provider totals and invoices.
 
     config = ConfigClient("eu-west-1", "org-aggregator", auth=..., transport=...)
     body = await config.select(since, next_token)
     s3 = S3Client("cur-bucket", "eu-west-1", auth=..., transport=...)
     body = await s3.list(prefix, continuation_token)
     obj = await s3.get(key)
+    ce = CostExplorerClient("<payer>", auth=..., transport=...)
+    body = await ce.cost_and_usage(start, end, next_page_token)
+    inv = InvoicingClient("<payer>", auth=..., transport=...)
+    body = await inv.invoice_summaries(start, end, next_token)
 
 Bodies come back untouched; the caller stores them in bronze before anything
 parses them. The same code runs against AWS and the fakes in ``fake.py``.
@@ -28,7 +33,7 @@ import json
 import random
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, time
 from email.utils import parsedate_to_datetime
 from typing import Final
 
@@ -37,8 +42,12 @@ import httpx
 from cloudops_connectors.aws.mapping import expression
 
 CONFIG_TARGET: Final = "StarlingDoveService.SelectAggregateResourceConfig"
+CE_TARGET: Final = "AWSInsightsIndexService.GetCostAndUsage"
+INVOICING_TARGET: Final = "Invoicing.ListInvoiceSummaries"
 CONFIG_PAGE: Final = 100  # the API's maximum Limit
 THROTTLE_TYPES: Final = frozenset({"ThrottlingException", "TooManyRequestsException"})
+# Cost Explorer also answers LimitExceededException when it wants a caller to slow down.
+BILLING_THROTTLE_TYPES: Final = THROTTLE_TYPES | {"LimitExceededException"}
 
 
 class ThrottledError(Exception):
@@ -62,6 +71,16 @@ def _config_throttled(response: httpx.Response) -> bool:
     except (ValueError, AttributeError):
         return response.status_code == 429
     return kind.rsplit("#", 1)[-1] in THROTTLE_TYPES or response.status_code == 429
+
+
+def _billing_throttled(response: httpx.Response) -> bool:
+    if response.status_code not in (400, 429):
+        return False
+    try:
+        kind = str(json.loads(response.content).get("__type", ""))
+    except (ValueError, AttributeError):
+        return response.status_code == 429
+    return kind.rsplit("#", 1)[-1] in BILLING_THROTTLE_TYPES or response.status_code == 429
 
 
 def _s3_throttled(response: httpx.Response) -> bool:
@@ -219,3 +238,99 @@ class S3Client:
 
     async def aclose(self) -> None:
         await self._http.aclose()
+
+
+# --- billing: Cost Explorer and Invoicing ---------------------------------------------------
+
+
+class _JsonApi:
+    """An AWS JSON-protocol API signed by the ``httpx.Auth`` passed in, for one
+    payer (management) account: the billing APIs answer for its organisation."""
+
+    def __init__(
+        self, payer: str, base_url: str, target: str, content_type: str, *,
+        auth: httpx.Auth | None, transport: httpx.AsyncBaseTransport | None,
+        max_throttle_retries: int, backoff_base: float, backoff_cap: float,
+        sleep: Callable[[float], Awaitable[None]], rand: Callable[[], float],
+    ) -> None:
+        if not payer.isdigit() or len(payer) != 12:
+            raise ValueError("a payer account id is twelve digits")
+        self.payer = payer
+        self.base_url = base_url.rstrip("/")
+        self._target = target
+        self._content_type = content_type
+        self.backoff = _Backoff(max_throttle_retries, backoff_base, backoff_cap, sleep, rand)
+        self._http = httpx.AsyncClient(base_url=self.base_url, auth=auth, transport=transport,
+                                       timeout=120.0)
+
+    async def _call(self, what: str, payload: dict[str, object]) -> bytes:
+        content = json.dumps(payload, sort_keys=True).encode()
+        headers = {"X-Amz-Target": self._target, "Content-Type": self._content_type}
+
+        async def request() -> httpx.Response:
+            return await self._http.post("/", content=content, headers=headers)
+
+        response = await self.backoff.send(what, request, _billing_throttled)
+        response.raise_for_status()
+        return response.content
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
+
+
+class CostExplorerClient(_JsonApi):
+    """``GetCostAndUsage``: the month's unblended cost per linked account."""
+
+    def __init__(
+        self, payer: str, *, base_url: str = "https://ce.us-east-1.amazonaws.com",
+        auth: httpx.Auth | None = None, transport: httpx.AsyncBaseTransport | None = None,
+        max_throttle_retries: int = 5, backoff_base: float = 1.0, backoff_cap: float = 60.0,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        rand: Callable[[], float] = random.random,
+    ) -> None:
+        super().__init__(payer, base_url, CE_TARGET, "application/x-amz-json-1.1", auth=auth,
+                         transport=transport, max_throttle_retries=max_throttle_retries,
+                         backoff_base=backoff_base, backoff_cap=backoff_cap, sleep=sleep,
+                         rand=rand)
+
+    async def cost_and_usage(self, start: date, end: date, token: str | None) -> bytes:
+        """``start`` inclusive, ``end`` exclusive, as Cost Explorer takes them."""
+        if end <= start:
+            raise ValueError("the period ends after it starts")
+        payload: dict[str, object] = {
+            "TimePeriod": {"Start": start.isoformat(), "End": end.isoformat()},
+            "Granularity": "MONTHLY", "Metrics": ["UnblendedCost"],
+            "GroupBy": [{"Type": "DIMENSION", "Key": "LINKED_ACCOUNT"}],
+        }
+        if token is not None:
+            payload["NextPageToken"] = token
+        return await self._call("cost explorer", payload)
+
+
+class InvoicingClient(_JsonApi):
+    """``ListInvoiceSummaries``: the invoices issued to the payer's organisation."""
+
+    def __init__(
+        self, payer: str, *, base_url: str = "https://invoicing.us-east-1.api.aws",
+        auth: httpx.Auth | None = None, transport: httpx.AsyncBaseTransport | None = None,
+        max_throttle_retries: int = 5, backoff_base: float = 1.0, backoff_cap: float = 60.0,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        rand: Callable[[], float] = random.random,
+    ) -> None:
+        super().__init__(payer, base_url, INVOICING_TARGET, "application/x-amz-json-1.0",
+                         auth=auth, transport=transport,
+                         max_throttle_retries=max_throttle_retries, backoff_base=backoff_base,
+                         backoff_cap=backoff_cap, sleep=sleep, rand=rand)
+
+    async def invoice_summaries(self, start: date, end: date, token: str | None) -> bytes:
+        """Invoices issued between ``start`` and ``end`` (inclusive)."""
+        payload: dict[str, object] = {
+            "Selector": {"ResourceType": "ACCOUNT_ID", "Value": self.payer},
+            "Filter": {"TimeInterval": {
+                "StartDate": int(datetime.combine(start, time.min, UTC).timestamp()),
+                "EndDate": int(datetime.combine(end, time.max, UTC).timestamp())}},
+            "MaxResults": 100,
+        }
+        if token is not None:
+            payload["NextToken"] = token
+        return await self._call("invoicing", payload)

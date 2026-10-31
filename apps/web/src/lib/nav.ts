@@ -10,10 +10,10 @@ export interface Module {
   href: string;
   label: string;
   permission: string;
+  /** Staff only: a customer never sees it, even holding the permission. */
+  staff?: boolean;
   /** Not built yet: listed so its place is decided, never shown. */
   reserved?: boolean;
-  /** Staff only: a customer holding the permission still never sees it (the API 404s). */
-  staffOnly?: boolean;
 }
 
 export const MODULES: readonly Module[] = [
@@ -32,14 +32,19 @@ export const MODULES: readonly Module[] = [
   { href: "/onboarding", label: "Portal onboarding", permission: "access.manage" },
   // Step 15: ingest health per source and entity, and schema drift (staff only).
   { href: "/connectors", label: "Connectors", permission: "connectors.read" },
+  // Step 16: cost reconciliation and allocation, margin, and the pricing engine.
+  // Customer viewers hold cost.read for their own cost; the FinOps module is staff work.
+  { href: "/finops", label: "FinOps", permission: "cost.read", staff: true },
+  { href: "/margin", label: "Margin", permission: "commercial.read", staff: true },
+  { href: "/pricing", label: "Pricing", permission: "commercial.read", staff: true },
   // Step 17: document staleness and gaps, assessments, and monthly report packs.
-  { href: "/knowledge", label: "Knowledge", permission: "knowledge.read", staffOnly: true },
-  { href: "/assurance", label: "Assurance", permission: "assurance.read", staffOnly: true },
+  { href: "/knowledge", label: "Knowledge", permission: "knowledge.read", staff: true },
+  { href: "/assurance", label: "Assurance", permission: "assurance.read", staff: true },
   { href: "/reports", label: "Reports", permission: "reports.read" },
 ];
 
-export function visibleModules(has: (permission: string) => boolean, staff = true): Module[] {
-  return MODULES.filter((m) => !m.reserved && has(m.permission) && (staff || !m.staffOnly));
+export function visibleModules(has: (permission: string) => boolean, staff: boolean): Module[] {
+  return MODULES.filter((m) => !m.reserved && (staff || !m.staff) && has(m.permission));
 }
 
 /** Where the role opens: its landing view when it can use it, else its first module. */

@@ -246,6 +246,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/commercial/margin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Margin Overview
+         * @description Every customer in scope for one month: modelled and actual margin in the
+         *     contract currency, the band, the gap to target and the trend. A customer
+         *     without a SOW is listed as not captured, never as zero.
+         */
+        get: operations["margin_overview_v1_commercial_margin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/commercial/margin/{tenant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Margin Detail
+         * @description One customer-month: variance by workgroup and activity type, and every
+         *     version of the figure (restatements are versions, never overwrites).
+         */
+        get: operations["margin_detail_v1_commercial_margin__tenant_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/commercial/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Quote
+         * @description The pricing engine on the rate card in force. Computes; stores nothing.
+         */
+        post: operations["quote_v1_commercial_quotes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/commercial/rate-card": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rate Card View */
+        get: operations["rate_card_view_v1_commercial_rate_card_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/sows": {
         parameters: {
             query?: never;
@@ -354,6 +434,70 @@ export interface paths {
          *     holds the permission it comes from; absent is not zero.
          */
         get: operations["list_customers_v1_customers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finops/customers/{tenant_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Finops Customer */
+        get: operations["finops_customer_v1_finops_customers__tenant_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finops/fx-corrections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Fx Corrections
+         * @description Every correction and source revision of a rate: the explicit entries.
+         */
+        get: operations["list_fx_corrections_v1_finops_fx_corrections_get"];
+        put?: never;
+        /**
+         * Correct Fx Rate
+         * @description Finance corrects a rate. The closed months it touches are restated by the
+         *     next month-end reprocessing, as new versions; nothing closed is overwritten.
+         */
+        post: operations["correct_fx_rate_v1_finops_fx_corrections_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/finops/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Finops Overview
+         * @description Every customer in scope for one invoice period: cost by charge class, the
+         *     reconciliation verdict, unallocated spend and recent anomalies. Staff work:
+         *     a customer reads its own cost through the portal (step 18).
+         */
+        get: operations["finops_overview_v1_finops_overview_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -998,6 +1142,36 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountCheck */
+        AccountCheck: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Account Name */
+            account_name: string;
+            /**
+             * Checked On
+             * Format: date
+             */
+            checked_on: string;
+            drift: components["schemas"]["Metric_Decimal_"] | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "provider_total" | "invoice";
+            ledger: components["schemas"]["Metric_Decimal_"];
+            /** Reason */
+            reason: string | null;
+            reference: components["schemas"]["Metric_Decimal_"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "verified" | "unverified";
+        };
         /** AcknowledgeRequest */
         AcknowledgeRequest: {
             /** Entity */
@@ -1024,6 +1198,49 @@ export interface components {
             confirmed_at: string | null;
             /** Source System */
             source_system: string;
+        };
+        /** AllocationLine */
+        AllocationLine: {
+            amortized: components["schemas"]["Metric_Decimal_"];
+            /** Currency */
+            currency: string;
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "application" | "cost_centre";
+            /** Value */
+            value: string | null;
+        };
+        /** AnomalyView */
+        AnomalyView: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Account Name */
+            account_name: string;
+            baseline: components["schemas"]["Metric_Decimal_"];
+            /** Currency */
+            currency: string;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "spike" | "drop";
+            /**
+             * Granularity
+             * @enum {string}
+             */
+            granularity: "day" | "month";
+            observed: components["schemas"]["Metric_Decimal_"];
+            /**
+             * Observed On
+             * Format: date
+             */
+            observed_on: string;
+            ratio: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** Approval */
         Approval: {
@@ -1133,6 +1350,18 @@ export interface components {
             name: string;
             /** Permissions */
             permissions: string[];
+        };
+        /** ChargeLine */
+        ChargeLine: {
+            amortized: components["schemas"]["Metric_Decimal_"];
+            /** Charge Class */
+            charge_class: string;
+            converted: components["schemas"]["Metric_Decimal_"] | null;
+            /** Currency */
+            currency: string;
+            /** Feeds Margin */
+            feeds_margin: boolean;
+            unblended: components["schemas"]["Metric_Decimal_"];
         };
         /** CitationView */
         CitationView: {
@@ -1338,6 +1567,32 @@ export interface components {
             has_gap: boolean;
             tenant: components["schemas"]["TenantView"];
         };
+        /** CustomerCost */
+        CustomerCost: {
+            anomalies: components["schemas"]["Metric_int_"];
+            /** Charges */
+            charges: components["schemas"]["ChargeLine"][];
+            /** Checks */
+            checks: components["schemas"]["AccountCheck"][];
+            /** Period */
+            period: string;
+            tenant: components["schemas"]["TenantView"];
+            /** Unallocated */
+            unallocated: components["schemas"]["Unallocated"][];
+            /**
+             * Verification
+             * @enum {string}
+             */
+            verification: "verified" | "unverified";
+        };
+        /** CustomerFinOps */
+        CustomerFinOps: {
+            /** Allocation */
+            allocation: components["schemas"]["AllocationLine"][];
+            /** Anomalies */
+            anomalies: components["schemas"]["AnomalyView"][];
+            cost: components["schemas"]["CustomerCost"];
+        };
         /** CustomerOverview */
         CustomerOverview: {
             /** Cost 30D */
@@ -1444,6 +1699,15 @@ export interface components {
             /** Source System */
             source_system: string;
         };
+        /** Effort */
+        Effort: {
+            /** Complete */
+            complete: boolean;
+            hours: components["schemas"]["Metric_Decimal_"];
+            items: components["schemas"]["Metric_int_"];
+            items_without_hours: components["schemas"]["Metric_int_"];
+            modelled_hours: components["schemas"]["Metric_Decimal_"] | null;
+        };
         /** EvidencePackSummary */
         EvidencePackSummary: {
             /**
@@ -1541,6 +1805,15 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** FinOpsOverview */
+        FinOpsOverview: {
+            /** Customers */
+            customers: components["schemas"]["CustomerCost"][];
+            /** Period */
+            period: string;
+            /** Reporting Currency */
+            reporting_currency: string | null;
+        };
         /** FirstAdminRequest */
         FirstAdminRequest: {
             /** Display Name */
@@ -1563,6 +1836,54 @@ export interface components {
             library_version: string;
             manual: components["schemas"]["Metric_int_"];
             narrative: components["schemas"]["Metric_int_"];
+        };
+        /** FxCorrectionRequest */
+        FxCorrectionRequest: {
+            /**
+             * Effective Date
+             * Format: date
+             */
+            effective_date: string;
+            /** From Currency */
+            from_currency: string;
+            /** Rate */
+            rate: number | string;
+            /**
+             * Rate Type
+             * @enum {string}
+             */
+            rate_type: "closing" | "average";
+            /** Reason */
+            reason: string;
+            /** To Currency */
+            to_currency: string;
+        };
+        /** FxCorrectionView */
+        FxCorrectionView: {
+            /**
+             * Effective Date
+             * Format: date
+             */
+            effective_date: string;
+            /**
+             * Entered At
+             * Format: date-time
+             */
+            entered_at: string;
+            /** From Currency */
+            from_currency: string;
+            /** Id */
+            id: string;
+            new_rate: components["schemas"]["Metric_Decimal_"];
+            previous_rate: components["schemas"]["Metric_Decimal_"] | null;
+            /** Rate Type */
+            rate_type: string;
+            /** Reason */
+            reason: string;
+            /** Source */
+            source: string;
+            /** To Currency */
+            to_currency: string;
         };
         /** GenerateRequest */
         GenerateRequest: {
@@ -1591,6 +1912,61 @@ export interface components {
             /** Library Version */
             library_version: string;
             loaded: components["schemas"]["Metric_int_"];
+        };
+        /** MarginDetail */
+        MarginDetail: {
+            margin: components["schemas"]["MarginView"];
+            /** Variance */
+            variance: components["schemas"]["VarianceView"][];
+            /** Versions */
+            versions: components["schemas"]["VersionView"][];
+        };
+        /** MarginOverview */
+        MarginOverview: {
+            /** Customers */
+            customers: components["schemas"]["MarginView"][];
+            /** Period */
+            period: string;
+            /** Reporting Currency */
+            reporting_currency: string | null;
+        };
+        /** MarginView */
+        MarginView: {
+            actual_cost: components["schemas"]["Metric_Decimal_"] | null;
+            actual_margin: components["schemas"]["Metric_Decimal_"] | null;
+            /** Band */
+            band: string | null;
+            /** Band Basis */
+            band_basis: ("actual" | "modelled") | null;
+            /** Contract Currency */
+            contract_currency: string | null;
+            effort: components["schemas"]["Effort"] | null;
+            /** Exceeds Slab */
+            exceeds_slab: boolean;
+            gap_to_target: components["schemas"]["Metric_Decimal_"] | null;
+            margin_pct: components["schemas"]["Metric_Decimal_"] | null;
+            modelled_cost: components["schemas"]["Metric_Decimal_"] | null;
+            modelled_margin: components["schemas"]["Metric_Decimal_"] | null;
+            /** Not Captured */
+            not_captured: ("no_sow" | "no_people_cost" | "no_fx_rate" | "no_cost_data" | "not_computed") | null;
+            /** Period */
+            period: string;
+            /** Rate Card Version */
+            rate_card_version: string | null;
+            reported: components["schemas"]["Reported"] | null;
+            /** Restated */
+            restated: boolean;
+            revenue: components["schemas"]["Metric_Decimal_"] | null;
+            /** Status */
+            status: ("provisional" | "closed") | null;
+            target_margin: components["schemas"]["Metric_Decimal_"] | null;
+            tenant: components["schemas"]["TenantView"];
+            /** Through */
+            through: string | null;
+            /** Trend */
+            trend: components["schemas"]["TrendPoint"][];
+            unpriced_cis: components["schemas"]["Metric_int_"] | null;
+            version: components["schemas"]["Metric_int_"] | null;
         };
         /** Metric[Decimal] */
         Metric_Decimal_: {
@@ -1890,6 +2266,102 @@ export interface components {
             items: components["schemas"]["QuarantinedAlias"][];
             names: components["schemas"]["Metric_int_"];
             sightings: components["schemas"]["Metric_int_"];
+        };
+        /** QuoteRequest */
+        QuoteRequest: {
+            /**
+             * Corestack
+             * @default true
+             */
+            corestack: boolean;
+            /**
+             * Coverage
+             * @default 24x7
+             * @enum {string}
+             */
+            coverage: "8x5" | "16x5" | "24x7";
+            /** Currency */
+            currency: string;
+            /** Inventory */
+            inventory: {
+                [key: string]: number;
+            };
+            /**
+             * Location
+             * @default India
+             * @enum {string}
+             */
+            location: "India" | "Budapest";
+            /** Monthly Consumption */
+            monthly_consumption: number | string;
+            /** On */
+            on?: string | null;
+            /**
+             * Support Model
+             * @default Gold
+             * @enum {string}
+             */
+            support_model: "Bronze" | "Silver" | "Gold";
+        };
+        /** QuoteView */
+        QuoteView: {
+            base_pack: components["schemas"]["Metric_Decimal_"];
+            cis_until_next_slab: components["schemas"]["Metric_int_"] | null;
+            cloud_services_cost: components["schemas"]["Metric_Decimal_"];
+            critical_cis: components["schemas"]["Metric_int_"];
+            /** Currency */
+            currency: string;
+            fte: components["schemas"]["Metric_Decimal_"];
+            /** Next Slab */
+            next_slab: string | null;
+            platform_cost: components["schemas"]["Metric_Decimal_"];
+            price_per_ci: components["schemas"]["Metric_Decimal_"];
+            /** Rate Card Version */
+            rate_card_version: string;
+            /** Repricing Due */
+            repricing_due: boolean;
+            service_cost: components["schemas"]["Metric_Decimal_"];
+            /** Slab */
+            slab: string;
+            /** Team */
+            team: components["schemas"]["TeamLine"][];
+            total_monthly: components["schemas"]["Metric_Decimal_"];
+            transition_weeks: components["schemas"]["Metric_int_"];
+        };
+        /** RateCardView */
+        RateCardView: {
+            /** Coverages */
+            coverages: string[];
+            /** Currency */
+            currency: string;
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to: string | null;
+            /** Locations */
+            locations: string[];
+            /** Resource Types */
+            resource_types: string[];
+            /** Source */
+            source: string;
+            /** Support Models */
+            support_models: string[];
+            /** Version */
+            version: string;
+        };
+        /**
+         * Reported
+         * @description The contract-currency margin converted for the viewer, FX impact apart.
+         */
+        Reported: {
+            /** Currency */
+            currency: string;
+            fx_impact: components["schemas"]["Metric_Decimal_"];
+            margin: components["schemas"]["Metric_Decimal_"];
+            margin_at_prior_rates: components["schemas"]["Metric_Decimal_"];
         };
         /** ReportPackSummary */
         ReportPackSummary: {
@@ -2262,6 +2734,12 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** TeamLine */
+        TeamLine: {
+            fte: components["schemas"]["Metric_Decimal_"];
+            /** Role */
+            role: string;
+        };
         /** TelemetryStatus */
         TelemetryStatus: {
             /** Available */
@@ -2329,6 +2807,19 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** TrendPoint */
+        TrendPoint: {
+            /** Band */
+            band: string | null;
+            margin_pct: components["schemas"]["Metric_Decimal_"] | null;
+            /** Period */
+            period: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "provisional" | "closed";
+        };
         /**
          * TriageOverrides
          * @description What a reviewer may change: the classification's fields, each to a value its
@@ -2383,6 +2874,19 @@ export interface components {
              */
             stage: 1 | 2 | 3;
         };
+        /** Unallocated */
+        Unallocated: {
+            allocated: components["schemas"]["Metric_Decimal_"];
+            /** Currency */
+            currency: string;
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "application" | "cost_centre";
+            share: components["schemas"]["Metric_Decimal_"] | null;
+            unallocated: components["schemas"]["Metric_Decimal_"];
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -2395,6 +2899,35 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VarianceView */
+        VarianceView: {
+            /** Activity */
+            activity: string;
+            excess_cost: components["schemas"]["Metric_Decimal_"];
+            excess_hours: components["schemas"]["Metric_Decimal_"];
+            hours: components["schemas"]["Metric_Decimal_"];
+            items: components["schemas"]["Metric_int_"];
+            items_without_hours: components["schemas"]["Metric_int_"];
+            share: components["schemas"]["Metric_Decimal_"];
+            /** Workgroup */
+            workgroup: string;
+        };
+        /** VersionView */
+        VersionView: {
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            margin_pct: components["schemas"]["Metric_Decimal_"] | null;
+            restates_version: components["schemas"]["Metric_int_"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "provisional" | "closed";
+            version: components["schemas"]["Metric_int_"];
         };
         /** VulnerabilityView */
         VulnerabilityView: {
@@ -2949,6 +3482,125 @@ export interface operations {
             };
         };
     };
+    margin_overview_v1_commercial_margin_get: {
+        parameters: {
+            query?: {
+                currency?: string | null;
+                period?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginOverview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    margin_detail_v1_commercial_margin__tenant_id__get: {
+        parameters: {
+            query?: {
+                currency?: string | null;
+                period?: string | null;
+            };
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarginDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    quote_v1_commercial_quotes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rate_card_view_v1_commercial_rate_card_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateCardView"];
+                };
+            };
+        };
+    };
     list_sows_v1_commercial_sows_get: {
         parameters: {
             query?: never;
@@ -3094,6 +3746,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerOverview"][];
+                };
+            };
+        };
+    };
+    finops_customer_v1_finops_customers__tenant_id__get: {
+        parameters: {
+            query?: {
+                currency?: string | null;
+                period?: string | null;
+            };
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerFinOps"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_fx_corrections_v1_finops_fx_corrections_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FxCorrectionView"][];
+                };
+            };
+        };
+    };
+    correct_fx_rate_v1_finops_fx_corrections_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FxCorrectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FxCorrectionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finops_overview_v1_finops_overview_get: {
+        parameters: {
+            query?: {
+                currency?: string | null;
+                period?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinOpsOverview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

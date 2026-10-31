@@ -1,0 +1,1809 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gesmes:Envelope xmlns:gesmes="http://www.gesmes.org/xml/2002-08-01" xmlns="http://www.ecb.int/vocabulary/2002-08-01/eurofxref">
+	<gesmes:subject>Reference rates</gesmes:subject>
+	<gesmes:Sender>
+		<gesmes:name>European Central Bank</gesmes:name>
+	</gesmes:Sender>
+	<Cube>
+		<Cube time="2026-10-30">
+			<Cube currency="USD" rate="1.0701"/>
+			<Cube currency="JPY" rate="161.89"/>
+			<Cube currency="CZK" rate="25.761"/>
+			<Cube currency="DKK" rate="7.6167"/>
+			<Cube currency="GBP" rate="0.84944"/>
+			<Cube currency="HUF" rate="411.56"/>
+			<Cube currency="PLN" rate="4.4030"/>
+			<Cube currency="SEK" rate="11.7296"/>
+			<Cube currency="CHF" rate="1.03059"/>
+			<Cube currency="NOK" rate="11.6997"/>
+			<Cube currency="AUD" rate="1.6771"/>
+			<Cube currency="CAD" rate="1.5136"/>
+			<Cube currency="INR" rate="90.4003"/>
+		</Cube>
+		<Cube time="2026-10-29">
+			<Cube currency="USD" rate="1.0653"/>
+			<Cube currency="JPY" rate="160.65"/>
+			<Cube currency="CZK" rate="25.849"/>
+			<Cube currency="DKK" rate="7.5858"/>
+			<Cube currency="GBP" rate="0.84934"/>
+			<Cube currency="HUF" rate="411.76"/>
+			<Cube currency="PLN" rate="4.4200"/>
+			<Cube currency="SEK" rate="11.6979"/>
+			<Cube currency="CHF" rate="1.02350"/>
+			<Cube currency="NOK" rate="11.6822"/>
+			<Cube currency="AUD" rate="1.6871"/>
+			<Cube currency="CAD" rate="1.5120"/>
+			<Cube currency="INR" rate="89.8507"/>
+		</Cube>
+		<Cube time="2026-10-28">
+			<Cube currency="USD" rate="1.0612"/>
+			<Cube currency="JPY" rate="161.08"/>
+			<Cube currency="CZK" rate="25.828"/>
+			<Cube currency="DKK" rate="7.5867"/>
+			<Cube currency="GBP" rate="0.84675"/>
+			<Cube currency="HUF" rate="410.82"/>
+			<Cube currency="PLN" rate="4.4179"/>
+			<Cube currency="SEK" rate="11.6672"/>
+			<Cube currency="CHF" rate="1.01845"/>
+			<Cube currency="NOK" rate="11.6575"/>
+			<Cube currency="AUD" rate="1.6830"/>
+			<Cube currency="CAD" rate="1.5121"/>
+			<Cube currency="INR" rate="89.1935"/>
+		</Cube>
+		<Cube time="2026-10-27">
+			<Cube currency="USD" rate="1.0659"/>
+			<Cube currency="JPY" rate="162.00"/>
+			<Cube currency="CZK" rate="25.761"/>
+			<Cube currency="DKK" rate="7.6032"/>
+			<Cube currency="GBP" rate="0.84808"/>
+			<Cube currency="HUF" rate="410.45"/>
+			<Cube currency="PLN" rate="4.4279"/>
+			<Cube currency="SEK" rate="11.6245"/>
+			<Cube currency="CHF" rate="1.02372"/>
+			<Cube currency="NOK" rate="11.6785"/>
+			<Cube currency="AUD" rate="1.6936"/>
+			<Cube currency="CAD" rate="1.5091"/>
+			<Cube currency="INR" rate="89.7860"/>
+		</Cube>
+		<Cube time="2026-10-26">
+			<Cube currency="USD" rate="1.0645"/>
+			<Cube currency="JPY" rate="161.78"/>
+			<Cube currency="CZK" rate="25.842"/>
+			<Cube currency="DKK" rate="7.5983"/>
+			<Cube currency="GBP" rate="0.84635"/>
+			<Cube currency="HUF" rate="411.21"/>
+			<Cube currency="PLN" rate="4.4456"/>
+			<Cube currency="SEK" rate="11.6401"/>
+			<Cube currency="CHF" rate="1.02080"/>
+			<Cube currency="NOK" rate="11.5656"/>
+			<Cube currency="AUD" rate="1.6903"/>
+			<Cube currency="CAD" rate="1.5052"/>
+			<Cube currency="INR" rate="90.1778"/>
+		</Cube>
+		<Cube time="2026-10-23">
+			<Cube currency="USD" rate="1.0650"/>
+			<Cube currency="JPY" rate="162.54"/>
+			<Cube currency="CZK" rate="25.742"/>
+			<Cube currency="DKK" rate="7.6182"/>
+			<Cube currency="GBP" rate="0.84601"/>
+			<Cube currency="HUF" rate="408.54"/>
+			<Cube currency="PLN" rate="4.4285"/>
+			<Cube currency="SEK" rate="11.6097"/>
+			<Cube currency="CHF" rate="1.02315"/>
+			<Cube currency="NOK" rate="11.5881"/>
+			<Cube currency="AUD" rate="1.6931"/>
+			<Cube currency="CAD" rate="1.5091"/>
+			<Cube currency="INR" rate="90.1332"/>
+		</Cube>
+		<Cube time="2026-10-22">
+			<Cube currency="USD" rate="1.0638"/>
+			<Cube currency="JPY" rate="161.59"/>
+			<Cube currency="CZK" rate="25.823"/>
+			<Cube currency="DKK" rate="7.6348"/>
+			<Cube currency="GBP" rate="0.84502"/>
+			<Cube currency="HUF" rate="408.43"/>
+			<Cube currency="PLN" rate="4.4175"/>
+			<Cube currency="SEK" rate="11.6316"/>
+			<Cube currency="CHF" rate="1.02364"/>
+			<Cube currency="NOK" rate="11.6491"/>
+			<Cube currency="AUD" rate="1.6965"/>
+			<Cube currency="CAD" rate="1.5094"/>
+			<Cube currency="INR" rate="90.2103"/>
+		</Cube>
+		<Cube time="2026-10-21">
+			<Cube currency="USD" rate="1.0696"/>
+			<Cube currency="JPY" rate="162.69"/>
+			<Cube currency="CZK" rate="25.954"/>
+			<Cube currency="DKK" rate="7.6062"/>
+			<Cube currency="GBP" rate="0.84864"/>
+			<Cube currency="HUF" rate="406.55"/>
+			<Cube currency="PLN" rate="4.4303"/>
+			<Cube currency="SEK" rate="11.6904"/>
+			<Cube currency="CHF" rate="1.01968"/>
+			<Cube currency="NOK" rate="11.5834"/>
+			<Cube currency="AUD" rate="1.6958"/>
+			<Cube currency="CAD" rate="1.5131"/>
+			<Cube currency="INR" rate="90.0348"/>
+		</Cube>
+		<Cube time="2026-10-20">
+			<Cube currency="USD" rate="1.0670"/>
+			<Cube currency="JPY" rate="163.31"/>
+			<Cube currency="CZK" rate="25.780"/>
+			<Cube currency="DKK" rate="7.5779"/>
+			<Cube currency="GBP" rate="0.84794"/>
+			<Cube currency="HUF" rate="407.00"/>
+			<Cube currency="PLN" rate="4.4070"/>
+			<Cube currency="SEK" rate="11.7076"/>
+			<Cube currency="CHF" rate="1.01121"/>
+			<Cube currency="NOK" rate="11.5110"/>
+			<Cube currency="AUD" rate="1.6882"/>
+			<Cube currency="CAD" rate="1.5040"/>
+			<Cube currency="INR" rate="90.7480"/>
+		</Cube>
+		<Cube time="2026-10-19">
+			<Cube currency="USD" rate="1.0680"/>
+			<Cube currency="JPY" rate="163.40"/>
+			<Cube currency="CZK" rate="25.918"/>
+			<Cube currency="DKK" rate="7.5558"/>
+			<Cube currency="GBP" rate="0.85102"/>
+			<Cube currency="HUF" rate="404.79"/>
+			<Cube currency="PLN" rate="4.3750"/>
+			<Cube currency="SEK" rate="11.7842"/>
+			<Cube currency="CHF" rate="1.01858"/>
+			<Cube currency="NOK" rate="11.5140"/>
+			<Cube currency="AUD" rate="1.6873"/>
+			<Cube currency="CAD" rate="1.5118"/>
+			<Cube currency="INR" rate="90.6340"/>
+		</Cube>
+		<Cube time="2026-10-16">
+			<Cube currency="USD" rate="1.0618"/>
+			<Cube currency="JPY" rate="163.43"/>
+			<Cube currency="CZK" rate="25.728"/>
+			<Cube currency="DKK" rate="7.5979"/>
+			<Cube currency="GBP" rate="0.85034"/>
+			<Cube currency="HUF" rate="406.59"/>
+			<Cube currency="PLN" rate="4.3624"/>
+			<Cube currency="SEK" rate="11.8663"/>
+			<Cube currency="CHF" rate="1.02200"/>
+			<Cube currency="NOK" rate="11.5360"/>
+			<Cube currency="AUD" rate="1.6852"/>
+			<Cube currency="CAD" rate="1.5135"/>
+			<Cube currency="INR" rate="91.0502"/>
+		</Cube>
+		<Cube time="2026-10-15">
+			<Cube currency="USD" rate="1.0543"/>
+			<Cube currency="JPY" rate="161.79"/>
+			<Cube currency="CZK" rate="25.906"/>
+			<Cube currency="DKK" rate="7.5740"/>
+			<Cube currency="GBP" rate="0.85170"/>
+			<Cube currency="HUF" rate="404.15"/>
+			<Cube currency="PLN" rate="4.3563"/>
+			<Cube currency="SEK" rate="11.8242"/>
+			<Cube currency="CHF" rate="1.02659"/>
+			<Cube currency="NOK" rate="11.5522"/>
+			<Cube currency="AUD" rate="1.6796"/>
+			<Cube currency="CAD" rate="1.5152"/>
+			<Cube currency="INR" rate="91.0757"/>
+		</Cube>
+		<Cube time="2026-10-14">
+			<Cube currency="USD" rate="1.0539"/>
+			<Cube currency="JPY" rate="162.14"/>
+			<Cube currency="CZK" rate="25.976"/>
+			<Cube currency="DKK" rate="7.6122"/>
+			<Cube currency="GBP" rate="0.85732"/>
+			<Cube currency="HUF" rate="406.17"/>
+			<Cube currency="PLN" rate="4.3420"/>
+			<Cube currency="SEK" rate="11.8220"/>
+			<Cube currency="CHF" rate="1.02837"/>
+			<Cube currency="NOK" rate="11.5347"/>
+			<Cube currency="AUD" rate="1.6877"/>
+			<Cube currency="CAD" rate="1.5278"/>
+			<Cube currency="INR" rate="90.7895"/>
+		</Cube>
+		<Cube time="2026-10-13">
+			<Cube currency="USD" rate="1.0557"/>
+			<Cube currency="JPY" rate="162.29"/>
+			<Cube currency="CZK" rate="25.902"/>
+			<Cube currency="DKK" rate="7.6165"/>
+			<Cube currency="GBP" rate="0.85397"/>
+			<Cube currency="HUF" rate="407.04"/>
+			<Cube currency="PLN" rate="4.3687"/>
+			<Cube currency="SEK" rate="11.8276"/>
+			<Cube currency="CHF" rate="1.03772"/>
+			<Cube currency="NOK" rate="11.4855"/>
+			<Cube currency="AUD" rate="1.6856"/>
+			<Cube currency="CAD" rate="1.5250"/>
+			<Cube currency="INR" rate="90.3096"/>
+		</Cube>
+		<Cube time="2026-10-12">
+			<Cube currency="USD" rate="1.0533"/>
+			<Cube currency="JPY" rate="162.43"/>
+			<Cube currency="CZK" rate="25.829"/>
+			<Cube currency="DKK" rate="7.7218"/>
+			<Cube currency="GBP" rate="0.85243"/>
+			<Cube currency="HUF" rate="407.26"/>
+			<Cube currency="PLN" rate="4.3666"/>
+			<Cube currency="SEK" rate="11.7851"/>
+			<Cube currency="CHF" rate="1.03159"/>
+			<Cube currency="NOK" rate="11.4764"/>
+			<Cube currency="AUD" rate="1.6866"/>
+			<Cube currency="CAD" rate="1.5168"/>
+			<Cube currency="INR" rate="90.1458"/>
+		</Cube>
+		<Cube time="2026-10-09">
+			<Cube currency="USD" rate="1.0438"/>
+			<Cube currency="JPY" rate="161.88"/>
+			<Cube currency="CZK" rate="25.929"/>
+			<Cube currency="DKK" rate="7.7390"/>
+			<Cube currency="GBP" rate="0.85106"/>
+			<Cube currency="HUF" rate="407.38"/>
+			<Cube currency="PLN" rate="4.3558"/>
+			<Cube currency="SEK" rate="11.7408"/>
+			<Cube currency="CHF" rate="1.03404"/>
+			<Cube currency="NOK" rate="11.4707"/>
+			<Cube currency="AUD" rate="1.6908"/>
+			<Cube currency="CAD" rate="1.5187"/>
+			<Cube currency="INR" rate="90.0402"/>
+		</Cube>
+		<Cube time="2026-10-08">
+			<Cube currency="USD" rate="1.0394"/>
+			<Cube currency="JPY" rate="161.49"/>
+			<Cube currency="CZK" rate="26.042"/>
+			<Cube currency="DKK" rate="7.8161"/>
+			<Cube currency="GBP" rate="0.85065"/>
+			<Cube currency="HUF" rate="405.75"/>
+			<Cube currency="PLN" rate="4.3684"/>
+			<Cube currency="SEK" rate="11.7506"/>
+			<Cube currency="CHF" rate="1.02603"/>
+			<Cube currency="NOK" rate="11.4429"/>
+			<Cube currency="AUD" rate="1.7003"/>
+			<Cube currency="CAD" rate="1.5310"/>
+			<Cube currency="INR" rate="89.7787"/>
+		</Cube>
+		<Cube time="2026-10-07">
+			<Cube currency="USD" rate="1.0344"/>
+			<Cube currency="JPY" rate="162.00"/>
+			<Cube currency="CZK" rate="25.974"/>
+			<Cube currency="DKK" rate="7.7409"/>
+			<Cube currency="GBP" rate="0.85835"/>
+			<Cube currency="HUF" rate="405.70"/>
+			<Cube currency="PLN" rate="4.3599"/>
+			<Cube currency="SEK" rate="11.6783"/>
+			<Cube currency="CHF" rate="1.03015"/>
+			<Cube currency="NOK" rate="11.4826"/>
+			<Cube currency="AUD" rate="1.6942"/>
+			<Cube currency="CAD" rate="1.5255"/>
+			<Cube currency="INR" rate="89.9481"/>
+		</Cube>
+		<Cube time="2026-10-06">
+			<Cube currency="USD" rate="1.0328"/>
+			<Cube currency="JPY" rate="162.33"/>
+			<Cube currency="CZK" rate="25.875"/>
+			<Cube currency="DKK" rate="7.7928"/>
+			<Cube currency="GBP" rate="0.86362"/>
+			<Cube currency="HUF" rate="403.59"/>
+			<Cube currency="PLN" rate="4.3288"/>
+			<Cube currency="SEK" rate="11.7365"/>
+			<Cube currency="CHF" rate="1.02273"/>
+			<Cube currency="NOK" rate="11.5320"/>
+			<Cube currency="AUD" rate="1.6883"/>
+			<Cube currency="CAD" rate="1.5258"/>
+			<Cube currency="INR" rate="89.6014"/>
+		</Cube>
+		<Cube time="2026-10-05">
+			<Cube currency="USD" rate="1.0320"/>
+			<Cube currency="JPY" rate="161.43"/>
+			<Cube currency="CZK" rate="25.947"/>
+			<Cube currency="DKK" rate="7.7382"/>
+			<Cube currency="GBP" rate="0.86192"/>
+			<Cube currency="HUF" rate="402.42"/>
+			<Cube currency="PLN" rate="4.3616"/>
+			<Cube currency="SEK" rate="11.8200"/>
+			<Cube currency="CHF" rate="1.02074"/>
+			<Cube currency="NOK" rate="11.5149"/>
+			<Cube currency="AUD" rate="1.6951"/>
+			<Cube currency="CAD" rate="1.5257"/>
+			<Cube currency="INR" rate="89.7731"/>
+		</Cube>
+		<Cube time="2026-10-02">
+			<Cube currency="USD" rate="1.0366"/>
+			<Cube currency="JPY" rate="162.33"/>
+			<Cube currency="CZK" rate="25.999"/>
+			<Cube currency="DKK" rate="7.7989"/>
+			<Cube currency="GBP" rate="0.85923"/>
+			<Cube currency="HUF" rate="401.79"/>
+			<Cube currency="PLN" rate="4.3725"/>
+			<Cube currency="SEK" rate="11.8668"/>
+			<Cube currency="CHF" rate="1.01534"/>
+			<Cube currency="NOK" rate="11.4764"/>
+			<Cube currency="AUD" rate="1.6948"/>
+			<Cube currency="CAD" rate="1.5268"/>
+			<Cube currency="INR" rate="89.5547"/>
+		</Cube>
+		<Cube time="2026-10-01">
+			<Cube currency="USD" rate="1.0412"/>
+			<Cube currency="JPY" rate="162.76"/>
+			<Cube currency="CZK" rate="25.890"/>
+			<Cube currency="DKK" rate="7.8375"/>
+			<Cube currency="GBP" rate="0.86150"/>
+			<Cube currency="HUF" rate="401.10"/>
+			<Cube currency="PLN" rate="4.3386"/>
+			<Cube currency="SEK" rate="11.8485"/>
+			<Cube currency="CHF" rate="1.01410"/>
+			<Cube currency="NOK" rate="11.4662"/>
+			<Cube currency="AUD" rate="1.6950"/>
+			<Cube currency="CAD" rate="1.5333"/>
+			<Cube currency="INR" rate="89.7672"/>
+		</Cube>
+		<Cube time="2026-09-30">
+			<Cube currency="USD" rate="1.0387"/>
+			<Cube currency="JPY" rate="161.64"/>
+			<Cube currency="CZK" rate="25.943"/>
+			<Cube currency="DKK" rate="7.8202"/>
+			<Cube currency="GBP" rate="0.86565"/>
+			<Cube currency="HUF" rate="398.37"/>
+			<Cube currency="PLN" rate="4.3210"/>
+			<Cube currency="SEK" rate="11.8821"/>
+			<Cube currency="CHF" rate="1.01140"/>
+			<Cube currency="NOK" rate="11.5421"/>
+			<Cube currency="AUD" rate="1.6999"/>
+			<Cube currency="CAD" rate="1.5229"/>
+			<Cube currency="INR" rate="89.8100"/>
+		</Cube>
+		<Cube time="2026-09-29">
+			<Cube currency="USD" rate="1.0424"/>
+			<Cube currency="JPY" rate="160.99"/>
+			<Cube currency="CZK" rate="25.898"/>
+			<Cube currency="DKK" rate="7.7306"/>
+			<Cube currency="GBP" rate="0.87159"/>
+			<Cube currency="HUF" rate="397.77"/>
+			<Cube currency="PLN" rate="4.3192"/>
+			<Cube currency="SEK" rate="11.9059"/>
+			<Cube currency="CHF" rate="1.00699"/>
+			<Cube currency="NOK" rate="11.4652"/>
+			<Cube currency="AUD" rate="1.6979"/>
+			<Cube currency="CAD" rate="1.5266"/>
+			<Cube currency="INR" rate="89.5068"/>
+		</Cube>
+		<Cube time="2026-09-28">
+			<Cube currency="USD" rate="1.0441"/>
+			<Cube currency="JPY" rate="162.54"/>
+			<Cube currency="CZK" rate="26.006"/>
+			<Cube currency="DKK" rate="7.7675"/>
+			<Cube currency="GBP" rate="0.86896"/>
+			<Cube currency="HUF" rate="397.97"/>
+			<Cube currency="PLN" rate="4.3145"/>
+			<Cube currency="SEK" rate="11.8955"/>
+			<Cube currency="CHF" rate="1.00511"/>
+			<Cube currency="NOK" rate="11.4623"/>
+			<Cube currency="AUD" rate="1.6950"/>
+			<Cube currency="CAD" rate="1.5140"/>
+			<Cube currency="INR" rate="89.1972"/>
+		</Cube>
+		<Cube time="2026-09-25">
+			<Cube currency="USD" rate="1.0502"/>
+			<Cube currency="JPY" rate="162.07"/>
+			<Cube currency="CZK" rate="25.829"/>
+			<Cube currency="DKK" rate="7.7883"/>
+			<Cube currency="GBP" rate="0.86721"/>
+			<Cube currency="HUF" rate="398.10"/>
+			<Cube currency="PLN" rate="4.3103"/>
+			<Cube currency="SEK" rate="11.8785"/>
+			<Cube currency="CHF" rate="1.01073"/>
+			<Cube currency="NOK" rate="11.4629"/>
+			<Cube currency="AUD" rate="1.7049"/>
+			<Cube currency="CAD" rate="1.5120"/>
+			<Cube currency="INR" rate="89.1188"/>
+		</Cube>
+		<Cube time="2026-09-24">
+			<Cube currency="USD" rate="1.0527"/>
+			<Cube currency="JPY" rate="161.85"/>
+			<Cube currency="CZK" rate="25.840"/>
+			<Cube currency="DKK" rate="7.8098"/>
+			<Cube currency="GBP" rate="0.86522"/>
+			<Cube currency="HUF" rate="394.23"/>
+			<Cube currency="PLN" rate="4.2703"/>
+			<Cube currency="SEK" rate="11.9169"/>
+			<Cube currency="CHF" rate="1.01517"/>
+			<Cube currency="NOK" rate="11.4403"/>
+			<Cube currency="AUD" rate="1.7127"/>
+			<Cube currency="CAD" rate="1.5185"/>
+			<Cube currency="INR" rate="88.9909"/>
+		</Cube>
+		<Cube time="2026-09-23">
+			<Cube currency="USD" rate="1.0517"/>
+			<Cube currency="JPY" rate="161.29"/>
+			<Cube currency="CZK" rate="26.022"/>
+			<Cube currency="DKK" rate="7.8212"/>
+			<Cube currency="GBP" rate="0.86265"/>
+			<Cube currency="HUF" rate="392.35"/>
+			<Cube currency="PLN" rate="4.2636"/>
+			<Cube currency="SEK" rate="11.9407"/>
+			<Cube currency="CHF" rate="1.01036"/>
+			<Cube currency="NOK" rate="11.5018"/>
+			<Cube currency="AUD" rate="1.7142"/>
+			<Cube currency="CAD" rate="1.5231"/>
+			<Cube currency="INR" rate="89.0712"/>
+		</Cube>
+		<Cube time="2026-09-22">
+			<Cube currency="USD" rate="1.0588"/>
+			<Cube currency="JPY" rate="160.91"/>
+			<Cube currency="CZK" rate="26.159"/>
+			<Cube currency="DKK" rate="7.8632"/>
+			<Cube currency="GBP" rate="0.86760"/>
+			<Cube currency="HUF" rate="392.65"/>
+			<Cube currency="PLN" rate="4.2876"/>
+			<Cube currency="SEK" rate="11.8568"/>
+			<Cube currency="CHF" rate="1.00855"/>
+			<Cube currency="NOK" rate="11.5245"/>
+			<Cube currency="AUD" rate="1.7150"/>
+			<Cube currency="CAD" rate="1.5226"/>
+			<Cube currency="INR" rate="88.3195"/>
+		</Cube>
+		<Cube time="2026-09-21">
+			<Cube currency="USD" rate="1.0536"/>
+			<Cube currency="JPY" rate="161.26"/>
+			<Cube currency="CZK" rate="26.108"/>
+			<Cube currency="DKK" rate="7.8905"/>
+			<Cube currency="GBP" rate="0.87561"/>
+			<Cube currency="HUF" rate="394.54"/>
+			<Cube currency="PLN" rate="4.2542"/>
+			<Cube currency="SEK" rate="11.8654"/>
+			<Cube currency="CHF" rate="1.01173"/>
+			<Cube currency="NOK" rate="11.4753"/>
+			<Cube currency="AUD" rate="1.7143"/>
+			<Cube currency="CAD" rate="1.5162"/>
+			<Cube currency="INR" rate="88.5853"/>
+		</Cube>
+		<Cube time="2026-09-18">
+			<Cube currency="USD" rate="1.0658"/>
+			<Cube currency="JPY" rate="161.22"/>
+			<Cube currency="CZK" rate="26.147"/>
+			<Cube currency="DKK" rate="7.8694"/>
+			<Cube currency="GBP" rate="0.87886"/>
+			<Cube currency="HUF" rate="393.57"/>
+			<Cube currency="PLN" rate="4.2632"/>
+			<Cube currency="SEK" rate="11.9289"/>
+			<Cube currency="CHF" rate="1.00765"/>
+			<Cube currency="NOK" rate="11.4876"/>
+			<Cube currency="AUD" rate="1.7081"/>
+			<Cube currency="CAD" rate="1.5191"/>
+			<Cube currency="INR" rate="88.4213"/>
+		</Cube>
+		<Cube time="2026-09-17">
+			<Cube currency="USD" rate="1.0658"/>
+			<Cube currency="JPY" rate="161.60"/>
+			<Cube currency="CZK" rate="26.075"/>
+			<Cube currency="DKK" rate="7.8566"/>
+			<Cube currency="GBP" rate="0.87903"/>
+			<Cube currency="HUF" rate="393.74"/>
+			<Cube currency="PLN" rate="4.2343"/>
+			<Cube currency="SEK" rate="11.9926"/>
+			<Cube currency="CHF" rate="1.00679"/>
+			<Cube currency="NOK" rate="11.4133"/>
+			<Cube currency="AUD" rate="1.7042"/>
+			<Cube currency="CAD" rate="1.5151"/>
+			<Cube currency="INR" rate="88.0891"/>
+		</Cube>
+		<Cube time="2026-09-16">
+			<Cube currency="USD" rate="1.0608"/>
+			<Cube currency="JPY" rate="162.16"/>
+			<Cube currency="CZK" rate="25.956"/>
+			<Cube currency="DKK" rate="7.8613"/>
+			<Cube currency="GBP" rate="0.87689"/>
+			<Cube currency="HUF" rate="395.83"/>
+			<Cube currency="PLN" rate="4.2353"/>
+			<Cube currency="SEK" rate="12.0774"/>
+			<Cube currency="CHF" rate="1.01473"/>
+			<Cube currency="NOK" rate="11.3928"/>
+			<Cube currency="AUD" rate="1.7056"/>
+			<Cube currency="CAD" rate="1.5138"/>
+			<Cube currency="INR" rate="87.2054"/>
+		</Cube>
+		<Cube time="2026-09-15">
+			<Cube currency="USD" rate="1.0578"/>
+			<Cube currency="JPY" rate="160.98"/>
+			<Cube currency="CZK" rate="25.978"/>
+			<Cube currency="DKK" rate="7.8256"/>
+			<Cube currency="GBP" rate="0.87329"/>
+			<Cube currency="HUF" rate="391.79"/>
+			<Cube currency="PLN" rate="4.2289"/>
+			<Cube currency="SEK" rate="12.0842"/>
+			<Cube currency="CHF" rate="1.01909"/>
+			<Cube currency="NOK" rate="11.4321"/>
+			<Cube currency="AUD" rate="1.7107"/>
+			<Cube currency="CAD" rate="1.5219"/>
+			<Cube currency="INR" rate="87.2312"/>
+		</Cube>
+		<Cube time="2026-09-14">
+			<Cube currency="USD" rate="1.0632"/>
+			<Cube currency="JPY" rate="160.99"/>
+			<Cube currency="CZK" rate="25.998"/>
+			<Cube currency="DKK" rate="7.7465"/>
+			<Cube currency="GBP" rate="0.86831"/>
+			<Cube currency="HUF" rate="392.97"/>
+			<Cube currency="PLN" rate="4.2378"/>
+			<Cube currency="SEK" rate="12.0511"/>
+			<Cube currency="CHF" rate="1.00974"/>
+			<Cube currency="NOK" rate="11.4196"/>
+			<Cube currency="AUD" rate="1.7156"/>
+			<Cube currency="CAD" rate="1.5252"/>
+			<Cube currency="INR" rate="86.7928"/>
+		</Cube>
+		<Cube time="2026-09-11">
+			<Cube currency="USD" rate="1.0663"/>
+			<Cube currency="JPY" rate="160.38"/>
+			<Cube currency="CZK" rate="26.102"/>
+			<Cube currency="DKK" rate="7.7310"/>
+			<Cube currency="GBP" rate="0.86787"/>
+			<Cube currency="HUF" rate="393.41"/>
+			<Cube currency="PLN" rate="4.2470"/>
+			<Cube currency="SEK" rate="11.9805"/>
+			<Cube currency="CHF" rate="1.00611"/>
+			<Cube currency="NOK" rate="11.3741"/>
+			<Cube currency="AUD" rate="1.7158"/>
+			<Cube currency="CAD" rate="1.5057"/>
+			<Cube currency="INR" rate="86.8665"/>
+		</Cube>
+		<Cube time="2026-09-10">
+			<Cube currency="USD" rate="1.0609"/>
+			<Cube currency="JPY" rate="160.48"/>
+			<Cube currency="CZK" rate="26.140"/>
+			<Cube currency="DKK" rate="7.6880"/>
+			<Cube currency="GBP" rate="0.87373"/>
+			<Cube currency="HUF" rate="395.23"/>
+			<Cube currency="PLN" rate="4.2570"/>
+			<Cube currency="SEK" rate="11.8537"/>
+			<Cube currency="CHF" rate="1.00577"/>
+			<Cube currency="NOK" rate="11.4079"/>
+			<Cube currency="AUD" rate="1.7159"/>
+			<Cube currency="CAD" rate="1.5031"/>
+			<Cube currency="INR" rate="86.6017"/>
+		</Cube>
+		<Cube time="2026-09-09">
+			<Cube currency="USD" rate="1.0574"/>
+			<Cube currency="JPY" rate="160.07"/>
+			<Cube currency="CZK" rate="25.905"/>
+			<Cube currency="DKK" rate="7.6496"/>
+			<Cube currency="GBP" rate="0.87294"/>
+			<Cube currency="HUF" rate="391.73"/>
+			<Cube currency="PLN" rate="4.2742"/>
+			<Cube currency="SEK" rate="11.8520"/>
+			<Cube currency="CHF" rate="1.00248"/>
+			<Cube currency="NOK" rate="11.3909"/>
+			<Cube currency="AUD" rate="1.6944"/>
+			<Cube currency="CAD" rate="1.5011"/>
+			<Cube currency="INR" rate="86.9281"/>
+		</Cube>
+		<Cube time="2026-09-08">
+			<Cube currency="USD" rate="1.0554"/>
+			<Cube currency="JPY" rate="159.55"/>
+			<Cube currency="CZK" rate="26.043"/>
+			<Cube currency="DKK" rate="7.6106"/>
+			<Cube currency="GBP" rate="0.87115"/>
+			<Cube currency="HUF" rate="389.82"/>
+			<Cube currency="PLN" rate="4.3119"/>
+			<Cube currency="SEK" rate="11.9029"/>
+			<Cube currency="CHF" rate="1.00087"/>
+			<Cube currency="NOK" rate="11.4670"/>
+			<Cube currency="AUD" rate="1.6940"/>
+			<Cube currency="CAD" rate="1.5077"/>
+			<Cube currency="INR" rate="87.2359"/>
+		</Cube>
+		<Cube time="2026-09-07">
+			<Cube currency="USD" rate="1.0523"/>
+			<Cube currency="JPY" rate="158.77"/>
+			<Cube currency="CZK" rate="25.989"/>
+			<Cube currency="DKK" rate="7.6899"/>
+			<Cube currency="GBP" rate="0.87217"/>
+			<Cube currency="HUF" rate="386.55"/>
+			<Cube currency="PLN" rate="4.3193"/>
+			<Cube currency="SEK" rate="11.8700"/>
+			<Cube currency="CHF" rate="1.00011"/>
+			<Cube currency="NOK" rate="11.3671"/>
+			<Cube currency="AUD" rate="1.6952"/>
+			<Cube currency="CAD" rate="1.4990"/>
+			<Cube currency="INR" rate="87.3524"/>
+		</Cube>
+		<Cube time="2026-09-04">
+			<Cube currency="USD" rate="1.0498"/>
+			<Cube currency="JPY" rate="158.60"/>
+			<Cube currency="CZK" rate="25.895"/>
+			<Cube currency="DKK" rate="7.6869"/>
+			<Cube currency="GBP" rate="0.87739"/>
+			<Cube currency="HUF" rate="385.78"/>
+			<Cube currency="PLN" rate="4.3190"/>
+			<Cube currency="SEK" rate="11.8527"/>
+			<Cube currency="CHF" rate="1.00181"/>
+			<Cube currency="NOK" rate="11.3734"/>
+			<Cube currency="AUD" rate="1.6954"/>
+			<Cube currency="CAD" rate="1.5068"/>
+			<Cube currency="INR" rate="87.7020"/>
+		</Cube>
+		<Cube time="2026-09-03">
+			<Cube currency="USD" rate="1.0515"/>
+			<Cube currency="JPY" rate="159.08"/>
+			<Cube currency="CZK" rate="25.866"/>
+			<Cube currency="DKK" rate="7.7135"/>
+			<Cube currency="GBP" rate="0.87404"/>
+			<Cube currency="HUF" rate="383.65"/>
+			<Cube currency="PLN" rate="4.3406"/>
+			<Cube currency="SEK" rate="11.8065"/>
+			<Cube currency="CHF" rate="0.99739"/>
+			<Cube currency="NOK" rate="11.3205"/>
+			<Cube currency="AUD" rate="1.6996"/>
+			<Cube currency="CAD" rate="1.5060"/>
+			<Cube currency="INR" rate="87.1335"/>
+		</Cube>
+		<Cube time="2026-09-02">
+			<Cube currency="USD" rate="1.0531"/>
+			<Cube currency="JPY" rate="159.36"/>
+			<Cube currency="CZK" rate="25.824"/>
+			<Cube currency="DKK" rate="7.7027"/>
+			<Cube currency="GBP" rate="0.87499"/>
+			<Cube currency="HUF" rate="381.42"/>
+			<Cube currency="PLN" rate="4.3306"/>
+			<Cube currency="SEK" rate="11.7642"/>
+			<Cube currency="CHF" rate="0.99001"/>
+			<Cube currency="NOK" rate="11.2982"/>
+			<Cube currency="AUD" rate="1.6889"/>
+			<Cube currency="CAD" rate="1.5142"/>
+			<Cube currency="INR" rate="87.0531"/>
+		</Cube>
+		<Cube time="2026-09-01">
+			<Cube currency="USD" rate="1.0507"/>
+			<Cube currency="JPY" rate="159.63"/>
+			<Cube currency="CZK" rate="25.774"/>
+			<Cube currency="DKK" rate="7.6721"/>
+			<Cube currency="GBP" rate="0.87886"/>
+			<Cube currency="HUF" rate="383.00"/>
+			<Cube currency="PLN" rate="4.3402"/>
+			<Cube currency="SEK" rate="11.7268"/>
+			<Cube currency="CHF" rate="0.98668"/>
+			<Cube currency="NOK" rate="11.2517"/>
+			<Cube currency="AUD" rate="1.6872"/>
+			<Cube currency="CAD" rate="1.5187"/>
+			<Cube currency="INR" rate="86.7329"/>
+		</Cube>
+		<Cube time="2026-08-31">
+			<Cube currency="USD" rate="1.0498"/>
+			<Cube currency="JPY" rate="160.11"/>
+			<Cube currency="CZK" rate="25.828"/>
+			<Cube currency="DKK" rate="7.6556"/>
+			<Cube currency="GBP" rate="0.88672"/>
+			<Cube currency="HUF" rate="384.01"/>
+			<Cube currency="PLN" rate="4.3315"/>
+			<Cube currency="SEK" rate="11.8131"/>
+			<Cube currency="CHF" rate="0.98291"/>
+			<Cube currency="NOK" rate="11.3047"/>
+			<Cube currency="AUD" rate="1.6872"/>
+			<Cube currency="CAD" rate="1.5111"/>
+			<Cube currency="INR" rate="87.1210"/>
+		</Cube>
+		<Cube time="2026-08-28">
+			<Cube currency="USD" rate="1.0471"/>
+			<Cube currency="JPY" rate="160.30"/>
+			<Cube currency="CZK" rate="25.856"/>
+			<Cube currency="DKK" rate="7.6351"/>
+			<Cube currency="GBP" rate="0.88729"/>
+			<Cube currency="HUF" rate="383.28"/>
+			<Cube currency="PLN" rate="4.3396"/>
+			<Cube currency="SEK" rate="11.7805"/>
+			<Cube currency="CHF" rate="0.98246"/>
+			<Cube currency="NOK" rate="11.2385"/>
+			<Cube currency="AUD" rate="1.6834"/>
+			<Cube currency="CAD" rate="1.5150"/>
+			<Cube currency="INR" rate="87.2479"/>
+		</Cube>
+		<Cube time="2026-08-27">
+			<Cube currency="USD" rate="1.0512"/>
+			<Cube currency="JPY" rate="160.74"/>
+			<Cube currency="CZK" rate="25.913"/>
+			<Cube currency="DKK" rate="7.6812"/>
+			<Cube currency="GBP" rate="0.88166"/>
+			<Cube currency="HUF" rate="382.03"/>
+			<Cube currency="PLN" rate="4.2896"/>
+			<Cube currency="SEK" rate="11.7855"/>
+			<Cube currency="CHF" rate="0.98328"/>
+			<Cube currency="NOK" rate="11.2080"/>
+			<Cube currency="AUD" rate="1.6719"/>
+			<Cube currency="CAD" rate="1.5191"/>
+			<Cube currency="INR" rate="86.8850"/>
+		</Cube>
+		<Cube time="2026-08-26">
+			<Cube currency="USD" rate="1.0564"/>
+			<Cube currency="JPY" rate="159.80"/>
+			<Cube currency="CZK" rate="25.856"/>
+			<Cube currency="DKK" rate="7.6922"/>
+			<Cube currency="GBP" rate="0.88187"/>
+			<Cube currency="HUF" rate="381.34"/>
+			<Cube currency="PLN" rate="4.2810"/>
+			<Cube currency="SEK" rate="11.8060"/>
+			<Cube currency="CHF" rate="0.98108"/>
+			<Cube currency="NOK" rate="11.2499"/>
+			<Cube currency="AUD" rate="1.6803"/>
+			<Cube currency="CAD" rate="1.5160"/>
+			<Cube currency="INR" rate="87.3208"/>
+		</Cube>
+		<Cube time="2026-08-25">
+			<Cube currency="USD" rate="1.0531"/>
+			<Cube currency="JPY" rate="159.48"/>
+			<Cube currency="CZK" rate="25.653"/>
+			<Cube currency="DKK" rate="7.7121"/>
+			<Cube currency="GBP" rate="0.88580"/>
+			<Cube currency="HUF" rate="381.90"/>
+			<Cube currency="PLN" rate="4.2650"/>
+			<Cube currency="SEK" rate="11.9013"/>
+			<Cube currency="CHF" rate="0.97709"/>
+			<Cube currency="NOK" rate="11.2403"/>
+			<Cube currency="AUD" rate="1.6692"/>
+			<Cube currency="CAD" rate="1.5161"/>
+			<Cube currency="INR" rate="87.6255"/>
+		</Cube>
+		<Cube time="2026-08-24">
+			<Cube currency="USD" rate="1.0556"/>
+			<Cube currency="JPY" rate="160.52"/>
+			<Cube currency="CZK" rate="25.685"/>
+			<Cube currency="DKK" rate="7.6244"/>
+			<Cube currency="GBP" rate="0.88559"/>
+			<Cube currency="HUF" rate="381.66"/>
+			<Cube currency="PLN" rate="4.2636"/>
+			<Cube currency="SEK" rate="11.9024"/>
+			<Cube currency="CHF" rate="0.97620"/>
+			<Cube currency="NOK" rate="11.2682"/>
+			<Cube currency="AUD" rate="1.6750"/>
+			<Cube currency="CAD" rate="1.5241"/>
+			<Cube currency="INR" rate="87.6660"/>
+		</Cube>
+		<Cube time="2026-08-21">
+			<Cube currency="USD" rate="1.0603"/>
+			<Cube currency="JPY" rate="160.63"/>
+			<Cube currency="CZK" rate="25.758"/>
+			<Cube currency="DKK" rate="7.5662"/>
+			<Cube currency="GBP" rate="0.88301"/>
+			<Cube currency="HUF" rate="379.27"/>
+			<Cube currency="PLN" rate="4.2649"/>
+			<Cube currency="SEK" rate="11.9137"/>
+			<Cube currency="CHF" rate="0.98295"/>
+			<Cube currency="NOK" rate="11.2049"/>
+			<Cube currency="AUD" rate="1.6778"/>
+			<Cube currency="CAD" rate="1.5241"/>
+			<Cube currency="INR" rate="87.6232"/>
+		</Cube>
+		<Cube time="2026-08-20">
+			<Cube currency="USD" rate="1.0693"/>
+			<Cube currency="JPY" rate="161.31"/>
+			<Cube currency="CZK" rate="25.900"/>
+			<Cube currency="DKK" rate="7.6071"/>
+			<Cube currency="GBP" rate="0.88110"/>
+			<Cube currency="HUF" rate="378.47"/>
+			<Cube currency="PLN" rate="4.2685"/>
+			<Cube currency="SEK" rate="11.9029"/>
+			<Cube currency="CHF" rate="0.98246"/>
+			<Cube currency="NOK" rate="11.2322"/>
+			<Cube currency="AUD" rate="1.6739"/>
+			<Cube currency="CAD" rate="1.5261"/>
+			<Cube currency="INR" rate="87.2786"/>
+		</Cube>
+		<Cube time="2026-08-19">
+			<Cube currency="USD" rate="1.0703"/>
+			<Cube currency="JPY" rate="161.33"/>
+			<Cube currency="CZK" rate="25.816"/>
+			<Cube currency="DKK" rate="7.5696"/>
+			<Cube currency="GBP" rate="0.87603"/>
+			<Cube currency="HUF" rate="376.29"/>
+			<Cube currency="PLN" rate="4.2568"/>
+			<Cube currency="SEK" rate="11.9218"/>
+			<Cube currency="CHF" rate="0.98091"/>
+			<Cube currency="NOK" rate="11.2295"/>
+			<Cube currency="AUD" rate="1.6618"/>
+			<Cube currency="CAD" rate="1.5196"/>
+			<Cube currency="INR" rate="87.9564"/>
+		</Cube>
+		<Cube time="2026-08-18">
+			<Cube currency="USD" rate="1.0709"/>
+			<Cube currency="JPY" rate="161.05"/>
+			<Cube currency="CZK" rate="25.907"/>
+			<Cube currency="DKK" rate="7.6085"/>
+			<Cube currency="GBP" rate="0.87354"/>
+			<Cube currency="HUF" rate="375.60"/>
+			<Cube currency="PLN" rate="4.2394"/>
+			<Cube currency="SEK" rate="11.8802"/>
+			<Cube currency="CHF" rate="0.97969"/>
+			<Cube currency="NOK" rate="11.1350"/>
+			<Cube currency="AUD" rate="1.6754"/>
+			<Cube currency="CAD" rate="1.5195"/>
+			<Cube currency="INR" rate="87.5027"/>
+		</Cube>
+		<Cube time="2026-08-17">
+			<Cube currency="USD" rate="1.0734"/>
+			<Cube currency="JPY" rate="162.43"/>
+			<Cube currency="CZK" rate="25.974"/>
+			<Cube currency="DKK" rate="7.5914"/>
+			<Cube currency="GBP" rate="0.87403"/>
+			<Cube currency="HUF" rate="378.10"/>
+			<Cube currency="PLN" rate="4.2551"/>
+			<Cube currency="SEK" rate="11.9175"/>
+			<Cube currency="CHF" rate="0.97586"/>
+			<Cube currency="NOK" rate="11.1094"/>
+			<Cube currency="AUD" rate="1.6818"/>
+			<Cube currency="CAD" rate="1.5112"/>
+			<Cube currency="INR" rate="87.0938"/>
+		</Cube>
+		<Cube time="2026-08-14">
+			<Cube currency="USD" rate="1.0796"/>
+			<Cube currency="JPY" rate="162.69"/>
+			<Cube currency="CZK" rate="26.069"/>
+			<Cube currency="DKK" rate="7.6020"/>
+			<Cube currency="GBP" rate="0.86969"/>
+			<Cube currency="HUF" rate="379.24"/>
+			<Cube currency="PLN" rate="4.2703"/>
+			<Cube currency="SEK" rate="11.8869"/>
+			<Cube currency="CHF" rate="0.97598"/>
+			<Cube currency="NOK" rate="11.2292"/>
+			<Cube currency="AUD" rate="1.6853"/>
+			<Cube currency="CAD" rate="1.5126"/>
+			<Cube currency="INR" rate="86.5317"/>
+		</Cube>
+		<Cube time="2026-08-13">
+			<Cube currency="USD" rate="1.0778"/>
+			<Cube currency="JPY" rate="162.78"/>
+			<Cube currency="CZK" rate="26.152"/>
+			<Cube currency="DKK" rate="7.6224"/>
+			<Cube currency="GBP" rate="0.87525"/>
+			<Cube currency="HUF" rate="379.82"/>
+			<Cube currency="PLN" rate="4.2720"/>
+			<Cube currency="SEK" rate="11.8360"/>
+			<Cube currency="CHF" rate="0.97788"/>
+			<Cube currency="NOK" rate="11.1864"/>
+			<Cube currency="AUD" rate="1.6902"/>
+			<Cube currency="CAD" rate="1.5173"/>
+			<Cube currency="INR" rate="86.4243"/>
+		</Cube>
+		<Cube time="2026-08-12">
+			<Cube currency="USD" rate="1.0797"/>
+			<Cube currency="JPY" rate="163.00"/>
+			<Cube currency="CZK" rate="26.149"/>
+			<Cube currency="DKK" rate="7.5671"/>
+			<Cube currency="GBP" rate="0.87077"/>
+			<Cube currency="HUF" rate="380.75"/>
+			<Cube currency="PLN" rate="4.2810"/>
+			<Cube currency="SEK" rate="11.8595"/>
+			<Cube currency="CHF" rate="0.97886"/>
+			<Cube currency="NOK" rate="11.2304"/>
+			<Cube currency="AUD" rate="1.6821"/>
+			<Cube currency="CAD" rate="1.5182"/>
+			<Cube currency="INR" rate="86.2832"/>
+		</Cube>
+		<Cube time="2026-08-11">
+			<Cube currency="USD" rate="1.0786"/>
+			<Cube currency="JPY" rate="163.34"/>
+			<Cube currency="CZK" rate="26.373"/>
+			<Cube currency="DKK" rate="7.5849"/>
+			<Cube currency="GBP" rate="0.87083"/>
+			<Cube currency="HUF" rate="381.31"/>
+			<Cube currency="PLN" rate="4.2536"/>
+			<Cube currency="SEK" rate="11.9575"/>
+			<Cube currency="CHF" rate="0.97617"/>
+			<Cube currency="NOK" rate="11.2429"/>
+			<Cube currency="AUD" rate="1.6737"/>
+			<Cube currency="CAD" rate="1.5180"/>
+			<Cube currency="INR" rate="86.3949"/>
+		</Cube>
+		<Cube time="2026-08-10">
+			<Cube currency="USD" rate="1.0836"/>
+			<Cube currency="JPY" rate="163.77"/>
+			<Cube currency="CZK" rate="26.303"/>
+			<Cube currency="DKK" rate="7.6447"/>
+			<Cube currency="GBP" rate="0.88091"/>
+			<Cube currency="HUF" rate="383.30"/>
+			<Cube currency="PLN" rate="4.2748"/>
+			<Cube currency="SEK" rate="11.9752"/>
+			<Cube currency="CHF" rate="0.97569"/>
+			<Cube currency="NOK" rate="11.2035"/>
+			<Cube currency="AUD" rate="1.6786"/>
+			<Cube currency="CAD" rate="1.5208"/>
+			<Cube currency="INR" rate="86.6339"/>
+		</Cube>
+		<Cube time="2026-08-07">
+			<Cube currency="USD" rate="1.0817"/>
+			<Cube currency="JPY" rate="164.73"/>
+			<Cube currency="CZK" rate="26.402"/>
+			<Cube currency="DKK" rate="7.6050"/>
+			<Cube currency="GBP" rate="0.88447"/>
+			<Cube currency="HUF" rate="384.57"/>
+			<Cube currency="PLN" rate="4.2498"/>
+			<Cube currency="SEK" rate="11.9051"/>
+			<Cube currency="CHF" rate="0.97234"/>
+			<Cube currency="NOK" rate="11.3043"/>
+			<Cube currency="AUD" rate="1.6846"/>
+			<Cube currency="CAD" rate="1.5197"/>
+			<Cube currency="INR" rate="87.2715"/>
+		</Cube>
+		<Cube time="2026-08-06">
+			<Cube currency="USD" rate="1.0854"/>
+			<Cube currency="JPY" rate="164.57"/>
+			<Cube currency="CZK" rate="26.333"/>
+			<Cube currency="DKK" rate="7.6540"/>
+			<Cube currency="GBP" rate="0.88683"/>
+			<Cube currency="HUF" rate="387.71"/>
+			<Cube currency="PLN" rate="4.2361"/>
+			<Cube currency="SEK" rate="11.9040"/>
+			<Cube currency="CHF" rate="0.96436"/>
+			<Cube currency="NOK" rate="11.3775"/>
+			<Cube currency="AUD" rate="1.6851"/>
+			<Cube currency="CAD" rate="1.5070"/>
+			<Cube currency="INR" rate="87.3676"/>
+		</Cube>
+		<Cube time="2026-08-05">
+			<Cube currency="USD" rate="1.0952"/>
+			<Cube currency="JPY" rate="164.55"/>
+			<Cube currency="CZK" rate="26.291"/>
+			<Cube currency="DKK" rate="7.6081"/>
+			<Cube currency="GBP" rate="0.88116"/>
+			<Cube currency="HUF" rate="385.60"/>
+			<Cube currency="PLN" rate="4.2237"/>
+			<Cube currency="SEK" rate="11.8996"/>
+			<Cube currency="CHF" rate="0.96425"/>
+			<Cube currency="NOK" rate="11.3135"/>
+			<Cube currency="AUD" rate="1.6952"/>
+			<Cube currency="CAD" rate="1.5079"/>
+			<Cube currency="INR" rate="87.9959"/>
+		</Cube>
+		<Cube time="2026-08-04">
+			<Cube currency="USD" rate="1.1006"/>
+			<Cube currency="JPY" rate="164.33"/>
+			<Cube currency="CZK" rate="26.068"/>
+			<Cube currency="DKK" rate="7.5919"/>
+			<Cube currency="GBP" rate="0.88184"/>
+			<Cube currency="HUF" rate="387.34"/>
+			<Cube currency="PLN" rate="4.1937"/>
+			<Cube currency="SEK" rate="11.8479"/>
+			<Cube currency="CHF" rate="0.95957"/>
+			<Cube currency="NOK" rate="11.3288"/>
+			<Cube currency="AUD" rate="1.6880"/>
+			<Cube currency="CAD" rate="1.5085"/>
+			<Cube currency="INR" rate="87.8961"/>
+		</Cube>
+		<Cube time="2026-08-03">
+			<Cube currency="USD" rate="1.0964"/>
+			<Cube currency="JPY" rate="163.87"/>
+			<Cube currency="CZK" rate="25.979"/>
+			<Cube currency="DKK" rate="7.6044"/>
+			<Cube currency="GBP" rate="0.88638"/>
+			<Cube currency="HUF" rate="389.98"/>
+			<Cube currency="PLN" rate="4.2087"/>
+			<Cube currency="SEK" rate="11.8582"/>
+			<Cube currency="CHF" rate="0.96225"/>
+			<Cube currency="NOK" rate="11.3483"/>
+			<Cube currency="AUD" rate="1.6857"/>
+			<Cube currency="CAD" rate="1.5122"/>
+			<Cube currency="INR" rate="87.8528"/>
+		</Cube>
+		<Cube time="2026-07-31">
+			<Cube currency="USD" rate="1.0988"/>
+			<Cube currency="JPY" rate="163.35"/>
+			<Cube currency="CZK" rate="26.055"/>
+			<Cube currency="DKK" rate="7.5448"/>
+			<Cube currency="GBP" rate="0.88398"/>
+			<Cube currency="HUF" rate="389.38"/>
+			<Cube currency="PLN" rate="4.1725"/>
+			<Cube currency="SEK" rate="11.8285"/>
+			<Cube currency="CHF" rate="0.96425"/>
+			<Cube currency="NOK" rate="11.3507"/>
+			<Cube currency="AUD" rate="1.6724"/>
+			<Cube currency="CAD" rate="1.5068"/>
+			<Cube currency="INR" rate="88.1095"/>
+		</Cube>
+		<Cube time="2026-07-30">
+			<Cube currency="USD" rate="1.1025"/>
+			<Cube currency="JPY" rate="163.05"/>
+			<Cube currency="CZK" rate="26.054"/>
+			<Cube currency="DKK" rate="7.5268"/>
+			<Cube currency="GBP" rate="0.88453"/>
+			<Cube currency="HUF" rate="387.13"/>
+			<Cube currency="PLN" rate="4.1631"/>
+			<Cube currency="SEK" rate="11.7816"/>
+			<Cube currency="CHF" rate="0.95465"/>
+			<Cube currency="NOK" rate="11.3818"/>
+			<Cube currency="AUD" rate="1.6722"/>
+			<Cube currency="CAD" rate="1.5141"/>
+			<Cube currency="INR" rate="88.4645"/>
+		</Cube>
+		<Cube time="2026-07-29">
+			<Cube currency="USD" rate="1.0914"/>
+			<Cube currency="JPY" rate="163.16"/>
+			<Cube currency="CZK" rate="26.116"/>
+			<Cube currency="DKK" rate="7.5528"/>
+			<Cube currency="GBP" rate="0.88513"/>
+			<Cube currency="HUF" rate="388.23"/>
+			<Cube currency="PLN" rate="4.1852"/>
+			<Cube currency="SEK" rate="11.7445"/>
+			<Cube currency="CHF" rate="0.95853"/>
+			<Cube currency="NOK" rate="11.3452"/>
+			<Cube currency="AUD" rate="1.6661"/>
+			<Cube currency="CAD" rate="1.5088"/>
+			<Cube currency="INR" rate="88.2153"/>
+		</Cube>
+		<Cube time="2026-07-28">
+			<Cube currency="USD" rate="1.0936"/>
+			<Cube currency="JPY" rate="163.46"/>
+			<Cube currency="CZK" rate="26.056"/>
+			<Cube currency="DKK" rate="7.5939"/>
+			<Cube currency="GBP" rate="0.88697"/>
+			<Cube currency="HUF" rate="389.06"/>
+			<Cube currency="PLN" rate="4.2306"/>
+			<Cube currency="SEK" rate="11.7122"/>
+			<Cube currency="CHF" rate="0.96424"/>
+			<Cube currency="NOK" rate="11.3494"/>
+			<Cube currency="AUD" rate="1.6657"/>
+			<Cube currency="CAD" rate="1.5137"/>
+			<Cube currency="INR" rate="88.5481"/>
+		</Cube>
+		<Cube time="2026-07-27">
+			<Cube currency="USD" rate="1.0978"/>
+			<Cube currency="JPY" rate="163.09"/>
+			<Cube currency="CZK" rate="26.031"/>
+			<Cube currency="DKK" rate="7.5933"/>
+			<Cube currency="GBP" rate="0.88731"/>
+			<Cube currency="HUF" rate="389.42"/>
+			<Cube currency="PLN" rate="4.2178"/>
+			<Cube currency="SEK" rate="11.7188"/>
+			<Cube currency="CHF" rate="0.96458"/>
+			<Cube currency="NOK" rate="11.2879"/>
+			<Cube currency="AUD" rate="1.6655"/>
+			<Cube currency="CAD" rate="1.5141"/>
+			<Cube currency="INR" rate="88.6633"/>
+		</Cube>
+		<Cube time="2026-07-24">
+			<Cube currency="USD" rate="1.0981"/>
+			<Cube currency="JPY" rate="163.17"/>
+			<Cube currency="CZK" rate="25.835"/>
+			<Cube currency="DKK" rate="7.6102"/>
+			<Cube currency="GBP" rate="0.87998"/>
+			<Cube currency="HUF" rate="389.21"/>
+			<Cube currency="PLN" rate="4.2060"/>
+			<Cube currency="SEK" rate="11.7185"/>
+			<Cube currency="CHF" rate="0.96112"/>
+			<Cube currency="NOK" rate="11.2481"/>
+			<Cube currency="AUD" rate="1.6680"/>
+			<Cube currency="CAD" rate="1.5177"/>
+			<Cube currency="INR" rate="89.1941"/>
+		</Cube>
+		<Cube time="2026-07-23">
+			<Cube currency="USD" rate="1.0898"/>
+			<Cube currency="JPY" rate="163.53"/>
+			<Cube currency="CZK" rate="25.861"/>
+			<Cube currency="DKK" rate="7.6025"/>
+			<Cube currency="GBP" rate="0.87863"/>
+			<Cube currency="HUF" rate="389.85"/>
+			<Cube currency="PLN" rate="4.2001"/>
+			<Cube currency="SEK" rate="11.6719"/>
+			<Cube currency="CHF" rate="0.95810"/>
+			<Cube currency="NOK" rate="11.2443"/>
+			<Cube currency="AUD" rate="1.6672"/>
+			<Cube currency="CAD" rate="1.5075"/>
+			<Cube currency="INR" rate="89.0506"/>
+		</Cube>
+		<Cube time="2026-07-22">
+			<Cube currency="USD" rate="1.0909"/>
+			<Cube currency="JPY" rate="164.11"/>
+			<Cube currency="CZK" rate="25.958"/>
+			<Cube currency="DKK" rate="7.5629"/>
+			<Cube currency="GBP" rate="0.87758"/>
+			<Cube currency="HUF" rate="390.47"/>
+			<Cube currency="PLN" rate="4.2030"/>
+			<Cube currency="SEK" rate="11.5779"/>
+			<Cube currency="CHF" rate="0.95766"/>
+			<Cube currency="NOK" rate="11.2755"/>
+			<Cube currency="AUD" rate="1.6661"/>
+			<Cube currency="CAD" rate="1.5060"/>
+			<Cube currency="INR" rate="89.1997"/>
+		</Cube>
+		<Cube time="2026-07-21">
+			<Cube currency="USD" rate="1.0937"/>
+			<Cube currency="JPY" rate="163.81"/>
+			<Cube currency="CZK" rate="25.940"/>
+			<Cube currency="DKK" rate="7.5728"/>
+			<Cube currency="GBP" rate="0.87560"/>
+			<Cube currency="HUF" rate="392.03"/>
+			<Cube currency="PLN" rate="4.1874"/>
+			<Cube currency="SEK" rate="11.5749"/>
+			<Cube currency="CHF" rate="0.95952"/>
+			<Cube currency="NOK" rate="11.2871"/>
+			<Cube currency="AUD" rate="1.6690"/>
+			<Cube currency="CAD" rate="1.5055"/>
+			<Cube currency="INR" rate="89.9115"/>
+		</Cube>
+		<Cube time="2026-07-20">
+			<Cube currency="USD" rate="1.0912"/>
+			<Cube currency="JPY" rate="164.79"/>
+			<Cube currency="CZK" rate="26.064"/>
+			<Cube currency="DKK" rate="7.5423"/>
+			<Cube currency="GBP" rate="0.87780"/>
+			<Cube currency="HUF" rate="389.57"/>
+			<Cube currency="PLN" rate="4.1994"/>
+			<Cube currency="SEK" rate="11.6247"/>
+			<Cube currency="CHF" rate="0.96137"/>
+			<Cube currency="NOK" rate="11.2274"/>
+			<Cube currency="AUD" rate="1.6683"/>
+			<Cube currency="CAD" rate="1.4897"/>
+			<Cube currency="INR" rate="90.4749"/>
+		</Cube>
+		<Cube time="2026-07-17">
+			<Cube currency="USD" rate="1.0889"/>
+			<Cube currency="JPY" rate="165.02"/>
+			<Cube currency="CZK" rate="26.000"/>
+			<Cube currency="DKK" rate="7.4923"/>
+			<Cube currency="GBP" rate="0.88096"/>
+			<Cube currency="HUF" rate="389.83"/>
+			<Cube currency="PLN" rate="4.1921"/>
+			<Cube currency="SEK" rate="11.7033"/>
+			<Cube currency="CHF" rate="0.96145"/>
+			<Cube currency="NOK" rate="11.2462"/>
+			<Cube currency="AUD" rate="1.6574"/>
+			<Cube currency="CAD" rate="1.4924"/>
+			<Cube currency="INR" rate="90.3049"/>
+		</Cube>
+		<Cube time="2026-07-16">
+			<Cube currency="USD" rate="1.0894"/>
+			<Cube currency="JPY" rate="164.89"/>
+			<Cube currency="CZK" rate="25.796"/>
+			<Cube currency="DKK" rate="7.4780"/>
+			<Cube currency="GBP" rate="0.87973"/>
+			<Cube currency="HUF" rate="392.27"/>
+			<Cube currency="PLN" rate="4.2024"/>
+			<Cube currency="SEK" rate="11.7389"/>
+			<Cube currency="CHF" rate="0.96439"/>
+			<Cube currency="NOK" rate="11.2624"/>
+			<Cube currency="AUD" rate="1.6655"/>
+			<Cube currency="CAD" rate="1.5000"/>
+			<Cube currency="INR" rate="90.5145"/>
+		</Cube>
+		<Cube time="2026-07-15">
+			<Cube currency="USD" rate="1.0856"/>
+			<Cube currency="JPY" rate="164.34"/>
+			<Cube currency="CZK" rate="25.798"/>
+			<Cube currency="DKK" rate="7.4527"/>
+			<Cube currency="GBP" rate="0.88045"/>
+			<Cube currency="HUF" rate="392.71"/>
+			<Cube currency="PLN" rate="4.2054"/>
+			<Cube currency="SEK" rate="11.6871"/>
+			<Cube currency="CHF" rate="0.96499"/>
+			<Cube currency="NOK" rate="11.3789"/>
+			<Cube currency="AUD" rate="1.6650"/>
+			<Cube currency="CAD" rate="1.5011"/>
+			<Cube currency="INR" rate="90.4756"/>
+		</Cube>
+		<Cube time="2026-07-14">
+			<Cube currency="USD" rate="1.0953"/>
+			<Cube currency="JPY" rate="164.93"/>
+			<Cube currency="CZK" rate="25.884"/>
+			<Cube currency="DKK" rate="7.4875"/>
+			<Cube currency="GBP" rate="0.87804"/>
+			<Cube currency="HUF" rate="391.43"/>
+			<Cube currency="PLN" rate="4.2052"/>
+			<Cube currency="SEK" rate="11.6889"/>
+			<Cube currency="CHF" rate="0.96579"/>
+			<Cube currency="NOK" rate="11.4169"/>
+			<Cube currency="AUD" rate="1.6677"/>
+			<Cube currency="CAD" rate="1.4901"/>
+			<Cube currency="INR" rate="90.7659"/>
+		</Cube>
+		<Cube time="2026-07-13">
+			<Cube currency="USD" rate="1.0903"/>
+			<Cube currency="JPY" rate="164.22"/>
+			<Cube currency="CZK" rate="25.773"/>
+			<Cube currency="DKK" rate="7.5131"/>
+			<Cube currency="GBP" rate="0.87496"/>
+			<Cube currency="HUF" rate="390.80"/>
+			<Cube currency="PLN" rate="4.2175"/>
+			<Cube currency="SEK" rate="11.6575"/>
+			<Cube currency="CHF" rate="0.95943"/>
+			<Cube currency="NOK" rate="11.4416"/>
+			<Cube currency="AUD" rate="1.6539"/>
+			<Cube currency="CAD" rate="1.4869"/>
+			<Cube currency="INR" rate="90.8548"/>
+		</Cube>
+		<Cube time="2026-07-10">
+			<Cube currency="USD" rate="1.0910"/>
+			<Cube currency="JPY" rate="164.71"/>
+			<Cube currency="CZK" rate="25.891"/>
+			<Cube currency="DKK" rate="7.5424"/>
+			<Cube currency="GBP" rate="0.87626"/>
+			<Cube currency="HUF" rate="388.99"/>
+			<Cube currency="PLN" rate="4.1974"/>
+			<Cube currency="SEK" rate="11.5711"/>
+			<Cube currency="CHF" rate="0.96214"/>
+			<Cube currency="NOK" rate="11.4997"/>
+			<Cube currency="AUD" rate="1.6493"/>
+			<Cube currency="CAD" rate="1.4961"/>
+			<Cube currency="INR" rate="91.1316"/>
+		</Cube>
+		<Cube time="2026-07-09">
+			<Cube currency="USD" rate="1.0864"/>
+			<Cube currency="JPY" rate="164.96"/>
+			<Cube currency="CZK" rate="25.974"/>
+			<Cube currency="DKK" rate="7.5267"/>
+			<Cube currency="GBP" rate="0.87968"/>
+			<Cube currency="HUF" rate="388.90"/>
+			<Cube currency="PLN" rate="4.1774"/>
+			<Cube currency="SEK" rate="11.5418"/>
+			<Cube currency="CHF" rate="0.96485"/>
+			<Cube currency="NOK" rate="11.5219"/>
+			<Cube currency="AUD" rate="1.6421"/>
+			<Cube currency="CAD" rate="1.4860"/>
+			<Cube currency="INR" rate="91.3295"/>
+		</Cube>
+		<Cube time="2026-07-08">
+			<Cube currency="USD" rate="1.0909"/>
+			<Cube currency="JPY" rate="165.43"/>
+			<Cube currency="CZK" rate="25.901"/>
+			<Cube currency="DKK" rate="7.5390"/>
+			<Cube currency="GBP" rate="0.87690"/>
+			<Cube currency="HUF" rate="388.06"/>
+			<Cube currency="PLN" rate="4.1947"/>
+			<Cube currency="SEK" rate="11.4671"/>
+			<Cube currency="CHF" rate="0.96095"/>
+			<Cube currency="NOK" rate="11.5631"/>
+			<Cube currency="AUD" rate="1.6416"/>
+			<Cube currency="CAD" rate="1.4924"/>
+			<Cube currency="INR" rate="91.3856"/>
+		</Cube>
+		<Cube time="2026-07-07">
+			<Cube currency="USD" rate="1.0972"/>
+			<Cube currency="JPY" rate="165.16"/>
+			<Cube currency="CZK" rate="25.778"/>
+			<Cube currency="DKK" rate="7.5015"/>
+			<Cube currency="GBP" rate="0.87499"/>
+			<Cube currency="HUF" rate="388.76"/>
+			<Cube currency="PLN" rate="4.1964"/>
+			<Cube currency="SEK" rate="11.5014"/>
+			<Cube currency="CHF" rate="0.96124"/>
+			<Cube currency="NOK" rate="11.6378"/>
+			<Cube currency="AUD" rate="1.6584"/>
+			<Cube currency="CAD" rate="1.4917"/>
+			<Cube currency="INR" rate="91.5133"/>
+		</Cube>
+		<Cube time="2026-07-06">
+			<Cube currency="USD" rate="1.0969"/>
+			<Cube currency="JPY" rate="164.60"/>
+			<Cube currency="CZK" rate="25.798"/>
+			<Cube currency="DKK" rate="7.5287"/>
+			<Cube currency="GBP" rate="0.87216"/>
+			<Cube currency="HUF" rate="387.75"/>
+			<Cube currency="PLN" rate="4.2057"/>
+			<Cube currency="SEK" rate="11.4998"/>
+			<Cube currency="CHF" rate="0.96091"/>
+			<Cube currency="NOK" rate="11.5327"/>
+			<Cube currency="AUD" rate="1.6557"/>
+			<Cube currency="CAD" rate="1.4976"/>
+			<Cube currency="INR" rate="91.4856"/>
+		</Cube>
+		<Cube time="2026-07-03">
+			<Cube currency="USD" rate="1.0992"/>
+			<Cube currency="JPY" rate="164.50"/>
+			<Cube currency="CZK" rate="25.776"/>
+			<Cube currency="DKK" rate="7.5526"/>
+			<Cube currency="GBP" rate="0.87101"/>
+			<Cube currency="HUF" rate="388.65"/>
+			<Cube currency="PLN" rate="4.2098"/>
+			<Cube currency="SEK" rate="11.5200"/>
+			<Cube currency="CHF" rate="0.96605"/>
+			<Cube currency="NOK" rate="11.6283"/>
+			<Cube currency="AUD" rate="1.6453"/>
+			<Cube currency="CAD" rate="1.5039"/>
+			<Cube currency="INR" rate="91.7369"/>
+		</Cube>
+		<Cube time="2026-07-02">
+			<Cube currency="USD" rate="1.0917"/>
+			<Cube currency="JPY" rate="164.83"/>
+			<Cube currency="CZK" rate="25.749"/>
+			<Cube currency="DKK" rate="7.5809"/>
+			<Cube currency="GBP" rate="0.86769"/>
+			<Cube currency="HUF" rate="391.08"/>
+			<Cube currency="PLN" rate="4.2055"/>
+			<Cube currency="SEK" rate="11.4068"/>
+			<Cube currency="CHF" rate="0.96559"/>
+			<Cube currency="NOK" rate="11.6430"/>
+			<Cube currency="AUD" rate="1.6431"/>
+			<Cube currency="CAD" rate="1.5024"/>
+			<Cube currency="INR" rate="91.8394"/>
+		</Cube>
+		<Cube time="2026-07-01">
+			<Cube currency="USD" rate="1.0940"/>
+			<Cube currency="JPY" rate="166.15"/>
+			<Cube currency="CZK" rate="25.829"/>
+			<Cube currency="DKK" rate="7.5753"/>
+			<Cube currency="GBP" rate="0.86575"/>
+			<Cube currency="HUF" rate="390.57"/>
+			<Cube currency="PLN" rate="4.1789"/>
+			<Cube currency="SEK" rate="11.4530"/>
+			<Cube currency="CHF" rate="0.96832"/>
+			<Cube currency="NOK" rate="11.6291"/>
+			<Cube currency="AUD" rate="1.6365"/>
+			<Cube currency="CAD" rate="1.5030"/>
+			<Cube currency="INR" rate="91.6791"/>
+		</Cube>
+		<Cube time="2026-06-30">
+			<Cube currency="USD" rate="1.0964"/>
+			<Cube currency="JPY" rate="165.55"/>
+			<Cube currency="CZK" rate="25.930"/>
+			<Cube currency="DKK" rate="7.4963"/>
+			<Cube currency="GBP" rate="0.86309"/>
+			<Cube currency="HUF" rate="393.64"/>
+			<Cube currency="PLN" rate="4.2058"/>
+			<Cube currency="SEK" rate="11.5168"/>
+			<Cube currency="CHF" rate="0.96937"/>
+			<Cube currency="NOK" rate="11.6453"/>
+			<Cube currency="AUD" rate="1.6257"/>
+			<Cube currency="CAD" rate="1.4922"/>
+			<Cube currency="INR" rate="92.2499"/>
+		</Cube>
+		<Cube time="2026-06-29">
+			<Cube currency="USD" rate="1.0952"/>
+			<Cube currency="JPY" rate="164.67"/>
+			<Cube currency="CZK" rate="25.883"/>
+			<Cube currency="DKK" rate="7.4956"/>
+			<Cube currency="GBP" rate="0.86037"/>
+			<Cube currency="HUF" rate="396.19"/>
+			<Cube currency="PLN" rate="4.2094"/>
+			<Cube currency="SEK" rate="11.5010"/>
+			<Cube currency="CHF" rate="0.96963"/>
+			<Cube currency="NOK" rate="11.6500"/>
+			<Cube currency="AUD" rate="1.6248"/>
+			<Cube currency="CAD" rate="1.4975"/>
+			<Cube currency="INR" rate="91.8158"/>
+		</Cube>
+		<Cube time="2026-06-26">
+			<Cube currency="USD" rate="1.0959"/>
+			<Cube currency="JPY" rate="163.95"/>
+			<Cube currency="CZK" rate="25.737"/>
+			<Cube currency="DKK" rate="7.5199"/>
+			<Cube currency="GBP" rate="0.86156"/>
+			<Cube currency="HUF" rate="394.88"/>
+			<Cube currency="PLN" rate="4.2093"/>
+			<Cube currency="SEK" rate="11.4878"/>
+			<Cube currency="CHF" rate="0.97179"/>
+			<Cube currency="NOK" rate="11.6539"/>
+			<Cube currency="AUD" rate="1.6253"/>
+			<Cube currency="CAD" rate="1.4864"/>
+			<Cube currency="INR" rate="91.7065"/>
+		</Cube>
+		<Cube time="2026-06-25">
+			<Cube currency="USD" rate="1.0901"/>
+			<Cube currency="JPY" rate="164.29"/>
+			<Cube currency="CZK" rate="25.712"/>
+			<Cube currency="DKK" rate="7.5059"/>
+			<Cube currency="GBP" rate="0.85482"/>
+			<Cube currency="HUF" rate="396.54"/>
+			<Cube currency="PLN" rate="4.2236"/>
+			<Cube currency="SEK" rate="11.4478"/>
+			<Cube currency="CHF" rate="0.96790"/>
+			<Cube currency="NOK" rate="11.6294"/>
+			<Cube currency="AUD" rate="1.6280"/>
+			<Cube currency="CAD" rate="1.4851"/>
+			<Cube currency="INR" rate="90.8630"/>
+		</Cube>
+		<Cube time="2026-06-24">
+			<Cube currency="USD" rate="1.0844"/>
+			<Cube currency="JPY" rate="163.38"/>
+			<Cube currency="CZK" rate="25.755"/>
+			<Cube currency="DKK" rate="7.4772"/>
+			<Cube currency="GBP" rate="0.85851"/>
+			<Cube currency="HUF" rate="398.42"/>
+			<Cube currency="PLN" rate="4.2229"/>
+			<Cube currency="SEK" rate="11.4007"/>
+			<Cube currency="CHF" rate="0.95895"/>
+			<Cube currency="NOK" rate="11.6227"/>
+			<Cube currency="AUD" rate="1.6195"/>
+			<Cube currency="CAD" rate="1.4928"/>
+			<Cube currency="INR" rate="90.7201"/>
+		</Cube>
+		<Cube time="2026-06-23">
+			<Cube currency="USD" rate="1.0822"/>
+			<Cube currency="JPY" rate="163.94"/>
+			<Cube currency="CZK" rate="25.697"/>
+			<Cube currency="DKK" rate="7.5083"/>
+			<Cube currency="GBP" rate="0.86076"/>
+			<Cube currency="HUF" rate="399.05"/>
+			<Cube currency="PLN" rate="4.2427"/>
+			<Cube currency="SEK" rate="11.3873"/>
+			<Cube currency="CHF" rate="0.95882"/>
+			<Cube currency="NOK" rate="11.6263"/>
+			<Cube currency="AUD" rate="1.6134"/>
+			<Cube currency="CAD" rate="1.4859"/>
+			<Cube currency="INR" rate="90.7582"/>
+		</Cube>
+		<Cube time="2026-06-22">
+			<Cube currency="USD" rate="1.0831"/>
+			<Cube currency="JPY" rate="162.41"/>
+			<Cube currency="CZK" rate="25.517"/>
+			<Cube currency="DKK" rate="7.5418"/>
+			<Cube currency="GBP" rate="0.86389"/>
+			<Cube currency="HUF" rate="396.69"/>
+			<Cube currency="PLN" rate="4.2387"/>
+			<Cube currency="SEK" rate="11.4319"/>
+			<Cube currency="CHF" rate="0.96099"/>
+			<Cube currency="NOK" rate="11.5821"/>
+			<Cube currency="AUD" rate="1.6146"/>
+			<Cube currency="CAD" rate="1.4862"/>
+			<Cube currency="INR" rate="89.4187"/>
+		</Cube>
+		<Cube time="2026-06-19">
+			<Cube currency="USD" rate="1.0855"/>
+			<Cube currency="JPY" rate="162.34"/>
+			<Cube currency="CZK" rate="25.453"/>
+			<Cube currency="DKK" rate="7.5990"/>
+			<Cube currency="GBP" rate="0.85834"/>
+			<Cube currency="HUF" rate="395.81"/>
+			<Cube currency="PLN" rate="4.2406"/>
+			<Cube currency="SEK" rate="11.4797"/>
+			<Cube currency="CHF" rate="0.96618"/>
+			<Cube currency="NOK" rate="11.5128"/>
+			<Cube currency="AUD" rate="1.6196"/>
+			<Cube currency="CAD" rate="1.4879"/>
+			<Cube currency="INR" rate="89.5348"/>
+		</Cube>
+		<Cube time="2026-06-18">
+			<Cube currency="USD" rate="1.0857"/>
+			<Cube currency="JPY" rate="162.03"/>
+			<Cube currency="CZK" rate="25.550"/>
+			<Cube currency="DKK" rate="7.5986"/>
+			<Cube currency="GBP" rate="0.85708"/>
+			<Cube currency="HUF" rate="395.80"/>
+			<Cube currency="PLN" rate="4.2410"/>
+			<Cube currency="SEK" rate="11.4320"/>
+			<Cube currency="CHF" rate="0.96321"/>
+			<Cube currency="NOK" rate="11.4804"/>
+			<Cube currency="AUD" rate="1.6345"/>
+			<Cube currency="CAD" rate="1.4865"/>
+			<Cube currency="INR" rate="89.7720"/>
+		</Cube>
+		<Cube time="2026-06-17">
+			<Cube currency="USD" rate="1.0833"/>
+			<Cube currency="JPY" rate="162.50"/>
+			<Cube currency="CZK" rate="25.508"/>
+			<Cube currency="DKK" rate="7.5983"/>
+			<Cube currency="GBP" rate="0.85909"/>
+			<Cube currency="HUF" rate="395.04"/>
+			<Cube currency="PLN" rate="4.2149"/>
+			<Cube currency="SEK" rate="11.4135"/>
+			<Cube currency="CHF" rate="0.96282"/>
+			<Cube currency="NOK" rate="11.4713"/>
+			<Cube currency="AUD" rate="1.6345"/>
+			<Cube currency="CAD" rate="1.4786"/>
+			<Cube currency="INR" rate="89.4314"/>
+		</Cube>
+		<Cube time="2026-06-16">
+			<Cube currency="USD" rate="1.0794"/>
+			<Cube currency="JPY" rate="162.16"/>
+			<Cube currency="CZK" rate="25.249"/>
+			<Cube currency="DKK" rate="7.6198"/>
+			<Cube currency="GBP" rate="0.85593"/>
+			<Cube currency="HUF" rate="395.76"/>
+			<Cube currency="PLN" rate="4.2115"/>
+			<Cube currency="SEK" rate="11.4888"/>
+			<Cube currency="CHF" rate="0.95786"/>
+			<Cube currency="NOK" rate="11.5776"/>
+			<Cube currency="AUD" rate="1.6290"/>
+			<Cube currency="CAD" rate="1.4874"/>
+			<Cube currency="INR" rate="89.5211"/>
+		</Cube>
+		<Cube time="2026-06-15">
+			<Cube currency="USD" rate="1.0816"/>
+			<Cube currency="JPY" rate="161.85"/>
+			<Cube currency="CZK" rate="25.242"/>
+			<Cube currency="DKK" rate="7.5963"/>
+			<Cube currency="GBP" rate="0.85817"/>
+			<Cube currency="HUF" rate="394.11"/>
+			<Cube currency="PLN" rate="4.2169"/>
+			<Cube currency="SEK" rate="11.4723"/>
+			<Cube currency="CHF" rate="0.96018"/>
+			<Cube currency="NOK" rate="11.5266"/>
+			<Cube currency="AUD" rate="1.6306"/>
+			<Cube currency="CAD" rate="1.4835"/>
+			<Cube currency="INR" rate="89.5150"/>
+		</Cube>
+		<Cube time="2026-06-12">
+			<Cube currency="USD" rate="1.0843"/>
+			<Cube currency="JPY" rate="162.21"/>
+			<Cube currency="CZK" rate="25.325"/>
+			<Cube currency="DKK" rate="7.5248"/>
+			<Cube currency="GBP" rate="0.86338"/>
+			<Cube currency="HUF" rate="393.24"/>
+			<Cube currency="PLN" rate="4.1895"/>
+			<Cube currency="SEK" rate="11.4344"/>
+			<Cube currency="CHF" rate="0.95784"/>
+			<Cube currency="NOK" rate="11.5489"/>
+			<Cube currency="AUD" rate="1.6339"/>
+			<Cube currency="CAD" rate="1.4755"/>
+			<Cube currency="INR" rate="88.9175"/>
+		</Cube>
+		<Cube time="2026-06-11">
+			<Cube currency="USD" rate="1.0870"/>
+			<Cube currency="JPY" rate="162.56"/>
+			<Cube currency="CZK" rate="25.197"/>
+			<Cube currency="DKK" rate="7.5467"/>
+			<Cube currency="GBP" rate="0.86491"/>
+			<Cube currency="HUF" rate="392.24"/>
+			<Cube currency="PLN" rate="4.1754"/>
+			<Cube currency="SEK" rate="11.4473"/>
+			<Cube currency="CHF" rate="0.95273"/>
+			<Cube currency="NOK" rate="11.5650"/>
+			<Cube currency="AUD" rate="1.6325"/>
+			<Cube currency="CAD" rate="1.4804"/>
+			<Cube currency="INR" rate="89.6734"/>
+		</Cube>
+		<Cube time="2026-06-10">
+			<Cube currency="USD" rate="1.0844"/>
+			<Cube currency="JPY" rate="162.65"/>
+			<Cube currency="CZK" rate="25.148"/>
+			<Cube currency="DKK" rate="7.5599"/>
+			<Cube currency="GBP" rate="0.86907"/>
+			<Cube currency="HUF" rate="393.31"/>
+			<Cube currency="PLN" rate="4.1585"/>
+			<Cube currency="SEK" rate="11.4558"/>
+			<Cube currency="CHF" rate="0.95205"/>
+			<Cube currency="NOK" rate="11.5776"/>
+			<Cube currency="AUD" rate="1.6261"/>
+			<Cube currency="CAD" rate="1.4847"/>
+			<Cube currency="INR" rate="90.6029"/>
+		</Cube>
+		<Cube time="2026-06-09">
+			<Cube currency="USD" rate="1.0807"/>
+			<Cube currency="JPY" rate="163.20"/>
+			<Cube currency="CZK" rate="25.030"/>
+			<Cube currency="DKK" rate="7.6277"/>
+			<Cube currency="GBP" rate="0.86466"/>
+			<Cube currency="HUF" rate="393.04"/>
+			<Cube currency="PLN" rate="4.1536"/>
+			<Cube currency="SEK" rate="11.4113"/>
+			<Cube currency="CHF" rate="0.95103"/>
+			<Cube currency="NOK" rate="11.5485"/>
+			<Cube currency="AUD" rate="1.6319"/>
+			<Cube currency="CAD" rate="1.4817"/>
+			<Cube currency="INR" rate="90.6872"/>
+		</Cube>
+		<Cube time="2026-06-08">
+			<Cube currency="USD" rate="1.0809"/>
+			<Cube currency="JPY" rate="163.83"/>
+			<Cube currency="CZK" rate="24.965"/>
+			<Cube currency="DKK" rate="7.6256"/>
+			<Cube currency="GBP" rate="0.85727"/>
+			<Cube currency="HUF" rate="391.19"/>
+			<Cube currency="PLN" rate="4.1784"/>
+			<Cube currency="SEK" rate="11.3692"/>
+			<Cube currency="CHF" rate="0.95431"/>
+			<Cube currency="NOK" rate="11.5749"/>
+			<Cube currency="AUD" rate="1.6329"/>
+			<Cube currency="CAD" rate="1.4892"/>
+			<Cube currency="INR" rate="89.5823"/>
+		</Cube>
+		<Cube time="2026-06-05">
+			<Cube currency="USD" rate="1.0803"/>
+			<Cube currency="JPY" rate="163.26"/>
+			<Cube currency="CZK" rate="24.843"/>
+			<Cube currency="DKK" rate="7.6158"/>
+			<Cube currency="GBP" rate="0.86311"/>
+			<Cube currency="HUF" rate="393.47"/>
+			<Cube currency="PLN" rate="4.1646"/>
+			<Cube currency="SEK" rate="11.3014"/>
+			<Cube currency="CHF" rate="0.94928"/>
+			<Cube currency="NOK" rate="11.5950"/>
+			<Cube currency="AUD" rate="1.6311"/>
+			<Cube currency="CAD" rate="1.4921"/>
+			<Cube currency="INR" rate="89.4253"/>
+		</Cube>
+		<Cube time="2026-06-04">
+			<Cube currency="USD" rate="1.0779"/>
+			<Cube currency="JPY" rate="163.37"/>
+			<Cube currency="CZK" rate="24.790"/>
+			<Cube currency="DKK" rate="7.5773"/>
+			<Cube currency="GBP" rate="0.86302"/>
+			<Cube currency="HUF" rate="394.26"/>
+			<Cube currency="PLN" rate="4.1532"/>
+			<Cube currency="SEK" rate="11.3119"/>
+			<Cube currency="CHF" rate="0.94811"/>
+			<Cube currency="NOK" rate="11.5476"/>
+			<Cube currency="AUD" rate="1.6299"/>
+			<Cube currency="CAD" rate="1.4898"/>
+			<Cube currency="INR" rate="89.3442"/>
+		</Cube>
+		<Cube time="2026-06-03">
+			<Cube currency="USD" rate="1.0829"/>
+			<Cube currency="JPY" rate="163.20"/>
+			<Cube currency="CZK" rate="24.662"/>
+			<Cube currency="DKK" rate="7.6055"/>
+			<Cube currency="GBP" rate="0.85861"/>
+			<Cube currency="HUF" rate="394.30"/>
+			<Cube currency="PLN" rate="4.1897"/>
+			<Cube currency="SEK" rate="11.3044"/>
+			<Cube currency="CHF" rate="0.94760"/>
+			<Cube currency="NOK" rate="11.4801"/>
+			<Cube currency="AUD" rate="1.6343"/>
+			<Cube currency="CAD" rate="1.4789"/>
+			<Cube currency="INR" rate="89.3548"/>
+		</Cube>
+		<Cube time="2026-06-02">
+			<Cube currency="USD" rate="1.0765"/>
+			<Cube currency="JPY" rate="163.47"/>
+			<Cube currency="CZK" rate="24.642"/>
+			<Cube currency="DKK" rate="7.5702"/>
+			<Cube currency="GBP" rate="0.85482"/>
+			<Cube currency="HUF" rate="396.87"/>
+			<Cube currency="PLN" rate="4.2022"/>
+			<Cube currency="SEK" rate="11.3597"/>
+			<Cube currency="CHF" rate="0.94800"/>
+			<Cube currency="NOK" rate="11.5830"/>
+			<Cube currency="AUD" rate="1.6434"/>
+			<Cube currency="CAD" rate="1.4796"/>
+			<Cube currency="INR" rate="89.2274"/>
+		</Cube>
+		<Cube time="2026-06-01">
+			<Cube currency="USD" rate="1.0741"/>
+			<Cube currency="JPY" rate="163.35"/>
+			<Cube currency="CZK" rate="24.536"/>
+			<Cube currency="DKK" rate="7.5786"/>
+			<Cube currency="GBP" rate="0.85958"/>
+			<Cube currency="HUF" rate="396.59"/>
+			<Cube currency="PLN" rate="4.1857"/>
+			<Cube currency="SEK" rate="11.3707"/>
+			<Cube currency="CHF" rate="0.94890"/>
+			<Cube currency="NOK" rate="11.5748"/>
+			<Cube currency="AUD" rate="1.6442"/>
+			<Cube currency="CAD" rate="1.4820"/>
+			<Cube currency="INR" rate="89.3702"/>
+		</Cube>
+		<Cube time="2026-05-29">
+			<Cube currency="USD" rate="1.0687"/>
+			<Cube currency="JPY" rate="162.91"/>
+			<Cube currency="CZK" rate="24.613"/>
+			<Cube currency="DKK" rate="7.6213"/>
+			<Cube currency="GBP" rate="0.86107"/>
+			<Cube currency="HUF" rate="394.97"/>
+			<Cube currency="PLN" rate="4.1763"/>
+			<Cube currency="SEK" rate="11.4400"/>
+			<Cube currency="CHF" rate="0.94567"/>
+			<Cube currency="NOK" rate="11.5613"/>
+			<Cube currency="AUD" rate="1.6393"/>
+			<Cube currency="CAD" rate="1.4738"/>
+			<Cube currency="INR" rate="89.6623"/>
+		</Cube>
+		<Cube time="2026-05-28">
+			<Cube currency="USD" rate="1.0683"/>
+			<Cube currency="JPY" rate="163.09"/>
+			<Cube currency="CZK" rate="24.536"/>
+			<Cube currency="DKK" rate="7.6127"/>
+			<Cube currency="GBP" rate="0.86011"/>
+			<Cube currency="HUF" rate="393.63"/>
+			<Cube currency="PLN" rate="4.1770"/>
+			<Cube currency="SEK" rate="11.4969"/>
+			<Cube currency="CHF" rate="0.94564"/>
+			<Cube currency="NOK" rate="11.6224"/>
+			<Cube currency="AUD" rate="1.6378"/>
+			<Cube currency="CAD" rate="1.4807"/>
+			<Cube currency="INR" rate="89.6687"/>
+		</Cube>
+		<Cube time="2026-05-27">
+			<Cube currency="USD" rate="1.0759"/>
+			<Cube currency="JPY" rate="162.59"/>
+			<Cube currency="CZK" rate="24.520"/>
+			<Cube currency="DKK" rate="7.5503"/>
+			<Cube currency="GBP" rate="0.85751"/>
+			<Cube currency="HUF" rate="394.81"/>
+			<Cube currency="PLN" rate="4.1753"/>
+			<Cube currency="SEK" rate="11.4679"/>
+			<Cube currency="CHF" rate="0.94916"/>
+			<Cube currency="NOK" rate="11.6983"/>
+			<Cube currency="AUD" rate="1.6349"/>
+			<Cube currency="CAD" rate="1.4838"/>
+			<Cube currency="INR" rate="89.7365"/>
+		</Cube>
+		<Cube time="2026-05-26">
+			<Cube currency="USD" rate="1.0744"/>
+			<Cube currency="JPY" rate="162.77"/>
+			<Cube currency="CZK" rate="24.513"/>
+			<Cube currency="DKK" rate="7.5306"/>
+			<Cube currency="GBP" rate="0.85708"/>
+			<Cube currency="HUF" rate="396.60"/>
+			<Cube currency="PLN" rate="4.2085"/>
+			<Cube currency="SEK" rate="11.4894"/>
+			<Cube currency="CHF" rate="0.94919"/>
+			<Cube currency="NOK" rate="11.6880"/>
+			<Cube currency="AUD" rate="1.6283"/>
+			<Cube currency="CAD" rate="1.4815"/>
+			<Cube currency="INR" rate="89.6246"/>
+		</Cube>
+		<Cube time="2026-05-25">
+			<Cube currency="USD" rate="1.0741"/>
+			<Cube currency="JPY" rate="163.14"/>
+			<Cube currency="CZK" rate="24.562"/>
+			<Cube currency="DKK" rate="7.5484"/>
+			<Cube currency="GBP" rate="0.85685"/>
+			<Cube currency="HUF" rate="396.39"/>
+			<Cube currency="PLN" rate="4.2461"/>
+			<Cube currency="SEK" rate="11.5058"/>
+			<Cube currency="CHF" rate="0.94749"/>
+			<Cube currency="NOK" rate="11.6720"/>
+			<Cube currency="AUD" rate="1.6297"/>
+			<Cube currency="CAD" rate="1.4804"/>
+			<Cube currency="INR" rate="90.1941"/>
+		</Cube>
+		<Cube time="2026-05-22">
+			<Cube currency="USD" rate="1.0763"/>
+			<Cube currency="JPY" rate="163.82"/>
+			<Cube currency="CZK" rate="24.712"/>
+			<Cube currency="DKK" rate="7.5464"/>
+			<Cube currency="GBP" rate="0.85529"/>
+			<Cube currency="HUF" rate="395.72"/>
+			<Cube currency="PLN" rate="4.2413"/>
+			<Cube currency="SEK" rate="11.4417"/>
+			<Cube currency="CHF" rate="0.94719"/>
+			<Cube currency="NOK" rate="11.6520"/>
+			<Cube currency="AUD" rate="1.6313"/>
+			<Cube currency="CAD" rate="1.4859"/>
+			<Cube currency="INR" rate="90.9917"/>
+		</Cube>
+		<Cube time="2026-05-21">
+			<Cube currency="USD" rate="1.0802"/>
+			<Cube currency="JPY" rate="164.32"/>
+			<Cube currency="CZK" rate="24.658"/>
+			<Cube currency="DKK" rate="7.5440"/>
+			<Cube currency="GBP" rate="0.85490"/>
+			<Cube currency="HUF" rate="394.12"/>
+			<Cube currency="PLN" rate="4.2558"/>
+			<Cube currency="SEK" rate="11.4002"/>
+			<Cube currency="CHF" rate="0.94925"/>
+			<Cube currency="NOK" rate="11.6919"/>
+			<Cube currency="AUD" rate="1.6346"/>
+			<Cube currency="CAD" rate="1.4795"/>
+			<Cube currency="INR" rate="90.3874"/>
+		</Cube>
+		<Cube time="2026-05-20">
+			<Cube currency="USD" rate="1.0777"/>
+			<Cube currency="JPY" rate="164.57"/>
+			<Cube currency="CZK" rate="24.555"/>
+			<Cube currency="DKK" rate="7.5014"/>
+			<Cube currency="GBP" rate="0.85278"/>
+			<Cube currency="HUF" rate="394.15"/>
+			<Cube currency="PLN" rate="4.2585"/>
+			<Cube currency="SEK" rate="11.3711"/>
+			<Cube currency="CHF" rate="0.95296"/>
+			<Cube currency="NOK" rate="11.6457"/>
+			<Cube currency="AUD" rate="1.6382"/>
+			<Cube currency="CAD" rate="1.4776"/>
+			<Cube currency="INR" rate="90.7706"/>
+		</Cube>
+		<Cube time="2026-05-19">
+			<Cube currency="USD" rate="1.0781"/>
+			<Cube currency="JPY" rate="163.42"/>
+			<Cube currency="CZK" rate="24.615"/>
+			<Cube currency="DKK" rate="7.4758"/>
+			<Cube currency="GBP" rate="0.85798"/>
+			<Cube currency="HUF" rate="397.18"/>
+			<Cube currency="PLN" rate="4.2599"/>
+			<Cube currency="SEK" rate="11.3580"/>
+			<Cube currency="CHF" rate="0.94590"/>
+			<Cube currency="NOK" rate="11.6601"/>
+			<Cube currency="AUD" rate="1.6362"/>
+			<Cube currency="CAD" rate="1.4846"/>
+			<Cube currency="INR" rate="90.7506"/>
+		</Cube>
+		<Cube time="2026-05-18">
+			<Cube currency="USD" rate="1.0818"/>
+			<Cube currency="JPY" rate="163.02"/>
+			<Cube currency="CZK" rate="24.856"/>
+			<Cube currency="DKK" rate="7.4772"/>
+			<Cube currency="GBP" rate="0.85078"/>
+			<Cube currency="HUF" rate="396.35"/>
+			<Cube currency="PLN" rate="4.2836"/>
+			<Cube currency="SEK" rate="11.3088"/>
+			<Cube currency="CHF" rate="0.94519"/>
+			<Cube currency="NOK" rate="11.6875"/>
+			<Cube currency="AUD" rate="1.6401"/>
+			<Cube currency="CAD" rate="1.4838"/>
+			<Cube currency="INR" rate="90.4431"/>
+		</Cube>
+	</Cube>
+</gesmes:Envelope>

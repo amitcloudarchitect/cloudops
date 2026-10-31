@@ -1,0 +1,34 @@
+{
+ "2026-10-01/2026-10-28": {
+  "GroupDefinitions": [
+   {
+    "Type": "DIMENSION",
+    "Key": "LINKED_ACCOUNT"
+   }
+  ],
+  "ResultsByTime": [
+   {
+    "TimePeriod": {
+     "Start": "2026-10-01",
+     "End": "2026-10-28"
+    },
+    "Total": {},
+    "Groups": [
+     {
+      "Keys": [
+       "178390688627"
+      ],
+      "Metrics": {
+       "UnblendedCost": {
+        "Amount": "3236.521688",
+        "Unit": "EUR"
+       }
+      }
+     }
+    ],
+    "Estimated": true
+   }
+  ],
+  "DimensionValueAttributes": []
+ }
+}
