@@ -223,7 +223,7 @@ def test_images_come_only_from_the_platform_registry_by_tag() -> None:
             assert not image.endswith(":latest"), name
 
 
-@pytest.mark.parametrize("name", ["api", "web"])
+@pytest.mark.parametrize("name", ["api"])
 def test_releases_are_canaries_with_analysis(name: str) -> None:
     (rollout,) = [d for d in ALL_OURS if d["kind"] == "Rollout" and d["metadata"]["name"] == name]
     canary = rollout["spec"]["strategy"]["canary"]
@@ -236,6 +236,33 @@ def test_releases_are_canaries_with_analysis(name: str) -> None:
 
 def _wave(d: dict[str, Any]) -> int:
     return int((d["metadata"].get("annotations") or {}).get("argocd.argoproj.io/sync-wave", 0))
+
+
+def test_the_console_releases_blue_green() -> None:
+    """ADR 0017, decision 10: never two console versions behind one Service. Each
+    build serves only its own hashed CSS and JS, so a mixed Service sends pages to
+    pods that lack their files. The previous version stays up through the analysis,
+    so a failed release switches back."""
+    (rollout,) = [d for d in WEB if d["kind"] == "Rollout"]
+    strategy = rollout["spec"]["strategy"]
+    assert "canary" not in strategy
+    bg = strategy["blueGreen"]
+    assert (bg["activeService"], bg["previewService"]) == ("web", "web-preview")
+    assert bg["autoPromotionEnabled"] is True
+    (template,) = bg["postPromotionAnalysis"]["templates"]
+    (analysis,) = [d for d in WEB if d["kind"] == "AnalysisTemplate"]
+    assert analysis["metadata"]["name"] == template["templateName"]
+    window = 0
+    for metric in analysis["spec"]["metrics"]:
+        query = metric["provider"]["prometheus"]["query"]
+        assert 'destination_service_name="web"' in query, metric["name"]
+        assert re.search(r"or vector\((0|NaN)\)", query), metric["name"]
+        assert metric["count"] >= 1  # a post-promotion analysis must end
+        window = max(window, metric["count"] * int(metric["interval"].rstrip("m")) * 60)
+    assert bg["scaleDownDelaySeconds"] >= window  # the old version outlives the check
+    (route,) = [d for d in WEB if d["kind"] == "HTTPRoute"]
+    for rule in route["spec"]["rules"]:
+        assert [b["name"] for b in rule["backendRefs"]] == ["web"]
 
 
 def test_migrations_run_before_the_rollout() -> None:
@@ -511,7 +538,7 @@ def test_every_console_route_requires_our_front_door() -> None:
             headers = {h["name"].lower(): h for h in match.get("headers", [])}
             assert headers["x-azure-fdid"]["type"] == "Exact"
             assert headers["x-azure-fdid"]["value"] == _one_values()["frontdoorId"]
-        assert {b["name"] for b in rule["backendRefs"]} == {"web", "web-canary"}
+        assert [b["name"] for b in rule["backendRefs"]] == ["web"]
 
 
 def test_the_api_keeps_its_paths_on_the_shared_host() -> None:
@@ -630,7 +657,7 @@ def test_canaries_route_through_the_gateway_and_are_judged_on_its_metrics() -> N
     app = yaml.safe_load((GITOPS / "applications/dev/platform.yaml").read_text(encoding="utf-8"))
     ignored = app["spec"]["ignoreDifferences"]
     assert {(i["kind"], i["namespace"], i["name"]) for i in ignored} == {
-        ("HTTPRoute", "platform-api", "api"), ("HTTPRoute", "platform-web", "web")}
+        ("HTTPRoute", "platform-api", "api")}
     for i in ignored:
         assert i["jqPathExpressions"][0] == ".spec.rules[].backendRefs[].weight"
     assert "RespectIgnoreDifferences=true" in app["spec"]["syncPolicy"]["syncOptions"]
