@@ -1,52 +1,71 @@
 # The platform's own cost, live: turning it on
 
-ADR 0023 (the follow-up to ADR 0022, decision 11). The Azure connector reads the Cost
-Management export of each platform subscription, plus Cost Management's month-to-date
-total, into the internal tenant. The FinOps jobs reconcile that data and the Grafana
-platform-cost dashboard shows it. Nothing here is applied by CI. The steps run in this
-order.
+ADR 0023 (the follow-up to ADR 0022, decision 11). The Azure connector reads the
+platform's own cost into the internal tenant:
 
-## 1. Terraform (plan, then you apply)
+- `cost_total`: Cost Management's month-to-date total per subscription.
+- Line items, from one of two places, set by `CLOUDOPS_AZURE_COST_LINES`:
+  - `export`: a daily FOCUS export into bronze (EA and MCA agreements).
+  - `query`: the query API's daily cost, for a subscription whose agreement allows no
+    export. That is dev: a Sponsorship ("WebDirect") offer, which Azure refuses every
+    export type for.
+
+The FinOps jobs reconcile the internal tenant's cost and the Grafana platform-cost
+dashboard shows it. Nothing here is applied by CI. The steps run in this order.
+
+## 1. Terraform (plan, then apply)
 
 | Stack | What it adds | Notes |
 | --- | --- | --- |
-| `04-data` | Containers `cost-exports-platform` and `azure` in bronze; the `Microsoft.CostManagementExports` resource provider registered on each platform subscription (a new subscription does not have it); one export per platform subscription, `cloudops-platform-dev-cd12743c`, with its own system-assigned identity | Needs Cost Management Contributor (or Owner) on the subscription to create the export. The schedule starts at `platform_cost_export_from` (default `2026-11-01T00:00:00Z`). Cost Management refuses a start in the past, so set a later date in `04-data.tfvars` if you apply after that. Output `platform_cost_export_roots` is the overlay's `CLOUDOPS_AZURE_COST_EXPORT_ROOTS`. |
-| `04b-rbac` | The export identity: Storage Blob Data Contributor on `cost-exports-platform`. The ingest identity: Storage Blob Data Reader on `cost-exports-platform`, Storage Blob Data Contributor on `azure`, Cost Management Reader on the subscription. The CI identity: the custom role *CloudOps role assignment reader (dev)* on the subscription. | **Apply after 04-data.** The export's identity exists only then, so a 04b plan made before 04-data is applied shows 5 additions, and a plan made after shows 6. Needs User Access Administrator. The two subscription-scope roles are ADR 0023's recorded exception. |
-| `05-aks` | The federated credential for `platform-ingest/connector-azure` on `id-cloudops-ingest-dev` | It also shows `platform-ingest/platform-metrics` if step 19's 05 apply has not happened yet. |
+| `04-data` | Containers `cost-exports-platform` and `azure` in bronze. The `Microsoft.CostManagementExports` resource provider registered on each platform subscription. With `platform_cost_export_enabled = true` (the default), one FOCUS export per platform subscription, with its own system-assigned identity. | Dev sets `platform_cost_export_enabled = false` in `04-data.tfvars`. Put the same line in the CI variable `TF_DEV_04_DATA_TFVARS`, or CI's plan will show an export to create. Creating an export needs Cost Management Contributor or Owner on the subscription. The schedule starts at `platform_cost_export_from`, which must be in the future. |
+| `04b-rbac` | The ingest identity: Cost Management Reader on each platform subscription, Storage Blob Data Reader on `cost-exports-platform`, Storage Blob Data Contributor on `azure`. The CI identity: *CloudOps role assignment reader (<env>)* on each subscription. Each export's own identity: Storage Blob Data Contributor on `cost-exports-platform`. | Apply after 04-data: an export's identity exists only then. Needs User Access Administrator. The two subscription-scope roles are ADR 0023's recorded exception. |
+| `05-aks` | The federated credential for `platform-ingest/connector-azure` on the ingest identity | |
 
-## 2. The internal tenant and its subscription
+**Dev, as of 2026-10-31.** All three stacks are applied:
 
-1. **The tenant.** If dev's database has no internal tenant yet, onboard *Getronics
-   CloudOps platform* in the console (step 18). Then mark it internal. Nothing in the
-   product does that yet; only the dev seed does (`cloudops_devdata.seed.mark_internal`:
-   one `UPDATE cloudops.tenant SET internal = true` through `packages/tenancy`, with an
-   ingest scope over that tenant). At most one tenant can be internal (migration 0019).
-2. **The alias.** In the mapping console (step 14b), map the subscription id
-   `cd12743c-f76e-4284-aa62-eb8bd576ac91` (source `azure`) to that tenant. In dev, one
-   person may approve. If you skip this, the first run puts the subscription in the
-   alias quarantine with its count, and nothing is written until you approve it there.
+- 04-data: the provider is registered; there is no export, and the containers exist.
+- 04b: five grants. There is no export identity to grant.
+- 05: both federated credentials.
 
-## 3. Merge, then let Argo CD roll it out
+## 2. Merge, then let Argo CD roll it out
 
 Merge after step 19 (PR #37), which this branch is built on. The main pipeline builds
 the connectors image, and the dev overlay's tag bump brings `connector-azure` into the
-workers Application. Its sync hook creates the `azure-cost_export` and
-`azure-cost_total` schedules, both daily. The dev overlay keeps `CLOUDOPS_TELEMETRY: "off"`
-like the other workers until the collector runs in dev (docs/observability.md).
+workers Application. Its sync hook creates the configured daily schedules:
+`azure-cost_daily` and `azure-cost_total` in dev.
 
-## 4. The first run, and checking it
+```bash
+kubectl -n platform-ingest get pods,jobs -l 'app.kubernetes.io/name in (connector-azure,connector-azure-schedule)'
+```
 
-- The export's first scheduled run is on the schedule's start date. To run it now:
+```bash
+kubectl -n platform-ingest logs job/connector-azure-schedule
+```
 
-  ```bash
-  az rest --method post --url "https://management.azure.com/subscriptions/cd12743c-f76e-4284-aa62-eb8bd576ac91/providers/Microsoft.CostManagement/exports/cloudops-platform-dev-cd12743c/run?api-version=2025-03-01"
-  ```
+## 3. The internal tenant and its subscription
 
-- Check that a run folder and its `manifest.json` landed under
-  `cost-exports-platform/focus/cloudops-platform-dev-cd12743c/`. If the run history
-  shows a storage access error, check that the 04b grant for the export's identity
-  exists. Microsoft documents exports to a firewalled account with keys disabled as
-  supported, but that is not yet proven on this account.
-- After the next `azure-cost_export` run, the console's connector health shows
-  `azure` / `cost_export` and `cost_total`, and the platform-cost dashboard shows the
-  month to date, reconciled against Cost Management's total.
+1. **The tenant.** On the console's Customer mapping screen (`/mapping`), choose
+   **Onboard a new customer**:
+   - Name: *Getronics CloudOps platform*
+   - Short code: `GTX`
+   - Source: `azure`
+   - Alias: the subscription id `cd12743c-f76e-4284-aa62-eb8bd576ac91`
+
+   Then **Onboard and propose**, and approve the mapping. In dev, one person may approve.
+2. **Mark it internal.** Nothing in the product does this yet; only the dev seed does,
+   with `cloudops_devdata.seed.mark_internal`. That is one
+   `UPDATE cloudops.tenant SET internal = true` through `packages/tenancy`, with an
+   ingest scope over the tenant. At most one tenant can be internal (migration 0019).
+
+If the mapping is not there at the first run, the subscription's rows go to the alias
+quarantine with their count, and nothing is written until it is approved.
+
+## 4. Checking it
+
+- After the first `azure-cost_daily` run, the console's connector health shows `azure` /
+  `cost_daily` and `cost_total`.
+- `cost_fact` holds the internal tenant's month by day, service and charge class, in the
+  subscription's billing currency (INR in dev). Reconciliation compares it with
+  `cost_total`.
+- The Grafana platform-cost dashboard needs the collector running in dev
+  (docs/observability.md).

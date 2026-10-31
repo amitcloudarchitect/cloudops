@@ -51,6 +51,8 @@ from cloudops_connectors.core.ingest import ConnectorActivities, FetchRequest
 from cloudops_connectors.core.raw import MemoryRawStore
 
 T0 = datetime(2026, 1, 1, tzinfo=UTC)
+EXPORT_ENTITIES = frozenset({mapping.COST_EXPORT, mapping.COST_TOTAL})
+QUERY_ENTITIES = frozenset({mapping.COST_DAILY, mapping.COST_TOTAL})
 # Built at runtime, so no literal here looks like a secret to the scanner.
 TOKEN = "-".join(("fake", "platform", "ingest", "bearer"))
 
@@ -83,7 +85,7 @@ def _live(azure: FakeAzure, blobs: FakeBlobStore, credential: FakeCredential) ->
                     transport=azure.transport(), sleep=_no_sleep),
         exports=BlobClient(BLOB_HOST, auth=EntraAuth(credential, STORAGE_SCOPE, BLOB_HOST),
                            transport=blobs.transport(), sleep=_no_sleep),
-        export_roots=blobs.roots, entities=entry.LIVE_ENTITIES,
+        export_roots=blobs.roots, entities=EXPORT_ENTITIES,
         today=lambda: date.fromisoformat(BILLING_DAY))
 
 
@@ -143,7 +145,7 @@ async def test_without_a_token_the_services_refuse_and_nothing_is_guessed() -> N
     unauthenticated = AzureSource(
         AzureClient(FIXTURE_HOST, transport=azure.transport(), sleep=_no_sleep),
         exports=BlobClient(BLOB_HOST, transport=blobs.transport(), sleep=_no_sleep),
-        export_roots=blobs.roots, entities=entry.LIVE_ENTITIES)
+        export_roots=blobs.roots, entities=EXPORT_ENTITIES)
     with pytest.raises(httpx.HTTPStatusError) as arm:
         await unauthenticated.fetch(mapping.COST_TOTAL, "", T0, None)
     assert arm.value.response.status_code == 401
@@ -234,11 +236,13 @@ def _identity(tmp_path: Path) -> WorkloadIdentity:
                             "00000000-0000-0000-0000-000000000002", token, None)
 
 
-def _settings(tmp_path: Path, identity: WorkloadIdentity | None) -> Settings:
+def _settings(tmp_path: Path, identity: WorkloadIdentity | None,
+              lines: str = "export") -> Settings:
     env_file = tmp_path / ".env"
     env_file.write_text("", encoding="utf-8")
-    cost = AzureCostConfig("https://stcloudopsbronzedevweu.blob.core.windows.net",
-                           ("cost-exports-platform/focus/cloudops-platform-dev-0a1b2c3d",))
+    cost = AzureCostConfig("query") if lines == "query" else AzureCostConfig(
+        "export", "https://stcloudopsbronzedevweu.blob.core.windows.net",
+        ("cost-exports-platform/focus/cloudops-platform-dev-0a1b2c3d",))
     return Settings(Environment.AZURE, EnvFileSecretStore.from_file(env_file), identity,
                     {Component.AZURE_COST: cost})
 
@@ -248,10 +252,36 @@ async def test_the_live_source_is_built_on_the_profiles_workload_identity(
 ) -> None:
     async with AsyncExitStack() as stack:
         source = entry.live_source(_settings(tmp_path, _identity(tmp_path)), stack)
-        assert source.entities == entry.LIVE_ENTITIES
+        assert source.entities == EXPORT_ENTITIES
         assert source.instance == ARM
         assert await source.scopes(None, mapping.COST_EXPORT) == [  # type: ignore[arg-type]
             "cost-exports-platform/focus/cloudops-platform-dev-0a1b2c3d"]
+
+
+async def test_the_query_live_source_reads_no_storage_and_serves_daily_cost(
+    tmp_path: Path
+) -> None:
+    async with AsyncExitStack() as stack:
+        source = entry.live_source(_settings(tmp_path, _identity(tmp_path), "query"), stack)
+        assert source.entities == QUERY_ENTITIES
+        with pytest.raises(ValueError, match="unknown entity"):
+            await source.fetch(mapping.COST_EXPORT, "", T0, None)
+
+
+async def test_daily_cost_is_read_with_the_management_token_on_every_request() -> None:
+    azure, blobs = _fakes()
+    azure.daily_page = 30
+    credential = FakeCredential()
+    source = AzureSource(
+        AzureClient(FIXTURE_HOST, auth=EntraAuth(credential, ARM_SCOPE, FIXTURE_HOST),
+                    transport=azure.transport(), sleep=_no_sleep),
+        entities=QUERY_ENTITIES, today=lambda: date.fromisoformat(BILLING_DAY))
+    raw = await _run(source, mapping.COST_DAILY, "")
+    assert any("$skiptoken" in r.url.params for r in azure.requests), "paged"
+    assert {r.headers["Authorization"] for r in azure.requests} == {f"Bearer {TOKEN}"}
+    assert set(credential.scopes) == {(ARM_SCOPE,)}
+    assert not blobs.requests
+    assert not any(TOKEN.encode() in body for body in raw.pages.values())
 
 
 def test_the_live_source_needs_a_workload_identity(tmp_path: Path) -> None:
@@ -278,15 +308,22 @@ def _args(*entity: str) -> argparse.Namespace:
 _ALL = {e: timedelta(days=1) for e in mapping.ENTITIES}
 
 
-def test_live_runs_and_schedules_default_to_the_live_entities() -> None:
-    assert sorted(cli._entities(_args(), _ALL, entry.LIVE)) == sorted(entry.LIVE_ENTITIES)
-    assert cli._entities(_args(mapping.COST_TOTAL), _ALL, entry.LIVE) == [mapping.COST_TOTAL]
+@pytest.mark.parametrize(("lines", "served"), [("export", EXPORT_ENTITIES),
+                                               ("query", QUERY_ENTITIES)])
+def test_live_runs_and_schedules_default_to_the_configured_entities(
+    tmp_path: Path, lines: str, served: frozenset[str]
+) -> None:
+    live = entry.LIVE.entities(_settings(tmp_path, None, lines))
+    assert live == served
+    assert sorted(cli._entities(_args(), _ALL, live)) == sorted(served)
+    assert cli._entities(_args(mapping.COST_TOTAL), _ALL, live) == [mapping.COST_TOTAL]
 
 
-@pytest.mark.parametrize("entity", [mapping.ENTITY, mapping.INVOICE])
-def test_live_refuses_an_entity_it_does_not_serve(entity: str) -> None:
+@pytest.mark.parametrize("entity", [mapping.ENTITY, mapping.INVOICE, mapping.COST_DAILY])
+def test_live_refuses_an_entity_it_does_not_serve(tmp_path: Path, entity: str) -> None:
+    live = entry.LIVE.entities(_settings(tmp_path, None, "export"))
     with pytest.raises(ConfigurationError, match=entity):
-        cli._entities(_args(mapping.COST_EXPORT, entity), _ALL, entry.LIVE)
+        cli._entities(_args(mapping.COST_EXPORT, entity), _ALL, live)
 
 
 def test_without_a_live_path_every_entity_stays_available_to_fixtures() -> None:

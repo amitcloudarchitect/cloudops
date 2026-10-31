@@ -101,3 +101,13 @@ variable "platform_cost_export_from" {
     error_message = "platform_cost_export_from is a UTC midnight, YYYY-MM-DDT00:00:00Z."
   }
 }
+
+variable "platform_cost_export_enabled" {
+  type        = bool
+  default     = true
+  description = <<-EOT
+    Create the platform cost exports (ADR 0023). False where the subscriptions' agreement
+    allows no export (pay-as-you-go, Sponsorship: dev); the connector then reads the
+    query API (CLOUDOPS_AZURE_COST_LINES=query).
+  EOT
+}

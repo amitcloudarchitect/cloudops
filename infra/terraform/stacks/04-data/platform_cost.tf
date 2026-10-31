@@ -1,6 +1,8 @@
 # The platform's own cost (ADR 0023): a daily Cost Management export of each platform
 # subscription, FOCUS 1.0, into bronze, read by the Azure connector into the internal
-# tenant (ADR 0022, decision 11).
+# tenant (ADR 0022, decision 11). FOCUS needs an EA or MCA agreement; a pay-as-you-go
+# or Sponsorship subscription ("WebDirect", dev) refuses every export type, so there
+# var.platform_cost_export_enabled is false and the connector reads the query API.
 #
 # Bronze has public network access and shared keys off. Cost Management is a trusted
 # Azure service for exports (bronze already bypasses AzureServices, for the Event
@@ -47,7 +49,7 @@ resource "azapi_resource_action" "register_cost_exports" {
 }
 
 resource "azapi_resource" "platform_cost_export" {
-  for_each   = local.platform_subscriptions
+  for_each   = var.platform_cost_export_enabled ? local.platform_subscriptions : toset([])
   depends_on = [azapi_resource_action.register_cost_exports]
 
   type      = "Microsoft.CostManagement/exports@2025-03-01"

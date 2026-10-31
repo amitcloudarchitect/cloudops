@@ -168,20 +168,37 @@ AZURE_OPENAI_ENDPOINT_VAR: Final = "CLOUDOPS_AZURE_OPENAI_ENDPOINT"
 
 @dataclass(frozen=True, slots=True)
 class AzureCostConfig:
-    """Where the Azure connector reads the platform's own Cost Management exports
-    (ADR 0023): the storage account's blob endpoint and the export roots in it,
-    each ``<container>/<root folder>/<export name>``. Not secret; authentication is
-    the workload identity's Entra token. Azure only: on a laptop, ``--fixtures``."""
+    """Where the Azure connector reads the platform's own line-item cost (ADR 0023).
 
-    export_account_url: str
-    export_roots: tuple[str, ...]
+    ``lines`` is ``export`` (Cost Management exports: the storage account's blob
+    endpoint and the export roots in it, each ``<container>/<root folder>/<export
+    name>``) or ``query`` (the query API's daily cost, for a subscription that cannot
+    have an export; no storage). Not secret; authentication is the workload
+    identity's Entra token. Azure only: on a laptop, ``--fixtures``."""
+
+    lines: str
+    export_account_url: str | None = None
+    export_roots: tuple[str, ...] = ()
 
 
+AZURE_COST_LINES_VAR: Final = "CLOUDOPS_AZURE_COST_LINES"  # export | query
 AZURE_COST_ACCOUNT_VAR: Final = "CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"
 AZURE_COST_ROOTS_VAR: Final = "CLOUDOPS_AZURE_COST_EXPORT_ROOTS"  # comma-separated
 
 
 def _azure_cost(environ: Mapping[str, str]) -> AzureCostConfig:
+    lines = _required(environ, AZURE_COST_LINES_VAR)
+    if lines == "query":
+        named = [v for v in (AZURE_COST_ACCOUNT_VAR, AZURE_COST_ROOTS_VAR)
+                 if environ.get(v, "").strip()]
+        if named:
+            raise ConfigurationError(
+                f"{', '.join(named)} set with {AZURE_COST_LINES_VAR}=query: say export, "
+                "or remove them"
+            )
+        return AzureCostConfig("query")
+    if lines != "export":
+        raise ConfigurationError(f"{AZURE_COST_LINES_VAR} must be 'export' or 'query'")
     url = _required(environ, AZURE_COST_ACCOUNT_VAR).rstrip("/")
     parts = urlsplit(url)
     host = parts.hostname or ""
@@ -201,7 +218,7 @@ def _azure_cost(environ: Mapping[str, str]) -> AzureCostConfig:
             )
     if len(set(roots)) != len(roots):
         raise ConfigurationError(f"{AZURE_COST_ROOTS_VAR} names a root twice")
-    return AzureCostConfig(f"https://{host}", roots)
+    return AzureCostConfig("export", f"https://{host}", roots)
 
 
 def _azure_openai(environ: Mapping[str, str]) -> AzureOpenAIConfig:

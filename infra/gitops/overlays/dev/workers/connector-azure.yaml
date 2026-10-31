@@ -20,10 +20,9 @@ data:
   CLOUDOPS_BRONZE_CONTAINER_URL: https://stcloudopsbronzedevweu.blob.core.windows.net/azure
   # Required by the BLOB component; the connector never writes reports.
   CLOUDOPS_REPORTS_CONTAINER_URL: https://stcloudopsreportsdevweu.blob.core.windows.net/reports
-  # The export of the dev subscription (stack 04-data), in bronze's own container;
-  # 04b grants the ingest identity Storage Blob Data Reader on that container alone.
-  CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL: https://stcloudopsbronzedevweu.blob.core.windows.net
-  CLOUDOPS_AZURE_COST_EXPORT_ROOTS: cost-exports-platform/focus/cloudops-platform-dev-cd12743c
+  # The dev subscription is a Sponsorship offer ("WebDirect"): Azure refuses every
+  # Cost Management export for it, so its line items come from the query API.
+  CLOUDOPS_AZURE_COST_LINES: query
   # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
   CLOUDOPS_TELEMETRY: "off"
   CLOUDOPS_DEPLOYMENT: dev

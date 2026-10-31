@@ -394,10 +394,18 @@ _EXPORTS = "https://stcloudopsbronzedevweu.blob.core.windows.net"
 _ROOT = "cost-exports-platform/focus/cloudops-platform-dev-0a1b2c3d"
 
 
-def test_azure_cost_names_the_export_account_and_roots(azure_env: dict[str, str]) -> None:
+@pytest.fixture
+def export_env(azure_env: dict[str, str]) -> dict[str, str]:
+    azure_env["CLOUDOPS_AZURE_COST_LINES"] = "export"
+    return azure_env
+
+
+def test_azure_cost_names_the_export_account_and_roots(export_env: dict[str, str]) -> None:
+    azure_env = export_env
     azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = _EXPORTS + "/"
     azure_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = f"{_ROOT}, {_ROOT}-2"
     cost = load_settings(azure_env, require={Component.AZURE_COST}).azure_cost
+    assert cost.lines == "export"
     assert cost.export_account_url == _EXPORTS
     assert cost.export_roots == (_ROOT, f"{_ROOT}-2")
 
@@ -410,8 +418,9 @@ def test_azure_cost_names_the_export_account_and_roots(azure_env: dict[str, str]
     "https://stcloudopsbronzedevweu.blob.core.windows.net.evil.example",
 ])
 def test_azure_cost_account_must_be_a_bare_blob_endpoint(
-    azure_env: dict[str, str], url: str
+    export_env: dict[str, str], url: str
 ) -> None:
+    azure_env = export_env
     azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = url
     azure_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = _ROOT
     with pytest.raises(ConfigurationError, match=r"blob\.core\.windows\.net"):
@@ -423,19 +432,38 @@ def test_azure_cost_account_must_be_a_bare_blob_endpoint(
     "cost-exports-platform/focus/", f"{_ROOT},", f"{_ROOT},{_ROOT}",
 ])
 def test_azure_cost_roots_are_container_and_path_each_once(
-    azure_env: dict[str, str], roots: str
+    export_env: dict[str, str], roots: str
 ) -> None:
+    azure_env = export_env
     azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = _EXPORTS
     azure_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = roots
     with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_COST_EXPORT_ROOTS"):
         load_settings(azure_env, require={Component.AZURE_COST})
 
 
-def test_azure_cost_needs_both_variables(azure_env: dict[str, str]) -> None:
+def test_azure_cost_needs_both_variables(export_env: dict[str, str]) -> None:
+    azure_env = export_env
     with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"):
         load_settings(azure_env, require={Component.AZURE_COST})
     azure_env["CLOUDOPS_AZURE_COST_EXPORT_ACCOUNT_URL"] = _EXPORTS
     with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_COST_EXPORT_ROOTS"):
+        load_settings(azure_env, require={Component.AZURE_COST})
+
+
+def test_azure_cost_says_where_its_lines_come_from(azure_env: dict[str, str]) -> None:
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_AZURE_COST_LINES"):
+        load_settings(azure_env, require={Component.AZURE_COST})
+    azure_env["CLOUDOPS_AZURE_COST_LINES"] = "exports"
+    with pytest.raises(ConfigurationError, match="'export' or 'query'"):
+        load_settings(azure_env, require={Component.AZURE_COST})
+
+
+def test_azure_cost_from_the_query_api_needs_no_storage(azure_env: dict[str, str]) -> None:
+    azure_env["CLOUDOPS_AZURE_COST_LINES"] = "query"
+    cost = load_settings(azure_env, require={Component.AZURE_COST}).azure_cost
+    assert (cost.lines, cost.export_account_url, cost.export_roots) == ("query", None, ())
+    azure_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = _ROOT
+    with pytest.raises(ConfigurationError, match="say export"):
         load_settings(azure_env, require={Component.AZURE_COST})
 
 

@@ -57,6 +57,7 @@ from cloudops_config import (
     load_settings,
 )
 from cloudops_config.probes import serve_probes
+from cloudops_config.settings import environment_from
 from cloudops_config.temporal import connect, run_worker
 from cloudops_connectors.core.ingest import (
     WORKFLOWS,
@@ -107,20 +108,20 @@ def _fixture_source(settings: Settings, fixtures: bool, name: str,
 @dataclass(frozen=True)
 class Live:
     """A source's live path: the components it needs beyond the database, bronze
-    and Temporal, the entities it serves, and how to build it. ``build`` pushes
-    anything it opens onto the stack."""
+    and Temporal, the entities it serves as configured, and how to build it.
+    ``build`` pushes anything it opens onto the stack."""
 
     requires: frozenset[Component]
-    entities: frozenset[str]
+    entities: Callable[[Settings], frozenset[str]]
     build: Callable[[Settings, AsyncExitStack], Source]
 
 
 def _entities(args: argparse.Namespace, entities: Mapping[str, timedelta],
-              live: Live | None) -> list[str]:
+              live: frozenset[str] | None) -> list[str]:
     if live is None:
         return list(args.entity or sorted(entities))
-    wanted = list(args.entity or sorted(live.entities))
-    other = sorted(set(wanted) - live.entities)
+    wanted = list(args.entity or sorted(live))
+    other = sorted(set(wanted) - live)
     if other:
         raise ConfigurationError(f"the live path does not serve {', '.join(other)}")
     return wanted
@@ -142,10 +143,12 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
                 factory: Callable[[], Source], live: Live | None = None) -> int:
     queue = task_queue(name)
     if args.command == "schedule":
-        settings = load_settings(os.environ, require={Component.TEMPORAL})
+        azure_live = live if environment_from(os.environ) is Environment.AZURE else None
+        settings = load_settings(os.environ, require={
+            Component.TEMPORAL, *(azure_live.requires if azure_live is not None else ())})
         temporal = await connect(settings.temporal, **temporal_options())
-        azure_live = live if settings.environment is Environment.AZURE else None
-        for entity in _entities(args, entities, azure_live):
+        served = azure_live.entities(settings) if azure_live is not None else None
+        for entity in _entities(args, entities, served):
             since = (datetime.now(UTC) - timedelta(days=90)).isoformat()
             wanted = Schedule(
                 action=ScheduleActionStartWorkflow(
@@ -164,7 +167,8 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
         source = _fixture_source(settings, args.fixtures, name, factory)
     elif settings.environment is not Environment.AZURE:  # pragma: no cover - load refuses
         raise ConfigurationError("the live path runs in the Azure profile only")
-    run_entities = _entities(args, entities, live)
+    run_entities = _entities(args, entities,
+                             live.entities(settings) if live is not None else None)
     temporal = await connect(settings.temporal, **temporal_options())
     async with AsyncExitStack() as stack:
         if live is not None:

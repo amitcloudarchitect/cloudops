@@ -33,10 +33,12 @@ the platform's own subscriptions with the platform's own workload identity.
    a token is fetched, a second lock behind the clients' own `nextLink` checks. Async
    only; the credential caches and renews; a 401 is Temporal's to retry.
 
-2. **Live path: two entities, Azure profile only** (user). `cost_export` (FOCUS line items
-   into `cost_fact`) and `cost_total` (the month-to-date total that reconciliation checks
-   against). `resource` and `invoice` stay fixture-only: the source refuses them before
-   any request, and `run` and `schedule` refuse to name them. A connector with no live
+2. **Live path: two entities, Azure profile only** (user). `cost_total` (the month-to-date
+   total that reconciliation checks against) and line items into `cost_fact`: `cost_export`
+   (FOCUS exports) or `cost_daily` (the query API, decision 7), as
+   `CLOUDOPS_AZURE_COST_LINES` says (`export` or `query`). `resource` and `invoice` stay
+   fixture-only: the source refuses them before any request, and `run` and `schedule`
+   refuse to name them. A connector with no live
    path still refuses to start without `--fixtures`. Which tenant the cost lands in is
    the alias mapping's (ADR 0016): the platform subscriptions are aliases of `azure`
    for the internal tenant, approved in the mapping console like any other.
@@ -72,12 +74,31 @@ the platform's own subscriptions with the platform's own workload identity.
 6. **Deployed as its own worker** (`connector-azure`, platform-ingest). It runs the
    connectors image's Azure entry point with the ingest login, federated to the ingest
    identity like `platform-metrics`. One replica, no autoscaler: two daily entities.
-   A sync hook schedules `cost_export` and `cost_total` daily.
+   A sync hook schedules its configured entities daily.
+
+7. **Where the agreement allows no export, the query API** (user). The dev subscription is
+   a Sponsorship offer, which Azure bills as "WebDirect": Cost Management refused both a
+   FOCUS and an actual-cost export for it (`… is not supported for Agreement Type:
+   WebDirect and Subscription`), after the exports resource provider was registered.
+   Entity `cost_daily` asks the query API, per subscription, for `ActualCost` by day,
+   ServiceName and ChargeType (the API allows two groupings), for the run's month and,
+   within five days of the 1st, the month before. Each answer is a whole statement of
+   that subscription's month: its pages are staged and swapped into `cost_fact` in one
+   transaction, superseded by a newer statement, with the export's machinery
+   (`core/assembly.py`). Raw responses go to bronze first; amounts are read from the
+   JSON numbers straight to `Decimal`. The shape was recorded from the dev subscription;
+   the fixtures are synthetic. Known limits: no resource (grouped by service, so nothing
+   is linked or quarantined), one figure (an actual-cost query does not amortise), and
+   Marketplace charges not told apart (no publisher). 04-data's
+   `platform_cost_export_enabled = false` leaves dev without an export. An account's month
+   comes from one of the two, never both: either swap replaces the whole month.
 
 ## Consequences
 
 - Reconciliation and anomaly detection of the platform's own cost run on real data:
-  the first export run is the day after the schedule starts. The dashboard reads what
+  in dev from the first `cost_daily` run; where there is an export, from its first run.
+- The exports resource provider (`Microsoft.CostManagementExports`) is registered by
+  04-data on each platform subscription; a new subscription does not have it. The dashboard reads what
   the FinOps jobs write, unchanged.
 - The ingest identity can read cost on every platform subscription. A stolen ingest
   token can see the platform's spend, not a customer's: the identity has no role on any

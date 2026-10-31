@@ -695,11 +695,103 @@ def _billing(ds: Any, runs: list[ExportRun]) -> tuple[dict[str, bytes], list[Bil
     return files, expected
 
 
+# --- Cost Management query, daily by service and charge type (ADR 0023) ------------------
+#
+# ``billing/daily/<sub>.json``: what the query API answers for ``ActualCost``, daily,
+# grouped by ServiceName and ChargeType, from DAILY_FROM to BILLING_DAY, in the shape
+# recorded from a real subscription (columns Cost, UsageDate, ServiceName, ChargeType,
+# Currency; costs as JSON numbers with many decimals). The fake answers a query
+# with the rows inside its timePeriod. Northwind's subscription in EUR, Contoso's in
+# GBP, and the unmapped one. Every charge type the class rule distinguishes, three
+# malformed rows per subscription, and a few days of September for the restatement
+# window. The amounts are synthetic, not anyone's real cost.
+
+DAILY_FROM: Final = date(2026, 9, 20)
+DAILY_COLUMNS: Final = ("Cost", "UsageDate", "ServiceName", "ChargeType", "Currency")
+_DAILY_SERVICES: Final = ("Virtual Machines", "Storage", "Log Analytics",
+                          "Virtual Machines Licenses")
+
+
+@dataclass(frozen=True)
+class DailyKey:
+    subscription: str
+    usage_date: date
+    service: str
+    charge_class: str
+
+
+@dataclass(frozen=True)
+class DailyFixtures:
+    rows: dict[DailyKey, Decimal]  # full precision, as sent; rounded once when stored
+    currency: dict[str, str]  # subscription -> billing currency
+    tenant: dict[str, str | None]  # subscription -> tenant short code (None: unmapped)
+    malformed: dict[str, int]  # subscription -> rows that must be rejected
+
+
+def _amount(rng: random.Random, low: int, high: int) -> Decimal:
+    """A cost with 13 decimals, as the query API sends floats."""
+    return Decimal(rng.randrange(low * 10**13, high * 10**13)) / Decimal(10**13)
+
+
+def _daily(ds: Any, runs: list[ExportRun]) -> tuple[dict[str, bytes], DailyFixtures]:
+    code = {t.id: t.short_code for t in ds.tenants}
+    tenant_of = {a.native_id: code[a.tenant_id] for a in ds.accounts if a.provider == "azure"}
+    by = {r.label: r for r in runs}
+    subs = {next(k.account for k in by["EO2"].rows): "EUR",
+            next(k.account for k in by["GO"].rows): "GBP", UNREGISTERED: "EUR"}
+    rng = random.Random(f"{FIXTURE_SEED}:daily")  # noqa: S311 - test data
+    files: dict[str, bytes] = {}
+    rows: dict[DailyKey, Decimal] = {}
+    malformed: dict[str, int] = {}
+    for sub, ccy in subs.items():
+        out: list[list[Any]] = []
+
+        def add(day: date, service: str, charge_type: str, cls: str, amount: Decimal,
+                sub: str = sub, ccy: str = ccy, out: list[list[Any]] = out) -> None:
+            out.append([amount, int(f"{day:%Y%m%d}"), service, charge_type, ccy])
+            key = DailyKey(sub, day, service, cls)
+            rows[key] = rows.get(key, Decimal(0)) + amount
+
+        day = DAILY_FROM
+        while day <= BILLING_DAY:
+            for service in _DAILY_SERVICES:
+                cls = "licence" if service.endswith("Licenses") else "consumption"
+                add(day, service, "Usage", cls, _amount(rng, 1, 400))
+            day += timedelta(days=1)
+        add(date(2026, 10, 5), "Support", "Purchase", "support", _amount(rng, 20, 30))
+        add(date(2026, 10, 10), "Virtual Machines", "Refund", "credit", -_amount(rng, 5, 9))
+        add(date(2026, 10, 10), "Virtual Machines", "RoundingAdjustment", "credit",
+            Decimal("-0.0000000412"))
+        add(date(2026, 10, 12), "Virtual Machines", "UnusedReservation", "reservation",
+            _amount(rng, 2, 4))
+        add(date(2026, 10, 14), "Azure DNS", "Unbilled", "other", _amount(rng, 1, 2))
+        out.extend([
+            [None, 20261015, "Storage", "Usage", ccy],  # no cost
+            [_amount(rng, 1, 2), 20261015, "Storage", "Usage", ccy.lower()],  # bad currency
+            [_amount(rng, 1, 2), 2026101, "Storage", "Usage", ccy],  # not a date
+        ])
+        malformed[sub] = 3
+        files[f"billing/daily/{sub}.json"] = _json_with_numbers({
+            "id": f"/subscriptions/{sub}/providers/Microsoft.CostManagement/query/"
+                  f"{uuid.uuid5(NAMESPACE, 'daily:' + sub)}",
+            "name": str(uuid.uuid5(NAMESPACE, "daily:" + sub)),
+            "type": "Microsoft.CostManagement/query", "location": None, "sku": None,
+            "eTag": None,
+            "properties": {"nextLink": None,
+                           "columns": [{"name": n, "type": "String" if n in (
+                               "ServiceName", "ChargeType", "Currency") else "Number"}
+                               for n in DAILY_COLUMNS],
+                           "rows": out},
+        })
+    return files, DailyFixtures(rows, subs, {s: tenant_of.get(s) for s in subs}, malformed)
+
+
 @dataclass(frozen=True)
 class CostFixtures:
     files: dict[str, bytes]  # path under the fixture directory -> bytes
     runs: list[ExportRun]
     billing: list[BillingExpected]
+    daily: DailyFixtures
 
 
 def build_cost() -> CostFixtures:
@@ -709,7 +801,13 @@ def build_cost() -> CostFixtures:
     files.update({f"exports/{n}": b for n, b in export_files.items()})
     billing_files, billing = _billing(ds, runs)
     files.update(billing_files)
-    return CostFixtures(files, runs, billing)
+    daily_files, daily = _daily(ds, runs)
+    files.update(daily_files)
+    return CostFixtures(files, runs, billing, daily)
+
+
+def daily_expectations() -> DailyFixtures:
+    return build_cost().daily
 
 
 def export_expectations() -> dict[str, ExportRun]:

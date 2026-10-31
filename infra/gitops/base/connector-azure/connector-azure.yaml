@@ -77,7 +77,7 @@ spec:
       containers:
         - name: worker
           image: connector-servicenow  # the connectors package, another entry point
-          # No --fixtures: the live path, which refuses any entity but its own two.
+          # No --fixtures: the live path, which refuses any entity but its configured two.
           command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.azure", "worker"]
           ports:
             - { name: probes, containerPort: 8080 }
@@ -152,9 +152,9 @@ spec:
       ports:
         - { protocol: TCP, port: 4318 }
 ---
-# Creates or updates the daily schedules of the live entities (cost_export,
-# cost_total) on every sync; safe to repeat. Never resource or invoice: the live
-# path refuses them, here and in the worker.
+# Creates or updates the daily schedules of the configured live entities (cost_total,
+# and cost_export or cost_daily) on every sync; safe to repeat. Never resource or
+# invoice: the live path refuses them, here and in the worker.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -193,8 +193,7 @@ spec:
       containers:
         - name: schedule
           image: connector-servicenow
-          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.azure", "schedule",
-                    "--entity", "cost_export", "--entity", "cost_total"]
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.azure", "schedule"]
           envFrom:
             - configMapRef: { name: connector-azure }
           securityContext:
