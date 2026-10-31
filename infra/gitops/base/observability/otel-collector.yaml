@@ -94,15 +94,30 @@ spec:
       app.kubernetes.io/name: otel-collector
   policyTypes: [Ingress, Egress]
   ingress:
-    # OTLP from the instrumented workloads' namespaces only: not the console's
-    # (platform-web), not the edge, not third-party charts. A pod that can reach
-    # this port can write a security_event record, so the list stays short.
+    # OTLP from the workloads that export, by pod: not the console (platform-web),
+    # not the edge, not third-party charts. A pod that can reach this port can write
+    # a security_event record, so the list is exactly the exporters.
     - from:
         - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-api
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-ingest
+          podSelector:
             matchExpressions:
-              - key: kubernetes.io/metadata.name
+              - key: app.kubernetes.io/name
                 operator: In
-                values: [platform-api, platform-ingest, platform-ai]
+                values: [connector-servicenow, connector-servicenow-schedule, platform-metrics]
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-ai
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: worker-ai
       ports:
         - { protocol: TCP, port: 4318 }
     # Azure Monitor managed Prometheus (the ama-metrics add-on) scrapes the metrics.
@@ -116,6 +131,13 @@ spec:
       ports:
         - { protocol: TCP, port: 8889 }
   egress:
-    # Application Insights ingestion and Entra ID token exchange.
-    - ports:
+    # Application Insights ingestion and Entra ID token exchange: public endpoints,
+    # HTTPS only. NetworkPolicy has no FQDNs, so the narrowest it can say is "public
+    # addresses on 443": no private range, so nothing in the VNet or the cluster.
+    # (An FQDN policy, Cilium's, would name the two hosts; ADR 0022.)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, 169.254.0.0/16]
+      ports:
         - { protocol: TCP, port: 443 }
