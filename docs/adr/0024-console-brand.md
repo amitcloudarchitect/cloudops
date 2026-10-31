@@ -5,7 +5,8 @@
 - **Implements:** the brand for the operations console and customer portal
   (`apps/web`), within ADR 0014's design rules and ADR 0017's CSP.
   `src/styles/tokens.css`, `src/app/globals.css`, `src/app/layout.tsx`,
-  `src/fonts/`, `src/components/` (`BrandLogo.tsx` new), the screens' class names.
+  `src/fonts/`, `src/brand/`, `src/app/icon.png`, `src/components/` (`BrandLogo.tsx` new),
+  the screens' class names.
 
 ## Sources
 
@@ -108,14 +109,22 @@ rounding. This ADR uses the book's values.
    Buttons are all caps with slight tracking, as the book sets for buttons. Headings
    and labels are in sentence case.
 
-6. **The logo is a marked placeholder until an approved file is supplied.**
-   - `components/BrandLogo.tsx` renders a dashed slot labelled "Getronics". Its
-     tooltip and screen-reader text say it is a placeholder.
-   - To fit the real logo, put the white version (the header is black) at
-     `public/brand/getronics-logo-white.svg` and set `LOGO_SRC` in that file. It is
-     served same-origin, so `img-src 'self'` covers it.
-   - The book's rules apply: unmodified, no effects, clear space equal to the "G"
-     height, at least 68 px wide on screen.
+6. **The logo is the brand book's own approved artwork.**
+   - The header and the sign-in panel are black, so they use the white version,
+     the book's version for dark backgrounds. It is taken unmodified from the
+     book's logo page as a PNG (`src/brand/getronics-logo-white.png`). Nothing was
+     taken from getronics.com.
+   - Its transparent margin is kept as the clear space. At 40 px tall the artwork
+     is about 86 px wide, above the book's 68 px screen minimum. Nothing is
+     stretched, recoloured or given an effect.
+   - The favicon (`src/app/icon.png`) is the green "g" brandmark, centred
+     unaltered on a transparent square. The book names the brandmark for
+     favicons.
+   - The logo is imported, so it is bundled and served from `/_next/static`. The
+     standalone container does not ship `public/`, and `img-src 'self'` covers
+     the file.
+   - If brand supplies vector (SVG) masters, they replace these files one for
+     one.
 
 7. **Behaviour is unchanged.** The following are not touched:
    - role-driven navigation and its permission filter;
@@ -133,8 +142,7 @@ rounding. This ADR uses the book's values.
 - The circle and the Mint selection are the only new decoration. There are no
   images, gradients or icon sets: the book allows only its own icon library, and we
   do not have it.
-- Open: the approved logo files (white for the header, and the full-colour version
-  if a light header is ever wanted), and confirmation from the brand team that the
-  open stand-in fonts are acceptable. A licensed webfont kit, if Getronics has one
+- Open: confirmation from the brand team that the open stand-in fonts are
+  acceptable, and vector logo masters if they want them to replace the PNGs. A licensed webfont kit, if Getronics has one
   for internal applications, would replace `src/fonts/` and leave the rest
   unchanged.

@@ -129,7 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         data-chrome
         className="sticky top-0 z-10 flex min-h-14 flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-chrome px-4 py-2 text-chrome-ink lg:px-6"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <BrandLogo />
           <span aria-hidden="true" className="h-6 w-px bg-chrome-line" />
           <Link href="/" className="font-display text-base font-bold tracking-tight text-chrome-ink">

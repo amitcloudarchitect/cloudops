@@ -37,7 +37,7 @@ Playwright starts the API and the console unless they are running. First run:
 | Path | What |
 |---|---|
 | `src/styles/tokens.css` | every colour and band, light and dark: the one file a rebrand changes |
-| `src/fonts/`, `src/components/BrandLogo.tsx` | the open stand-in fonts and the logo slot (ADR 0024) |
+| `src/fonts/`, `src/brand/`, `src/components/BrandLogo.tsx` | the open stand-in fonts and the approved logo (ADR 0024) |
 | `src/lib/nav.ts` | modules and the permission each needs |
 | `src/lib/health.ts` | the one health scale and its thresholds |
 | `src/components/` | metric card, provenance, health badge, table, empty states, shell |

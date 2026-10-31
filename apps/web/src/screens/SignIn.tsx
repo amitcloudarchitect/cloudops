@@ -72,7 +72,7 @@ function Frame({ children }: { children: ReactNode }) {
         {/* The brand's circle, its one graphic element: green, large, at 20% opacity. */}
         <span aria-hidden="true" className="pointer-events-none absolute -right-24 -bottom-24 size-96 rounded-full bg-accent opacity-20" />
         <div className="self-start">
-          <BrandLogo />
+          <BrandLogo size="hero" />
         </div>
         <div className="relative max-w-sm">
           <p className="font-display text-3xl leading-tight font-bold">
