@@ -9,6 +9,7 @@ import { visibleModules } from "@/lib/nav";
 import { can, useSession } from "@/lib/session";
 
 import { BrandLogo } from "./BrandLogo";
+import { BrandPhoto } from "./BrandPhoto";
 import { EmptyState } from "./EmptyState";
 import { Loading } from "./Loading";
 import { ThemeToggle } from "./ThemeToggle";
@@ -22,6 +23,15 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   if (pathname === "/signin") return <main id="main">{children}</main>;
 
+  // Before the console opens (signed out, no access, unreachable): the state beside a
+  // Getronics background, the one place inside the shell where imagery appears (ADR 0024).
+  const welcome = (state: ReactNode) => (
+    <div className="card mx-auto grid max-w-5xl overflow-hidden md:grid-cols-2">
+      <BrandPhoto photo="atrium" className="min-h-56 md:min-h-[26rem]" />
+      <div className="flex items-center justify-center p-4">{state}</div>
+    </div>
+  );
+
   let content: ReactNode;
   let nav: ReactNode = null;
   let who: ReactNode = null;
@@ -31,25 +41,28 @@ export function AppShell({ children }: { children: ReactNode }) {
       break;
     case "signed-out": {
       const failure = state.status === "signed-out" ? state.failure : undefined;
-      content = failure ? (
+      content = welcome(failure ? (
         <EmptyState
           title="Sign-in did not complete"
+          plain
           next={`Microsoft did not complete the sign-in (${failure}). Try again; if it keeps failing, quote that code.`}
           action={{ label: "Sign in again", onClick: () => void signIn() }}
         />
       ) : (
         <EmptyState
           title="Sign in to use the console"
+          plain
           next="Use your Getronics account."
           action={{ label: "Sign in", onClick: () => void signIn() }}
         />
-      );
+      ));
       break;
     }
     case "no-access":
-      content = (
+      content = welcome(
         <EmptyState
           title="Your account has no access yet"
+          plain
           next={
             <>
               Getronics staff: a platform administrator assigns your role and customers. Customers: your organisation’s
@@ -61,15 +74,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               ) : null}
             </>
           }
-        />
+        />,
       );
       break;
     case "error":
-      content = (
+      content = welcome(
         <EmptyState
           title="The console could not reach the platform"
+          plain
           next={`Try again in a moment.${session.requestId ? ` Quote request ${session.requestId}.` : ""}`}
-        />
+        />,
       );
       break;
     case "ready": {
@@ -125,10 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         Skip to content
       </a>
-      <header
-        data-chrome
-        className="sticky top-0 z-10 flex min-h-14 flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-chrome px-4 py-2 text-chrome-ink lg:px-6"
-      >
+      <header className="sticky top-0 z-10 flex min-h-14 flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-chrome-line bg-chrome px-4 py-1.5 text-chrome-ink shadow-card lg:px-6">
         <div className="flex items-center gap-3">
           <BrandLogo />
           <span aria-hidden="true" className="h-6 w-px bg-chrome-line" />
@@ -143,7 +154,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => void signOut()}
-              className="btn border-chrome-line bg-chrome text-chrome-ink hover:border-chrome-ink hover:bg-chrome-raised"
+              className="btn btn-secondary"
             >
               Sign out
             </button>
