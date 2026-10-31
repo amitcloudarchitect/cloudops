@@ -14,10 +14,10 @@ import { date } from "@/lib/format";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
-const control = "w-full rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
-const label = "flex flex-col gap-1 text-xs font-medium text-muted";
-const primary = "rounded-control bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-60";
-const secondary = "rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink disabled:opacity-60";
+const control = "w-full field";
+const label = "flex flex-col gap-1 text-xs font-semibold text-muted";
+const primary = "btn btn-primary";
+const secondary = "btn btn-secondary";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Message = { kind: "ok" | "error"; text: string } | null;
@@ -79,7 +79,7 @@ function UserForm({
   }
 
   return (
-    <form onSubmit={submit} aria-labelledby="user-heading" className="space-y-3 rounded-card border border-line bg-surface p-4">
+    <form onSubmit={submit} aria-labelledby="user-heading" className="space-y-3 card p-4">
       <h2 id="user-heading" className="text-base font-semibold text-ink">
         {editing ? `Change ${editing.display_name}` : "Add a user"}
       </h2>

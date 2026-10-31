@@ -12,7 +12,7 @@ const STYLE: Record<Band, string> = {
 export function HealthBadge({ band, label }: { band: Band; label?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-control border px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${STYLE[band]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-semibold whitespace-nowrap ${STYLE[band]}`}
       data-band={band}
     >
       <span aria-hidden="true" className="inline-block size-2 rounded-full bg-current" />

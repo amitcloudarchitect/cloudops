@@ -43,7 +43,7 @@ export function Provenance({ metric }: { metric: AnyMetric }) {
         <time dateTime={metric.as_of}>{dateTime(metric.as_of)}</time>
       </span>
       {metric.is_modelled ? (
-        <span className="rounded-control border border-dashed border-modelled bg-modelled-bg px-1.5 font-medium text-modelled">
+        <span className="rounded-full border border-dashed border-modelled bg-modelled-bg px-2 font-semibold text-modelled">
           Modelled
         </span>
       ) : null}

@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { visibleModules } from "@/lib/nav";
 import { can, useSession } from "@/lib/session";
 
+import { BrandLogo } from "./BrandLogo";
 import { EmptyState } from "./EmptyState";
 import { Loading } from "./Loading";
 import { ThemeToggle } from "./ThemeToggle";
@@ -19,7 +20,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const session = useSession();
   const { signIn, signOut, state } = useAuth();
 
-  if (pathname === "/signin") return <main id="main" className="mx-auto max-w-2xl p-6">{children}</main>;
+  if (pathname === "/signin") return <main id="main">{children}</main>;
 
   let content: ReactNode;
   let nav: ReactNode = null;
@@ -77,7 +78,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       content = children;
       nav = (
         <nav aria-label="Modules">
-          <ul className="flex flex-wrap gap-1 lg:flex-col">
+          <ul className="flex flex-wrap gap-1 lg:flex-col lg:gap-0.5">
             {modules.map((m) => {
               const current = pathname === m.href || pathname.startsWith(`${m.href}/`);
               return (
@@ -85,10 +86,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                   <Link
                     href={m.href}
                     aria-current={current ? "page" : undefined}
-                    className={`block rounded-control px-3 py-2 text-sm font-medium ${
-                      current ? "bg-accent text-accent-ink" : "text-ink hover:bg-surface-raised"
+                    className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm ${
+                      current
+                        ? "bg-selected font-semibold text-ink"
+                        : "text-muted hover:bg-surface-raised hover:text-ink"
                     }`}
                   >
+                    {/* The brand's one shape, the circle: lit for the current module. */}
+                    <span
+                      aria-hidden="true"
+                      className={`size-2 shrink-0 rounded-full ${current ? "bg-brand" : "border border-line"}`}
+                    />
                     {m.label}
                   </Link>
                 </li>
@@ -98,42 +106,58 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       );
       who = (
-        <p className="text-sm text-muted">
-          <span className="font-medium text-ink">{state.status === "signed-in" ? state.name : ""}</span>{" "}
-          <span data-testid="role">{me.role}</span>
-          {me.kind === "customer" ? " · Customer" : ""}
+        <p className="flex flex-wrap items-center gap-2 text-sm text-chrome-muted">
+          <span className="font-semibold text-chrome-ink">{state.status === "signed-in" ? state.name : ""}</span>{" "}
+          <span className="rounded-full border border-chrome-line px-2 py-0.5 text-xs">
+            <span data-testid="role">{me.role}</span>
+            {me.kind === "customer" ? " · Customer" : ""}
+          </span>
         </p>
       );
     }
   }
 
   return (
-    <div className="min-h-screen">
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-10 focus:bg-surface focus:p-2">
+    <div className="flex min-h-screen flex-col">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-20 focus:rounded-control focus:bg-surface focus:p-2 focus:text-ink"
+      >
         Skip to content
       </a>
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-surface px-4 py-3">
-        <Link href="/" className="text-lg font-semibold text-ink">
-          CloudOps <span className="font-normal text-muted">Operations</span>
-        </Link>
-        <div className="flex flex-wrap items-center gap-4">
+      <header
+        data-chrome
+        className="sticky top-0 z-10 flex min-h-14 flex-wrap items-center justify-between gap-x-6 gap-y-2 bg-chrome px-4 py-2 text-chrome-ink lg:px-6"
+      >
+        <div className="flex items-center gap-3">
+          <BrandLogo />
+          <span aria-hidden="true" className="h-6 w-px bg-chrome-line" />
+          <Link href="/" className="font-display text-base font-bold tracking-tight text-chrome-ink">
+            CloudOps <span className="font-normal text-chrome-muted">Operations</span>
+          </Link>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           {who}
           <ThemeToggle />
           {session.status === "ready" ? (
             <button
               type="button"
               onClick={() => void signOut()}
-              className="rounded-control border border-line px-3 py-1 text-sm text-ink hover:bg-surface-raised"
+              className="btn border-chrome-line bg-chrome text-chrome-ink hover:border-chrome-ink hover:bg-chrome-raised"
             >
               Sign out
             </button>
           ) : null}
         </div>
       </header>
-      <div className="mx-auto flex max-w-screen-2xl flex-col gap-4 p-4 lg:flex-row">
-        {nav ? <aside className="lg:w-52 lg:shrink-0">{nav}</aside> : null}
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1">
-          {content}
+      <div className="flex flex-1 flex-col lg:flex-row">
+        {nav ? (
+          <aside className="border-b border-line-subtle bg-surface px-3 py-2 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-5">
+            {nav}
+          </aside>
+        ) : null}
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 lg:px-8 lg:py-7">
+          <div className="mx-auto max-w-screen-2xl">{content}</div>
         </main>
       </div>
     </div>

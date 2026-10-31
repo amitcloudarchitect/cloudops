@@ -71,7 +71,7 @@ export function CustomerOverviewView() {
           {customers.map((c) => (
             <li key={c.tenant.id} aria-labelledby={`customer-${c.tenant.id}`}>
               {many ? (
-                <h2 id={`customer-${c.tenant.id}`} className="mb-2 text-lg font-semibold text-ink">
+                <h2 id={`customer-${c.tenant.id}`} className="mb-2 section-title">
                   {c.tenant.name}
                 </h2>
               ) : (

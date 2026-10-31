@@ -141,7 +141,7 @@ export function Margin() {
       header: "Customer",
       value: (m) => m.tenant.name,
       render: (m) => (
-        <Link href={link(m.tenant.id)} className="font-medium text-accent underline">
+        <Link href={link(m.tenant.id)} className="link font-medium">
           {m.tenant.name}
         </Link>
       ),
@@ -272,7 +272,7 @@ export function Margin() {
         />
       </div>
       <section aria-labelledby="margin-customers" className="space-y-2">
-        <h2 id="margin-customers" className="text-lg font-semibold text-ink">
+        <h2 id="margin-customers" className="section-title">
           {periodLabel(data.period)}
           {notCapturedCount > 0 ? <span className="ml-2 text-sm font-normal text-muted">{count(notCapturedCount)} not captured</span> : null}
         </h2>

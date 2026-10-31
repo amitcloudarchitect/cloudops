@@ -31,10 +31,10 @@ export function ThemeToggle() {
     }
   }, [theme]);
   return (
-    <label className="flex items-center gap-2 text-sm text-muted">
+    <label className="flex items-center gap-2 text-sm text-chrome-muted">
       Theme
       <select
-        className="rounded-control border border-line bg-surface px-2 py-1 text-ink"
+        className="min-h-8 rounded-control border border-chrome-line bg-chrome-raised px-2 py-1 text-sm text-chrome-ink hover:border-chrome-ink"
         value={theme}
         onChange={(e) => setTheme(e.target.value as Theme)}
       >

@@ -41,7 +41,7 @@ export function Posture() {
       value: (f) => f.asset_name,
       render: (f) =>
         f.resource_id ? (
-          <Link href={`/resources/${f.resource_id}`} className="font-medium text-accent underline">
+          <Link href={`/resources/${f.resource_id}`} className="link font-medium">
             {f.asset_name ?? "Resource"}
           </Link>
         ) : (

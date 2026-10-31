@@ -4,24 +4,49 @@
  * utilities these tokens generate (bg-surface, text-muted, border-line, ...),
  * never a raw colour.
  *
+ * Brand: the Getronics Brand Book (2026, v1.1) and getronics.com; ADR 0024 has the
+ * sources. White and black base layers; Getronics Green for buttons and key
+ * accents, in subtle presence and never as text on white or grey; the neon logo
+ * green only on the logo and small marks (the active dot); Mint and Frost Grey as
+ * secondary fills and dividers.
+ *
  * Contrast: every text/background pair below meets WCAG 2.1 AA (4.5:1 for body
  * text, 3:1 for large text and UI boundaries) in both themes; e2e/a11y.spec.ts
  * checks the rendered screens with axe.
  */
 
 @theme inline {
-  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* The brand's three families, each with a self-hosted open stand-in
+   * (src/app/layout.tsx loads them; ADR 0024 says which stands in for which). */
+  --font-sans: var(--font-body);
+  --font-display: var(--font-title);
+  --font-heading: var(--font-subhead);
+  --font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Menlo, monospace;
 
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
   --color-surface-raised: var(--surface-raised);
   --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
+  /* Links: black (Mint in dark) and underlined, the one underline the brand allows. */
+  --color-link: var(--link);
+  /* The current item (navigation): a tint of Mint. */
+  --color-selected: var(--selected);
   --color-focus: var(--focus);
+
+  /* Logo Neon Green: the logo and small marks only (the active dot, the logo slot). */
+  --color-brand: var(--brand);
+  /* The header band: black in both themes, a brand base layer. */
+  --color-chrome: var(--chrome);
+  --color-chrome-ink: var(--chrome-ink);
+  --color-chrome-muted: var(--chrome-muted);
+  --color-chrome-line: var(--chrome-line);
+  --color-chrome-raised: var(--chrome-raised);
 
   /* Health banding: one scale for the whole product (lib/health.ts). */
   --color-band-healthy: var(--band-healthy);
@@ -39,23 +64,50 @@
   --color-modelled: var(--modelled);
   --color-modelled-bg: var(--modelled-bg);
 
+  /* Shape and depth: getronics.com's small radii (0.8rem cards at its 10px rem). */
   --radius-card: 0.5rem;
-  --radius-control: 0.375rem;
+  --radius-control: 0.25rem;
+  --shadow-card: var(--card-shadow);
+  --shadow-raised: var(--raised-shadow);
 }
 
 :root {
-  --font-body: "Segoe UI", "Inter";
+  /* The brand's three: Helvetica (page titles), Avenir (section headings), Segoe UI
+   * (body). Where one is not installed, its open stand-in, self-hosted under the
+   * CSP's font-src 'self': Arimo, Nunito Sans, Open Sans. */
+  --font-title: "Helvetica Neue", Helvetica, var(--font-arimo), Arial, sans-serif;
+  --font-subhead: "Avenir Next", Avenir, var(--font-nunito-sans), sans-serif;
+  --font-body: "Segoe UI", var(--font-open-sans), system-ui, sans-serif;
   color-scheme: light;
 
-  --canvas: #f4f6f8;
+  /* Brand Book colours: Black #000000, White #FFFFFF, Getronics Green #57BD37,
+   * Logo Neon Green #03E100, Mint #A4D9A3, Frost Grey #DEE4E7, type grey #697377.
+   * Tints of Frost Grey and Mint fill the canvas and selections; the grey text is
+   * one step darker than #697377 so it holds 4.5:1 on those tints too. */
+  --brand: #03e100;
+
+  --canvas: #f5f7f8;
   --surface: #ffffff;
-  --surface-raised: #eef1f4;
-  --line: #8a96a3;
-  --ink: #16202b;
-  --muted: #4d5b69;
-  --accent: #0b5cad;
-  --accent-ink: #ffffff;
-  --focus: #b34700;
+  --surface-raised: #eef2f3;
+  --line: #7d898f;
+  --line-subtle: #dee4e7;
+  --ink: #000000;
+  --muted: #5f686c;
+  --accent: #57bd37;
+  --accent-hover: #4ca92f;
+  --accent-ink: #000000;
+  --link: #000000;
+  --selected: #e4f3e3;
+  --focus: #000000;
+
+  --chrome: #000000;
+  --chrome-ink: #ffffff;
+  --chrome-muted: #b7c0c4;
+  --chrome-line: #2c3237;
+  --chrome-raised: #1d2124;
+
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  --raised-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
 
   --band-healthy: #1d6b36;
   --band-healthy-bg: #e3f3e8;
@@ -63,28 +115,35 @@
   --band-watch-bg: #fbf1cc;
   --band-at-risk: #9a4100;
   --band-at-risk-bg: #fde6d6;
-  --band-critical: #a1121d;
-  --band-critical-bg: #fbe1e3;
-  --band-unknown: #4d5b69;
-  --band-unknown-bg: #e9edf1;
+  --band-critical: #b0102a;
+  --band-critical-bg: #fde4e8;
+  --band-unknown: #5f686c;
+  --band-unknown-bg: #eef2f3;
 
-  --modelled: #5b3d99;
-  --modelled-bg: #efe9fa;
+  --modelled: #554f9c;
+  --modelled-bg: #efeef9;
 }
 
 /* Dark: the system preference unless the user chose light; or chosen explicitly. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --canvas: #0f151b;
-    --surface: #18212a;
-    --surface-raised: #212c37;
-    --line: #6c7a88;
-    --ink: #e8edf2;
-    --muted: #a9b6c3;
-    --accent: #6cb4ff;
-    --accent-ink: #0b1620;
-    --focus: #ffb366;
+    --canvas: #0c0e10;
+    --surface: #16191c;
+    --surface-raised: #22272b;
+    --line: #6f7a80;
+    --line-subtle: #2c3237;
+    --ink: #f2f4f5;
+    --muted: #a3adb2;
+    --accent: #57bd37;
+    --accent-hover: #6fcc52;
+    --accent-ink: #000000;
+    --link: #a4d9a3;
+    --selected: #1c2b1d;
+    --focus: #57bd37;
+
+    --card-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    --raised-shadow: 0 4px 16px rgb(0 0 0 / 0.5);
 
     --band-healthy: #7fd69a;
     --band-healthy-bg: #173322;
@@ -92,27 +151,34 @@
     --band-watch-bg: #3a3112;
     --band-at-risk: #ffad70;
     --band-at-risk-bg: #3f2412;
-    --band-critical: #ff8f97;
-    --band-critical-bg: #45161b;
-    --band-unknown: #a9b6c3;
-    --band-unknown-bg: #26313c;
+    --band-critical: #ff8f9d;
+    --band-critical-bg: #45161f;
+    --band-unknown: #a3adb2;
+    --band-unknown-bg: #262c31;
 
-    --modelled: #c4a8ff;
-    --modelled-bg: #2c2340;
+    --modelled: #b9b5f0;
+    --modelled-bg: #2a2842;
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --canvas: #0f151b;
-  --surface: #18212a;
-  --surface-raised: #212c37;
-  --line: #6c7a88;
-  --ink: #e8edf2;
-  --muted: #a9b6c3;
-  --accent: #6cb4ff;
-  --accent-ink: #0b1620;
-  --focus: #ffb366;
+  --canvas: #0c0e10;
+  --surface: #16191c;
+  --surface-raised: #22272b;
+  --line: #6f7a80;
+  --line-subtle: #2c3237;
+  --ink: #f2f4f5;
+  --muted: #a3adb2;
+  --accent: #57bd37;
+  --accent-hover: #6fcc52;
+  --accent-ink: #000000;
+  --link: #a4d9a3;
+  --selected: #1c2b1d;
+  --focus: #57bd37;
+
+  --card-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --raised-shadow: 0 4px 16px rgb(0 0 0 / 0.5);
 
   --band-healthy: #7fd69a;
   --band-healthy-bg: #173322;
@@ -120,11 +186,11 @@
   --band-watch-bg: #3a3112;
   --band-at-risk: #ffad70;
   --band-at-risk-bg: #3f2412;
-  --band-critical: #ff8f97;
-  --band-critical-bg: #45161b;
-  --band-unknown: #a9b6c3;
-  --band-unknown-bg: #26313c;
+  --band-critical: #ff8f9d;
+  --band-critical-bg: #45161f;
+  --band-unknown: #a3adb2;
+  --band-unknown-bg: #262c31;
 
-  --modelled: #c4a8ff;
-  --modelled-bg: #2c2340;
+  --modelled: #b9b5f0;
+  --modelled-bg: #2a2842;
 }

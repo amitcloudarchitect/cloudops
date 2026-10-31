@@ -4,7 +4,8 @@ import { EmptyState } from "./EmptyState";
 
 export function Loading({ what }: { what: string }) {
   return (
-    <p role="status" aria-live="polite" className="py-6 text-sm text-muted">
+    <p role="status" aria-live="polite" className="flex items-center gap-2 py-6 text-sm text-muted">
+      <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-accent" />
       Loading {what}…
     </p>
   );

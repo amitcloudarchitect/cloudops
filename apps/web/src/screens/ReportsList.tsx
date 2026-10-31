@@ -66,10 +66,10 @@ function Generate() {
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} aria-label="Generate a monthly pack" className="mb-6 grid gap-3 rounded-card border border-line bg-surface p-4 sm:grid-cols-3">
+    <form onSubmit={(e) => void submit(e)} aria-label="Generate a monthly pack" className="mb-6 grid gap-3 card p-4 sm:grid-cols-3">
       <label className="text-sm text-ink">
         Customer
-        <select name="tenant" required className="mt-1 block w-full rounded-control border border-line bg-surface px-2 py-1.5">
+        <select name="tenant" required className="mt-1 block w-full field">
           {me.tenants.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -79,10 +79,10 @@ function Generate() {
       </label>
       <label className="text-sm text-ink">
         Month
-        <input name="period" type="month" required defaultValue={lastMonth()} className="mt-1 block w-full rounded-control border border-line bg-surface px-2 py-1.5" />
+        <input name="period" type="month" required defaultValue={lastMonth()} className="mt-1 block w-full field" />
       </label>
       <div className="flex items-end">
-        <button type="submit" disabled={busy} className="rounded-control bg-accent px-3 py-1.5 text-sm font-semibold text-accent-ink disabled:opacity-60">
+        <button type="submit" disabled={busy} className="btn btn-primary">
           Generate pack
         </button>
       </div>
@@ -122,17 +122,17 @@ function Portfolio() {
   ];
   return (
     <section aria-labelledby="portfolio-heading" className="mt-8">
-      <h2 id="portfolio-heading" className="mb-2 text-lg font-semibold text-ink">
+      <h2 id="portfolio-heading" className="mb-2 section-title">
         Portfolio
       </h2>
       <div className="mb-3 flex flex-wrap gap-3">
         <label className="text-sm text-ink">
           Month
-          <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="mt-1 block rounded-control border border-line bg-surface px-2 py-1.5" />
+          <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="mt-1 block field" />
         </label>
         <label className="text-sm text-ink">
           Reporting currency
-          <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="mt-1 block rounded-control border border-line bg-surface px-2 py-1.5">
+          <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="mt-1 block field">
             {CURRENCIES.map((c) => (
               <option key={c}>{c}</option>
             ))}
@@ -180,7 +180,7 @@ export function ReportsList() {
       header: "Pack",
       value: (p) => `${p.tenant.name} ${p.period} v${p.version}`,
       render: (p) => (
-        <Link href={`/reports/${p.id}`} className="font-medium text-accent underline">
+        <Link href={`/reports/${p.id}`} className="link font-medium">
           {p.tenant.name} · {p.period} · version {p.version}
         </Link>
       ),

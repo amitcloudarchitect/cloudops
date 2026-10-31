@@ -25,10 +25,10 @@ import { count, date, dateTime } from "@/lib/format";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
-const control = "w-full rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
-const label = "flex flex-col gap-1 text-xs font-medium text-muted";
-const primary = "rounded-control bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-60";
-const secondary = "rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink disabled:opacity-60";
+const control = "w-full field";
+const label = "flex flex-col gap-1 text-xs font-semibold text-muted";
+const primary = "btn btn-primary";
+const secondary = "btn btn-secondary";
 
 type Message = { kind: "ok" | "error"; text: string } | null;
 
@@ -117,7 +117,7 @@ function MapForm({ target, tenants, onDone, onCancel }: { target: Target; tenant
   }
 
   return (
-    <form onSubmit={submit} aria-labelledby="map-heading" className="space-y-3 rounded-card border border-line bg-surface p-4">
+    <form onSubmit={submit} aria-labelledby="map-heading" className="space-y-3 card p-4">
       <h3 id="map-heading" className="text-base font-semibold text-ink">
         Map a name to a customer
       </h3>
@@ -212,7 +212,7 @@ function PendingRow({ proposal, approvers, onDecided }: { proposal: ProposalView
   }
 
   return (
-    <li className="rounded-card border border-line bg-surface p-3" data-testid="pending-proposal">
+    <li className="card p-3" data-testid="pending-proposal">
       <p className="text-sm text-ink">
         <span className="font-semibold">“{proposal.alias}”</span> <span className="text-muted">from {proposal.source_system} →</span>{" "}
         <span className="font-semibold">{proposal.tenant.name}</span>
@@ -368,7 +368,7 @@ function DecidedRow({ proposal, onRequested }: { proposal: ProposalView; onReque
   const last = proposal.reprocess;
   const mayAsk = approved && !!decision?.held_occurrences && (!last || last.status === "refused" || last.status === "failed");
   return (
-    <li className="rounded-card border border-line bg-surface p-3 text-sm text-ink" data-testid="decided-proposal">
+    <li className="card p-3 text-sm text-ink" data-testid="decided-proposal">
       <span className="font-semibold">“{proposal.alias}”</span> <span className="text-muted">from {proposal.source_system} →</span> {proposal.tenant.name}{" "}
       <HealthBadge band={approved ? "healthy" : "unknown"} label={approved ? "Approved" : "Rejected"} />
       <span className="block text-xs text-muted">
@@ -441,7 +441,7 @@ export function CustomerMapping() {
         ) : (
           <button
             type="button"
-            className="font-medium text-accent underline"
+            className="link font-medium"
             aria-label={`Map ${q.alias}`}
             onClick={() => setTarget({ source: q.source_system, alias: q.alias, suggested: q.suggested_tenant?.id ?? null, fromQuarantine: true })}
           >
@@ -499,7 +499,7 @@ export function CustomerMapping() {
         {target ? <MapForm key={`${target.source}:${target.alias}`} target={target} tenants={tenants} onDone={done} onCancel={() => setTarget(null)} /> : null}
 
         <section aria-labelledby="pending-heading">
-          <h2 id="pending-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="pending-heading" className="mb-2 section-title">
             Awaiting approval ({pending.length})
           </h2>
           {pending.length === 0 ? (
@@ -514,7 +514,7 @@ export function CustomerMapping() {
         </section>
 
         <section aria-labelledby="quarantine-heading">
-          <h2 id="quarantine-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="quarantine-heading" className="mb-2 section-title">
             Quarantined names
           </h2>
           <p className="mb-2 text-sm text-muted">
@@ -535,7 +535,7 @@ export function CustomerMapping() {
         </section>
 
         <section aria-labelledby="tenants-heading">
-          <h2 id="tenants-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="tenants-heading" className="mb-2 section-title">
             Customers and their names
           </h2>
           <DataTable
@@ -550,7 +550,7 @@ export function CustomerMapping() {
         </section>
 
         <section aria-labelledby="decided-heading">
-          <h2 id="decided-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="decided-heading" className="mb-2 section-title">
             Decided
           </h2>
           {decided.length === 0 ? (

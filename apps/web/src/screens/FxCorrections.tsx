@@ -25,8 +25,8 @@ import { useApi } from "@/lib/useApi";
 
 type Message = { kind: "ok" | "error"; text: string } | null;
 
-const control = "w-full rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
-const labelStyle = "flex flex-col gap-1 text-xs font-medium text-muted";
+const control = "w-full field";
+const labelStyle = "flex flex-col gap-1 text-xs font-semibold text-muted";
 const RATE = /^\d{1,10}(\.\d{1,8})?$/;
 
 function rateText(value: string): string {
@@ -99,7 +99,7 @@ function CorrectionForm({ onSaved }: { onSaved: (message: Message) => void }) {
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className="space-y-3 rounded-card border border-line bg-surface p-4" aria-labelledby="fx-form-heading">
+    <form onSubmit={(e) => void submit(e)} className="space-y-3 card p-4" aria-labelledby="fx-form-heading">
       <h3 id="fx-form-heading" className="font-semibold text-ink">
         Correct a rate
       </h3>
@@ -151,7 +151,7 @@ function CorrectionForm({ onSaved }: { onSaved: (message: Message) => void }) {
           {error}
         </p>
       ) : null}
-      <button type="submit" disabled={busy} className="rounded-control bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-60">
+      <button type="submit" disabled={busy} className="btn btn-primary">
         Record correction
       </button>
     </form>
@@ -193,7 +193,7 @@ export function FxCorrections({ manage }: { manage: boolean }) {
 
   return (
     <section aria-labelledby="fx-heading" className="space-y-3">
-      <h2 id="fx-heading" className="text-lg font-semibold text-ink">
+      <h2 id="fx-heading" className="section-title">
         FX corrections
       </h2>
       <p className="text-sm text-muted">

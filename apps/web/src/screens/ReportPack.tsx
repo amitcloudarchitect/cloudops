@@ -66,7 +66,7 @@ function SectionView({ section, currency }: { section: SectionSnapshot; currency
           <thead>
             <tr>
               {t.columns.map((c) => (
-                <th key={c} scope="col" className="border-b border-line py-1 pr-3 font-medium text-muted">
+                <th key={c} scope="col" className="border-b border-line py-1.5 pr-3 font-semibold text-muted">
                   {c}
                 </th>
               ))}
@@ -76,7 +76,7 @@ function SectionView({ section, currency }: { section: SectionSnapshot; currency
             {t.rows.map((row, i) => (
               <tr key={i}>
                 {row.map((cell, j) => (
-                  <td key={j} className="border-b border-line py-1 pr-3 tabular-nums">
+                  <td key={j} className="border-b border-line-subtle py-1.5 pr-3 tabular-nums">
                     {cell ? shown(cell, t.kinds[j] ?? "text", currency) : "-"}
                   </td>
                 ))}
@@ -125,14 +125,14 @@ function Narrative({ pack, n, editable, onChange }: { pack: string; n: Narrative
         >
           <label className="block text-ink">
             Narrative for {title}
-            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={6000} className="mt-1 block w-full rounded-control border border-line bg-surface p-2" />
+            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={6000} className="mt-1 block w-full field" />
           </label>
           <div className="mt-1 flex flex-wrap gap-2">
-            <button type="submit" disabled={busy || !text.trim()} className="rounded-control border border-line px-2 py-1 font-medium disabled:opacity-60">
+            <button type="submit" disabled={busy || !text.trim()} className="btn btn-secondary">
               Save narrative
             </button>
             {n.draft_text ? (
-              <button type="button" className="rounded-control border border-line px-2 py-1" onClick={() => setText(n.draft_text ?? "")}>
+              <button type="button" className="btn btn-secondary" onClick={() => setText(n.draft_text ?? "")}>
                 Start from the draft
               </button>
             ) : null}
@@ -140,7 +140,7 @@ function Narrative({ pack, n, editable, onChange }: { pack: string; n: Narrative
               <button
                 type="button"
                 disabled={busy}
-                className="rounded-control border border-line px-2 py-1"
+                className="btn btn-secondary"
                 onClick={() => void act((t) => apiPost(t, "/v1/reports/packs/{pack_id}/narratives/{section}/draft", { pack_id: pack, section: n.section }, undefined), `A new draft for ${title} was requested.`)}
               >
                 Request a new draft
@@ -204,16 +204,16 @@ export function ReportPack({ id }: { id: string }) {
       >
         <div className="flex flex-wrap items-center gap-2">
           <HealthBadge band={STATUS[pack.status].band} label={STATUS[pack.status].label} />
-          <button type="button" onClick={() => void pdf()} className="rounded-control border border-line px-3 py-1.5 text-sm font-medium">
+          <button type="button" onClick={() => void pdf()} className="btn btn-secondary">
             Download PDF
           </button>
           {publish && pack.status === "draft" ? (
-            <button type="button" disabled={busy || !pack.releasable} onClick={() => void release("approve")} className="rounded-control bg-accent px-3 py-1.5 text-sm font-semibold text-accent-ink disabled:opacity-60">
+            <button type="button" disabled={busy || !pack.releasable} onClick={() => void release("approve")} className="btn btn-primary">
               Approve
             </button>
           ) : null}
           {publish && pack.status === "approved" ? (
-            <button type="button" disabled={busy} onClick={() => void release("publish")} className="rounded-control bg-accent px-3 py-1.5 text-sm font-semibold text-accent-ink">
+            <button type="button" disabled={busy} onClick={() => void release("publish")} className="btn btn-primary">
               Publish
             </button>
           ) : null}
@@ -233,8 +233,8 @@ export function ReportPack({ id }: { id: string }) {
         {pack.sections.map((s) => {
           const n = narratives.get(s.key);
           return (
-            <section key={s.key} aria-labelledby={`section-${s.key}`} className="rounded-card border border-line bg-surface p-4">
-              <h2 id={`section-${s.key}`} className="mb-2 text-lg font-semibold text-ink">
+            <section key={s.key} aria-labelledby={`section-${s.key}`} className="card p-4">
+              <h2 id={`section-${s.key}`} className="mb-2 section-title">
                 {s.title}
               </h2>
               <SectionView section={s} currency={pack.contract_currency} />

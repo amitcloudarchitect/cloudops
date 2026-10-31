@@ -39,7 +39,7 @@ export function usePeriodChoice(): PeriodChoice & { set: (next: Partial<PeriodCh
   return { period, currency, set, query };
 }
 
-const control = "rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
+const control = "field";
 
 export function PeriodControls({
   choice,
@@ -54,7 +54,7 @@ export function PeriodControls({
   const help = useId();
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+      <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
         Month
         <input
           type="month"
@@ -66,7 +66,7 @@ export function PeriodControls({
           }}
         />
       </label>
-      <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+      <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
         Reporting currency
         <select
           className={control}

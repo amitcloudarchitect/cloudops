@@ -68,7 +68,7 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
   const choice = usePeriodChoice();
   const loaded = useApi(load(tenantId, choice.period, choice.currency), `finops:${tenantId}:${choice.query}`);
   const back = (
-    <Link href={`/finops${choice.query ? `?${choice.query}` : ""}`} className="text-sm font-medium text-accent underline">
+    <Link href={`/finops${choice.query ? `?${choice.query}` : ""}`} className="text-sm link font-medium">
       All customers
     </Link>
   );
@@ -213,7 +213,7 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
       </div>
 
       <div
-        className={`mb-6 rounded-card border border-l-4 border-line bg-surface p-4 ${cost.verification === "verified" ? "border-l-band-healthy" : "border-l-band-at-risk border-dashed"}`}
+        className={`mb-6 rounded-card border border-l-4 border-line bg-surface p-4 shadow-card ${cost.verification === "verified" ? "border-l-band-healthy" : "border-l-band-at-risk border-dashed"}`}
         role="status"
       >
         <p className="flex flex-wrap items-center gap-2 font-semibold text-ink">
@@ -227,7 +227,7 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
 
       <div className="space-y-8">
         <section aria-labelledby="charges-heading" className="space-y-2">
-          <h2 id="charges-heading" className="text-lg font-semibold text-ink">
+          <h2 id="charges-heading" className="section-title">
             Charges by class
           </h2>
           <p className="text-sm text-muted">Only consumption feeds margin; licences, marketplace, support, reservations, tax and credits do not.</p>
@@ -244,7 +244,7 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
         </section>
 
         <section aria-labelledby="checks-heading" className="space-y-2">
-          <h2 id="checks-heading" className="text-lg font-semibold text-ink">
+          <h2 id="checks-heading" className="section-title">
             Reconciliation per account
           </h2>
           <p className="text-sm text-muted">
@@ -264,7 +264,7 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
         </section>
 
         <section aria-labelledby="allocation-heading" className="space-y-4">
-          <h2 id="allocation-heading" className="text-lg font-semibold text-ink">
+          <h2 id="allocation-heading" className="section-title">
             Allocation
           </h2>
           <p className="text-sm text-muted">From each resource’s tags. Cost with no tag, or no matching resource, is unallocated and shown as its own row.</p>
@@ -275,7 +275,7 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
         </section>
 
         <section aria-labelledby="anomalies-heading" className="space-y-2">
-          <h2 id="anomalies-heading" className="text-lg font-semibold text-ink">
+          <h2 id="anomalies-heading" className="section-title">
             Anomalies, last 30 days
           </h2>
           {data.anomalies[0] ? <Provenance metric={data.anomalies[0].observed} /> : null}

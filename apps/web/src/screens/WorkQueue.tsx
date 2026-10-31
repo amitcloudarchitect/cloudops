@@ -59,7 +59,7 @@ export function WorkQueue() {
       header: "Number",
       value: (w) => w.number,
       render: (w) => (
-        <Link href={`/work/${encodeURIComponent(w.number)}`} className="font-medium text-accent underline">
+        <Link href={`/work/${encodeURIComponent(w.number)}`} className="link font-medium">
           {w.number}
         </Link>
       ),
@@ -118,10 +118,10 @@ export function WorkQueue() {
         title="Work queue"
         subtitle="Incidents, changes, requests and tasks from ServiceNow, for your customers."
       >
-        <label className="flex flex-col text-xs font-medium text-muted">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
           Show
           <select
-            className="rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink"
+            className="field"
             value={status}
             onChange={(e) => setStatus(e.target.value as Status)}
           >

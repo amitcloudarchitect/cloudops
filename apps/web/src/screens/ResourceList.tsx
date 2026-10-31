@@ -23,7 +23,7 @@ export function ResourceList() {
       header: "Name",
       value: (r) => r.name,
       render: (r) => (
-        <Link href={`/resources/${r.id}`} className="font-medium text-accent underline">
+        <Link href={`/resources/${r.id}`} className="link font-medium">
           {r.name}
         </Link>
       ),

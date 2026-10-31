@@ -31,7 +31,7 @@ export function Approvals() {
       value: (c) => c.number,
       render: (c) =>
         tickets ? (
-          <Link href={`/work/${encodeURIComponent(c.number)}`} className="font-medium text-accent underline">
+          <Link href={`/work/${encodeURIComponent(c.number)}`} className="link font-medium">
             {c.number}
           </Link>
         ) : (
@@ -54,7 +54,7 @@ export function Approvals() {
   return (
     <>
       <PageHeader title="Approvals" subtitle="Open changes that affect your services, oldest first." />
-      <p role="note" className="mb-4 rounded-card border border-line bg-surface p-3 text-sm text-muted">
+      <p role="note" className="mb-4 card p-3 text-sm text-muted">
         Read-only for now. Approving or rejecting a change from here arrives with automated remediation; until then,
         approve in ServiceNow as today.
       </p>
