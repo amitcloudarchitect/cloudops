@@ -17,6 +17,7 @@ export type ReviewView = Schemas["ReviewView"];
 export type ReviewRequest = Schemas["ReviewRequest"];
 export type ResourceContext = Schemas["ResourceContext"];
 export type CustomerOverview = Schemas["CustomerOverview"];
+export type CustomerPrice = Schemas["CustomerPrice"];
 export type MetricInt = Schemas["Metric_int_"];
 export type MetricDecimal = Schemas["Metric_Decimal_"];
 export type ApiErrorBody = { error: { code: string; request_id: string } };

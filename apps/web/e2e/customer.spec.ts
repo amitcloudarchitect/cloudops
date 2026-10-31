@@ -37,5 +37,6 @@ test("its overview is one customer, figures it may see", async ({ signedIn: page
   await page.goto("/customers");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Northwind/);
   await expect(page.getByRole("link", { name: /^Open incidents.*View the evidence$/ })).toHaveCount(1);
-  await expect(page.getByText(/Cloud cost, 30 days/).first()).toBeVisible();
+  await expect(page.getByText(/Cloud consumption, 30 days/).first()).toBeVisible();
+  await expect(page.getByText(/Cloud cost/)).toHaveCount(0);
 });
