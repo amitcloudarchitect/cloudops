@@ -2,8 +2,11 @@
 
 // FX corrections (step 16; ADR 0019): Finance corrects a rate with a reason, and
 // each correction is an explicit recorded entry, never an overwrite. Closed months
-// it touches are restated by the next month-end run as new versions. The list is
-// staff-only (cost.read); the form needs fx.manage, and the database checks again.
+// it touches are restated by the next month-end run as new versions. EUR anchors
+// every rate: the inverse and every pair with the moving currency follow the
+// correction, each listed as its own entry; for a pair without EUR, Finance says
+// which EUR leg moves. The list is staff-only (cost.read); the form needs
+// fx.manage, and the database checks again.
 
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -33,7 +36,9 @@ function rateText(value: string): string {
 function failure(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 403) return "Correcting FX rates is not available to your role.";
-    if (error.status === 409) return "The correction was not saved: that rate is already in force for that day.";
+    if (error.status === 409) return "The correction was not saved: that rate, and every rate derived from it, is already in force for that day.";
+    if (error.code === "eur_leg_required") return "Neither currency is EUR: choose which EUR leg moves.";
+    if (error.code === "no_held_rate") return "The correction was not saved: the held currency has no EUR rate on or before that day.";
     if (error.status === 422) return "The correction was not saved: check the currencies, date, rate and reason.";
   }
   return "The correction was not saved. Try again in a moment.";
@@ -41,7 +46,11 @@ function failure(error: unknown): string {
 
 function CorrectionForm({ onSaved }: { onSaved: (message: Message) => void }) {
   const { token } = useAuth();
-  const [form, setForm] = useState({ from: "", to: "EUR", kind: "average" as FxCorrectionRequest["rate_type"], on: "", rate: "", reason: "" });
+  const [form, setForm] = useState({ from: "", to: "EUR", kind: "average" as FxCorrectionRequest["rate_type"], on: "", rate: "", reason: "", moves: "" });
+  const pairFrom = form.from.trim().toUpperCase();
+  const pairTo = form.to.trim().toUpperCase();
+  // Without EUR in the pair, Finance names the EUR leg that moves; the other is held.
+  const needsLeg = CURRENCY_PATTERN.test(pairFrom) && CURRENCY_PATTERN.test(pairTo) && pairFrom !== pairTo && pairFrom !== "EUR" && pairTo !== "EUR";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,6 +64,10 @@ function CorrectionForm({ onSaved }: { onSaved: (message: Message) => void }) {
     }
     if (!RATE.test(form.rate.trim()) || /^0+(\.0+)?$/.test(form.rate.trim())) {
       setError("Enter the rate as a positive decimal with up to 8 places, such as 1.17245.");
+      return;
+    }
+    if (needsLeg && form.moves !== from && form.moves !== to) {
+      setError("Neither currency is EUR: choose which EUR leg moves.");
       return;
     }
     if (form.reason.trim().length < 3) {
@@ -71,6 +84,7 @@ function CorrectionForm({ onSaved }: { onSaved: (message: Message) => void }) {
         effective_date: form.on,
         rate: form.rate.trim(),
         reason: form.reason.trim(),
+        moves: needsLeg ? form.moves : null,
       });
       setForm((f) => ({ ...f, rate: "", reason: "" }));
       onSaved({
@@ -90,8 +104,8 @@ function CorrectionForm({ onSaved }: { onSaved: (message: Message) => void }) {
         Correct a rate
       </h3>
       <p className="text-xs text-muted">
-        The correction is recorded with your name and reason beside the rate it replaces. Closed months that used the old rate are restated as new
-        versions at the next month-end run.
+        The correction is recorded with your name and reason beside the rate it replaces. Its inverse and the rates derived from it through EUR
+        follow, each recorded too. Closed months that used the old rate are restated as new versions at the next month-end run.
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <label className={labelStyle}>
@@ -117,6 +131,16 @@ function CorrectionForm({ onSaved }: { onSaved: (message: Message) => void }) {
           Rate
           <input className={control} value={form.rate} required inputMode="decimal" autoComplete="off" onChange={(e) => setForm({ ...form, rate: e.target.value })} />
         </label>
+        {needsLeg ? (
+          <label className={labelStyle}>
+            EUR leg that moves
+            <select className={control} value={form.moves} onChange={(e) => setForm({ ...form, moves: e.target.value })}>
+              <option value="">Choose…</option>
+              <option value={pairFrom}>EUR → {pairFrom} moves, EUR → {pairTo} held</option>
+              <option value={pairTo}>EUR → {pairTo} moves, EUR → {pairFrom} held</option>
+            </select>
+          </label>
+        ) : null}
         <label className={`${labelStyle} sm:col-span-2 lg:col-span-1`}>
           Reason
           <input className={control} value={form.reason} required minLength={3} maxLength={500} onChange={(e) => setForm({ ...form, reason: e.target.value })} />

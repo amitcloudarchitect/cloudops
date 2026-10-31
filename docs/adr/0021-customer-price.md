@@ -5,7 +5,7 @@
 - **Amends:** ADR 0018 (the customer role's grant on `cost_fact`)
 - **Implements:** ADR 0002 D10 (commercial data never reaches a customer role); CLAUDE.md
   rule 5 (money). Migrations `0014_customer_price` (expand) and `0015_revoke_customer_cost`
-  (contract), `0016_pack_customer_price`, `0017_customer_price_detail` (contract),
+  (contract), `0017_pack_customer_price`, `0018_customer_price_detail` (contract),
   `services/api/.../bff.py` (`/v1/cost/summary`), `operations.py`
   (`/v1/customers`), the console's customer overview, the synthetic SOWs.
 
@@ -37,7 +37,7 @@ inferred.
    - **Price = amortized cost × (1 + the SOW's consumption uplift)**, per usage date, in
      the transaction currency of the cost line.
    - **The uplift is per SOW**: `sow.consumption_uplift`, a fraction (`0.08` is 8%),
-     `numeric(7,6)`, `0 < uplift < 10` (above 0 since 0017, decision 9). The SOW in force on the usage date
+     `numeric(7,6)`, `0 < uplift < 10` (above 0 since 0018, decision 9). The SOW in force on the usage date
      (`effective_from ≤ day ≤ effective_to`, inclusive, as the FinOps worker reads it)
      supplies it, so a renewal that changes the rate prices each day at its own rate.
    - **It applies to every charge class**: consumption, licence, marketplace, support,
@@ -115,7 +115,7 @@ inferred.
    its SOWs). Woodgrove has no SOW, so its customers would see "Not yet priced".
 
 8. **Report packs take the price at generation (user decision, 2026-10-31; migration
-   `0016_pack_customer_price`).** Packs are generated under a staff scope, which cannot
+   `0017_pack_customer_price`).** Packs are generated under a staff scope, which cannot
    call `customer_price`. The alternative, pricing when a customer opens a published pack,
    was rejected: a published pack would change silently when cost is restated or an uplift
    edited, and the approver would never see the customer's figure.
@@ -153,7 +153,7 @@ inferred.
      reads from `customer_monthly_price`.
 
 9. **The uplift must not be inferable: above 0, and no detail finer than a month**
-   (user decision, 2026-10-31, after review; migration `0017_customer_price_detail`).
+   (user decision, 2026-10-31, after review; migration `0018_customer_price_detail`).
 
    *The risk.* One uplift multiplies every cost line, and `customer_price` returned one
    row per account, day, charge class and currency. A customer who knows the provider's

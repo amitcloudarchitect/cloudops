@@ -1,4 +1,4 @@
-"""The customer price for cloud consumption (ADR 0021, migrations 0014-0017).
+"""The customer price for cloud consumption (ADR 0021, migrations 0014-0015, 0017-0018).
 
 ``cost_fact`` is what the provider charges Getronics: commercial (ADR 0002,
 D10). A customer scope is refused its cost columns by the database, and reads

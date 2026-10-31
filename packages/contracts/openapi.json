@@ -2172,6 +2172,18 @@
             "title": "From Currency",
             "type": "string"
           },
+          "moves": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moves"
+          },
           "rate": {
             "anyOf": [
               {
@@ -2475,6 +2487,17 @@
             ],
             "title": "Contract Currency"
           },
+          "cost_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Verified"
+          },
           "effort": {
             "anyOf": [
               {
@@ -2674,6 +2697,7 @@
           "band_basis",
           "target_margin",
           "gap_to_target",
+          "cost_verified",
           "effort",
           "unpriced_cis",
           "exceeds_slab",
@@ -7442,7 +7466,7 @@
         "summary": "List Fx Corrections"
       },
       "post": {
-        "description": "Finance corrects a rate. The closed months it touches are restated by the\nnext month-end reprocessing, as new versions; nothing closed is overwritten.",
+        "description": "Finance corrects a rate. Its inverse and every pair with the moving\ncurrency are re-derived from the EUR rates on the same day, each with its own\nentry; the returned entry is the first that moved. The closed months it\ntouches are restated by the next month-end reprocessing, as new versions;\nnothing closed is overwritten.",
         "operationId": "correct_fx_rate_v1_finops_fx_corrections_post",
         "requestBody": {
           "content": {

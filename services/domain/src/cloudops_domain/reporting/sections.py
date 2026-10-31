@@ -426,7 +426,7 @@ async def consumption(conn: ScopedConnection, tenant: UUID, period: date, curren
 # Together they give the uplift away: never both where a non-commercial role reads.
 PRICE_AND_COST: Final = ("cloud_cost", "customer_price")
 # The roles commercial_visibility admits (migration 0001): they may read the SOW's
-# uplift, so they may hold price and cost side by side (migration 0016).
+# uplift, so they may hold price and cost side by side (migration 0017).
 PRICE_ROLES: Final = frozenset({Role.CEO, Role.CFO, Role.FINOPS, Role.DELIVERY_LEAD,
                                 Role.COMMERCIAL, Role.AUDITOR, Role.PLATFORM_ADMIN})
 _PRICE_MISSING_RATES: Final = text("""

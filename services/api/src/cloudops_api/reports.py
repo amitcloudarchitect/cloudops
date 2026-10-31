@@ -179,7 +179,7 @@ _PACK_COLS: Final = (
     "p.id, p.tenant_id, t.canonical_name, p.period, p.version, p.status, p.contract_currency,"
     " p.generated_at, p.approved_at, p.published_at, p.data_as_of,"
     # The customer's price joins in where price_visibility lets the scope read it
-    # (commercial roles; a customer once published, migration 0016), and the
+    # (commercial roles; a customer once published, migration 0017), and the
     # commercial sections where commercial_visibility does (0013), each section by
     # section over the one before. Anyone else gets the pack without them.
     " p.sections || coalesce((SELECT r.sections FROM cloudops.report_pack_price r"

@@ -46,7 +46,7 @@ ACCOUNT_SCOPED = (
     "cloudops.report_pack",
     "cloudops.report_narrative",
     "cloudops.report_pack_commercial",
-    "cloudops.report_pack_price",  # 0016, with its pack
+    "cloudops.report_pack_price",  # 0017, with its pack
 )
 GROUP_ROLES = ("cloudops_app", "cloudops_ingest")
 

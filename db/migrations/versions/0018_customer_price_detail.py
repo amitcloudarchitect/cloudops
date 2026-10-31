@@ -1,7 +1,7 @@
 """The customer price, without the detail that reveals the uplift (contract).
 
-Revision ID: 0017
-Revises: 0016
+Revision ID: 0018
+Revises: 0017
 Create Date: 2026-10-31
 
 ADR 0021, decision 9. Review found that the uplift can be inferred. One uplift
@@ -32,7 +32,7 @@ detail" (2026-10-31):
   covers.
 - EXECUTE on ``customer_price`` and ``customer_saving`` is revoked from
   ``cloudops_customer``. They stay as the resolver's internal building blocks,
-  and ``pack_customer_price`` (0016, commercial roles only, who may read the
+  and ``pack_customer_price`` (0017, commercial roles only, who may read the
   uplift anyway) still uses ``customer_price``.
 
 A contract, shipped in the same release as the API change that stops calling the
@@ -45,8 +45,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0017"
-down_revision = "0016"
+revision = "0018"
+down_revision = "0017"
 branch_labels = None
 depends_on = None
 

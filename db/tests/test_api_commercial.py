@@ -273,23 +273,159 @@ async def test_finops_customer_outside_scope_is_404(
 async def test_finance_corrects_a_rate_with_an_explicit_entry(
     api: Api, principals: Principals, seeded: Seeded
 ) -> None:
-    body = {"from_currency": "GBP", "to_currency": "USD", "rate_type": "average",
-            "effective_date": "2026-01-02", "rate": "1.27123456",
+    body = {"from_currency": "GBP", "to_currency": "EUR", "rate_type": "average",
+            "effective_date": "2026-01-02", "rate": "1.17123456",
             "reason": "Bank statement disagrees with the feed"}
     r = await _post(api, "/v1/finops/fx-corrections", principals.finops_all, body)
     assert r.status_code == 201, r.text
     entry = r.json()
-    assert entry["new_rate"]["value"] == "1.27123456"
-    assert entry["new_rate"]["unit"] == "GBP->USD"
+    assert entry["new_rate"]["value"] == "1.17123456"
+    assert entry["new_rate"]["unit"] == "GBP->EUR"
     with psycopg.connect(seeded.admin_dsn) as cx:
         rate = cx.execute("SELECT rate, source FROM cloudops.fx_rate WHERE from_currency = 'GBP'"
-                          " AND to_currency = 'USD' AND rate_type = 'average'"
+                          " AND to_currency = 'EUR' AND rate_type = 'average'"
                           " AND effective_date = '2026-01-02'").fetchone()
-    assert rate == (Decimal("1.27123456"), "finance")
+    assert rate == (Decimal("1.17123456"), "finance")
     again = await _post(api, "/v1/finops/fx-corrections", principals.finops_all, body)
     assert again.status_code == 409
     listed = await api.get("/v1/finops/fx-corrections", principals.finops_all)
     assert any(e["id"] == entry["id"] for e in listed.json())
+
+
+# EUR anchors every rate (the ECB publishes EUR -> X; the connector derives the rest).
+FX_DAY = "2026-01-05"  # a Monday; 2026-01-10 is the Saturday after
+FX_HELD = {("EUR", "GBP"): "0.86956522", ("GBP", "EUR"): "1.15000000",
+           ("EUR", "USD"): "1.13043478", ("USD", "EUR"): "0.88461538",
+           ("GBP", "USD"): "1.30000000", ("USD", "GBP"): "0.76923077"}
+
+
+def _fx_seed(dsn: str, day: str) -> None:
+    with psycopg.connect(dsn, autocommit=True) as cx:
+        cx.execute("DELETE FROM cloudops.fx_rate WHERE rate_type = 'closing'"
+                   " AND effective_date BETWEEN %s::date AND %s::date + 6", (day, day))
+        for (f, t), r in FX_HELD.items():
+            cx.execute("INSERT INTO cloudops.fx_rate (from_currency, to_currency, rate,"
+                       " rate_type, effective_date, source) VALUES (%s, %s, %s, 'closing',"
+                       " %s, 'ecb')", (f, t, r, day))
+
+
+def _fx_rates(dsn: str, day: str) -> dict[tuple[str, str], tuple[Decimal, str]]:
+    with psycopg.connect(dsn) as cx:
+        return {(f, t): (rate, src) for f, t, rate, src in cx.execute(
+            "SELECT from_currency, to_currency, rate, source FROM cloudops.fx_rate"
+            " WHERE rate_type = 'closing' AND effective_date = %s", (day,)).fetchall()}
+
+
+def _fx_entries(dsn: str, day: str, after: int = 0) -> list[tuple[Any, ...]]:
+    with psycopg.connect(dsn) as cx:
+        return cx.execute("SELECT from_currency, to_currency, previous_rate, new_rate, reason"
+                          " FROM cloudops.fx_restatement WHERE rate_type = 'closing'"
+                          " AND effective_date = %s AND id > %s ORDER BY id",
+                          (day, after)).fetchall()
+
+
+def _last_entry(dsn: str) -> int:
+    with psycopg.connect(dsn) as cx:
+        row = cx.execute("SELECT coalesce(max(id), 0) FROM cloudops.fx_restatement").fetchone()
+    return int(row[0]) if row else 0
+
+
+def _fx_body(f: str, t: str, rate: str, day: str = FX_DAY, **kw: Any) -> dict[str, Any]:
+    return {"from_currency": f, "to_currency": t, "rate_type": "closing",
+            "effective_date": day, "rate": rate, "reason": "Bank statement rate", **kw}
+
+
+async def test_an_eur_correction_moves_its_inverse_and_crosses_never_other_eur_legs(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    """EUR -> GBP corrected: GBP -> EUR and GBP <-> USD follow, derived from the
+    EUR rates; EUR <-> USD, the ECB's own, is untouched."""
+    _fx_seed(seeded.admin_dsn, FX_DAY)
+    before = _last_entry(seeded.admin_dsn)
+    r = await _post(api, "/v1/finops/fx-corrections", principals.finops_all,
+                    _fx_body("EUR", "GBP", "0.88"))
+    assert r.status_code == 201, r.text
+    rates = _fx_rates(seeded.admin_dsn, FX_DAY)
+    assert rates[("EUR", "GBP")] == (Decimal("0.88000000"), "finance")
+    assert rates[("GBP", "EUR")] == (Decimal("1.13636364"), "finance")  # 1 / 0.88
+    assert rates[("GBP", "USD")] == (Decimal("1.28458498"), "finance")  # 1.13043478 / 0.88
+    assert rates[("USD", "GBP")] == (Decimal("0.77846154"), "finance")  # 0.88 / 1.13043478
+    assert rates[("EUR", "USD")] == (Decimal("1.13043478"), "ecb")
+    assert rates[("USD", "EUR")] == (Decimal("0.88461538"), "ecb")
+    entries = _fx_entries(seeded.admin_dsn, FX_DAY, before)
+    pairs = {(e[0], e[1]) for e in entries}
+    assert {("EUR", "GBP"), ("GBP", "EUR"), ("GBP", "USD"), ("USD", "GBP")} <= pairs
+    assert all("GBP" in pair for pair in pairs)  # nothing without the moving currency
+    assert (entries[0][0], entries[0][1]) == ("EUR", "GBP")
+    for e in entries[1:]:
+        assert e[4] == "Derived from correction of EUR->GBP: Bank statement rate"
+
+
+async def test_a_cross_without_eur_moves_only_the_eur_leg_finance_names(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    """GBP -> USD = 1.25 with USD named as the moving leg: EUR -> GBP is held,
+    so EUR -> USD becomes 0.86956522 x 1.25. Named the other way, GBP would move
+    instead. Never named, the correction is refused."""
+    _fx_seed(seeded.admin_dsn, FX_DAY)
+    refused = await _post(api, "/v1/finops/fx-corrections", principals.finops_all,
+                          _fx_body("GBP", "USD", "1.25"))
+    assert refused.status_code == 422
+    assert refused.json()["error"]["code"] == "eur_leg_required"
+    wrong = await _post(api, "/v1/finops/fx-corrections", principals.finops_all,
+                        _fx_body("GBP", "USD", "1.25", moves="CHF"))
+    assert wrong.status_code == 422
+    r = await _post(api, "/v1/finops/fx-corrections", principals.finops_all,
+                    _fx_body("GBP", "USD", "1.25", moves="USD"))
+    assert r.status_code == 201, r.text
+    rates = _fx_rates(seeded.admin_dsn, FX_DAY)
+    assert rates[("GBP", "USD")] == (Decimal("1.25000000"), "finance")
+    assert rates[("USD", "GBP")] == (Decimal("0.80000000"), "finance")
+    assert rates[("EUR", "USD")] == (Decimal("1.08695653"), "finance")  # 0.86956522 x 1.25
+    assert rates[("USD", "EUR")] == (Decimal("0.92000000"), "finance")
+    assert rates[("EUR", "GBP")] == (Decimal("0.86956522"), "ecb")  # held
+    assert rates[("GBP", "EUR")] == (Decimal("1.15000000"), "ecb")
+
+
+async def test_a_correction_on_a_day_without_rates_derives_from_the_rate_in_force(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    """A Saturday: no ECB rates that day. The crosses are derived from Friday's
+    EUR rates (the rate in force, as fx_rate_on reads it), not left stale. A
+    held currency with no EUR rate at all is refused."""
+    _fx_seed(seeded.admin_dsn, FX_DAY)
+    saturday = "2026-01-10"
+    r = await _post(api, "/v1/finops/fx-corrections", principals.finops_all,
+                    _fx_body("EUR", "GBP", "0.90", day=saturday))
+    assert r.status_code == 201, r.text
+    rates = _fx_rates(seeded.admin_dsn, saturday)
+    assert rates[("GBP", "EUR")][0] == Decimal("1.11111111")
+    assert rates[("GBP", "USD")][0] == Decimal("1.25603864")  # Friday's 1.13043478 / 0.90
+    assert rates[("USD", "GBP")][0] == Decimal("0.79615385")
+    assert ("EUR", "USD") not in rates  # held: still Friday's, as fx_rate_on reads it
+    none = await _post(api, "/v1/finops/fx-corrections", principals.finops_all,
+                       _fx_body("GBP", "XAU", "0.0005", day=saturday, moves="GBP"))
+    assert none.status_code == 422
+    assert none.json()["error"]["code"] == "no_held_rate"
+
+
+async def test_resubmitting_a_rate_repairs_derived_pairs_then_reports_unchanged(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    _fx_seed(seeded.admin_dsn, FX_DAY)
+    body = _fx_body("EUR", "GBP", "0.87")
+    assert (await _post(api, "/v1/finops/fx-corrections", principals.finops_all,
+                        body)).status_code == 201
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+        cx.execute("UPDATE cloudops.fx_rate SET rate = 1.5 WHERE from_currency = 'GBP'"
+                   " AND to_currency = 'EUR' AND rate_type = 'closing'"
+                   " AND effective_date = %s", (FX_DAY,))
+    repaired = await _post(api, "/v1/finops/fx-corrections", principals.finops_all, body)
+    assert repaired.status_code == 201, repaired.text
+    assert repaired.json()["from_currency"] == "GBP"  # the first entry that moved
+    assert _fx_rates(seeded.admin_dsn, FX_DAY)[("GBP", "EUR")][0] == Decimal("1.14942529")
+    again = await _post(api, "/v1/finops/fx-corrections", principals.finops_all, body)
+    assert again.status_code == 409
 
 
 async def test_only_fx_managers_correct_rates(api: Api, principals: Principals) -> None:
