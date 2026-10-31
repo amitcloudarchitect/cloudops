@@ -138,9 +138,9 @@ live. The user decided those before the build.
    (platform health, ingest health, execution, AI operations, data quality, platform
    cost), each panel PromQL on a data source the stack creates. 03b plans with a
    short-lived Entra token for Grafana, so it is not in CI's plan matrix. Its lock
-   file is not committed: the SCA scan matches Grafana server CVEs to the Grafana
-   Terraform provider by name, and `.grype.yaml` admits only base-image exceptions;
-   `~> 4.49.0` pins the provider instead.
+   file is committed (linux_amd64) and excluded from the SCA scan by path in
+   `.grype.yaml`: grype matches Grafana server CVEs to the Grafana Terraform
+   provider by name.
 
 10. **Connector health from the database, as gauges.** Last-success age, lag, runs and
     failures, rejected records, dead letters and schema drift are state in the run log,
