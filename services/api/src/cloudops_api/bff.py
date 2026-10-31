@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Annotated, Any, Final
+from typing import Annotated, Any, Final, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request
@@ -35,6 +35,8 @@ router = APIRouter(prefix="/v1", route_class=AuditedRoute)
 AccessDep = Annotated[Access, Depends(current_access)]
 
 COST_SOURCE: Final = {"azure": "azure_cost_management", "aws": "aws_cost_and_usage"}
+PRICE_SOURCE: Final = "customer_price"
+Currency = Annotated[str | None, Query(pattern=r"^[A-Z]{3}$")]
 MAX_LIST: Final = 500
 
 
@@ -88,15 +90,42 @@ class ResourceList(ApiModel):
 
 
 class CostLine(ApiModel):
+    """What Getronics staff see: the provider's charge to Getronics."""
+
     provider: str
     currency: str
     amortized: Metric[Decimal]
+    converted: Metric[Decimal] | None  # None: no currency asked for, or no rate in force
 
 
 class CostSummary(ApiModel):
     period_start: date
     period_end: date
+    reporting_currency: str | None
     lines: list[CostLine]
+
+
+class CustomerPrice(ApiModel):
+    """What a customer sees instead of cost (ADR 0021): its consumption at the
+    price Getronics charges. ``price`` is None, and ``not_captured`` says why,
+    when any day in the period has no uplift in force: never the cost, never a
+    zero."""
+
+    currency: str
+    price: Metric[Decimal] | None
+    not_captured: Literal["no_uplift"] | None
+
+
+class PriceLine(CustomerPrice):
+    provider: str
+    converted: Metric[Decimal] | None  # None: not asked for, not captured, or no rate
+
+
+class PriceSummary(ApiModel):
+    period_start: date
+    period_end: date
+    reporting_currency: str | None
+    lines: list[PriceLine]
 
 
 class SowView(ApiModel):
@@ -207,49 +236,121 @@ async def get_resource(
     return _resource(row, access)
 
 
-@router.get("/cost/summary", response_model=CostSummary)
+# Each figure is also converted, given ``rep``, at the daily average rate in
+# force on its usage date (HLD, Multi-currency): NULL with no currency asked
+# for or no rate in force, never a 1 or a 0.
+_STAFF_COST: Final = text(
+    "SELECT a.provider, c.currency, sum(c.amortized_cost), max(c.usage_date),"
+    "   sum(c.amortized_cost * r.rate), bool_and(r.rate IS NOT NULL)"
+    " FROM cloudops.cost_fact c"
+    " JOIN cloudops.cloud_account a ON a.id = c.account_id"
+    " LEFT JOIN LATERAL (SELECT CASE WHEN CAST(:rep AS text) IS NULL THEN NULL"
+    "   WHEN c.currency = :rep THEN 1::numeric ELSE ("
+    "     SELECT f.rate FROM cloudops.fx_rate f WHERE f.from_currency = c.currency"
+    "       AND f.to_currency = :rep AND f.rate_type = 'average'"
+    "       AND f.effective_date <= c.usage_date"
+    "     ORDER BY f.effective_date DESC LIMIT 1) END AS rate) r ON true"
+    " WHERE c.usage_date BETWEEN :start AND :end"
+    " GROUP BY a.provider, c.currency ORDER BY a.provider, c.currency"
+)
+# A customer scope cannot read cost_fact's cost columns (migration 0015): the
+# price comes from cloudops.customer_price alone (0014, ADR 0021).
+_CUSTOMER_PRICE: Final = text(
+    "SELECT a.provider, p.currency, sum(p.price), max(p.usage_date),"
+    "   bool_and(p.price IS NOT NULL), sum(p.price * r.rate), bool_and(r.rate IS NOT NULL)"
+    " FROM cloudops.customer_price(:start, :end) p"
+    " JOIN cloudops.cloud_account a ON a.id = p.account_id"
+    " LEFT JOIN LATERAL (SELECT CASE WHEN CAST(:rep AS text) IS NULL THEN NULL"
+    "   WHEN p.currency = :rep THEN 1::numeric ELSE ("
+    "     SELECT f.rate FROM cloudops.fx_rate f WHERE f.from_currency = p.currency"
+    "       AND f.to_currency = :rep AND f.rate_type = 'average'"
+    "       AND f.effective_date <= p.usage_date"
+    "     ORDER BY f.effective_date DESC LIMIT 1) END AS rate) r ON true"
+    " GROUP BY a.provider, p.currency ORDER BY a.provider, p.currency"
+)
+
+
+def customer_price(
+    currency: str, total: Any, priced: bool, last_day: date, ref: str
+) -> CustomerPrice:
+    """One currency's price, or not captured when any day of it had no uplift."""
+    if not priced:
+        return CustomerPrice(currency=currency, price=None, not_captured="no_uplift")
+    return CustomerPrice(
+        currency=currency, not_captured=None,
+        # In transaction currency, unconverted and unrounded: rounding happens
+        # once, at presentation (CLAUDE.md rule 5).
+        price=Metric[Decimal](value=Decimal(total), unit=currency, source_system=PRICE_SOURCE,
+                              as_of=_end_of(last_day), query_ref=ref, is_modelled=False))
+
+
+def _converted(value: Any, complete: bool, rep: str | None, source: str, as_of: datetime,
+               ref: str) -> Metric[Decimal] | None:
+    if rep is None or value is None or not complete:
+        return None
+    return Metric[Decimal](value=Decimal(value), unit=rep, source_system=source, as_of=as_of,
+                           query_ref=ref, is_modelled=False)
+
+
+@router.get("/cost/summary", response_model=CostSummary | PriceSummary)
 @requires("cost.read")
 async def cost_summary(
     request: Request,
     access: AccessDep,
     days: Annotated[int, Query(ge=1, le=90)] = 30,
-) -> CostSummary:
+    currency: Currency = None,
+) -> CostSummary | PriceSummary:
+    """Cloud consumption by provider and transaction currency. Staff see the
+    provider's charge to Getronics; a customer sees the price Getronics charges
+    it (ADR 0021). Given ``currency``, each line is also converted at the rate
+    in force on each usage date; a line with any day unconverted has none."""
     end = _now().date()
     start = end - timedelta(days=days - 1)
+    params = {"start": start, "end": end, "rep": currency}
+    customer = access.kind == "customer"
     async with platform(request).db.transaction(access.scope) as conn:
-        cost_rows: list[tuple[Any, ...]] = [
-            tuple(r)
-            for r in await conn.execute(
-                text(
-                    "SELECT a.provider, c.currency, sum(c.amortized_cost), max(c.usage_date)"
-                    " FROM cloudops.cost_fact c"
-                    " JOIN cloudops.cloud_account a ON a.id = c.account_id"
-                    " WHERE c.usage_date BETWEEN :start AND :end"
-                    " GROUP BY a.provider, c.currency ORDER BY a.provider, c.currency"
-                ),
-                {"start": start, "end": end},
-            )
+        rows: list[tuple[Any, ...]] = [
+            tuple(r) for r in await conn.execute(_CUSTOMER_PRICE if customer else _STAFF_COST,
+                                                 params)
         ]
+    if customer:
+        ref = query_ref("cost.customer_price_by_provider_currency", 1, start=start, end=end)
+        cref = query_ref("cost.customer_price_converted", 1, start=start, end=end, rep=currency)
+        lines: list[PriceLine] = []
+        for provider, ccy, total, last_day, priced, conv, conv_ok in rows:
+            base = customer_price(ccy, total, priced, last_day, ref)
+            lines.append(PriceLine(
+                provider=provider, currency=base.currency, price=base.price,
+                not_captured=base.not_captured,
+                converted=_converted(conv, priced and conv_ok, currency, PRICE_SOURCE,
+                                     _end_of(last_day), cref)))
+        return PriceSummary(period_start=start, period_end=end, reporting_currency=currency,
+                            lines=lines)
     ref = query_ref("cost.amortized_by_provider_currency", 1, start=start, end=end)
+    cref = query_ref("cost.amortized_converted", 1, start=start, end=end, rep=currency)
     return CostSummary(
         period_start=start,
         period_end=end,
+        reporting_currency=currency,
         lines=[
             CostLine(
                 provider=provider,
-                currency=currency,
+                currency=ccy,
                 # In transaction currency, unconverted and unrounded: conversion
                 # and rounding happen once, at presentation (CLAUDE.md rule 5).
                 amortized=Metric[Decimal](
                     value=Decimal(total),
-                    unit=currency,
+                    unit=ccy,
                     source_system=COST_SOURCE.get(provider, provider),
                     as_of=_end_of(last_day),
                     query_ref=ref,
                     is_modelled=False,
                 ),
+                converted=_converted(conv, conv_ok, currency,
+                                     COST_SOURCE.get(provider, provider), _end_of(last_day),
+                                     cref),
             )
-            for provider, currency, total, last_day in cost_rows
+            for provider, ccy, total, last_day, conv, conv_ok in rows
         ],
     )
 
