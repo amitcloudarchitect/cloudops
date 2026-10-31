@@ -23,13 +23,13 @@ resources:
 images:
   - name: api
     newName: crcloudopsdevweu.azurecr.io/api
-    newTag: 6a2ad02
+    newTag: a3fa7db
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
-    newTag: 6a2ad02
+    newTag: a3fa7db
   - name: web
     newName: crcloudopsdevweu.azurecr.io/web
-    newTag: 6a2ad02
+    newTag: a3fa7db
   - name: pause
     newName: crcloudopsdevweu.azurecr.io/pause
     newTag: 3.10.1
@@ -43,6 +43,8 @@ replacements:
       - select: { kind: NetworkPolicy, name: api }
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: migrate }
+        fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: bootstrap-admin }
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: temporal-database }
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
