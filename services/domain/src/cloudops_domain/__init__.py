@@ -1,4 +1,4 @@
-"""cloudops_domain — knowledge, assurance and reporting (step 17, ADR 0019).
+"""cloudops_domain — knowledge, assurance and reporting (step 17, ADR 0020).
 
 Deterministic domain logic over the platform database. It reaches the database
 only through ``cloudops_tenancy`` connections it is handed, and never calls a

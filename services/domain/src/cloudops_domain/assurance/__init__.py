@@ -1,5 +1,5 @@
 """Assurance: the control library, evidence routing, scoring and signed packs
-(HLD M14, M15; ADR 0019).
+(HLD M14, M15; ADR 0020).
 
 - ``library``   a control library file, validated before it is loaded
 - ``evidence``  the registered evidence queries each automated control routes to

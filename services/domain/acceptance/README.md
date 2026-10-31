@@ -4,7 +4,7 @@ The acceptance test for the reporting pack (`/step17`): regenerate a recent mont
 diff it against the manually assembled version, line by line, including currency
 presentation.
 
-**Status: pending.** No manually assembled pack is in the repository (ADR 0019). The
+**Status: pending.** No manually assembled pack is in the repository (ADR 0020). The
 harness is built and tested (`cloudops_domain.reporting.acceptance`); the comparison
 itself waits for a real pack.
 

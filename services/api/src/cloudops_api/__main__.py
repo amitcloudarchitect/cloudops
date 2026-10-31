@@ -36,7 +36,7 @@ ENVOY_UPSTREAM_IDLE_SECONDS: Final = 3600
 KEEP_ALIVE_SECONDS: Final = ENVOY_UPSTREAM_IDLE_SECONDS + 60
 
 
-# The local stand-in for an evidence-signing key (ADR 0019). Elsewhere no key is
+# The local stand-in for an evidence-signing key (ADR 0020). Elsewhere no key is
 # decided yet, so evidence-pack export refuses rather than sign with nothing.
 EVIDENCE_SIGNING_SECRET: Final = "evidence-signing-seed"  # noqa: S105 - a secret's name
 

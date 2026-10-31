@@ -65,7 +65,7 @@ def later_keys() -> dict[str, str]:
         # Step 04: the default platform administrator (ADR 0002, D14). A random
         # object id: locally it is just the identity you mint tokens for.
         "PLATFORM_ADMIN_OID": str(uuid.uuid4()),
-        # Step 17: the local evidence-pack signing key, an Ed25519 seed (ADR 0019).
+        # Step 17: the local evidence-pack signing key, an Ed25519 seed (ADR 0020).
         # No environment but local has one until an evidence-signing key is decided.
         "EVIDENCE_SIGNING_SEED": base64.b64encode(secrets.token_bytes(32)).decode("ascii"),
     }

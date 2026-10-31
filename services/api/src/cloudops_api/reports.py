@@ -1,4 +1,4 @@
-"""Monthly report pack endpoints (step 17, ADR 0019; HLD M19).
+"""Monthly report pack endpoints (step 17, ADR 0020; HLD M19).
 
     POST /v1/reports/packs                          generate a month (a new version)
     GET  /v1/reports/packs, /v1/reports/packs/{id}  read
@@ -22,7 +22,7 @@ SOW the currency is "not captured" and nothing is generated). The portfolio is
 in the reporting currency the viewer picks, from the same cost rows.
 
 **Access.** ``reports.read`` covers reading, and customers see only published
-packs (row-level security, migration 0012). No customer role holds
+packs (row-level security, migration 0013). No customer role holds
 ``reports.read`` yet: the portal (step 18) decides. A pack outside scope is a
 404. Report packs are tenant-wide, so a subscription-limited scope sees none.
 """
@@ -72,7 +72,7 @@ def _period(value: str) -> date:
 
 def _narrow(access: Access, tenant: UUID) -> TenantScope:
     # Tenant-wide objects: a subscription-limited scope sees none, so it cannot
-    # create one either (migration 0012's account_scope policy).
+    # create one either (migration 0013's account_scope policy).
     if tenant not in access.scope.tenant_ids or access.scope.account_ids is not None:
         raise ApiError(404, "not_found")
     return TenantScope([tenant], access.scope.role, access.scope.principal_id,

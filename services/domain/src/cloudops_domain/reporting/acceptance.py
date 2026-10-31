@@ -13,7 +13,7 @@ Lines that differ and carry an amount are listed again in
 ``currency_mismatches``, so a presentation difference is never lost in a long
 diff.
 
-**The reference pack is not in the repository yet** (ADR 0019). It is a
+**The reference pack is not in the repository yet** (ADR 0020). It is a
 manually assembled pack for a recent month, its text extracted one line per
 printed line. Compare it with the regenerated month's text
 (``GET /v1/reports/packs/{id}/text``, the PDF's own lines):

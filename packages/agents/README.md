@@ -81,7 +81,7 @@ An agent is five things (`AgentSpec`):
 | `draft_report_narrative` (`drafting.py`, prompt `report_narrator/v1`) | reporting (step 17) | large | none | two to four sentences, figures cited |
 
 `drafting.py` holds `DraftSweepWorkflow` and `KnowledgeIndexWorkflow` on the `drafting`
-queue (ADR 0019): requested drafts are drafted under their own tenant's scope, checked
+queue (ADR 0020): requested drafts are drafted under their own tenant's scope, checked
 deterministically (citations given, numbers in the data, no asserted result, no
 instruction-like material), and stored as drafts only. A person approves every result
 and writes or accepts every narrative. They are measured by `evals/drafting/`.

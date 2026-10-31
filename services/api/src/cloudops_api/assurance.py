@@ -1,5 +1,5 @@
 """Assurance endpoints: the control library, assessments, evidence, approval and
-the signed evidence pack (step 17, ADR 0019; HLD M14, M15).
+the signed evidence pack (step 17, ADR 0020; HLD M14, M15).
 
 The order of things, and who may do each:
 
@@ -16,7 +16,7 @@ The order of things, and who may do each:
    person, marks a control compliant on nothing.
 4. ``assurance.manage`` exports the signed evidence pack.
 
-Staff only. Assessments are tenant-wide (migration 0012): a subscription-limited
+Staff only. Assessments are tenant-wide (migration 0013): a subscription-limited
 scope sees none. An assessment outside scope is a 404, like one that never
 existed.
 """
@@ -76,7 +76,7 @@ def _staff(access: Access) -> None:
 
 def _narrow(access: Access, tenant: UUID) -> TenantScope:
     # Tenant-wide objects: a subscription-limited scope sees none, so it cannot
-    # create one either (migration 0012's account_scope policy).
+    # create one either (migration 0013's account_scope policy).
     if tenant not in access.scope.tenant_ids or access.scope.account_ids is not None:
         raise ApiError(404, "not_found")
     return TenantScope([tenant], access.scope.role, access.scope.principal_id,

@@ -1,6 +1,6 @@
 # cloudops_domain
 
-Knowledge, assurance and reporting (step 17, ADR 0019). Deterministic domain logic over
+Knowledge, assurance and reporting (step 17, ADR 0020). Deterministic domain logic over
 the platform database, reached only through `cloudops_tenancy` connections it is handed.
 It never calls a model: AI drafting is `cloudops_agents.drafting`, and it writes drafts
 only.

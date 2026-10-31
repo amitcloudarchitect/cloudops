@@ -1,4 +1,4 @@
-"""Knowledge and document intelligence (HLD M20; ADR 0019).
+"""Knowledge and document intelligence (HLD M20; ADR 0020).
 
 **Document kinds** come from a document's name and folder, never from what it
 says: document text is data, never instruction (CLAUDE.md rule 4), and a

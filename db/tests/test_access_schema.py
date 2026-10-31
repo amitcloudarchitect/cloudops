@@ -32,7 +32,7 @@ ACCOUNT_SCOPED = (
     "cloudops.directory_role_assignment",  # 0010, likewise
     "cloudops.sharepoint_site",  # 0010, likewise
     "cloudops.document",  # 0010, likewise
-    # 0012: an assessment and a report pack answer for the whole estate.
+    # 0013: an assessment and a report pack answer for the whole estate.
     "cloudops.assessment",
     "cloudops.control_response",
     "cloudops.evidence",
@@ -173,7 +173,7 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     The re-process queue (0009) is claimed before its tenant is known: waiting
     requests only, moved to running only, function owner only. Portal
     onboarding (0011) is read by the resolver before any scope exists and
-    written by the access functions' owner only. The drafting queue (0012)
+    written by the access functions' owner only. The drafting queue (0013)
     lists requested drafts across tenants: requested only, three columns,
     function owner only."""
     with psycopg.connect(seeded.admin_dsn) as cx:

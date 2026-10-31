@@ -83,7 +83,7 @@ class Platform:
     validator: TokenValidator
     resolver: ScopeResolver
     # Step 17. Evidence packs are signed by ``signer`` (refuses until a key is
-    # decided, ADR 0019); availability comes from the telemetry store when it
+    # decided, ADR 0020); availability comes from the telemetry store when it
     # is connected; the financial sections wait for step 16.
     signer: Signer = field(default_factory=UnavailableSigner)
     availability: AvailabilitySource | None = None

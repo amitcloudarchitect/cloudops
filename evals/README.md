@@ -101,7 +101,7 @@ unreviewed.
 
 ## The drafting suite (step 17)
 
-`drafting/` holds a second golden set, for the two drafting agents (ADR 0019): control
+`drafting/` holds a second golden set, for the two drafting agents (ADR 0020): control
 responses for assurance and section narrative for report packs. It runs in the same
 `pytest -m evaluation` gate (`db/tests/test_evaluation_drafting.py`) through the drafting
 activities production runs, with replies replayed from `drafting/cassettes.jsonl`.

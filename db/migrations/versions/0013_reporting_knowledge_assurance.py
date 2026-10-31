@@ -1,10 +1,10 @@
 """Reporting, knowledge and assurance (expand).
 
-Revision ID: 0012
-Revises: 0011
+Revision ID: 0013
+Revises: 0012
 Create Date: 2026-10-31
 
-Step 17, ADR 0019. HLD modules M14, M15, M19 and M20.
+Step 17, ADR 0020. HLD modules M14, M15, M19 and M20.
 
 **Knowledge (M20).** ``knowledge_chunk`` gains its citation: the ``document``
 it came from, its ``ordinal`` in that document and the ``page`` it starts on,
@@ -59,8 +59,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0012"
-down_revision = "0011"
+revision = "0013"
+down_revision = "0012"
 branch_labels = None
 depends_on = None
 
@@ -75,7 +75,7 @@ PERMISSIONS = (
     ("assurance.approve", "Approve a control response so that it scores"),
     ("assurance.library", "Load the control library"),
 )
-# The default matrix (ADR 0019), by system role name: a role class is shared by
+# The default matrix (ADR 0020), by system role name: a role class is shared by
 # several roles (Customer master is a delivery_lead class), and they differ.
 # The product owner refines it in the console. No customer role gets any of
 # these yet: the portal decides.

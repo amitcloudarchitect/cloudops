@@ -1,4 +1,4 @@
-"""Assurance against the real schema (step 17, ADR 0019; HLD M14, M15).
+"""Assurance against the real schema (step 17, ADR 0020; HLD M14, M15).
 
 The library loads only through ``access.load_controls``; evidence is routed by
 each control's declared query and stored append-only with its query, raw value

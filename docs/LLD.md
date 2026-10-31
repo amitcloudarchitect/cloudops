@@ -436,7 +436,7 @@ Application code names a tier, never a model. Which published model fills each t
 
 `vector` extension on the platform database; `knowledge_chunk.embedding vector(N)` with N fixed by the embedding deployment; HNSW index with cosine distance, `m=16`, `ef_construction=64`, `ef_search` tuned against the evaluation set; row-level security identical to every other tenant table, with `tenant_id NOT NULL`; hybrid search fusing vector similarity with full-text by reciprocal rank, re-ranked by the `small` tier.
 
-Each customer chunk carries its citation: the source `document`, its ordinal and the page it starts on. Connectors write chunks with their tenant and no embedding; the knowledge indexer embeds them one tenant's scope at a time and fills only an embedding that is still empty (ADR 0019).
+Each customer chunk carries its citation: the source `document`, its ordinal and the page it starts on. Connectors write chunks with their tenant and no embedding; the knowledge indexer embeds them one tenant's scope at a time and fills only an embedding that is still empty (ADR 0020).
 
 Getronics-wide content (shared runbooks, best practice) lives in `cloudops.global_knowledge_chunk`, which has no `tenant_id`. Every scope can read it, and no application role can write it (ADR 0001). Customer content is never tenant-less.
 
@@ -603,7 +603,7 @@ Steps one to eight are the walking skeleton — something deployable should exis
 | L10 | Session transcript redaction | Before the execution step |
 | L11 | Vector store — pgvector or Azure AI Search | Before the knowledge module |
 | L12 | Azure OpenAI model per tier | Before the Azure OpenAI step |
-| L13 | Evidence-pack signing key: a new HSM-backed `key-evidence-signing`, or reuse of runbook signing (ADR 0019) | Before any evidence pack leaves the platform |
+| L13 | Evidence-pack signing key: a new HSM-backed `key-evidence-signing`, or reuse of runbook signing (ADR 0020) | Before any evidence pack leaves the platform |
 
 **L10 deserves attention.** Transcripts may capture customer data incidentally — a log line, a config value, a connection string. Redacting before storage protects against that but weakens the evidence value of the transcript. The answer depends on what customers have agreed to, which makes it a contractual question as much as a technical one.
 

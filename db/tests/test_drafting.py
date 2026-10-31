@@ -1,4 +1,4 @@
-"""AI drafting against the real schema (step 17, ADR 0019).
+"""AI drafting against the real schema (step 17, ADR 0020).
 
 A draft reaches only the ``draft_*`` columns: it never sets a control's
 result or a pack's text. A draft citing anything it was not given, or a

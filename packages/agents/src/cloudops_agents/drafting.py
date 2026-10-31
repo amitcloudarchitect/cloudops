@@ -1,4 +1,4 @@
-"""AI drafting for assurance and reporting (step 17, ADR 0019).
+"""AI drafting for assurance and reporting (step 17, ADR 0020).
 
 Two narrow agents, no tools:
 
@@ -8,7 +8,7 @@ Two narrow agents, no tools:
   citations. Its output has **no result field**: it cannot mark a control
   compliant, or anything else. A person approves every result, and the
   database refuses an approval from anyone but staff holding
-  ``assurance.approve`` (migration 0012).
+  ``assurance.approve`` (migration 0013).
 - ``draft_report_narrative`` (large tier, prompt ``report_narrator/v1``): two
   to four sentences on one captured section of a monthly pack, from its
   figures and tables only. A person edits or accepts it; nothing is published

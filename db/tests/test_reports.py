@@ -1,4 +1,4 @@
-"""Monthly report packs against the real schema (step 17, ADR 0019; HLD M19).
+"""Monthly report packs against the real schema (step 17, ADR 0020; HLD M19).
 
 A pack is generated from live rows in the customer's contract currency, each
 cost row converted at the average rate on its own date; a missing rate or SOW

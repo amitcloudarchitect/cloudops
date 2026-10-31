@@ -1,4 +1,4 @@
-"""Knowledge and document intelligence against the real schema (step 17, ADR 0019).
+"""Knowledge and document intelligence against the real schema (step 17, ADR 0020).
 
 Staleness and gaps are computed under the caller's scope, the indexer embeds
 and indexes one tenant at a time and never touches another's chunks, and a

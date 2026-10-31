@@ -1,4 +1,4 @@
-"""Reporting: the monthly pack per customer (HLD M19; ADR 0019).
+"""Reporting: the monthly pack per customer (HLD M19; ADR 0020).
 
 - ``sections``   the sections, generated from live data; the step 16 seam
 - ``money``      presenting money: rounded once, in its currency

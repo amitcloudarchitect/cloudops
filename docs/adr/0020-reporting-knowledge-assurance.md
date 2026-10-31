@@ -1,10 +1,10 @@
-# ADR 0019: Reporting, knowledge and assurance
+# ADR 0020: Reporting, knowledge and assurance
 
 - **Status:** Accepted, 2026-10-31
 - **Decided by:** Amit Kumar (the library and the acceptance pack); the rest is step 17
   carried out on this design
 - **Implements:** step 17; HLD modules M14, M15, M19 and M20; LLD Vector store,
-  Evaluation, Multi-currency. Migration `0012_reporting_knowledge_assurance`,
+  Evaluation, Multi-currency. Migration `0013_reporting_knowledge_assurance`,
   `services/domain` (`cloudops_domain`), `cloudops_api.{knowledge,assurance,reports}`,
   `cloudops_agents.drafting`, `cloudops_evals.drafting`, the gateway's
   `KnowledgeIndexer`, and the console's Knowledge, Assurance and Reports screens.
@@ -166,5 +166,5 @@ Step 16 (FinOps, pricing, margin) was being built in parallel and was not on mai
 - Two more resolver-owned functions and two `draft_queue_read` policies, confined to
   `cloudops_resolver`, join the catalog test's known list.
 - The report-pack acceptance stays pending until a real pack is supplied.
-- **Numbering:** step 16 was also renumbering to migration 0012 and ADR 0019 when
-  this merged; whichever lands second renumbers.
+- **Numbering:** step 16 (FinOps, pricing, margin) took migration 0012 and ADR 0019
+  and merges first; this step follows as 0013 and ADR 0020.

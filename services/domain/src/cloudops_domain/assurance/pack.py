@@ -12,7 +12,7 @@ those bytes, so a recipient can check the pack has not changed since export.
 
 **Which key.** The LLD names no evidence-signing key (its Key Vault Premium
 keys are runbook, transcript, database and token signing). Until one is
-decided (ADR 0019), the local profile signs with an Ed25519 key from the local
+decided (ADR 0020), the local profile signs with an Ed25519 key from the local
 secrets file, and every other environment refuses to export: an unsigned or
 self-asserted pack would be worse than none.
 """

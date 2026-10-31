@@ -1,4 +1,4 @@
-"""Knowledge and document intelligence endpoints (step 17, ADR 0019; HLD M20).
+"""Knowledge and document intelligence endpoints (step 17, ADR 0020; HLD M20).
 
 - ``GET /v1/knowledge/documents``  current design, handover, runbook and policy
   documents, each with whether the live estate has superseded it, and why
