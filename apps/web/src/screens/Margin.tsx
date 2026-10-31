@@ -5,8 +5,10 @@
 // console's one scale, with the gap to the SOW's target. A customer whose margin
 // cannot be computed is "Not captured" with the reason, never a zero or a dash.
 // Provisional (month to date) and closed figures are marked, and so is a restated
-// one. Given a reporting currency, the converted margin and its FX impact follow
-// as their own lines.
+// one. A provisional month has figures but no band or gap to target: those
+// arrive at close. A figure whose cost did not reconcile says so. Given a
+// reporting currency, the converted margin and its FX impact follow as their
+// own lines.
 
 import Link from "next/link";
 
@@ -49,13 +51,29 @@ export function points(ratio: string): string {
   return text.startsWith("-") ? `−${text.slice(1)}` : `+${text}`;
 }
 
+/** A provisional month is banded when it closes, never on part of a month. */
+export function awaitingClose(m: MarginView): boolean {
+  return !m.not_captured && m.status === "provisional" && !m.band;
+}
+
+export function bandText(m: MarginView): string {
+  if (m.not_captured) return "Not captured";
+  if (awaitingClose(m)) return "Provisional";
+  return BAND_LABEL[marginBand(m.band)];
+}
+
 export function BandBadge({ m }: { m: MarginView }) {
   if (m.not_captured) return <HealthBadge band="unknown" label={notCaptured(m) ?? "Not captured"} />;
   const band = marginBand(m.band);
   return (
     <span className="flex flex-col items-start gap-1">
-      <HealthBadge band={band} label={BAND_LABEL[band]} />
+      {awaitingClose(m) ? (
+        <HealthBadge band="unknown" label="Banded at month close" />
+      ) : (
+        <HealthBadge band={band} label={BAND_LABEL[band]} />
+      )}
       {m.band_basis === "modelled" ? <span className="text-xs text-muted">On modelled cost: effort incomplete</span> : null}
+      {m.cost_verified === false ? <HealthBadge band="watch" label="Cost not reconciled" /> : null}
     </span>
   );
 }
@@ -158,6 +176,8 @@ export function Margin() {
       render: (m) =>
         m.not_captured ? (
           <NotCaptured m={m} />
+        ) : awaitingClose(m) ? (
+          <span className="text-sm text-muted">At month close</span>
         ) : m.gap_to_target && m.target_margin ? (
           <span className="tabular-nums">
             {points(m.gap_to_target.value)}
@@ -268,7 +288,7 @@ export function Margin() {
           rowKey={(m) => m.tenant.id}
           columns={columns}
           facets={[
-            { key: "band", label: "Band", value: (m) => (m.not_captured ? "Not captured" : BAND_LABEL[marginBand(m.band)]) },
+            { key: "band", label: "Band", value: bandText },
             { key: "status", label: "Status", value: (m) => (m.status ? statusLabel(m) : "Not captured") },
           ]}
           role={me.role}

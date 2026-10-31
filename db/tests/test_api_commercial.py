@@ -292,6 +292,52 @@ async def test_finance_corrects_a_rate_with_an_explicit_entry(
     assert any(e["id"] == entry["id"] for e in listed.json())
 
 
+async def test_a_correction_moves_its_inverse_and_crosses_with_it(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    """Every directed pair is stored, so correcting GBP->USD alone would leave
+    USD->GBP and the crosses through EUR disagreeing. The legs from GBP stay;
+    everything derived from the corrected rate moves, each with its own entry."""
+    day = "2026-01-05"
+    held = {("GBP", "USD"): "1.30000000", ("USD", "GBP"): "0.76923077",
+            ("GBP", "EUR"): "1.15000000", ("EUR", "GBP"): "0.86956522",
+            ("USD", "EUR"): "0.88461538", ("EUR", "USD"): "1.13043478"}
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+        for (f, t), r in held.items():
+            cx.execute("INSERT INTO cloudops.fx_rate (from_currency, to_currency, rate,"
+                       " rate_type, effective_date, source) VALUES (%s, %s, %s, 'average',"
+                       " %s, 'ecb') ON CONFLICT (from_currency, to_currency, rate_type,"
+                       " effective_date) DO UPDATE SET rate = EXCLUDED.rate,"
+                       " source = EXCLUDED.source", (f, t, r, day))
+    body = {"from_currency": "GBP", "to_currency": "USD", "rate_type": "average",
+            "effective_date": day, "rate": "1.25", "reason": "Bank statement rate"}
+    r = await _post(api, "/v1/finops/fx-corrections", principals.finops_all, body)
+    assert r.status_code == 201, r.text
+    entry = r.json()["id"]
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        rates = {(f, t): (rate, src) for f, t, rate, src in cx.execute(
+            "SELECT from_currency, to_currency, rate, source FROM cloudops.fx_rate"
+            " WHERE rate_type = 'average' AND effective_date = %s", (day,)).fetchall()}
+        entries = cx.execute(
+            "SELECT from_currency, to_currency, previous_rate, new_rate, reason"
+            " FROM cloudops.fx_restatement WHERE effective_date = %s ORDER BY id",
+            (day,)).fetchall()
+    assert rates[("GBP", "USD")] == (Decimal("1.25000000"), "finance")
+    assert rates[("USD", "GBP")] == (Decimal("0.80000000"), "finance")
+    assert rates[("USD", "EUR")] == (Decimal("0.92000000"), "finance")  # 1.15 / 1.25
+    assert rates[("EUR", "USD")] == (Decimal("1.08695652"), "finance")  # 1.25 / 1.15
+    # The legs from GBP are held: untouched, still the feed's.
+    assert rates[("GBP", "EUR")] == (Decimal("1.15000000"), "ecb")
+    assert rates[("EUR", "GBP")] == (Decimal("0.86956522"), "ecb")
+    assert [(e[0], e[1]) for e in entries] == [("GBP", "USD"), ("USD", "GBP"),
+                                               ("USD", "EUR"), ("EUR", "USD")]
+    assert entries[1][2] == Decimal("0.76923077")
+    for e in entries[1:]:
+        assert e[4] == f"Derived from correction {entry}: Bank statement rate"
+    listed = (await api.get("/v1/finops/fx-corrections", principals.finops_all)).json()
+    assert sum(1 for x in listed if x["effective_date"] == day) == 4
+
+
 async def test_only_fx_managers_correct_rates(api: Api, principals: Principals) -> None:
     body = {"from_currency": "EUR", "to_currency": "GBP", "rate_type": "average",
             "effective_date": "2026-01-02", "rate": "0.5", "reason": "no"}

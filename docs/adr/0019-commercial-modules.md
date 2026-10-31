@@ -120,3 +120,27 @@ commercial rules open; the user decided them before the build.
 - Alerts are structured log events (`finops.alert`); the Log Analytics alert rule that
   pages on them is step 19 (observability).
 - Margin needs SOW capture (HLD dependency): until then a customer shows not captured.
+
+## Amendment: review follow-ups (migration 0013)
+
+Decided with the user after the step 16 review:
+
+- **Margin records whether its cost reconciled** (`margin_snapshot.cost_verified`),
+  stored rather than looked up at read time, so a closed month keeps what was true when
+  it closed. True when every account with consumption in the month has a latest check
+  that is verified (the invoice once there is one, else the provider total); false
+  otherwise, including an account never checked; null with no cost. A change restates
+  a closed month as a new version. The console marks "Cost not reconciled". The first
+  run after 0013 restates closed months in the reprocessing window once, because their
+  stored flag is null.
+- **An FX correction moves its inverse and crosses.** Rates are stored for every
+  directed pair. Correcting A → B also sets B → A = 1 / rate and, holding the legs from
+  A fixed, B → X and X → B for every stored A → X on that day and rate type. Each moved
+  pair gets its own `fx_restatement` entry naming the correction, with source `finance`
+  so the ECB feed does not undo it.
+- **A provisional month carries figures but no band and no gap to target.** Full-month
+  revenue against month-to-date cost would band too well, and nothing is projected to
+  make up the difference. The band arrives at close.
+- From review: a month with no work items or no hours is incomplete (modelled basis);
+  invoice references sum every document in the period; one customer's margin failure
+  stops only that customer.

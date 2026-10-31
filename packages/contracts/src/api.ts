@@ -1149,6 +1149,8 @@ export interface components {
             band_basis: ("actual" | "modelled") | null;
             /** Contract Currency */
             contract_currency: string | null;
+            /** Cost Verified */
+            cost_verified: boolean | null;
             effort: components["schemas"]["Effort"] | null;
             /** Exceeds Slab */
             exceeds_slab: boolean;

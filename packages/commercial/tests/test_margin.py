@@ -200,3 +200,16 @@ def test_no_recorded_effort_is_a_gap_not_free_delivery(
 
 def test_not_captured_figures_record_missing_effort_as_incomplete() -> None:
     assert margin.compute(inputs(revenue=None, effort=()), V2_14).effort_complete is False
+
+
+def test_a_provisional_month_has_figures_but_no_band_or_gap() -> None:
+    """Month to date: full-month revenue against part of the month's cost would
+    band too well. The figures are shown; the band waits for the close."""
+    closed = margin.compute(inputs(), V2_14)
+    provisional = margin.compute(inputs(provisional=True), V2_14)
+    assert provisional.margin_pct == closed.margin_pct
+    assert provisional.actual_margin == closed.actual_margin
+    assert provisional.band is None
+    assert provisional.gap_to_target is None
+    assert closed.band is not None
+    assert closed.gap_to_target is not None

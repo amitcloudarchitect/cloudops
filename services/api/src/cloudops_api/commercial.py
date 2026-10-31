@@ -530,10 +530,12 @@ class MarginView(ApiModel):
     modelled_margin: Metric[Decimal] | None
     actual_margin: Metric[Decimal] | None
     margin_pct: Metric[Decimal] | None
-    band: str | None
+    band: str | None  # None while provisional: the band arrives at close
     band_basis: Literal["actual", "modelled"] | None
     target_margin: Metric[Decimal] | None
     gap_to_target: Metric[Decimal] | None
+    # Did the cost under the figure reconcile? None: no cost to verify.
+    cost_verified: bool | None
     effort: Effort | None
     unpriced_cis: Metric[int] | None
     exceeds_slab: bool
@@ -578,7 +580,7 @@ _SNAPSHOT_COLUMNS: Final = (
     " s.actual_cost, s.modelled_margin, s.actual_margin, s.margin_at_prior_rates,"
     " s.margin_pct, s.band, s.band_basis, s.target_margin, s.gap_to_target,"
     " s.effort_hours, s.modelled_hours, s.effort_items, s.effort_items_without_hours,"
-    " s.effort_complete, s.unpriced_cis, s.exceeds_slab"
+    " s.effort_complete, s.unpriced_cis, s.exceeds_slab, s.cost_verified"
 )
 _LATEST: Final = text(
     f"SELECT DISTINCT ON (s.tenant_id, s.period) {_SNAPSHOT_COLUMNS}"  # noqa: S608
@@ -607,7 +609,8 @@ def _empty(tenant: TenantView, period: str, reason: NotCaptured,
         version=None, restated=False, rate_card_version=None, contract_currency=None,
         revenue=None, modelled_cost=None, actual_cost=None, modelled_margin=None,
         actual_margin=None, margin_pct=None, band=None, band_basis=None, target_margin=None,
-        gap_to_target=None, effort=None, unpriced_cis=None, exceeds_slab=False, reported=None,
+        gap_to_target=None, cost_verified=None, effort=None, unpriced_cis=None,
+        exceeds_slab=False, reported=None,
         trend=trend)
 
 
@@ -618,7 +621,7 @@ async def _margin_view(conn: ScopedConnection, tenant: TenantView, period: str,
         return _empty(tenant, period, "not_computed", trend)
     (sid, _t, p, through, version, status, restates, computed, card, not_captured, ccy,
      revenue, modelled, actual, m_margin, a_margin, at_prior, pct, band, basis, target, gap,
-     hours, m_hours, items, missing, complete, unpriced, exceeds) = row
+     hours, m_hours, items, missing, complete, unpriced, exceeds, verified) = row
     ref = query_ref("commercial.margin", 1, snapshot=str(sid))
     as_of = computed
     modelled_flag = basis == "modelled"
@@ -655,6 +658,7 @@ async def _margin_view(conn: ScopedConnection, tenant: TenantView, period: str,
         margin_pct=_opt(pct, RATIO, MARGIN_SOURCE, as_of, ref, modelled_flag), band=band,
         band_basis=basis, target_margin=_opt(target, RATIO, "sow_register", as_of, ref),
         gap_to_target=_opt(gap, RATIO, MARGIN_SOURCE, as_of, ref, modelled_flag),
+        cost_verified=verified,
         effort=Effort(
             hours=_money(hours, HOURS, "servicenow", as_of, ref),
             modelled_hours=_opt(m_hours, HOURS, MARGIN_SOURCE, as_of, ref, True),

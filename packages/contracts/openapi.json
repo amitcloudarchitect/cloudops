@@ -1453,6 +1453,17 @@
             ],
             "title": "Contract Currency"
           },
+          "cost_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Verified"
+          },
           "effort": {
             "anyOf": [
               {
@@ -1652,6 +1663,7 @@
           "band_basis",
           "target_margin",
           "gap_to_target",
+          "cost_verified",
           "effort",
           "unpriced_cis",
           "exceeds_slab",
