@@ -107,10 +107,12 @@ class CostSummary(ApiModel):
 
 class CustomerPrice(ApiModel):
     """What a customer sees instead of cost (ADR 0021): its consumption at the
-    price Getronics charges. ``price`` is None, and ``not_captured`` says why,
-    when any day in the period has no uplift in force: never the cost, never a
-    zero."""
+    price Getronics charges, for one closed calendar month and nothing finer, so
+    no single line's price can be isolated (decision 8). ``price`` is None, and
+    ``not_captured`` says why, when any line in the month has no uplift in force:
+    never the cost, never a zero."""
 
+    period: date  # the month's first day
     currency: str
     price: Metric[Decimal] | None
     not_captured: Literal["no_uplift"] | None
@@ -122,8 +124,8 @@ class PriceLine(CustomerPrice):
 
 
 class PriceSummary(ApiModel):
-    period_start: date
-    period_end: date
+    period_start: date  # the first closed month's first day
+    period_end: date  # the last closed month's last day
     reporting_currency: str | None
     lines: list[PriceLine]
 
@@ -253,35 +255,42 @@ _STAFF_COST: Final = text(
     " WHERE c.usage_date BETWEEN :start AND :end"
     " GROUP BY a.provider, c.currency ORDER BY a.provider, c.currency"
 )
-# A customer scope cannot read cost_fact's cost columns (migration 0015): the
-# price comes from cloudops.customer_price alone (0014, ADR 0021).
+# A customer scope cannot read cost_fact's cost columns (migration 0015) and gets
+# its price from cloudops.customer_monthly_price alone: closed months, by
+# provider and currency, nothing finer (0017, ADR 0021 decision 8).
 _CUSTOMER_PRICE: Final = text(
-    "SELECT a.provider, p.currency, sum(p.price), max(p.usage_date),"
-    "   bool_and(p.price IS NOT NULL), sum(p.price * r.rate), bool_and(r.rate IS NOT NULL)"
-    " FROM cloudops.customer_price(:start, :end) p"
-    " JOIN cloudops.cloud_account a ON a.id = p.account_id"
-    " LEFT JOIN LATERAL (SELECT CASE WHEN CAST(:rep AS text) IS NULL THEN NULL"
-    "   WHEN p.currency = :rep THEN 1::numeric ELSE ("
-    "     SELECT f.rate FROM cloudops.fx_rate f WHERE f.from_currency = p.currency"
-    "       AND f.to_currency = :rep AND f.rate_type = 'average'"
-    "       AND f.effective_date <= p.usage_date"
-    "     ORDER BY f.effective_date DESC LIMIT 1) END AS rate) r ON true"
-    " GROUP BY a.provider, p.currency ORDER BY a.provider, p.currency"
+    "SELECT period, provider, currency, price, converted"
+    " FROM cloudops.customer_monthly_price(:start, :end, CAST(:rep AS char(3)))"
+    " ORDER BY period, provider, currency"
 )
 
 
-def customer_price(
-    currency: str, total: Any, priced: bool, last_day: date, ref: str
-) -> CustomerPrice:
-    """One currency's price, or not captured when any day of it had no uplift."""
-    if not priced:
-        return CustomerPrice(currency=currency, price=None, not_captured="no_uplift")
+def closed_months(today: date, months: int) -> tuple[date, date]:
+    """The first day of the earliest and the last day of the latest of the
+    ``months`` calendar months before ``today``'s."""
+    end = today.replace(day=1) - timedelta(days=1)
+    start = end.replace(day=1)
+    for _ in range(months - 1):
+        start = (start - timedelta(days=1)).replace(day=1)
+    return start, end
+
+
+def _month_end(first: date) -> date:
+    return (first + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+
+
+def customer_price(period: date, currency: str, total: Any, ref: str) -> CustomerPrice:
+    """One month's price in one currency, or not captured."""
+    if total is None:
+        return CustomerPrice(period=period, currency=currency, price=None,
+                             not_captured="no_uplift")
     return CustomerPrice(
-        currency=currency, not_captured=None,
+        period=period, currency=currency, not_captured=None,
         # In transaction currency, unconverted and unrounded: rounding happens
         # once, at presentation (CLAUDE.md rule 5).
         price=Metric[Decimal](value=Decimal(total), unit=currency, source_system=PRICE_SOURCE,
-                              as_of=_end_of(last_day), query_ref=ref, is_modelled=False))
+                              as_of=_end_of(_month_end(period)), query_ref=ref,
+                              is_modelled=False))
 
 
 def _converted(value: Any, complete: bool, rep: str | None, source: str, as_of: datetime,
@@ -298,34 +307,38 @@ async def cost_summary(
     request: Request,
     access: AccessDep,
     days: Annotated[int, Query(ge=1, le=90)] = 30,
+    months: Annotated[int, Query(ge=1, le=12)] = 3,
     currency: Currency = None,
 ) -> CostSummary | PriceSummary:
     """Cloud consumption by provider and transaction currency. Staff see the
-    provider's charge to Getronics; a customer sees the price Getronics charges
-    it (ADR 0021). Given ``currency``, each line is also converted at the rate
-    in force on each usage date; a line with any day unconverted has none."""
-    end = _now().date()
-    start = end - timedelta(days=days - 1)
-    params = {"start": start, "end": end, "rep": currency}
-    customer = access.kind == "customer"
-    async with platform(request).db.transaction(access.scope) as conn:
-        rows: list[tuple[Any, ...]] = [
-            tuple(r) for r in await conn.execute(_CUSTOMER_PRICE if customer else _STAFF_COST,
-                                                 params)
-        ]
-    if customer:
-        ref = query_ref("cost.customer_price_by_provider_currency", 1, start=start, end=end)
-        cref = query_ref("cost.customer_price_converted", 1, start=start, end=end, rep=currency)
+    provider's charge to Getronics over the last ``days``. A customer sees the
+    price Getronics charges it (ADR 0021) for each of the last ``months``
+    closed calendar months, and nothing finer. Given ``currency``, each figure
+    is also converted at the rate in force on each usage date; a figure with any
+    day unconverted has none."""
+    if access.kind == "customer":
+        start, end = closed_months(_now().date(), months)
+        async with platform(request).db.transaction(access.scope) as conn:
+            rows = [tuple(r) for r in await conn.execute(
+                _CUSTOMER_PRICE, {"start": start, "end": end, "rep": currency})]
+        ref = query_ref("cost.customer_monthly_price", 1, start=start, end=end)
+        cref = query_ref("cost.customer_monthly_price_converted", 1, start=start, end=end,
+                         rep=currency)
         lines: list[PriceLine] = []
-        for provider, ccy, total, last_day, priced, conv, conv_ok in rows:
-            base = customer_price(ccy, total, priced, last_day, ref)
+        for period, provider, ccy, total, conv in rows:
+            base = customer_price(period, ccy, total, ref)
             lines.append(PriceLine(
-                provider=provider, currency=base.currency, price=base.price,
+                period=period, provider=provider, currency=ccy, price=base.price,
                 not_captured=base.not_captured,
-                converted=_converted(conv, priced and conv_ok, currency, PRICE_SOURCE,
-                                     _end_of(last_day), cref)))
+                converted=_converted(conv, total is not None, currency, PRICE_SOURCE,
+                                     _end_of(_month_end(period)), cref)))
         return PriceSummary(period_start=start, period_end=end, reporting_currency=currency,
                             lines=lines)
+    end = _now().date()
+    start = end - timedelta(days=days - 1)
+    async with platform(request).db.transaction(access.scope) as conn:
+        rows = [tuple(r) for r in await conn.execute(
+            _STAFF_COST, {"start": start, "end": end, "rep": currency})]
     ref = query_ref("cost.amortized_by_provider_currency", 1, start=start, end=end)
     cref = query_ref("cost.amortized_converted", 1, start=start, end=end, rep=currency)
     return CostSummary(

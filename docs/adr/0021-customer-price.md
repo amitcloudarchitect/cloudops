@@ -5,7 +5,8 @@
 - **Amends:** ADR 0018 (the customer role's grant on `cost_fact`)
 - **Implements:** ADR 0002 D10 (commercial data never reaches a customer role); CLAUDE.md
   rule 5 (money). Migrations `0014_customer_price` (expand) and `0015_revoke_customer_cost`
-  (contract), `0016_pack_customer_price`, `services/api/.../bff.py` (`/v1/cost/summary`), `operations.py`
+  (contract), `0016_pack_customer_price`, `0017_customer_price_detail` (contract),
+  `services/api/.../bff.py` (`/v1/cost/summary`), `operations.py`
   (`/v1/customers`), the console's customer overview, the synthetic SOWs.
 
 ## Context
@@ -36,7 +37,7 @@ inferred.
    - **Price = amortized cost × (1 + the SOW's consumption uplift)**, per usage date, in
      the transaction currency of the cost line.
    - **The uplift is per SOW**: `sow.consumption_uplift`, a fraction (`0.08` is 8%),
-     `numeric(7,6)`, `0 ≤ uplift < 10`. The SOW in force on the usage date
+     `numeric(7,6)`, `0 < uplift < 10` (above 0 since 0017, decision 9). The SOW in force on the usage date
      (`effective_from ≤ day ≤ effective_to`, inclusive, as the FinOps worker reads it)
      supplies it, so a renewal that changes the rate prices each day at its own rate.
    - **It applies to every charge class**: consumption, licence, marketplace, support,
@@ -86,18 +87,20 @@ inferred.
 
 5. **Serving** (CLAUDE.md rule 5):
 
-   - **`/v1/cost/summary`** returns `PriceSummary` to a customer: per provider and
-     currency, `price` (a `Metric`, source `customer_price`) or `not_captured:
-     "no_uplift"`. A line with any unpriced day is not captured as a whole, so a
-     partially priced sum is never shown. Staff still get `CostSummary` with `amortized`.
+   - **`/v1/cost/summary`** returns `PriceSummary` to a customer: per **closed calendar
+     month**, provider and currency (decision 9), `price` (a `Metric`, source
+     `customer_price`) or `not_captured: "no_uplift"`, for the last `months` (1 to 12,
+     default 3). A month with any unpriced line is not captured as a whole, so a
+     partially priced sum is never shown. Staff still get `CostSummary` with `amortized`
+     over the last `days`.
    - **Conversion.** Given `currency`, both views also return `converted`, at the daily
      average rate in force on each usage date. A line with any day lacking a rate has no
      conversion, never a rate of 1 or 0.
-   - **`/v1/customers`** returns `price_30d` to a customer and `cost_30d` to staff. Each
-     is null for the other kind.
+   - **`/v1/customers`** returns `price_last_month` to a customer and `cost_30d` to staff.
+     Each is null for the other kind.
    - **Rounding.** Nothing is rounded server-side. The console rounds once, in `money()`.
-   - **Console.** The customer overview shows "Cloud consumption, 30 days (EUR)" with the
-     price, or "Not yet priced" when not captured. Staff still see "Cloud cost".
+   - **Console.** The customer overview shows "Cloud consumption, September 2026 (EUR)" with
+     the price, or "Not yet priced" when not captured. Staff still see "Cloud cost".
 
 6. **A finding's saving is priced the same way** (user, 2026-10-31). CoreStack's
    `cost_finding.estimated_saving` is stated in provider-cost terms, so it could reveal
@@ -130,6 +133,47 @@ inferred.
    - The customer-readable copy (`report_pack.sections`) keeps the price and drops the
      cost. `report_pack_commercial` keeps both, so staff still see cloud cost and the
      approver sees what the customer will see.
+
+9. **The uplift must not be inferable: above 0, and no detail finer than a month**
+   (user decision, 2026-10-31, after review; migration `0017_customer_price_detail`).
+
+   *The risk.* One uplift multiplies every cost line, and `customer_price` returned one
+   row per account, day, charge class and currency. A customer who knows the provider's
+   list price for a single line divides to get 1 + uplift, and from that recovers every
+   cost. The line might be a support plan, or a marketplace item on a day it is the only
+   charge. An uplift of 0 would show the cost outright.
+
+   *The decision.*
+   - `sow_consumption_uplift_positive`: `consumption_uplift > 0`, added NOT VALID and
+     validated. If a SOW held 0 the migration would stop rather than choose a value.
+     Commercial sets the real uplift, or NULL for not captured. No API writes the uplift
+     (only migrations and the seed do), so the database check is the validation.
+   - `cloudops.customer_monthly_price(from, to, currency)` is the only price a customer
+     may call. It returns tenant, **closed calendar month**, provider and currency, and
+     no account, charge class, service or day. The dates select whole months, so asking
+     for one day returns that day's whole month. The current month is never returned: a
+     month to date that grows daily would let a customer difference one day's lines.
+     Conversion happens inside the function, per usage date, before the sum (rule 5).
+   - `cloudops.customer_saving_total()` replaces the per-finding saving for customers.
+     It returns the open findings' priced total per tenant and currency, with how many
+     findings it covers.
+   - EXECUTE on `customer_price` and `customer_saving` is revoked from customers. They
+     remain the resolver's building blocks. `pack_customer_price` (decision 8) keeps its
+     per-day grain because only commercial roles, who may read the uplift, can call it.
+     The customer-readable pack holds one figure for the month.
+   - Same-release contract, as decision 4: an old pod's customer cost card errors during
+     the rollout instead of returning per-line prices.
+
+   *Residual risk, for the user to decide.* Aggregation leaves a single-line group exposed:
+
+   - a provider with one line in a month still shows that line's price. In the tests,
+     charlie's AWS subscription has one marketplace line;
+   - so does a tenant with one open finding;
+   - a closed month restated by a late line changes by that line's price.
+
+   A minimum group size (for example, withhold a figure built from fewer than *n*
+   lines) would close these. It is not built, because it is a pricing-display rule the
+   user has not chosen.
 
 ## Consequences
 

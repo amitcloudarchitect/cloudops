@@ -414,9 +414,11 @@ export interface paths {
         /**
          * Cost Summary
          * @description Cloud consumption by provider and transaction currency. Staff see the
-         *     provider's charge to Getronics; a customer sees the price Getronics charges
-         *     it (ADR 0021). Given ``currency``, each line is also converted at the rate
-         *     in force on each usage date; a line with any day unconverted has none.
+         *     provider's charge to Getronics over the last ``days``. A customer sees the
+         *     price Getronics charges it (ADR 0021) for each of the last ``months``
+         *     closed calendar months, and nothing finer. Given ``currency``, each figure
+         *     is also converted at the rate in force on each usage date; a figure with any
+         *     day unconverted has none.
          */
         get: operations["cost_summary_v1_cost_summary_get"];
         put?: never;
@@ -1613,8 +1615,8 @@ export interface components {
             cost_30d: components["schemas"]["Metric_Decimal_"][] | null;
             critical_vulnerabilities: components["schemas"]["Metric_int_"] | null;
             open_incidents: components["schemas"]["Metric_int_"] | null;
-            /** Price 30D */
-            price_30d: components["schemas"]["CustomerPrice"][] | null;
+            /** Price Last Month */
+            price_last_month: components["schemas"]["CustomerPrice"][] | null;
             resources: components["schemas"]["Metric_int_"] | null;
             sla_breached_open: components["schemas"]["Metric_int_"] | null;
             tenant: components["schemas"]["TenantView"];
@@ -1622,15 +1624,21 @@ export interface components {
         /**
          * CustomerPrice
          * @description What a customer sees instead of cost (ADR 0021): its consumption at the
-         *     price Getronics charges. ``price`` is None, and ``not_captured`` says why,
-         *     when any day in the period has no uplift in force: never the cost, never a
-         *     zero.
+         *     price Getronics charges, for one closed calendar month and nothing finer, so
+         *     no single line's price can be isolated (decision 8). ``price`` is None, and
+         *     ``not_captured`` says why, when any line in the month has no uplift in force:
+         *     never the cost, never a zero.
          */
         CustomerPrice: {
             /** Currency */
             currency: string;
             /** Not Captured */
             not_captured: "no_uplift" | null;
+            /**
+             * Period
+             * Format: date
+             */
+            period: string;
             price: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** DecisionRequest */
@@ -2224,6 +2232,11 @@ export interface components {
             currency: string;
             /** Not Captured */
             not_captured: "no_uplift" | null;
+            /**
+             * Period
+             * Format: date
+             */
+            period: string;
             price: components["schemas"]["Metric_Decimal_"] | null;
             /** Provider */
             provider: string;
@@ -3762,6 +3775,7 @@ export interface operations {
             query?: {
                 currency?: string | null;
                 days?: number;
+                months?: number;
             };
             header?: never;
             path?: never;

@@ -12,6 +12,7 @@ const DATE_TIME = new Intl.DateTimeFormat("en-GB", {
   timeZoneName: "short",
 });
 const DATE = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
+const MONTH = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 
 export function dateTime(iso: string | null | undefined): string {
   return iso ? DATE_TIME.format(new Date(iso)) : "—";
@@ -19,6 +20,11 @@ export function dateTime(iso: string | null | undefined): string {
 
 export function date(iso: string | null | undefined): string {
   return iso ? DATE.format(new Date(iso)) : "—";
+}
+
+/** A calendar month, from its first day: "September 2026". */
+export function month(iso: string): string {
+  return MONTH.format(new Date(iso));
 }
 
 export function count(value: number): string {

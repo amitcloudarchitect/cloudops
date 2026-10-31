@@ -204,10 +204,10 @@ async def test_customer_overview_is_scoped_and_absent_is_not_zero(
     customer = (await api.get("/v1/customers", principals.customer_a)).json()
     assert [c["tenant"]["id"] for c in customer] == [str(seeded.a.id)]
     assert customer[0]["open_incidents"]["value"] == 1
-    # A customer sees the price, never the cost (ADR 0021); no uplift here.
+    # A customer sees last month's price, never the cost (ADR 0021); the figures
+    # themselves are tested in test_customer_price.
     assert customer[0]["cost_30d"] is None
-    assert [(p["currency"], p["price"], p["not_captured"]) for p in customer[0]["price_30d"]] \
-        == [(seeded.a.currency, None, "no_uplift")]
+    assert {p["currency"] for p in customer[0]["price_last_month"]} <= {seeded.a.currency}
 
     finops = (await api.get("/v1/customers", principals.finops_all)).json()
     assert {c["tenant"]["id"] for c in finops} >= {str(t.id) for t in seeded.tenants}
