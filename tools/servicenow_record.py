@@ -1,7 +1,7 @@
 """Record contract fixtures from a real ServiceNow instance, scrubbed (ADR 0009).
 
     uv run python tools/servicenow_record.py --instance https://dev407774.service-now.com \
-        --client-id 82e09795000b4f1693138c3427623f04
+        --client-id 666769454e68469d8d39fb53b61337dc
 
 Reads one page of each connector entity with the platform's own client (OAuth
 client credentials, the secret fetched from Key Vault into memory only) and
