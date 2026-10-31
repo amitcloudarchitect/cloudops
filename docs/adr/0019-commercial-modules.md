@@ -121,7 +121,7 @@ commercial rules open; the user decided them before the build.
   pages on them is step 19 (observability).
 - Margin needs SOW capture (HLD dependency): until then a customer shows not captured.
 
-## Amendment: review follow-ups (migration 0014)
+## Amendment: review follow-ups (migration 0016)
 
 Decided with the user after the step 16 review:
 
@@ -131,13 +131,20 @@ Decided with the user after the step 16 review:
   that is verified (the invoice once there is one, else the provider total); false
   otherwise, including an account never checked; null with no cost. A change restates
   a closed month as a new version. The console marks "Cost not reconciled". The first
-  run after 0014 restates closed months in the reprocessing window once, because their
-  stored flag is null.
-- **An FX correction moves its inverse and crosses.** Rates are stored for every
-  directed pair. Correcting A → B also sets B → A = 1 / rate and, holding the legs from
-  A fixed, B → X and X → B for every stored A → X on that day and rate type. Each moved
-  pair gets its own `fx_restatement` entry naming the correction, with source `finance`
-  so the ECB feed does not undo it.
+  run after 0016 restates closed months in the reprocessing window once, because their
+  stored flag is null. A null on a version computed before 0016 means "not recorded",
+  not "no cost": those versions predate the flag.
+- **An FX correction moves its inverse and crosses, anchored on EUR.** Rates are
+  stored for every directed pair, derived from the ECB's EUR rates. A correction names
+  one moving currency M: the non-EUR currency of a pair with EUR, or, for a pair
+  without EUR, the one Finance names (user decision); every other EUR leg is held, so
+  a GBP/USD fix never rewrites EUR/USD unless Finance says USD moves. On the
+  correction's day: the pair, its inverse and every pair with M are set, derived from
+  the EUR rates in force on or before the day (as `fx_rate_on` reads them). A held
+  currency with no EUR rate is refused, as is a pair without EUR and no named leg.
+  Each moved pair gets its own `fx_restatement` entry, source `finance` so the ECB feed
+  does not undo it; resubmitting a stored rate repairs derived pairs and is refused as
+  unchanged only when nothing moves.
 - **A provisional month carries figures but no band and no gap to target.** Full-month
   revenue against month-to-date cost would band too well, and nothing is projected to
   make up the difference. The band arrives at close.

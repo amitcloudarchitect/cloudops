@@ -412,13 +412,14 @@ _EFFORT: Final = text(
     " WHERE w.tenant_id = :t AND w.closed_at >= :start AND w.closed_at < :end"
     " GROUP BY 1, 2"
 )
-# Per account with consumption in the month, its latest check: the invoice once
-# one exists, else the provider total. An account never checked counts against.
+# Per account with consumption in the invoice period (checks are keyed by it, not
+# by usage date), its latest check: the invoice once one exists, else the
+# provider total. An account never checked counts against.
 _COST_VERIFIED: Final = text(
     "WITH accounts AS ("
     "  SELECT DISTINCT c.account_id FROM cloudops.cost_fact c"
     "  WHERE c.tenant_id = :t AND c.charge_class = 'consumption'"
-    "    AND c.usage_date BETWEEN :a AND :b),"
+    "    AND c.invoice_period = :p AND c.usage_date <= :b),"
     " latest AS ("
     "  SELECT DISTINCT ON (r.account_id) r.account_id, r.status"
     "  FROM cloudops.cost_reconciliation r"
@@ -497,7 +498,7 @@ async def cost_verified(conn: ScopedConnection, tenant: UUID, period: date,
                         through: date) -> bool | None:
     """Did the month's cost reconcile? None when there is no cost to verify."""
     accounts, verified = _rows(await conn.execute(_COST_VERIFIED, {
-        "t": tenant, "a": period, "b": through, "p": period_label(period)}))[0]
+        "t": tenant, "b": through, "p": period_label(period)}))[0]
     return None if not accounts else accounts == verified
 
 

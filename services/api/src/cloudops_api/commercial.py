@@ -400,6 +400,10 @@ class FxCorrectionRequest(BaseModel):
     effective_date: date
     rate: Decimal = Field(gt=0, max_digits=18, decimal_places=8)
     reason: str = Field(min_length=3, max_length=500)
+    # EUR anchors every rate. For a pair without EUR, the currency whose EUR leg
+    # moves (one of the pair); the other is held. For a pair with EUR, absent or
+    # the other currency.
+    moves: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
 
 
 class FxCorrectionView(ApiModel):
@@ -415,12 +419,14 @@ class FxCorrectionView(ApiModel):
     entered_at: datetime
 
 
-# The function's refusals (migration 0012), by SQLSTATE. Anything else is a 500.
+# The function's refusals (migrations 0012, 0016), by SQLSTATE. Anything else is a 500.
 _REFUSALS: Final = {
     "42501": (403, "forbidden"),
     "22023": (422, "invalid_request"),
     "23514": (422, "invalid_request"),
     "FXSAM": (409, "unchanged"),
+    "FXLEG": (422, "eur_leg_required"),
+    "FXHLD": (422, "no_held_rate"),
 }
 
 
@@ -470,18 +476,22 @@ async def list_fx_corrections(request: Request, access: AccessDep) -> list[FxCor
 async def correct_fx_rate(
     request: Request, body: FxCorrectionRequest, access: AccessDep
 ) -> FxCorrectionView:
-    """Finance corrects a rate. The closed months it touches are restated by the
-    next month-end reprocessing, as new versions; nothing closed is overwritten."""
+    """Finance corrects a rate. Its inverse and every pair with the moving
+    currency are re-derived from the EUR rates on the same day, each with its own
+    entry; the returned entry is the first that moved. The closed months it
+    touches are restated by the next month-end reprocessing, as new versions;
+    nothing closed is overwritten."""
     if access.kind != "staff":
         raise ApiError(403, "forbidden")
     if body.from_currency == body.to_currency:
         raise ApiError(422, "invalid_request")
     async with _guarded(request, access) as conn:
         entry = await conn.scalar(text(
-            "SELECT access.correct_fx_rate(:actor, :f, :t, :k, :d, :r, :why)"), {
+            "SELECT access.correct_fx_rate(:actor, :f, :t, :k, :d, :r, :why,"
+            " CAST(:moves AS char(3)))"), {
             "actor": access.identity.oid, "f": body.from_currency, "t": body.to_currency,
             "k": body.rate_type, "d": body.effective_date, "r": body.rate,
-            "why": body.reason})
+            "why": body.reason, "moves": body.moves})
         row = _rows(await conn.execute(text(f"{_FX_ENTRIES} WHERE id = :id"),
                                        {"id": entry}))
     return _fx_view(row[0])

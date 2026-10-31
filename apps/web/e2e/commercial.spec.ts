@@ -81,11 +81,27 @@ test.describe("finops", () => {
     await form.getByLabel("Reason").fill(reason);
     await form.getByRole("button", { name: "Record correction" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Correction recorded: CHF to EUR, closing" })).toBeVisible();
-    // The correction and its inverse, derived from it, each with an entry.
+    // The correction, its inverse and any cross through EUR, each with an entry.
     const entries = page.getByRole("table", { name: "FX corrections" }).getByRole("row").filter({ hasText: reason });
-    await expect(entries).toHaveCount(2);
     await expect(entries.filter({ hasText: "CHF → EUR" })).toHaveCount(1);
     await expect(entries.filter({ hasText: "EUR → CHF" })).toContainText("Derived from correction");
+  });
+
+  test("a pair without EUR asks which EUR leg moves", async ({ signedIn: page }) => {
+    await page.goto("/finops");
+    const form = page.getByRole("form", { name: "Correct a rate" });
+    await form.getByLabel("From currency").fill("GBP");
+    await form.getByLabel("To currency").fill("EUR");
+    await expect(form.getByLabel("EUR leg that moves")).toHaveCount(0);
+    await form.getByLabel("To currency").fill("USD");
+    const leg = form.getByLabel("EUR leg that moves");
+    await expect(leg).toBeVisible();
+    await expect(leg.getByRole("option", { name: "EUR → USD moves, EUR → GBP held" })).toHaveCount(1);
+    await form.getByLabel("Effective date").fill("2025-01-02");
+    await form.getByLabel("Rate", { exact: true }).fill("1.25");
+    await form.getByLabel("Reason").fill("e2e leg check");
+    await form.getByRole("button", { name: "Record correction" }).click();
+    await expect(form.getByRole("alert")).toContainText("choose which EUR leg moves");
   });
 
   test("margin: banded, with not captured in words for a customer without a SOW", async ({ signedIn: page }) => {
