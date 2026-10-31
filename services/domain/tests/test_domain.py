@@ -306,7 +306,7 @@ def _content() -> PackContent:
         uuid4(), "Alpha Ltd", date(2026, 9, 1), "EUR", datetime(2026, 10, 1, 6, 0, tzinfo=UTC),
         (
             Section("executive_summary", "Executive summary", True, None, (
-                Figure("cloud_consumption", "Billed cloud consumption", "1234.565", "money",
+                Figure("cloud_cost", "Cloud cost", "1234.565", "money",
                        "EUR", "cloud_billing", "q"),
                 Figure("incident_sla_attainment", "Incidents resolved within SLA",
                        "66.666666", "percent", "percent", "servicenow", "q"),
@@ -325,7 +325,7 @@ def test_render_prints_people_not_drafts_and_marks_unreleased_packs() -> None:
     lines = text_lines(render_lines(_content(), {"volumetrics": "A quiet month."},
                                     released=False, version=2))
     assert DRAFT_BANNER in lines
-    assert "Billed cloud consumption: EUR 1,234.57" in lines
+    assert "Cloud cost: EUR 1,234.57" in lines
     assert "Incidents resolved within SLA: 66.67%" in lines
     assert "Incidents opened: 1,204" in lines
     assert "A quiet month." in lines
@@ -374,15 +374,15 @@ def test_the_pdf_is_valid_deterministic_and_prints_the_euro_sign() -> None:
 
 
 def test_acceptance_matches_on_whitespace_and_flags_currency_presentation() -> None:
-    generated = ["Alpha  Ltd", "Billed cloud consumption: EUR 1,234.57", "Incidents opened: 1,204"]
-    same = ["  Alpha Ltd ", "", "Billed cloud consumption: EUR 1,234.57", "Incidents opened: 1,204"]
+    generated = ["Alpha  Ltd", "Cloud cost: EUR 1,234.57", "Incidents opened: 1,204"]
+    same = ["  Alpha Ltd ", "", "Cloud cost: EUR 1,234.57", "Incidents opened: 1,204"]
     assert compare(generated, same).matches
-    manual = ["Alpha Ltd", "Billed cloud consumption: €1,234.57", "Incidents opened: 1,204"]
+    manual = ["Alpha Ltd", "Cloud cost: €1,234.57", "Incidents opened: 1,204"]
     result = compare(generated, manual)
     assert not result.matches
-    assert result.currency_mismatches == [("Billed cloud consumption: €1,234.57",
-                                           "Billed cloud consumption: EUR 1,234.57")]
-    assert any(line.startswith("-Billed") for line in result.diff)
+    assert result.currency_mismatches == [("Cloud cost: €1,234.57",
+                                           "Cloud cost: EUR 1,234.57")]
+    assert any(line.startswith("-Cloud cost") for line in result.diff)
 
 
 def test_month_bounds() -> None:

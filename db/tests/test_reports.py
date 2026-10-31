@@ -138,7 +138,7 @@ async def test_a_pack_is_generated_from_live_rows_in_the_contract_currency(
     assert got.status_code == 201, got.text
     pack = got.json()
     assert (pack["contract_currency"], pack["status"], pack["period"]) == ("EUR", "draft", LABEL)
-    spend = _figure(pack, "executive_summary", "cloud_consumption")
+    spend = _figure(pack, "executive_summary", "cloud_cost")
     assert (spend["kind"], spend["unit"]) == ("money", "EUR")
     assert Decimal(spend["value"]) == month.expected_eur  # unrounded until presentation
     assert _figure(pack, "volumetrics", "incidents_opened")["value"] == "4"
@@ -239,7 +239,7 @@ async def test_commercial_sections_are_stored_apart_for_commercial_roles(
 async def test_a_missing_rate_is_a_gap_never_zero(step17: Step17, month: Month) -> None:
     # Charlie's contract is USD and its CHF row has no CHF->USD rate.
     admin_pack = (await _generate(step17, step17.admin, step17.seeded.c.id)).json()
-    spend = _figure(admin_pack, "executive_summary", "cloud_consumption")
+    spend = _figure(admin_pack, "executive_summary", "cloud_cost")
     assert spend["value"] == ""
     assert spend["kind"] == "text"
     assert spend["note"] == f"not shown: no average FX rate for CHF->USD from {D1.isoformat()}"
@@ -316,6 +316,25 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
         seen = cx.execute("SELECT count(*) FROM cloudops.report_pack WHERE id = %s",
                           (pid,)).fetchone()
     assert seen == (1,)
+    # Getronics' cloud cost, and anything commercial, never reaches what a customer
+    # scope reads: the pack as the API assembles it, under that scope.
+    with psycopg.connect(s.app_dsn) as cx:
+        _as_role(cx, s.a.id, "customer")
+        found = cx.execute(
+            "SELECT p.sections || coalesce((SELECT c.sections FROM"
+            " cloudops.report_pack_commercial c WHERE c.pack_id = p.id), '{}'::jsonb)"
+            " FROM cloudops.report_pack p WHERE p.id = %s", (pid,)).fetchone()
+    assert found
+    readable = found[0]
+    assert {"financial_dashboard", "revenue_mix"}.isdisjoint(readable)
+    money = [f for sec in readable.values() for f in sec["figures"] if f["kind"] == "money"]
+    assert money == []
+    cost = next(f for f in readable["executive_summary"]["figures"] if f["key"] == "cloud_cost")
+    assert (cost["value"], cost["kind"]) == ("", "text")
+    assert "not the customer's price" in cost["note"]
+    staff_view = (await api.get(f"/v1/reports/packs/{pid}", step17.delivery_a)).json()
+    assert Decimal(_figure(staff_view, "executive_summary", "cloud_cost")["value"]) == (
+        month.expected_eur)
     # What was released stays what was approved, for the table owner too.
     with psycopg.connect(s.admin_dsn) as cx:
         for sql in ("UPDATE cloudops.report_narrative SET text = 'Rewritten.'"
@@ -329,7 +348,7 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
     lines = (await api.get(f"/v1/reports/packs/{pid}/text", step17.delivery_a)).text.splitlines()
     assert "Reviewed volumetrics." in lines
     assert DRAFT_BANNER not in lines
-    assert (f"Billed cloud consumption: EUR {month.expected_eur.quantize(Decimal('0.01')):,}"
+    assert (f"Cloud cost: EUR {month.expected_eur.quantize(Decimal('0.01')):,}"
             " (unreconciled; each row at the average rate on its usage date)") in lines
     assert pdf.startswith(b"%PDF")
     assert DRAFT_BANNER.encode() not in pdf

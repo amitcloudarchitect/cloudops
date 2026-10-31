@@ -63,7 +63,7 @@ test.describe("platform administrator", () => {
     await page.goto("/reports");
     await page.getByLabel("Reporting currency").selectOption("GBP");
     await expect(page.getByRole("table", { name: "Portfolio in GBP" })).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: /Billed cloud consumption \(GBP\)/ })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: /Cloud cost \(GBP\)/ })).toBeVisible();
   });
 });
 

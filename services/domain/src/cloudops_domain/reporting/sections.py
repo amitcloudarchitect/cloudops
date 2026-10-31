@@ -7,7 +7,7 @@ Sections, in pack order:
 
 | Section | Source | Built here |
 | --- | --- | --- |
-| Executive summary | the other sections' key figures, and billed cloud consumption | yes |
+| Executive summary | the other sections' key figures, and the month's cloud cost | yes |
 | Volumetrics | ServiceNow work items | yes |
 | Financial dashboard | the commercial engine's margin snapshot (step 16) | ``financial.py`` |
 | Vulnerabilities | Qualys detections | yes |
@@ -35,7 +35,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from typing import Any, Final, Literal, Protocol
@@ -397,22 +397,26 @@ WHERE tenant_id = :t AND usage_date >= :s AND usage_date < :e
 
 async def consumption(conn: ScopedConnection, tenant: UUID, period: date, currency: str
                       ) -> Figure:
-    """Billed cloud consumption in ``currency``: every cost row converted at the
+    """The month's cloud cost in ``currency``: every cost row converted at the
     average rate in force on its own usage date, then summed. Unreconciled:
-    reconciliation to the invoice is step 16."""
+    reconciliation to the invoice is step 16.
+
+    This is Getronics' cost (unblended, as the provider bills Getronics), not
+    the customer's price: it is staff-only, and ``for_storage`` keeps it out of
+    what a customer can read."""
     start, end = month_bounds(period)
     p = {"t": tenant, "s": start.date(), "e": end.date(), "target": check_currency(currency)}
     q = ref("consumption", period=period, currency=currency)
     missing = [tuple(r) for r in await conn.execute(_MISSING_RATES, p)]
     if missing:
         pairs = ", ".join(f"{c}->{currency} from {d.isoformat()}" for c, d in missing)
-        return Figure("cloud_consumption", "Billed cloud consumption", "", "text", "",
+        return Figure("cloud_cost", "Cloud cost", "", "text", "",
                       "cloud_billing", q, f"not shown: no average FX rate for {pairs}")
     rows, total, _first, _last = tuple((await conn.execute(_CONSUMPTION, p)).one())
     note = "unreconciled; each row at the average rate on its usage date"
     if not rows:
         note = "no billing rows for this month"
-    return Figure("cloud_consumption", "Billed cloud consumption", str(Decimal(total)), "money",
+    return Figure("cloud_cost", "Cloud cost", str(Decimal(total)), "money",
                   currency, "cloud_billing", q, note)
 
 
@@ -450,6 +454,29 @@ async def generate(conn: ScopedConnection, scope: TenantScope, *, tenant_id: UUI
     summary = executive_summary(built, spend)
     ordered = tuple(summary if k == "executive_summary" else built[k] for k in SECTION_ORDER)
     return PackContent(tenant_id, tenant_name, period, contract_currency, now, ordered)
+
+
+COST_WITHHELD: Final = ("not in the customer's pack: this is Getronics' cost, not the"
+                        " customer's price")
+
+
+def for_storage(content: PackContent) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The pack's sections as stored: what any reader of the pack may see (a
+    customer, once published), and what only commercial roles read
+    (``report_pack_commercial``), which overrides the first section by section.
+    The commercial sections and the cloud cost go only to the second; the first
+    says the cost is withheld, and why."""
+    every = content.to_json()["sections"]
+    public = {k: v for k, v in every.items() if k not in COMMERCIAL_SECTIONS}
+    restricted = {k: v for k, v in every.items() if k in COMMERCIAL_SECTIONS}
+    summary = content.section("executive_summary")
+    if summary.figure("cloud_cost") is not None:
+        restricted["executive_summary"] = every["executive_summary"]
+        withheld = replace(summary, figures=tuple(
+            replace(f, value="", kind="text", unit="", note=COST_WITHHELD)
+            if f.key == "cloud_cost" else f for f in summary.figures))
+        public["executive_summary"] = asdict(withheld)
+    return public, restricted
 
 
 def narrative_input(section: Section) -> dict[str, Any]:

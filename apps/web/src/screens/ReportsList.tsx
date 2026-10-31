@@ -104,7 +104,7 @@ function Portfolio() {
     { key: "customer", header: "Customer", value: (l) => l.tenant.name, sortable: true },
     {
       key: "consumption",
-      header: `Billed cloud consumption (${currency})`,
+      header: `Cloud cost (${currency})`,
       value: (l) => (l.consumption ? Number(l.consumption.value) : null),
       render: (l) => (l.consumption ? money(String(l.consumption.value), currency) : <span className="text-muted">Not shown: {l.gap}</span>),
       sortable: true,

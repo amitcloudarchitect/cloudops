@@ -258,6 +258,9 @@ async def generate_pack(request: Request, body: GenerateRequest, access: AccessD
             conn, scope, tenant_id=body.tenant_id, tenant_name=str(name), period=period,
             contract_currency=str(currency).strip(), now=now,
             availability_source=p.availability, financial=p.financial)
+        # Margin, SOW revenue and Getronics' cloud cost are stored apart, where only
+        # commercial roles read them (ADR 0020): never in what a customer can read.
+        public, restricted = sections.for_storage(content)
         # A new version supersedes the unpublished ones; a published pack stays
         # published until its successor is.
         await conn.execute(text(
@@ -272,15 +275,11 @@ async def generate_pack(request: Request, body: GenerateRequest, access: AccessD
             " sections, data_as_of, generated_by) VALUES (:t, :p, :v, :c, CAST(:s AS jsonb),"
             " :at, :by) RETURNING id"),
             {"t": body.tenant_id, "p": period, "v": version, "c": content.contract_currency,
-             "s": json.dumps({k: v for k, v in content.to_json()["sections"].items()
-                              if k not in sections.COMMERCIAL_SECTIONS}), "at": now,
-             "by": access.identity.oid})
+             "s": json.dumps(public), "at": now, "by": access.identity.oid})
         await conn.execute(text(
             "INSERT INTO cloudops.report_pack_commercial (pack_id, tenant_id, sections)"
             " VALUES (:p, :t, CAST(:s AS jsonb))"),
-            {"p": pack, "t": body.tenant_id,
-             "s": json.dumps({k: v for k, v in content.to_json()["sections"].items()
-                              if k in sections.COMMERCIAL_SECTIONS})})
+            {"p": pack, "t": body.tenant_id, "s": json.dumps(restricted)})
         wanted = sections.narrative_sections(content)
         if wanted:
             await conn.execute(text(
