@@ -1180,9 +1180,20 @@
       },
       "CostLine": {
         "additionalProperties": false,
+        "description": "What Getronics staff see: the provider's charge to Getronics.",
         "properties": {
           "amortized": {
             "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "converted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "currency": {
             "title": "Currency",
@@ -1196,7 +1207,8 @@
         "required": [
           "provider",
           "currency",
-          "amortized"
+          "amortized",
+          "converted"
         ],
         "title": "CostLine",
         "type": "object"
@@ -1220,11 +1232,23 @@
             "format": "date",
             "title": "Period Start",
             "type": "string"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
           }
         },
         "required": [
           "period_start",
           "period_end",
+          "reporting_currency",
           "lines"
         ],
         "title": "CostSummary",
@@ -1389,6 +1413,20 @@
               }
             ]
           },
+          "price_30d": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CustomerPrice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price 30D"
+          },
           "resources": {
             "anyOf": [
               {
@@ -1419,9 +1457,49 @@
           "open_incidents",
           "sla_breached_open",
           "critical_vulnerabilities",
-          "cost_30d"
+          "cost_30d",
+          "price_30d"
         ],
         "title": "CustomerOverview",
+        "type": "object"
+      },
+      "CustomerPrice": {
+        "additionalProperties": false,
+        "description": "What a customer sees instead of cost (ADR 0021): its consumption at the\nprice Getronics charges. ``price`` is None, and ``not_captured`` says why,\nwhen any day in the period has no uplift in force: never the cost, never a\nzero.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "not_captured": {
+            "anyOf": [
+              {
+                "const": "no_uplift",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Captured"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "currency",
+          "price",
+          "not_captured"
+        ],
+        "title": "CustomerPrice",
         "type": "object"
       },
       "DecisionRequest": {
@@ -3427,6 +3505,101 @@
           "open_total"
         ],
         "title": "Posture",
+        "type": "object"
+      },
+      "PriceLine": {
+        "additionalProperties": false,
+        "properties": {
+          "converted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "not_captured": {
+            "anyOf": [
+              {
+                "const": "no_uplift",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Captured"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "price",
+          "not_captured",
+          "provider",
+          "converted"
+        ],
+        "title": "PriceLine",
+        "type": "object"
+      },
+      "PriceSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PriceLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "reporting_currency",
+          "lines"
+        ],
+        "title": "PriceSummary",
         "type": "object"
       },
       "ProposalRequest": {
@@ -7083,6 +7256,7 @@
     },
     "/v1/cost/summary": {
       "get": {
+        "description": "Cloud consumption by provider and transaction currency. Staff see the\nprovider's charge to Getronics; a customer sees the price Getronics charges\nit (ADR 0021). Given ``currency``, each line is also converted at the rate\nin force on each usage date; a line with any day unconverted has none.",
         "operationId": "cost_summary_v1_cost_summary_get",
         "parameters": [
           {
@@ -7096,6 +7270,23 @@
               "title": "Days",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
           }
         ],
         "responses": {
@@ -7103,7 +7294,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CostSummary"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CostSummary"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PriceSummary"
+                    }
+                  ],
+                  "title": "Response Cost Summary V1 Cost Summary Get"
                 }
               }
             },

@@ -26,10 +26,12 @@ from sqlalchemy import text
 from cloudops_api.access import Access
 from cloudops_api.bff import (
     _RESOURCE_COLUMNS,
+    CustomerPrice,
     ResourceStaffView,
     ResourceView,
     TenantView,
     _resource,
+    customer_price,
 )
 from cloudops_api.pipeline import (
     AUTHENTICATED,
@@ -204,7 +206,8 @@ class CustomerOverview(ApiModel):
     open_incidents: Metric[int] | None
     sla_breached_open: Metric[int] | None
     critical_vulnerabilities: Metric[int] | None
-    cost_30d: list[Metric[Decimal]] | None
+    cost_30d: list[Metric[Decimal]] | None  # staff: the provider's charge to Getronics
+    price_30d: list[CustomerPrice] | None  # a customer: the price it is charged (ADR 0021)
 
 
 # --- work items --------------------------------------------------------------------
@@ -457,10 +460,16 @@ async def list_customers(request: Request, access: AccessDep) -> list[CustomerOv
             "SELECT tenant_id, count(*) FROM cloudops.vulnerability WHERE remediated_at IS NULL"
             " AND severity >= :sev GROUP BY 1", sev=CRITICAL_SEVERITY,
         ) if can("vulnerabilities.read") else None
+        # A customer reads the price, never the cost (migrations 0014-0015, ADR 0021).
+        customer = access.kind == "customer"
         cost_rows = [tuple(r) for r in await conn.execute(text(
             "SELECT tenant_id, currency, sum(amortized_cost), max(usage_date)"
             " FROM cloudops.cost_fact WHERE usage_date >= :since GROUP BY 1, 2 ORDER BY 1, 2"),
-            {"since": since})] if can("cost.read") else None
+            {"since": since})] if can("cost.read") and not customer else None
+        price_rows = [tuple(r) for r in await conn.execute(text(
+            "SELECT tenant_id, currency, sum(price), max(usage_date), bool_and(price IS NOT NULL)"
+            " FROM cloudops.customer_price(:since, :today) GROUP BY 1, 2 ORDER BY 1, 2"),
+            {"since": since, "today": _now().date()})] if can("cost.read") and customer else None
 
     def metric(counts: dict[UUID, Any] | None, tid: UUID, unit: str, source: str,
                name: str) -> Metric[int] | None:
@@ -477,6 +486,10 @@ async def list_customers(request: Request, access: AccessDep) -> list[CustomerOv
                             query_ref=query_ref("cost.amortized_30d", 1, tenant=str(tid)),
                             is_modelled=False)
             for t, currency, total, last in cost_rows if t == tid]
+        pref = query_ref("cost.customer_price_30d", 1, tenant=str(tid))
+        prices = None if price_rows is None else [
+            customer_price(currency, total, priced, last, pref)
+            for t, currency, total, last, priced in price_rows if t == tid]
         out.append(CustomerOverview(
             tenant=TenantView(id=tid, name=name),
             resources=metric(resources, tid, "resources", "platform_inventory",
@@ -488,5 +501,6 @@ async def list_customers(request: Request, access: AccessDep) -> list[CustomerOv
             critical_vulnerabilities=metric(critical, tid, "vulnerabilities", "qualys",
                                             "vulnerabilities.critical_open"),
             cost_30d=costs,
+            price_30d=prices,
         ))
     return out

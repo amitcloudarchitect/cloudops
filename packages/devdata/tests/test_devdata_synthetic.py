@@ -236,6 +236,7 @@ def test_one_customer_has_no_sow_and_the_rest_have_targets(ds: Dataset) -> None:
     without = {t.id for t in ds.tenants} - {s.tenant_id for s in ds.sows}
     assert without == {tenant_id(code) for code in NO_SOW}
     assert all(s.target_margin is not None for s in ds.sows)
+    assert all(s.consumption_uplift is not None for s in ds.sows)
 
 
 def test_billing_totals_agree_except_the_drift_account_in_two_currencies(ds: Dataset) -> None:

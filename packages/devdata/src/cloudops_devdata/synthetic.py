@@ -104,6 +104,7 @@ class SowRow:
     coverage: str
     support: str
     target_margin: Decimal | None
+    consumption_uplift: Decimal | None
 
 
 @dataclass(frozen=True)
@@ -526,6 +527,10 @@ def _tenant(ds: Dataset, spec: _Spec, rng: random.Random) -> None:
 NO_SOW: Final = frozenset({"WGF"})
 TARGET_MARGIN: Final = {"NWL": Decimal("0.25"), "CRL": Decimal("0.30"), "FAB": Decimal("0.28"),
                         "TSA": Decimal("0.20")}
+# The uplift on consumption a customer's price carries (ADR 0021). Woodgrove has
+# no SOW, so its consumption is not priced: the console shows it not captured.
+CONSUMPTION_UPLIFT: Final = {"NWL": Decimal("0.08"), "CRL": Decimal("0.06"),
+                             "FAB": Decimal("0.10"), "TSA": Decimal("0.07")}
 # One account whose provider total disagrees with its line items by 1.2% this
 # month, so the console has an unverified figure to show (> 0.5%, HLD).
 DRIFT_ACCOUNT: Final = ("FAB", "aws")
@@ -558,6 +563,7 @@ def _sows(ds: Dataset, spec: _Spec, tid: uuid.UUID, start: date, rng: random.Ran
                 coverage=spec.coverage,
                 support=spec.support,
                 target_margin=TARGET_MARGIN.get(spec.code),
+                consumption_uplift=CONSUMPTION_UPLIFT.get(spec.code),
             )
         )
         # Built either way so the random stream (and every recorded fixture
