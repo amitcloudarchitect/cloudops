@@ -130,9 +130,23 @@ inferred.
      currency. Each day is converted at the average rate on its usage date, and nothing is
      rounded before presentation. Any unpriced day or missing rate makes the whole figure
      a named gap, never a partial total and never the cost.
-   - The customer-readable copy (`report_pack.sections`) keeps the price and drops the
-     cost. `report_pack_commercial` keeps both, so staff still see cloud cost and the
-     approver sees what the customer will see.
+   - **Where each figure is stored, enforced by row-level security.** `reports.read` and
+     `cost.read` are both non-commercial, so an administrator may grant both to an
+     Engineer-class role. With the price in `report_pack.sections`, which every
+     `reports.read` holder reads, that role could divide price by cost and read the uplift.
+     - `report_pack.sections` has neither figure.
+     - `report_pack_price`, one row per pack, holds the summary as the customer sees it:
+       the price, no cost. Its RESTRICTIVE `price_visibility` policy admits commercial
+       roles, and a customer scope once the pack is published. Only commercial roles may
+       insert, and nobody may update.
+     - `report_pack_commercial` holds the summary with both figures.
+     - The API merges the three in that order, so staff in commercial roles still see
+       cloud cost and the approver sees the customer's figure.
+     - The narrator drafts from `report_pack.sections`, so no narrative carries either
+       figure.
+   - The staff figure is labelled "Cloud cost (unblended)". The price is on an amortized
+     basis, so in a month with a reservation purchase the two differ, and the label says
+     why. A month with no billing rows has no price; it is never zero.
 
 9. **The uplift must not be inferable: above 0, and no detail finer than a month**
    (user decision, 2026-10-31, after review; migration `0017_customer_price_detail`).

@@ -22,6 +22,12 @@ ignore:
     fix-state: wont-fix
     package: { name: '^libc6$', type: deb }
     reason: "distroless base; Debian 13 won't fix; reviewed 2026-10-28"
+  # Published 2026-10-31, High; Debian 13 has no fixed libc6 yet (state not-fixed in
+  # the pinned base). Stops matching once Debian ships a fix; then bump the base digest.
+  - vulnerability: CVE-2026-84243
+    fix-state: not-fixed
+    package: { name: '^libc6$', type: deb }
+    reason: "distroless base; no Debian 13 fix yet; reviewed 2026-10-31"
   # GCC 14 runtime (libgcc_s, libstdc++, libgomp); Rust and C++ extensions need it.
   - vulnerability: CVE-2026-102010
     fix-state: wont-fix

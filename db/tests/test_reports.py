@@ -319,6 +319,23 @@ async def test_who_may_generate(step17: Step17, month: Month) -> None:
     assert (await _generate(step17, step17.delivery_a, s.a.id, future)).status_code == 422
 
 
+# The pack's sections as the API assembles them (reports._PACK_COLS), under
+# whatever scope runs it: each table joins in only where its policy admits the row.
+READABLE = (
+    "SELECT p.sections"
+    " || coalesce((SELECT r.sections FROM cloudops.report_pack_price r"
+    "  WHERE r.pack_id = p.id), '{}'::jsonb)"
+    " || coalesce((SELECT c.sections FROM cloudops.report_pack_commercial c"
+    "  WHERE c.pack_id = p.id), '{}'::jsonb)"
+    " FROM cloudops.report_pack p WHERE p.id = %s")
+
+
+def _summary_keys(cx: psycopg.Connection[Any], pack: UUID) -> set[str]:
+    found = cx.execute(READABLE, (pack,)).fetchone()
+    assert found
+    return {f["key"] for f in found[0]["executive_summary"]["figures"]}
+
+
 def _as_role(cx: psycopg.Connection[Any], tenant: UUID, role: str) -> None:
     cx.execute("SELECT set_config('app.tenant_ids', %s, true),"
                " set_config('app.role', %s, true),"
@@ -363,8 +380,11 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
                           (pid,)).fetchone()
         texts = cx.execute("SELECT count(*) FROM cloudops.report_narrative WHERE pack_id = %s",
                            (pid,)).fetchone()
+        priced = cx.execute("SELECT count(*) FROM cloudops.report_pack_price WHERE pack_id = %s",
+                            (pid,)).fetchone()
     assert seen == (0,)
     assert texts == (0,)
+    assert priced == (0,)
 
     draft_pdf = await api.get(f"/v1/reports/packs/{pid}/pdf", step17.auditor_all)
     assert draft_pdf.headers["content-type"] == "application/pdf"
@@ -380,10 +400,7 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
     # scope reads: the pack as the API assembles it, under that scope.
     with psycopg.connect(s.app_dsn) as cx:
         _as_role(cx, s.a.id, "customer")
-        found = cx.execute(
-            "SELECT p.sections || coalesce((SELECT c.sections FROM"
-            " cloudops.report_pack_commercial c WHERE c.pack_id = p.id), '{}'::jsonb)"
-            " FROM cloudops.report_pack p WHERE p.id = %s", (pid,)).fetchone()
+        found = cx.execute(READABLE, (pid,)).fetchone()
     assert found
     readable = found[0]
     assert {"financial_dashboard", "revenue_mix"}.isdisjoint(readable)
@@ -421,7 +438,7 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
     lines = (await api.get(f"/v1/reports/packs/{pid}/text", step17.delivery_a)).text.splitlines()
     assert "Reviewed volumetrics." in lines
     assert DRAFT_BANNER not in lines
-    assert (f"Cloud cost: EUR {month.expected_eur.quantize(Decimal('0.01')):,}"
+    assert (f"Cloud cost (unblended): EUR {month.expected_eur.quantize(Decimal('0.01')):,}"
             " (unreconciled; each row at the average rate on its usage date)") in lines
     assert (f"Cloud consumption: EUR {month.expected_price_eur.quantize(Decimal('0.01')):,}"
             " (each day at the average rate on its usage date)") in lines
@@ -513,3 +530,65 @@ async def test_a_customer_scope_reads_no_report_yet(step17: Step17, month: Month
             "SELECT DISTINCT unnest(array(SELECT rolname FROM pg_roles WHERE oid = ANY(polroles)))"
             " FROM pg_policy WHERE polname = 'published_only_for_customers' ORDER BY 1").fetchall()
     assert roles == [("cloudops_app",), ("cloudops_customer",)]
+
+
+async def test_a_non_commercial_role_with_reports_and_cost_never_reads_the_price(
+    step17: Step17, month: Month
+) -> None:
+    """reports.read and cost.read are both non-commercial, so an administrator may
+    grant both to an Engineer-class role. Price over cost is the uplift: such a
+    role must read neither the price nor the cost from a pack, draft or published,
+    and the database, not the API, is what refuses it (ADR 0021, decision 8)."""
+    s = step17.seeded
+    api = step17.api
+    pack = (await _generate(step17, step17.delivery_a, s.a.id)).json()
+    pid = pack["id"]
+    for stage in ("draft", "published"):
+        if stage == "published":
+            for n in pack["narratives"]:
+                await api.post(f"/v1/reports/packs/{pid}/narratives/{n['section']}",
+                               step17.delivery_a, {"text": "Reviewed."})
+            await api.post(f"/v1/reports/packs/{pid}/approve", step17.delivery_a)
+            got = await api.post(f"/v1/reports/packs/{pid}/publish", step17.delivery_a)
+            assert got.json()["status"] == "published"
+        with psycopg.connect(s.app_dsn) as cx:
+            for role in ("engineer", "secops", "", "ingest"):
+                _as_role(cx, s.a.id, role)
+                assert cx.execute("SELECT count(*) FROM cloudops.report_pack_price"
+                                  " WHERE pack_id = %s", (pid,)).fetchone() == (0,), role
+                assert _summary_keys(cx, pid).isdisjoint(
+                    {"customer_price", "cloud_cost"}), (stage, role)
+                cx.rollback()
+            # A commercial role sees both; the customer, once published, the price only.
+            _as_role(cx, s.a.id, "auditor")
+            assert {"customer_price", "cloud_cost"} <= _summary_keys(cx, pid)
+            cx.rollback()
+            _as_role(cx, s.a.id, "customer")
+            if stage == "published":
+                keys = _summary_keys(cx, pid)
+                assert "customer_price" in keys
+                assert "cloud_cost" not in keys
+            cx.rollback()
+            # Nobody but a commercial role writes a price, and nobody rewrites one.
+            for role in ("engineer", "customer"):
+                _as_role(cx, s.a.id, role)
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    cx.execute("INSERT INTO cloudops.report_pack_price (pack_id, tenant_id,"
+                               " sections) VALUES (%s, %s, '{}')", (pid, s.a.id))
+                cx.rollback()
+            _as_role(cx, s.a.id, "delivery_lead")
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                cx.execute("UPDATE cloudops.report_pack_price SET sections = '{}'"
+                           " WHERE pack_id = %s", (pid,))
+            cx.rollback()
+
+
+async def test_a_month_without_billing_rows_has_no_price_never_zero(
+    step17: Step17, month: Month
+) -> None:
+    earlier = (PERIOD - timedelta(days=1)).replace(day=1)  # no cost rows seeded
+    got = await _generate(step17, step17.delivery_a, step17.seeded.a.id, f"{earlier:%Y-%m}")
+    assert got.status_code == 201, got.text
+    price = _figure(got.json(), "executive_summary", "customer_price")
+    assert (price["value"], price["kind"], price["note"]) == (
+        "", "text", "not captured: no billing rows for this month")

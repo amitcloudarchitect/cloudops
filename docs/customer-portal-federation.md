@@ -37,11 +37,15 @@ Review the plan, then apply it yourself:
 cd infra/terraform/stacks/06-edge && terraform init && terraform plan
 ```
 
-The expected plan is **8 to add, 0 to change, 0 to destroy**:
+On a stack with none of the portal applied, the expected plan is **6 to add, 0 to
+change, 0 to destroy**:
 
-- the portal endpoint, its origin group, origin and two routes;
-- its WAF policy and security policy;
-- `route-console-static` from ADR 0017, if it has not been applied yet.
+- the portal endpoint, its origin group, origin and route;
+- its WAF policy and security policy.
+
+There is no edge-cached route for `/_next/static/*`. Front Door compression hung
+every request that accepted gzip, so both such routes were removed (ADR 0017,
+decision 11).
 
 Afterwards:
 

@@ -38,7 +38,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Any, Final, Literal, Protocol
+from typing import Any, Final, Literal, NamedTuple, Protocol
 from uuid import UUID
 
 from sqlalchemy import text
@@ -386,6 +386,9 @@ WHERE NOT EXISTS (
       AND f.rate_type = 'average' AND f.effective_date <= c.usage_date)
 GROUP BY c.currency ORDER BY c.currency
 """)
+# Unblended, as the provider bills Getronics; the price is amortized x (1 + uplift),
+# so in a month with a reservation purchase the two differ in basis, and say so.
+COST_LABEL: Final = "Cloud cost (unblended)"
 _CONSUMPTION: Final = text("""
 SELECT count(*), coalesce(sum(cloudops.to_currency(unblended_cost, currency, :target,
                                                    usage_date, 'average')), 0),
@@ -410,16 +413,18 @@ async def consumption(conn: ScopedConnection, tenant: UUID, period: date, curren
     missing = [tuple(r) for r in await conn.execute(_MISSING_RATES, p)]
     if missing:
         pairs = ", ".join(f"{c}->{currency} from {d.isoformat()}" for c, d in missing)
-        return Figure("cloud_cost", "Cloud cost", "", "text", "",
+        return Figure("cloud_cost", COST_LABEL, "", "text", "",
                       "cloud_billing", q, f"not shown: no average FX rate for {pairs}")
     rows, total, _first, _last = tuple((await conn.execute(_CONSUMPTION, p)).one())
     note = "unreconciled; each row at the average rate on its usage date"
     if not rows:
         note = "no billing rows for this month"
-    return Figure("cloud_cost", "Cloud cost", str(Decimal(total)), "money",
+    return Figure("cloud_cost", COST_LABEL, str(Decimal(total)), "money",
                   currency, "cloud_billing", q, note)
 
 
+# Together they give the uplift away: never both where a non-commercial role reads.
+PRICE_AND_COST: Final = ("cloud_cost", "customer_price")
 # The roles commercial_visibility admits (migration 0001): they may read the SOW's
 # uplift, so they may hold price and cost side by side (migration 0016).
 PRICE_ROLES: Final = frozenset({Role.CEO, Role.CFO, Role.FINOPS, Role.DELIVERY_LEAD,
@@ -472,10 +477,10 @@ async def customer_price(conn: ScopedConnection, scope: TenantScope, tenant: UUI
     if missing:
         pairs = ", ".join(f"{c}->{currency} from {d.isoformat()}" for c, d in missing)
         return _price_gap(f"no average FX rate for {pairs}", q)
+    if not rows:
+        return _price_gap("no billing rows for this month", q)
     total = await conn.scalar(_PRICE, p)
     note = "each day at the average rate on its usage date"
-    if not rows:
-        note = "no billing rows for this month"
     return Figure("customer_price", "Cloud consumption", str(Decimal(total)), "money",
                   currency, "cloud_billing", q, note)
 
@@ -518,21 +523,37 @@ async def generate(conn: ScopedConnection, scope: TenantScope, *, tenant_id: UUI
     return PackContent(tenant_id, tenant_name, period, contract_currency, now, ordered)
 
 
-def for_storage(content: PackContent) -> tuple[dict[str, Any], dict[str, Any]]:
-    """The pack's sections as stored: what any reader of the pack may see (a
-    customer, once published), and what only commercial roles read
-    (``report_pack_commercial``), which overrides the first section by section.
-    The commercial sections and Getronics' cloud cost go only to the second.
-    The first keeps the customer's price (or its gap) in the cost's place."""
+class Stored(NamedTuple):
+    """A pack's sections as stored, each where its readers are (ADR 0020, 0021).
+
+    ``public`` (``report_pack.sections``) is what every reader of the pack sees:
+    a summary with neither the cost nor the customer's price, since a staff role
+    holding ``reports.read`` and ``cost.read`` could divide one by the other and
+    read the uplift. ``priced`` (``report_pack_price``) is the summary as the
+    customer sees it, with the price in the cost's place: commercial roles, and
+    the customer once the pack is published. ``commercial``
+    (``report_pack_commercial``) adds the commercial sections and the summary
+    with both figures, for commercial roles only. Each overrides the one before,
+    section by section, wherever its row is visible."""
+
+    public: dict[str, Any]
+    priced: dict[str, Any]
+    commercial: dict[str, Any]
+
+
+def for_storage(content: PackContent) -> Stored:
     every = content.to_json()["sections"]
     public = {k: v for k, v in every.items() if k not in COMMERCIAL_SECTIONS}
-    restricted = {k: v for k, v in every.items() if k in COMMERCIAL_SECTIONS}
+    commercial = {k: v for k, v in every.items() if k in COMMERCIAL_SECTIONS}
     summary = content.section("executive_summary")
-    if summary.figure("cloud_cost") is not None:
-        restricted["executive_summary"] = every["executive_summary"]
-        public["executive_summary"] = asdict(replace(summary, figures=tuple(
-            f for f in summary.figures if f.key != "cloud_cost")))
-    return public, restricted
+    commercial["executive_summary"] = every["executive_summary"]
+
+    def without(*keys: str) -> dict[str, Any]:
+        return asdict(replace(summary, figures=tuple(
+            f for f in summary.figures if f.key not in keys)))
+
+    public["executive_summary"] = without(*PRICE_AND_COST)
+    return Stored(public, {"executive_summary": without("cloud_cost")}, commercial)
 
 
 def narrative_input(section: Section) -> dict[str, Any]:

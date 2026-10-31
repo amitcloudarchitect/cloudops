@@ -403,6 +403,11 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             " VALUES (%s, %s, %s)",
             (pack[0] if pack else None, t.id, f'{{"marker": "{t.name}-commercial"}}'),
         )
+        cx.execute(
+            "INSERT INTO cloudops.report_pack_price (pack_id, tenant_id, sections)"
+            " VALUES (%s, %s, %s)",
+            (pack[0] if pack else None, t.id, f'{{"marker": "{t.name}-price"}}'),
+        )
     cx.execute(
         "INSERT INTO cloudops.global_knowledge_chunk (source_kind, title, body, embedding)"
         " VALUES ('runbook', 'Global runbook', 'Restart the service', %s)",
