@@ -1,7 +1,8 @@
 # Dev (crcloudopsdevweu, kv-cloudops-app-dev-weu, network_mode = "public").
 #
 # Deployed: namespaces and policies, the internal CA, migrations (before the API), the
-# API, and the secret sync and certificates Temporal needs. The workers are a separate
+# API, the operations console (ADR 0017), and the secret sync and certificates
+# Temporal needs. The workers are a separate
 # Application after Temporal (workers/, applications/dev/workers.yaml): only
 # connector-servicenow so far; worker-ai waits for the Azure OpenAI tiers (LLD L12).
 #
@@ -14,6 +15,7 @@ resources:
   - ../../base/internal-ca
   - ../../base/migrate
   - ../../base/api
+  - ../../base/web
   - ../../base/edge
   - ../../base/temporal-secrets
   - ../../base/monitoring
@@ -21,15 +23,13 @@ resources:
 images:
   - name: api
     newName: crcloudopsdevweu.azurecr.io/api
-    newTag: e3933b8
+    newTag: 6a2ad02
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
-    newTag: e3933b8
-  # The console (ADR 0017): listed before it is deployed, so that the first release
-  # from main sets a tag that exists. base/web joins the resources after that.
+    newTag: 6a2ad02
   - name: web
     newName: crcloudopsdevweu.azurecr.io/web
-    newTag: "none-yet"
+    newTag: 6a2ad02
   - name: pause
     newName: crcloudopsdevweu.azurecr.io/pause
     newTag: 3.10.1
@@ -47,6 +47,8 @@ replacements:
       - select: { kind: NetworkPolicy, name: temporal-database }
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
   - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.frontdoorId }
-    targets:  # lock 2: only our Front Door profile reaches the API (ADR 0011)
+    targets:  # lock 2: only our Front Door profile reaches the API and the console (ADR 0011)
       - select: { kind: HTTPRoute, name: api }
         fieldPaths: [spec.rules.1.matches.0.headers.0.value]
+      - select: { kind: HTTPRoute, name: web }
+        fieldPaths: [spec.rules.0.matches.0.headers.0.value]
