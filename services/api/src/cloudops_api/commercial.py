@@ -400,6 +400,10 @@ class FxCorrectionRequest(BaseModel):
     effective_date: date
     rate: Decimal = Field(gt=0, max_digits=18, decimal_places=8)
     reason: str = Field(min_length=3, max_length=500)
+    # EUR anchors every rate. For a pair without EUR, the currency whose EUR leg
+    # moves (one of the pair); the other is held. For a pair with EUR, absent or
+    # the other currency.
+    moves: str | None = Field(default=None, pattern=r"^[A-Z]{3}$")
 
 
 class FxCorrectionView(ApiModel):
@@ -415,12 +419,14 @@ class FxCorrectionView(ApiModel):
     entered_at: datetime
 
 
-# The function's refusals (migration 0012), by SQLSTATE. Anything else is a 500.
+# The function's refusals (migrations 0012, 0016), by SQLSTATE. Anything else is a 500.
 _REFUSALS: Final = {
     "42501": (403, "forbidden"),
     "22023": (422, "invalid_request"),
     "23514": (422, "invalid_request"),
     "FXSAM": (409, "unchanged"),
+    "FXLEG": (422, "eur_leg_required"),
+    "FXHLD": (422, "no_held_rate"),
 }
 
 
@@ -470,18 +476,22 @@ async def list_fx_corrections(request: Request, access: AccessDep) -> list[FxCor
 async def correct_fx_rate(
     request: Request, body: FxCorrectionRequest, access: AccessDep
 ) -> FxCorrectionView:
-    """Finance corrects a rate. The closed months it touches are restated by the
-    next month-end reprocessing, as new versions; nothing closed is overwritten."""
+    """Finance corrects a rate. Its inverse and every pair with the moving
+    currency are re-derived from the EUR rates on the same day, each with its own
+    entry; the returned entry is the first that moved. The closed months it
+    touches are restated by the next month-end reprocessing, as new versions;
+    nothing closed is overwritten."""
     if access.kind != "staff":
         raise ApiError(403, "forbidden")
     if body.from_currency == body.to_currency:
         raise ApiError(422, "invalid_request")
     async with _guarded(request, access) as conn:
         entry = await conn.scalar(text(
-            "SELECT access.correct_fx_rate(:actor, :f, :t, :k, :d, :r, :why)"), {
+            "SELECT access.correct_fx_rate(:actor, :f, :t, :k, :d, :r, :why,"
+            " CAST(:moves AS char(3)))"), {
             "actor": access.identity.oid, "f": body.from_currency, "t": body.to_currency,
             "k": body.rate_type, "d": body.effective_date, "r": body.rate,
-            "why": body.reason})
+            "why": body.reason, "moves": body.moves})
         row = _rows(await conn.execute(text(f"{_FX_ENTRIES} WHERE id = :id"),
                                        {"id": entry}))
     return _fx_view(row[0])
@@ -530,10 +540,12 @@ class MarginView(ApiModel):
     modelled_margin: Metric[Decimal] | None
     actual_margin: Metric[Decimal] | None
     margin_pct: Metric[Decimal] | None
-    band: str | None
+    band: str | None  # None while provisional: the band arrives at close
     band_basis: Literal["actual", "modelled"] | None
     target_margin: Metric[Decimal] | None
     gap_to_target: Metric[Decimal] | None
+    # Did the cost under the figure reconcile? None: no cost to verify.
+    cost_verified: bool | None
     effort: Effort | None
     unpriced_cis: Metric[int] | None
     exceeds_slab: bool
@@ -578,7 +590,7 @@ _SNAPSHOT_COLUMNS: Final = (
     " s.actual_cost, s.modelled_margin, s.actual_margin, s.margin_at_prior_rates,"
     " s.margin_pct, s.band, s.band_basis, s.target_margin, s.gap_to_target,"
     " s.effort_hours, s.modelled_hours, s.effort_items, s.effort_items_without_hours,"
-    " s.effort_complete, s.unpriced_cis, s.exceeds_slab"
+    " s.effort_complete, s.unpriced_cis, s.exceeds_slab, s.cost_verified"
 )
 _LATEST: Final = text(
     f"SELECT DISTINCT ON (s.tenant_id, s.period) {_SNAPSHOT_COLUMNS}"  # noqa: S608
@@ -607,7 +619,8 @@ def _empty(tenant: TenantView, period: str, reason: NotCaptured,
         version=None, restated=False, rate_card_version=None, contract_currency=None,
         revenue=None, modelled_cost=None, actual_cost=None, modelled_margin=None,
         actual_margin=None, margin_pct=None, band=None, band_basis=None, target_margin=None,
-        gap_to_target=None, effort=None, unpriced_cis=None, exceeds_slab=False, reported=None,
+        gap_to_target=None, cost_verified=None, effort=None, unpriced_cis=None,
+        exceeds_slab=False, reported=None,
         trend=trend)
 
 
@@ -618,7 +631,7 @@ async def _margin_view(conn: ScopedConnection, tenant: TenantView, period: str,
         return _empty(tenant, period, "not_computed", trend)
     (sid, _t, p, through, version, status, restates, computed, card, not_captured, ccy,
      revenue, modelled, actual, m_margin, a_margin, at_prior, pct, band, basis, target, gap,
-     hours, m_hours, items, missing, complete, unpriced, exceeds) = row
+     hours, m_hours, items, missing, complete, unpriced, exceeds, verified) = row
     ref = query_ref("commercial.margin", 1, snapshot=str(sid))
     as_of = computed
     modelled_flag = basis == "modelled"
@@ -655,6 +668,7 @@ async def _margin_view(conn: ScopedConnection, tenant: TenantView, period: str,
         margin_pct=_opt(pct, RATIO, MARGIN_SOURCE, as_of, ref, modelled_flag), band=band,
         band_basis=basis, target_margin=_opt(target, RATIO, "sow_register", as_of, ref),
         gap_to_target=_opt(gap, RATIO, MARGIN_SOURCE, as_of, ref, modelled_flag),
+        cost_verified=verified,
         effort=Effort(
             hours=_money(hours, HOURS, "servicenow", as_of, ref),
             modelled_hours=_opt(m_hours, HOURS, MARGIN_SOURCE, as_of, ref, True),

@@ -23,7 +23,7 @@ import { marginBand } from "@/lib/health";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
-import { BandBadge, notCaptured, points, StatusMarker, Trend } from "./Margin";
+import { awaitingClose, BandBadge, notCaptured, points, StatusMarker, Trend } from "./Margin";
 
 function load(tenantId: string, period: string | undefined, currency: string | undefined) {
   return (token: string) => apiGet(token, "/v1/commercial/margin/{tenant_id}", { tenant_id: tenantId }, { period, currency });
@@ -145,7 +145,7 @@ export function MarginCustomer({ tenantId }: { tenantId: string }) {
               label="Gap to target"
               metric={m.gap_to_target}
               display={(x) => points(String(x.value))}
-              unavailable="No target in the SOW"
+              unavailable={awaitingClose(m) ? "At month close" : "No target in the SOW"}
               trend={m.target_margin ? { direction: "flat", text: `target ${percent(m.target_margin.value)}`, better: true } : undefined}
             />
             {ccy ? (

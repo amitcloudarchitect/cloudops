@@ -27,7 +27,10 @@ current month is provisional, month to date. From ``CLOSE_DAY`` the previous
 month is closed. Closed months are reprocessed for ``RESTATE_MONTHS`` months,
 because billing restates after the fact and Finance may correct a rate: if any
 figure moves, a new version is written that names the one it restates. Nothing
-closed is overwritten.
+closed is overwritten. A provisional month has no band and no gap to target.
+Each figure records whether the cost under it reconciled (``cost_verified``):
+every account with consumption in the month has a latest check that is
+verified, the invoice once there is one, else the provider total.
 """
 
 from __future__ import annotations
@@ -409,10 +412,26 @@ _EFFORT: Final = text(
     " WHERE w.tenant_id = :t AND w.closed_at >= :start AND w.closed_at < :end"
     " GROUP BY 1, 2"
 )
+# Per account with consumption in the invoice period (checks are keyed by it, not
+# by usage date), its latest check: the invoice once one exists, else the
+# provider total. An account never checked counts against.
+_COST_VERIFIED: Final = text(
+    "WITH accounts AS ("
+    "  SELECT DISTINCT c.account_id FROM cloudops.cost_fact c"
+    "  WHERE c.tenant_id = :t AND c.charge_class = 'consumption'"
+    "    AND c.invoice_period = :p AND c.usage_date <= :b),"
+    " latest AS ("
+    "  SELECT DISTINCT ON (r.account_id) r.account_id, r.status"
+    "  FROM cloudops.cost_reconciliation r"
+    "  WHERE r.tenant_id = :t AND r.invoice_period = :p"
+    "  ORDER BY r.account_id, (r.kind = 'invoice') DESC, r.checked_on DESC)"
+    " SELECT count(*), count(*) FILTER (WHERE l.status = 'verified')"
+    " FROM accounts a LEFT JOIN latest l ON l.account_id = a.account_id"
+)
 _CURRENT: Final = text(
     "SELECT id, version, status, revenue, modelled_cost, actual_cost, margin_pct,"
     "   not_captured, effort_hours, effort_items_without_hours, consumption,"
-    "   fx_rate, prior_fx_rate, margin_at_prior_rates, through"
+    "   fx_rate, prior_fx_rate, margin_at_prior_rates, through, band, cost_verified"
     " FROM cloudops.margin_snapshot WHERE tenant_id = :t AND period = :p"
     " ORDER BY version DESC LIMIT 1"
 )
@@ -424,7 +443,7 @@ _SNAPSHOT_COLUMNS: Final = (
     "modelled_hours", "effort_hours", "effort_items", "effort_items_without_hours",
     "effort_complete", "unpriced_cis", "exceeds_slab", "consumption", "consumption_currency",
     "fx_rate", "fx_rate_from", "fx_rate_to", "prior_fx_rate", "prior_fx_rate_from",
-    "prior_fx_rate_to",
+    "prior_fx_rate_to", "cost_verified",
 )
 _INSERT_SNAPSHOT: Final = text(
     f"INSERT INTO cloudops.margin_snapshot ({', '.join(_SNAPSHOT_COLUMNS)})"  # noqa: S608
@@ -475,8 +494,17 @@ async def _per_tenant(db: Database, report: MarginReport,
     return report
 
 
+async def cost_verified(conn: ScopedConnection, tenant: UUID, period: date,
+                        through: date) -> bool | None:
+    """Did the month's cost reconcile? None when there is no cost to verify."""
+    accounts, verified = _rows(await conn.execute(_COST_VERIFIED, {
+        "t": tenant, "b": through, "p": period_label(period)}))[0]
+    return None if not accounts else accounts == verified
+
+
 async def _inputs(conn: ScopedConnection, tenant: UUID, period: date, through: date,
-                  card: RateCard) -> tuple[margin.MarginInputs, UUID | None]:
+                  card: RateCard, provisional: bool = False,
+                  ) -> tuple[margin.MarginInputs, UUID | None]:
     end = add_months(period, 1)
     loc, t_cov, t_sup = _rows(await conn.execute(_TENANT, {"t": tenant}))[0]
     sow = _rows(await conn.execute(_SOW, {"t": tenant, "d": through}))
@@ -519,12 +547,13 @@ async def _inputs(conn: ScopedConnection, tenant: UUID, period: date, through: d
         target_margin=None if target is None else Decimal(target),
         location=str(loc), coverage=s_cov or t_cov, support=s_sup or t_sup,
         priced_inventory=dict(priced), unpriced_cis=unpriced, consumption_eur=consumption,
-        has_cost_data=bool(lines), effort=effort, rate=rate, prior_rate=prior), sow_id
+        has_cost_data=bool(lines), effort=effort, rate=rate, prior_rate=prior,
+        provisional=provisional), sow_id
 
 
 def _snapshot_row(f: margin.MarginFigures, tenant: UUID, sow_id: UUID | None, through: date,
                   status: str, version: int, restates: UUID | None, card: RateCard,
-                  consumption: Decimal) -> dict[str, Any]:
+                  consumption: Decimal, verified: bool | None) -> dict[str, Any]:
     return {
         "tenant_id": tenant, "sow_id": sow_id, "period": f.period, "through": through,
         "version": version, "status": status, "restates": restates,
@@ -547,6 +576,7 @@ def _snapshot_row(f: margin.MarginFigures, tenant: UUID, sow_id: UUID | None, th
         "prior_fx_rate": None if f.prior_rate is None else f.prior_rate.rate,
         "prior_fx_rate_from": None if f.prior_rate is None else f.prior_rate.first_day,
         "prior_fx_rate_to": None if f.prior_rate is None else f.prior_rate.last_day,
+        "cost_verified": verified,
     }
 
 
@@ -557,7 +587,7 @@ def _q(v: Any, places: str = "0.000001") -> Any:
 def _moved(stored: tuple[Any, ...], row: dict[str, Any]) -> bool:
     """Has any figure a reader sees changed, at the precision it is stored in?"""
     (_id, _v, _s, revenue, modelled, actual, pct, not_captured, hours, missing, consumption,
-     fx, prior_fx, at_prior, through) = stored
+     fx, prior_fx, at_prior, through, band, verified) = stored
     return bool(
         _q(revenue) != _q(row["revenue"]) or _q(modelled) != _q(row["modelled_cost"])
         or _q(actual) != _q(row["actual_cost"])
@@ -570,6 +600,8 @@ def _moved(stored: tuple[Any, ...], row: dict[str, Any]) -> bool:
         or _q(prior_fx, "0.00000001") != _q(row["prior_fx_rate"], "0.00000001")
         or _q(at_prior) != _q(row["margin_at_prior_rates"])
         or through != row["through"]
+        or band != row["band"]
+        or verified != row["cost_verified"]
     )
 
 
@@ -589,7 +621,8 @@ async def compute_period(conn: ScopedConnection, tenant: UUID, period: date, thr
                          close: bool, report: MarginReport) -> None:
     """Compute one customer-month and store it by the rules above."""
     card = rate_card_on(period)
-    inputs, sow_id = await _inputs(conn, tenant, period, through, card)
+    inputs, sow_id = await _inputs(conn, tenant, period, through, card, provisional=not close)
+    verified = await cost_verified(conn, tenant, period, through)
     figures = margin.compute(inputs, card)
     report.computed += 1
     if figures.not_captured is not None:
@@ -598,7 +631,7 @@ async def compute_period(conn: ScopedConnection, tenant: UUID, period: date, thr
     status = "closed" if close else "provisional"
     if not current:
         row = _snapshot_row(figures, tenant, sow_id, through, status, 1, None, card,
-                            inputs.consumption_eur)
+                            inputs.consumption_eur, verified)
         snapshot = (await conn.execute(_INSERT_SNAPSHOT, row)).scalar_one()
         await _write_variance(conn, snapshot, tenant, figures)
         report.closed += close
@@ -607,14 +640,14 @@ async def compute_period(conn: ScopedConnection, tenant: UUID, period: date, thr
     snapshot_id, version, stored_status = stored[0], int(stored[1]), str(stored[2])
     if stored_status == "provisional":
         row = _snapshot_row(figures, tenant, sow_id, through, status, version, None, card,
-                            inputs.consumption_eur)
+                            inputs.consumption_eur, verified)
         await conn.execute(_UPDATE_SNAPSHOT, {**row, "id": snapshot_id})
         await _write_variance(conn, snapshot_id, tenant, figures)
         report.closed += close
         return
     # Closed: never overwritten. A restatement is a new version naming the old.
     row = _snapshot_row(figures, tenant, sow_id, through, "closed", version + 1, snapshot_id,
-                        card, inputs.consumption_eur)
+                        card, inputs.consumption_eur, verified)
     if _moved(stored, row):
         snapshot = (await conn.execute(_INSERT_SNAPSHOT, row)).scalar_one()
         await _write_variance(conn, snapshot, tenant, figures)

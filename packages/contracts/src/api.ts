@@ -480,8 +480,11 @@ export interface paths {
         put?: never;
         /**
          * Correct Fx Rate
-         * @description Finance corrects a rate. The closed months it touches are restated by the
-         *     next month-end reprocessing, as new versions; nothing closed is overwritten.
+         * @description Finance corrects a rate. Its inverse and every pair with the moving
+         *     currency are re-derived from the EUR rates on the same day, each with its own
+         *     entry; the returned entry is the first that moved. The closed months it
+         *     touches are restated by the next month-end reprocessing, as new versions;
+         *     nothing closed is overwritten.
          */
         post: operations["correct_fx_rate_v1_finops_fx_corrections_post"];
         delete?: never;
@@ -1876,6 +1879,8 @@ export interface components {
             effective_date: string;
             /** From Currency */
             from_currency: string;
+            /** Moves */
+            moves?: string | null;
             /** Rate */
             rate: number | string;
             /**
@@ -1970,6 +1975,8 @@ export interface components {
             band_basis: ("actual" | "modelled") | null;
             /** Contract Currency */
             contract_currency: string | null;
+            /** Cost Verified */
+            cost_verified: boolean | null;
             effort: components["schemas"]["Effort"] | null;
             /** Exceeds Slab */
             exceeds_slab: boolean;
