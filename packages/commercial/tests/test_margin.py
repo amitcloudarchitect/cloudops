@@ -177,3 +177,26 @@ def test_a_month_without_billing_data_is_not_captured() -> None:
                            V2_14)
         assert f.not_captured == "no_cost_data"
         assert f.actual_margin is None
+
+
+@pytest.mark.parametrize("effort", [
+    (),  # no ServiceNow items at all: not connected, a mapping gap, a quiet month
+    (EffortBucket("Cloud Ops", "incident", Decimal(0), 5, 0),),  # items, zero hours
+], ids=["no-items", "zero-hours"])
+def test_no_recorded_effort_is_a_gap_not_free_delivery(
+        effort: tuple[EffortBucket, ...]) -> None:
+    """HLD principle 7: zero effort must not read as zero cost. The same customer
+    with its effort recorded is critical; without it the band falls back to the
+    modelled basis rather than an actual basis on 0 hours."""
+    recorded = margin.compute(inputs(), V2_14)
+    gap = margin.compute(inputs(effort=effort), V2_14)
+    assert recorded.band_basis == "actual"
+    assert recorded.band == "critical"
+    assert gap.effort_complete is False
+    assert gap.band_basis == "modelled"
+    assert gap.margin_pct == (gap.revenue - gap.modelled_cost) / gap.revenue  # type: ignore[operator]
+    assert gap.not_captured is None  # actual figures still stored, just not banded on
+
+
+def test_not_captured_figures_record_missing_effort_as_incomplete() -> None:
+    assert margin.compute(inputs(revenue=None, effort=()), V2_14).effort_complete is False
