@@ -14,6 +14,20 @@
       "configuration_item": null,
       "confidence": 0.0
     },
-    "draft_work_note": "Canned mock work note. No action has been taken."
+    "draft_work_note": "Canned mock work note. No action has been taken.",
+    "draft_control_response": {
+      "narrative": "Canned mock draft: the material provided has not been assessed by a model.",
+      "citations": [],
+      "sufficiency": "insufficient",
+      "gaps": [
+        "a real model draft"
+      ],
+      "confidence": 0.6
+    },
+    "draft_report_narrative": {
+      "text": "Canned mock commentary: no model has read this section.",
+      "figures_cited": [],
+      "confidence": 0.6
+    }
   }
 }

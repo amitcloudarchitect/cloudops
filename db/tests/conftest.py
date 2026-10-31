@@ -310,6 +310,49 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             " 'consumption', 1.000000, 1.000000, %s)",
             (t.id, t.account_id, t.currency),
         )
+    # Step 17: one row in each new tenant table, under a test control.
+    cx.execute(
+        "INSERT INTO cloudops.control (code, framework, domain, title, requirement, assessment,"
+        " evidence_source, library_version) VALUES ('TEST-SEED-01', 'test', 'Seed', 'Seed control',"
+        " 'A control for seeding only.', 'narrative', 'policy_library', 'test-1')"
+    )
+    for t in tenants:
+        assessment = cx.execute(
+            "INSERT INTO cloudops.assessment (tenant_id, framework, library_version, title,"
+            " created_by) VALUES (%s, 'test', 'test-1', %s, gen_random_uuid()) RETURNING id",
+            (t.id, f"{t.name} seed assessment"),
+        ).fetchone()
+        a_id = assessment[0] if assessment else None
+        cx.execute(
+            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_code,"
+            " draft_narrative) VALUES (%s, %s, 'TEST-SEED-01', %s)",
+            (t.id, a_id, f"{t.name} draft"),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_code,"
+            " source_system, query_name, query_ref, query_text, parameters, raw_value,"
+            " retrieved_at, retrieved_by, sha256) VALUES (%s, %s, 'TEST-SEED-01', 'human',"
+            " 'seed', 'seed.v1:0', 'seed', '{}', %s, now(), 'seed', repeat('0', 64))",
+            (t.id, a_id, f'{{"marker": "{t.name}-evidence"}}'),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.evidence_pack (tenant_id, assessment_id, framework, manifest,"
+            " manifest_sha256, signature, signature_alg, key_id, created_by) VALUES"
+            " (%s, %s, 'test', '{}', repeat('0', 64), 'sig', 'Ed25519', 'seed',"
+            " gen_random_uuid())",
+            (t.id, a_id),
+        )
+        pack = cx.execute(
+            "INSERT INTO cloudops.report_pack (tenant_id, period, version, contract_currency,"
+            " sections, data_as_of, generated_by) VALUES (%s, date_trunc('month', now())::date,"
+            " 1, %s, '{}', now(), gen_random_uuid()) RETURNING id",
+            (t.id, t.currency),
+        ).fetchone()
+        cx.execute(
+            "INSERT INTO cloudops.report_narrative (tenant_id, pack_id, section, draft_text)"
+            " VALUES (%s, %s, 'executive_summary', %s)",
+            (t.id, pack[0] if pack else None, f"{t.name} narrative"),
+        )
     cx.execute(
         "INSERT INTO cloudops.global_knowledge_chunk (source_kind, title, body, embedding)"
         " VALUES ('runbook', 'Global runbook', 'Restart the service', %s)",
@@ -386,32 +429,36 @@ def _database(admin: str, label: str) -> Iterator[Provisioned]:
                 cx.execute(sql.SQL("DROP ROLE IF EXISTS {}").format(sql.Identifier(role)))
 
 
+def _seeded(db: Provisioned) -> Seeded:
+    with psycopg.connect(db.admin_dsn, autocommit=True) as cx:
+        tenants = tuple(
+            Tenant(uuid4(), name, ccy, uuid4(), f"sub-{name}-{db.suffix}", uuid4(), axis)
+            for name, ccy, axis in (
+                ("alpha", "EUR", 1), ("bravo", "GBP", 2), ("charlie", "USD", 3)
+            )
+        )
+        _seed(cx, tenants, global_axis=4)
+        c_account2, c_resource2 = uuid4(), uuid4()
+        _seed_second_subscription(cx, tenants[2], c_account2, c_resource2)
+    return Seeded(
+        admin_dsn=db.admin_dsn,
+        migrator_dsn=db.migrator_dsn,
+        app_dsn=db.app_dsn,
+        ingest_dsn=db.ingest_dsn,
+        partman=db.partman,
+        a=tenants[0],
+        b=tenants[1],
+        c=tenants[2],
+        global_axis=4,
+        c_account2=c_account2,
+        c_resource2=c_resource2,
+    )
+
+
 @pytest.fixture(scope="session")
 def seeded(admin_server: str) -> Iterator[Seeded]:
     with _database(admin_server, "schema") as db:
-        with psycopg.connect(db.admin_dsn, autocommit=True) as cx:
-            tenants = tuple(
-                Tenant(uuid4(), name, ccy, uuid4(), f"sub-{name}-{db.suffix}", uuid4(), axis)
-                for name, ccy, axis in (
-                    ("alpha", "EUR", 1), ("bravo", "GBP", 2), ("charlie", "USD", 3)
-                )
-            )
-            _seed(cx, tenants, global_axis=4)
-            c_account2, c_resource2 = uuid4(), uuid4()
-            _seed_second_subscription(cx, tenants[2], c_account2, c_resource2)
-        yield Seeded(
-            admin_dsn=db.admin_dsn,
-            migrator_dsn=db.migrator_dsn,
-            app_dsn=db.app_dsn,
-            ingest_dsn=db.ingest_dsn,
-            partman=db.partman,
-            a=tenants[0],
-            b=tenants[1],
-            c=tenants[2],
-            global_axis=4,
-            c_account2=c_account2,
-            c_resource2=c_resource2,
-        )
+        yield _seeded(db)
 
 
 @pytest.fixture
@@ -550,6 +597,7 @@ class Api:
     client: Any  # httpx.AsyncClient
     signing_key: dict[str, Any]
     auth: Any  # AuthConfig
+    evidence_signer: Any = None  # cloudops_domain.assurance.pack.Ed25519Signer (step 17)
 
     def token(self, oid: UUID, **mint_kwargs: Any) -> str:
         from cloudops_devdata.tokens import mint
@@ -567,6 +615,11 @@ class Api:
     ) -> Any:
         auth = {"Authorization": f"Bearer {self.token(oid, **mint_kwargs)}"}
         return await self.client.get(path, headers={**auth, **(headers or {})}, params=params)
+
+    async def post(self, path: str, oid: UUID, body: Any = None, *,
+                   params: dict[str, str] | None = None) -> Any:
+        auth = {"Authorization": f"Bearer {self.token(oid)}"}
+        return await self.client.post(path, json=body, headers=auth, params=params)
 
 
 @pytest.fixture(scope="session")
@@ -586,12 +639,17 @@ async def api(seeded: Seeded, principals: Principals) -> AsyncIterator[Api]:
         jwks_url=None,
         jwks_secret=None,
     )
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from cloudops_domain.assurance.pack import Ed25519Signer
+
     private, public = new_signing_key("suite")
+    signer = Ed25519Signer(Ed25519PrivateKey.generate())
     db = Database.create(seeded.app_dsn, pool_size=4, max_overflow=0)
-    app = create_app(db=db, validator=TokenValidator(auth, StaticKeys(public)))
+    app = create_app(db=db, validator=TokenValidator(auth, StaticKeys(public)), signer=signer)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://api") as client:
-        yield Api(client, private, auth)
+        yield Api(client, private, auth, signer)
     await db.dispose()
 
 
@@ -730,3 +788,74 @@ def telemetry_store() -> Iterator[Telemetry]:
         finally:
             admin.post("/", content=f"DROP USER IF EXISTS {app_user}".encode())
             admin.close()
+
+
+# --- Reporting, knowledge and assurance (step 17) ---------------------------------
+
+
+@dataclass(frozen=True)
+class Step17:
+    """Its own database, seeded like ``seeded``: these tests add resources,
+    documents, cost rows and FX rates, which must not move another suite's counts."""
+
+    seeded: Seeded
+    api: Api
+    admin: UUID  # platform administrator, all tenants
+    delivery_a: UUID  # Delivery lead, tenant a: reports, assurance, commercial visibility
+    secops_a: UUID  # SecOps, tenant a: assurance, never reports
+    engineer_a: UUID  # Engineer, tenant a: knowledge, but no reports or assurance
+    customer_a: UUID  # Customer viewer, tenant a
+    auditor_all: UUID  # Auditor, all tenants: reads assurance and reports, approves nothing
+    delivery_limited: UUID  # Delivery lead, tenant c, first subscription only
+
+
+@pytest.fixture(scope="session")
+async def step17(admin_server: str) -> AsyncIterator[Step17]:
+    import httpx
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    from cloudops_api.app import create_app
+    from cloudops_api.auth import StaticKeys, TokenValidator
+    from cloudops_config import AuthConfig
+    from cloudops_devdata.tokens import new_signing_key
+    from cloudops_domain.assurance.pack import Ed25519Signer
+    from cloudops_tenancy import TenantScope
+
+    with _database(admin_server, "step17") as provisioned:
+        seeded = _seeded(provisioned)
+        oids = [uuid4() for _ in range(7)]
+        admin, delivery_a, secops_a, engineer_a, customer_a, auditor_all, limited = oids
+        db = Database.create(seeded.app_dsn, pool_size=4, max_overflow=0)
+        a, c = seeded.a.id, seeded.c.id
+        async with db.transaction(TenantScope.for_resolution("setup:step17")) as conn:
+            await _access(conn, "SELECT access.bootstrap_admin(:o, 'Admin')", o=admin)
+            for oid, kind, role, tenant, everyone in (
+                (delivery_a, "staff", "Delivery lead", a, False),
+                (secops_a, "staff", "SecOps", a, False),
+                (engineer_a, "staff", "Engineer", a, False),
+                (customer_a, "customer", "Customer viewer", a, False),
+                (auditor_all, "staff", "Auditor", None, True),
+                (limited, "staff", "Delivery lead", c, False),
+            ):
+                await _access(conn, "SELECT access.set_principal(:a, :o, :k, :n, :r, :all)",
+                              a=admin, o=oid, k=kind, n=f"{role} {oid}", r=role, all=everyone)
+                if tenant is not None:
+                    await _access(conn, "SELECT access.grant_tenant(:a, :o, :t)",
+                                  a=admin, o=oid, t=tenant)
+            await _access(conn, "SELECT access.restrict_accounts(:a, :o, :t, CAST(:ids AS uuid[]))",
+                          a=admin, o=limited, t=c, ids=[seeded.c.account_id])
+        auth = AuthConfig(
+            issuer="https://login.example.test/55555555-5555-4555-8555-555555555555/v2.0",
+            audience="api://cloudops-step17", tenant_id="55555555-5555-4555-8555-555555555555",
+            required_scope="access_as_user", jwks_url=None, jwks_secret=None,
+        )
+        private, public = new_signing_key("step17")
+        signer = Ed25519Signer(Ed25519PrivateKey.generate())
+        app = create_app(db=db, validator=TokenValidator(auth, StaticKeys(public)), signer=signer)
+        try:
+            async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                         base_url="http://api") as client:
+                yield Step17(seeded, Api(client, private, auth, signer), admin, delivery_a,
+                             secops_a, engineer_a, customer_a, auditor_all, limited)
+        finally:
+            await db.dispose()

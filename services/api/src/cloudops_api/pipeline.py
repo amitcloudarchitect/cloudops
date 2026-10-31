@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections.abc import Callable, Coroutine, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Final, TypeVar
 from uuid import UUID
 
@@ -28,6 +28,12 @@ from sqlalchemy import text
 
 from cloudops_api.access import Access, NoScopeError, ScopeDefectError, ScopeResolver
 from cloudops_api.auth import TokenError, TokenValidator
+from cloudops_domain.assurance.pack import Signer, UnavailableSigner
+from cloudops_domain.reporting.sections import (
+    AvailabilitySource,
+    FinancialSections,
+    NotYetAvailable,
+)
 from cloudops_tenancy import Database
 
 log = logging.getLogger("cloudops.api")
@@ -76,6 +82,12 @@ class Platform:
     db: Database
     validator: TokenValidator
     resolver: ScopeResolver
+    # Step 17. Evidence packs are signed by ``signer`` (refuses until a key is
+    # decided, ADR 0019); availability comes from the telemetry store when it
+    # is connected; the financial sections wait for step 16.
+    signer: Signer = field(default_factory=UnavailableSigner)
+    availability: AvailabilitySource | None = None
+    financial: FinancialSections = field(default_factory=NotYetAvailable)
 
 
 def platform(request: Request) -> Platform:

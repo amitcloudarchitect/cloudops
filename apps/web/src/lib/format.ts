@@ -81,3 +81,14 @@ export function duration(seconds: number): string {
   const part = minor ? Math.floor((s % major[0]) / minor[0]) : 0;
   return minor && part > 0 ? `${whole} ${major[1]} ${part} ${minor[1]}` : `${whole} ${major[1]}`;
 }
+
+/** A link from ingested data (a SharePoint webUrl) is followed only if it is https:
+ * the source is attacker-influenceable, and any other scheme is shown as text. */
+export function safeHttps(url: unknown): string | null {
+  if (typeof url !== "string") return null;
+  try {
+    return new URL(url).protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}

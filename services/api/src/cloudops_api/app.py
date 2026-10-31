@@ -12,11 +12,26 @@ from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 
-from cloudops_api import bff, connectors, mapping, operations, portal
+from cloudops_api import (
+    assurance,
+    bff,
+    connectors,
+    knowledge,
+    mapping,
+    operations,
+    portal,
+    reports,
+)
 from cloudops_api.access import ScopeResolver
 from cloudops_api.auth import TokenValidator
 from cloudops_api.health import PROBES
 from cloudops_api.pipeline import AuditedRoute, Platform
+from cloudops_domain.assurance.pack import Signer, UnavailableSigner
+from cloudops_domain.reporting.sections import (
+    AvailabilitySource,
+    FinancialSections,
+    NotYetAvailable,
+)
 from cloudops_tenancy import Database
 
 
@@ -26,6 +41,9 @@ def create_app(
     validator: TokenValidator,
     expose_openapi: bool = False,
     web_origins: tuple[str, ...] = (),
+    signer: Signer | None = None,
+    availability: AvailabilitySource | None = None,
+    financial: FinancialSections | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="CloudOps Platform API",
@@ -35,7 +53,11 @@ def create_app(
         # The schema drives generated TypeScript types; served locally only.
         openapi_url="/openapi.json" if expose_openapi else None,
     )
-    app.state.platform = Platform(db=db, validator=validator, resolver=ScopeResolver(db))
+    app.state.platform = Platform(
+        db=db, validator=validator, resolver=ScopeResolver(db),
+        signer=signer or UnavailableSigner(), availability=availability,
+        financial=financial or NotYetAvailable(),
+    )
     for router in ROUTERS:
         check_router(router)
         app.include_router(router)
@@ -59,6 +81,7 @@ def create_app(
 # Every router the API serves. Endpoints are added to these, never to the app.
 ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
+    knowledge.router, assurance.router, reports.router,
 )
 
 

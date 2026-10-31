@@ -21,6 +21,16 @@ export async function api<T>(role: RoleName, path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+/** Write through the API directly, as a role: how a journey sets up what it needs. */
+export async function apiPost<T>(role: RoleName, path: string, body?: unknown): Promise<{ status: number; body: T }> {
+  const response = await fetch(`${API}${path}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token(role)}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  return { status: response.status, body: (await response.json()) as T };
+}
+
 /** Hold a company name in quarantine as a connector would (local only), so a journey
  * maps a name of its own and never uses up the seeded quarantine. */
 export function holdName(alias: string, sightings: number): void {

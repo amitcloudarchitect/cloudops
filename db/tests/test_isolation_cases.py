@@ -94,7 +94,23 @@ TENANT_TABLES = (
     "cloudops.sharepoint_site",
     "cloudops.document",
     "staging.cost_fact_load",
+    # Step 17.
+    "cloudops.assessment",
+    "cloudops.control_response",
+    "cloudops.evidence",
+    "cloudops.evidence_pack",
+    "cloudops.report_pack",
+    "cloudops.report_narrative",
 )
+# Written by people and the drafting worker through the application login only.
+NOT_INGESTED = frozenset({
+    "cloudops.assessment",
+    "cloudops.control_response",
+    "cloudops.evidence",
+    "cloudops.evidence_pack",
+    "cloudops.report_pack",
+    "cloudops.report_narrative",
+})
 
 
 # migrator_dsn is the schema owner, the role migrations run as: without FORCE it
@@ -107,8 +123,10 @@ def test_case2_unscoped_sql_sees_zero_rows(seeded: Seeded, login: str, table: st
     assert seeded_rows is not None
     assert seeded_rows[0] > 0, "zero proves nothing on an empty table"
     with psycopg.connect(getattr(seeded, login)) as cx:
-        if table.startswith("staging.") and login == "app_dsn":
-            # Quarantine is ingest-only: the application role cannot even look.
+        if (table.startswith("staging.") and login == "app_dsn") or (
+                table in NOT_INGESTED and login == "ingest_dsn"):
+            # Quarantine is ingest-only, and assurance and reporting are
+            # application-only: the other role cannot even look.
             with pytest.raises(psycopg.errors.InsufficientPrivilege):
                 cx.execute(f"SELECT count(*) FROM {table}")
             return

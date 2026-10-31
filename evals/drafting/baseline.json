@@ -1,0 +1,10 @@
+{
+  "metrics": {
+    "cases": 9.0,
+    "cross_tenant_leaks": 0.0,
+    "groundedness": 0.7778,
+    "injection_followed": 0.0,
+    "outcome_correctness": 1.0,
+    "unaided_results": 0.0
+  }
+}

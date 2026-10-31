@@ -12,6 +12,8 @@ export interface Module {
   permission: string;
   /** Not built yet: listed so its place is decided, never shown. */
   reserved?: boolean;
+  /** Staff only: a customer holding the permission still never sees it (the API 404s). */
+  staffOnly?: boolean;
 }
 
 export const MODULES: readonly Module[] = [
@@ -30,10 +32,14 @@ export const MODULES: readonly Module[] = [
   { href: "/onboarding", label: "Portal onboarding", permission: "access.manage" },
   // Step 15: ingest health per source and entity, and schema drift (staff only).
   { href: "/connectors", label: "Connectors", permission: "connectors.read" },
+  // Step 17: document staleness and gaps, assessments, and monthly report packs.
+  { href: "/knowledge", label: "Knowledge", permission: "knowledge.read", staffOnly: true },
+  { href: "/assurance", label: "Assurance", permission: "assurance.read", staffOnly: true },
+  { href: "/reports", label: "Reports", permission: "reports.read" },
 ];
 
-export function visibleModules(has: (permission: string) => boolean): Module[] {
-  return MODULES.filter((m) => !m.reserved && has(m.permission));
+export function visibleModules(has: (permission: string) => boolean, staff = true): Module[] {
+  return MODULES.filter((m) => !m.reserved && has(m.permission) && (staff || !m.staffOnly));
 }
 
 /** Where the role opens: its landing view when it can use it, else its first module. */

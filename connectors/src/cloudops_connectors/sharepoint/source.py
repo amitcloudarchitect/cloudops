@@ -6,8 +6,9 @@ fetch     one delta page: the site's delta, or the persisted deltaLink, then
           means its consent was withdrawn: ``ScopeRevokedError``
 inspect   after the page is in bronze: every changed text file's content is
           downloaded and stored in bronze beside it (``.{item}.content``)
-process   upsert ``cloudops.document``; a changed text file's chunks are
-          replaced in ``knowledge_chunk`` (no embedding: step 17 adds it); a
+process   upsert ``cloudops.document`` with its kind; a changed text file's
+          chunks are replaced in ``knowledge_chunk``, each with its document,
+          position and page (no embedding: the knowledge indexer adds it); a
           deleted item's chunks go and its document is marked deleted; on the
           final page the deltaLink is persisted, in the same transaction
 revoke    the site is marked revoked, every chunk of it deleted, its documents
@@ -85,6 +86,7 @@ _LOCK_SITE: Final = text(
 _DOC_COLUMNS: Final = (
     "tenant_id", "source_system", "site_id", "item_id", "name", "web_url", "mime_type",
     "etag", "size_bytes", "modified_at", "extraction", "chunk_count", "raw_extra",
+    "doc_kind", "folder_path",
 )
 _UPSERT_DOC: Final = text(
     f"INSERT INTO cloudops.document ({', '.join(_DOC_COLUMNS)}) VALUES ("  # noqa: S608
@@ -110,8 +112,9 @@ _DELETE_CHUNKS: Final = text(
     "DELETE FROM cloudops.knowledge_chunk WHERE source_kind = :kind AND source_ref = :ref"
 )
 _INSERT_CHUNK: Final = text(
-    "INSERT INTO cloudops.knowledge_chunk (tenant_id, source_kind, source_ref, title, body)"
-    " VALUES (:tenant_id, :kind, :ref, :title, :body)"
+    "INSERT INTO cloudops.knowledge_chunk (tenant_id, source_kind, source_ref, title, body,"
+    " document_id, ordinal, page)"
+    " VALUES (:tenant_id, :kind, :ref, :title, :body, :document_id, :ordinal, :page)"
 )
 _REVOKE_SITE: Final = text(
     "UPDATE cloudops.sharepoint_site SET consent = 'revoked',"
@@ -340,7 +343,7 @@ async def _write_item(conn: ScopedConnection, tenant: UUID, ctx: PageContext,
     if not ctx.advance and await conn.scalar(_DELETED_DOC, {
             "source": mapping.SOURCE, "site": ctx.scope, "item": item.item_id}):
         return False  # replay never brings a deleted document back
-    chunks = mapping.chunk(body) if body is not None and item.extraction == "text" else []
+    chunks = mapping.pieces(body) if body is not None and item.extraction == "text" else []
     written = await conn.scalar(_UPSERT_DOC, _doc_row(tenant, ctx.scope, item, len(chunks)))
     if written is None:
         return False  # bronze older than what is stored
@@ -350,7 +353,8 @@ async def _write_item(conn: ScopedConnection, tenant: UUID, ctx: PageContext,
         # Verbatim: document text is data, never instruction.
         await conn.execute(_INSERT_CHUNK, [
             {"tenant_id": tenant, "kind": mapping.SOURCE_KIND, "ref": ref, "title": item.name,
-             "body": c} for c in chunks])
+             "body": c.body, "document_id": written, "ordinal": c.ordinal, "page": c.page}
+            for c in chunks])
     return True
 
 
@@ -361,4 +365,5 @@ def _doc_row(tenant: UUID, site: str, item: mapping.DriveItem, chunks: int) -> d
         "mime_type": item.mime_type, "etag": item.etag, "size_bytes": item.size,
         "modified_at": item.modified_at, "extraction": item.extraction, "chunk_count": chunks,
         "raw_extra": json.dumps(item.raw_extra, sort_keys=True) if item.raw_extra else None,
+        "doc_kind": item.doc_kind, "folder_path": item.folder_path,
     }

@@ -14,6 +14,9 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
     "Customer mapping",
     "Portal onboarding",
     "Connectors",
+    "Knowledge",
+    "Assurance",
+    "Reports",
   ]);
   await page.goto("/mapping");
   await expect(page.getByRole("heading", { level: 1, name: "Customer mapping" })).toBeVisible();

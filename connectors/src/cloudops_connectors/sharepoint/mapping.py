@@ -14,6 +14,11 @@ UTF-8 text, is ``unsupported`` too.
 
 Document text is data, never instruction (CLAUDE.md rule 4): chunks hold it
 verbatim, split on paragraph boundaries; nothing here reads what it says.
+
+Step 17: a document's kind (design, handover, policy, runbook, report, other)
+comes from its name and its folder (``parentReference.path``), never from its
+text. Each chunk records its position in the document and the page it starts
+on, so an answer can cite them.
 """
 
 from __future__ import annotations
@@ -24,6 +29,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Final
+
+from cloudops_domain.knowledge import DocKind, classify_document, page_at
 
 SOURCE: Final = "sharepoint"
 ENTITY: Final = "drive_item"
@@ -57,6 +64,8 @@ class DriveItem:
     size: int | None
     modified_at: datetime | None
     raw_extra: dict[str, Any] = field(default_factory=dict)
+    folder_path: str | None = None
+    doc_kind: DocKind = "other"
 
     @property
     def wants_content(self) -> bool:
@@ -127,6 +136,9 @@ def normalise(item: Mapping[str, Any]) -> DriveItem:
     else:
         extraction = "unsupported"
     extra = {k: v for k, v in item.items() if k not in MAPPED}
+    parent = item.get("parentReference")
+    folder = _text(parent.get("path")) if isinstance(parent, Mapping) else None
+    folder = folder.split(":", 1)[-1] or "/" if folder else None
     if isinstance(file, Mapping):
         rest = {k: v for k, v in file.items() if k != "mimeType"}
         if rest:
@@ -136,6 +148,8 @@ def normalise(item: Mapping[str, Any]) -> DriveItem:
         root=isinstance(item.get("root"), Mapping), extraction=extraction, mime_type=mime,
         web_url=_text(item.get("webUrl")), etag=_text(item.get("eTag")), size=size,
         modified_at=_time(item.get("lastModifiedDateTime")), raw_extra=extra,
+        folder_path=folder,
+        doc_kind=classify_document(name or "", folder) if extraction != "folder" else "other",
     )
 
 
@@ -173,4 +187,25 @@ def chunk(text: str, limit: int = MAX_CHUNK_CHARS) -> list[str]:
             out[-1] = f"{out[-1]}\n\n{piece}"
         else:
             out.append(piece)
+    return out
+
+
+@dataclass(frozen=True)
+class Piece:
+    ordinal: int
+    page: int
+    body: str
+
+
+def pieces(text: str, limit: int = MAX_CHUNK_CHARS) -> list[Piece]:
+    """``chunk``, with each chunk's position and the page it starts on (pages are
+    form-feed separated; plain text without any is one page)."""
+    out: list[Piece] = []
+    cursor = 0
+    for ordinal, body in enumerate(chunk(text, limit)):
+        head = body.split("\n", 1)[0][:200]
+        found = text.find(head, cursor)
+        start = found if found >= 0 else cursor
+        out.append(Piece(ordinal, page_at(text, start), body))
+        cursor = start + 1
     return out

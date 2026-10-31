@@ -46,6 +46,28 @@ export type TenantUserRequest = Schemas["TenantUserRequest"];
 export type Onboarding = Schemas["Onboarding"];
 export type CatalogueRole = Schemas["CatalogueRole"];
 export type FederationRequest = Schemas["FederationRequest"];
+// Step 17: knowledge, assurance and reporting.
+export type DocumentList = Schemas["DocumentList"];
+export type DocumentView = Schemas["DocumentView"];
+export type CoverageView = Schemas["CoverageView"];
+export type CitationView = Schemas["CitationView"];
+export type FrameworkView = Schemas["FrameworkView"];
+export type ControlView = Schemas["ControlView"];
+export type AssessmentSummary = Schemas["AssessmentSummary"];
+export type AssessmentDetail = Schemas["AssessmentDetail"];
+export type ResponseView = Schemas["ResponseView"];
+export type EvidenceView = Schemas["EvidenceView"];
+export type ScoreView = Schemas["ScoreView"];
+export type Approval = Schemas["Approval"];
+export type EvidencePackSummary = Schemas["EvidencePackSummary"];
+export type ReportPackSummary = Schemas["ReportPackSummary"];
+export type ReportPackView = Schemas["ReportPackView"];
+export type NarrativeView = Schemas["NarrativeView"];
+export type SectionSnapshot = Schemas["SectionSnapshot"];
+export type FigureSnapshot = Schemas["FigureSnapshot"];
+export type TableSnapshot = Schemas["TableSnapshot"];
+export type PortfolioView = Schemas["PortfolioView"];
+export type PortfolioLine = Schemas["PortfolioLine"];
 
 // The values a reviewer may choose, read from the schema itself rather than
 // copied, so a new intent in the API reaches the console by regeneration.

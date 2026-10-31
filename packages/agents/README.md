@@ -77,6 +77,14 @@ An agent is five things (`AgentSpec`):
 | --- | --- | --- | --- | --- |
 | `classify_ticket` (`classifier.py`, prompt `ticket_classifier/v2`) | 2 Classify | small | none | intent, affected CI, customer, action class, risk, confidence |
 | `enrich_ticket` (`enricher.py`, prompt `ticket_enricher/v1`) | 3 Enrich | large | `get_resource_context`, `search_tickets`, `search_knowledge` | the context bundle |
+| `draft_control_response` (`drafting.py`, prompt `control_drafter/v1`) | assurance (step 17) | large | none | narrative, citations, sufficiency; **no result** |
+| `draft_report_narrative` (`drafting.py`, prompt `report_narrator/v1`) | reporting (step 17) | large | none | two to four sentences, figures cited |
+
+`drafting.py` holds `DraftSweepWorkflow` and `KnowledgeIndexWorkflow` on the `drafting`
+queue (ADR 0019): requested drafts are drafted under their own tenant's scope, checked
+deterministically (citations given, numbers in the data, no asserted result, no
+instruction-like material), and stored as drafts only. A person approves every result
+and writes or accepts every narrative. They are measured by `evals/drafting/`.
 
 `remediation.py` holds `TicketTriageWorkflow`, stages 1 to 3 as a Temporal workflow.
 `triage.py` holds the deterministic guardrails between the stages; ADR 0006 explains
