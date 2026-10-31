@@ -12,6 +12,14 @@
 #
 # Reviewed 2026-10-28 (step 11): no Debian 13 fix exists for any of these.
 
+# Paths the dependency scan (SCA) does not read. Each one names a single file and why.
+exclude:
+  # The Grafana Terraform provider's lock (step 19, ADR 0022). Grype matches Grafana
+  # *server* CVEs to this provider by name; the provider is a Terraform plugin, and
+  # the server is Azure Managed Grafana, patched by Microsoft. The provider stays
+  # pinned by this lock and versions.tf. Approved by the user, 2026-10-31.
+  - "./infra/terraform/stacks/03b-dashboards/.terraform.lock.hcl"
+
 ignore:
   # glibc: core C library, present in every Debian-based image.
   - vulnerability: CVE-2026-19499
