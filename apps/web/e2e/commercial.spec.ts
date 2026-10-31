@@ -81,7 +81,11 @@ test.describe("finops", () => {
     await form.getByLabel("Reason").fill(reason);
     await form.getByRole("button", { name: "Record correction" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Correction recorded: CHF to EUR, closing" })).toBeVisible();
-    await expect(row(page, "FX corrections", reason)).toContainText("CHF → EUR");
+    // The correction and its inverse, derived from it, each with an entry.
+    const entries = page.getByRole("table", { name: "FX corrections" }).getByRole("row").filter({ hasText: reason });
+    await expect(entries).toHaveCount(2);
+    await expect(entries.filter({ hasText: "CHF → EUR" })).toHaveCount(1);
+    await expect(entries.filter({ hasText: "EUR → CHF" })).toContainText("Derived from correction");
   });
 
   test("margin: banded, with not captured in words for a customer without a SOW", async ({ signedIn: page }) => {
