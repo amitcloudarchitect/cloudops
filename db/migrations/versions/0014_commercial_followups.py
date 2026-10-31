@@ -1,8 +1,8 @@
 """Step 16 follow-ups: margin knows whether its cost reconciled; an FX correction
 keeps every directed pair of its day consistent.
 
-Revision ID: 0013
-Revises: 0012
+Revision ID: 0014
+Revises: 0013
 
 ``margin_snapshot.cost_verified`` (step 16 decision: stored, not looked up at
 read time). True when every account with consumption cost in the month has a
@@ -32,8 +32,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0013"
-down_revision = "0012"
+revision = "0014"
+down_revision = "0013"
 branch_labels = None
 depends_on = None
 

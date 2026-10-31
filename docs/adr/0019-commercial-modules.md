@@ -121,7 +121,7 @@ commercial rules open; the user decided them before the build.
   pages on them is step 19 (observability).
 - Margin needs SOW capture (HLD dependency): until then a customer shows not captured.
 
-## Amendment: review follow-ups (migration 0013)
+## Amendment: review follow-ups (migration 0014)
 
 Decided with the user after the step 16 review:
 
@@ -131,7 +131,7 @@ Decided with the user after the step 16 review:
   that is verified (the invoice once there is one, else the provider total); false
   otherwise, including an account never checked; null with no cost. A change restates
   a closed month as a new version. The console marks "Cost not reconciled". The first
-  run after 0013 restates closed months in the reprocessing window once, because their
+  run after 0014 restates closed months in the reprocessing window once, because their
   stored flag is null.
 - **An FX correction moves its inverse and crosses.** Rates are stored for every
   directed pair. Correcting A → B also sets B → A = 1 / rate and, holding the legs from
