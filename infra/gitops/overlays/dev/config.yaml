@@ -7,6 +7,9 @@ data:
   CLOUDOPS_ENTRA_TENANT_ID: 2fa5e26d-5ad2-415f-88a2-771caca87cbe
   # app-cloudops-api-dev's client ID: v2 tokens carry it as the audience.
   CLOUDOPS_API_AUDIENCE: f037f7b8-38cc-4add-8aa7-254b4a117e5d
+  # The console's origin (ADR 0017): the same Front Door host, so its calls are
+  # same-origin; listed so that stays true if the console ever moves host.
+  CLOUDOPS_WEB_ORIGINS: https://cloudops-dev-dne7dpdpfrgfccej.z02.azurefd.net
 ---
 apiVersion: v1
 kind: ConfigMap

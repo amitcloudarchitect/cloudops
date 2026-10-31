@@ -1,5 +1,6 @@
 # One HTTP listener: Front Door terminates TLS and reaches the origin over HTTP in
-# public mode (stack 06 explains why). Only the API's namespace may attach routes.
+# public mode (stack 06 explains why). Only the API's and the console's namespaces
+# may attach routes (ADR 0017: one host, /v1 to the API, the rest to the console).
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -28,8 +29,10 @@ spec:
         namespaces:
           from: Selector
           selector:
-            matchLabels:
-              kubernetes.io/metadata.name: platform-api
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: [platform-api, platform-web]
 ---
 # Customisations of the generated proxy, within the add-on's allow list.
 #
@@ -66,7 +69,8 @@ data:
                 limits: { memory: 512Mi }
 ---
 # The proxies: Front Door in on 80 (the NSG admits only its service tag), the load
-# balancer's probe on 15021, Prometheus on 15020; out to the API and to istiod.
+# balancer's probe on 15021, Prometheus on 15020; out to the API, the console and
+# istiod.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -96,6 +100,15 @@ spec:
               app.kubernetes.io/name: api
       ports:
         - { protocol: TCP, port: 8000 }
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-web
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: web
+      ports:
+        - { protocol: TCP, port: 3000 }
     - to:
         - namespaceSelector:
             matchLabels:

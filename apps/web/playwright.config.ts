@@ -39,7 +39,7 @@ export default defineConfig({
       url: `${web}/signin`,
       reuseExistingServer: !ci,
       timeout: 180_000,
-      env: { NEXT_PUBLIC_AUTH_MODE: "local", NEXT_PUBLIC_API_BASE: api, NEXT_TELEMETRY_DISABLED: "1" },
+      env: { NEXT_PUBLIC_AUTH_MODE: "local", CLOUDOPS_WEB_API_BASE: api, NEXT_TELEMETRY_DISABLED: "1" },
     },
   ],
 });

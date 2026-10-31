@@ -216,7 +216,7 @@ jobs:
       - name: build every image
         run: docker buildx bake -f docker-bake.hcl --load
       - name: SBOM, non-root check, and the critical/high gate
-        run: scripts/image-check.sh cloudops/api:dev cloudops/connector-servicenow:dev cloudops/worker-ai:dev cloudops/migrate:dev
+        run: scripts/image-check.sh cloudops/api:dev cloudops/connector-servicenow:dev cloudops/worker-ai:dev cloudops/migrate:dev cloudops/web:dev
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

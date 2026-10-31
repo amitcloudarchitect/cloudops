@@ -68,6 +68,6 @@
 
 - **Deployment.** The console is built and tested only. Hosting it (static export
   behind Front Door, or a container behind the gateway), its Entra app registration's
-  SPA redirect URIs, and its CSP are a follow-up.
+  SPA redirect URIs, and its CSP are a follow-up. Decided in ADR 0017.
 - **Live metrics** on resource context wait for the telemetry store (LLD L1); the
   screen says so.

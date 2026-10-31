@@ -64,7 +64,7 @@ jobs:
       # Only images the main pipeline built and signed on main may be promoted.
       - name: signatures
         run: |
-          for image in api connector-servicenow worker-ai migrate; do
+          for image in api connector-servicenow worker-ai migrate web; do
             cosign verify "$REGISTRY/$image:$TAG" \
               --certificate-identity "https://github.com/$GITHUB_REPOSITORY/.github/workflows/main.yml@refs/heads/main" \
               --certificate-oidc-issuer https://token.actions.githubusercontent.com > /dev/null
@@ -99,7 +99,7 @@ jobs:
           BOT: ${{ steps.bot.outputs.app-slug }}
           APPROVED_BY: ${{ github.actor }}
         run: |
-          python3 -I tools/ci/set_image_tag.py "$TAG" api migrate connector-servicenow worker-ai \
+          python3 -I tools/ci/set_image_tag.py "$TAG" api migrate connector-servicenow worker-ai web \
             -- "infra/gitops/overlays/$ENVIRONMENT"
           branch="promote/$ENVIRONMENT-$TAG"
           title="Promote $TAG to $ENVIRONMENT${CHANGE_REF:+ ($CHANGE_REF)}"

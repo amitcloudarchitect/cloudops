@@ -6,53 +6,75 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DOCKERFILE = REPO_ROOT / "infra/docker/python.Dockerfile"
+WEB_DOCKERFILE = REPO_ROOT / "infra/docker/web.Dockerfile"  # the console (ADR 0017)
 BAKE = REPO_ROOT / "docker-bake.hcl"
 GRYPE = REPO_ROOT / ".grype.yaml"
 DOCKERIGNORE = REPO_ROOT / ".dockerignore"
 
 
-def _froms() -> list[tuple[str, str | None]]:
+def _froms(dockerfile: Path = DOCKERFILE) -> list[tuple[str, str | None]]:
     """(image, stage name) for every FROM."""
     found = []
-    for line in DOCKERFILE.read_text(encoding="utf-8").splitlines():
+    for line in dockerfile.read_text(encoding="utf-8").splitlines():
         m = re.match(r"FROM\s+(\S+)(?:\s+AS\s+(\S+))?", line)
         if m:
             found.append((m.group(1), m.group(2)))
     return found
 
 
-def test_every_external_base_is_pinned_by_digest() -> None:
-    stages = {name for _, name in _froms() if name}
-    external = [image for image, _ in _froms() if image not in stages]
+@pytest.mark.parametrize("dockerfile", [DOCKERFILE, WEB_DOCKERFILE], ids=lambda p: p.name)
+def test_every_external_base_is_pinned_by_digest(dockerfile: Path) -> None:
+    stages = {name for _, name in _froms(dockerfile) if name}
+    external = [image for image, _ in _froms(dockerfile) if image not in stages]
     assert external
     for image in external:
         assert re.search(r"@sha256:[0-9a-f]{64}$", image), image
 
 
-def test_the_runtime_is_distroless_and_never_root() -> None:
-    text = DOCKERFILE.read_text(encoding="utf-8")
-    froms = dict((name, image) for image, name in _froms())
+@pytest.mark.parametrize("dockerfile", [DOCKERFILE, WEB_DOCKERFILE], ids=lambda p: p.name)
+def test_the_runtime_is_distroless_and_never_root(dockerfile: Path) -> None:
+    text = dockerfile.read_text(encoding="utf-8")
+    froms = dict((name, image) for image, name in _froms(dockerfile))
     assert froms["runtime"] == "distroless"
     assert froms["distroless"].startswith("gcr.io/distroless/")
     runtime = text[text.index("FROM distroless AS runtime"):]
     users = re.findall(r"^USER\s+(\S+)", runtime, re.M)
     assert users == ["65532:65532"]
-    assert "pip" in text  # pip is removed from the interpreter
+    if dockerfile == DOCKERFILE:
+        assert "pip" in text  # pip is removed from the interpreter
+
+
+def test_the_console_image_is_built_for_entra_and_runs_nothing_at_install() -> None:
+    """A local-mode bundle signs in with dev tokens; it never goes in an image."""
+    text = WEB_DOCKERFILE.read_text(encoding="utf-8")
+    assert 'test "$NEXT_PUBLIC_AUTH_MODE" = entra' in text
+    assert "npm ci --ignore-scripts" in text
+    block = _bake_block("web")
+    assert 'dockerfile = "infra/docker/web.Dockerfile"' in block
+    assert 'NEXT_PUBLIC_AUTH_MODE = "entra"' in block
+
+
+def _bake_block(target: str) -> str:
+    bake = BAKE.read_text(encoding="utf-8")
+    return bake[bake.index(f'target "{target}"'):].split("\n}\n", 1)[0]
 
 
 def test_bake_builds_exactly_the_final_stages_each_with_its_package() -> None:
-    finals = {name for image, name in _froms() if image == "runtime"}
+    python = {name for image, name in _froms() if image == "runtime" and name}
+    web = {name for image, name in _froms(WEB_DOCKERFILE) if image == "runtime" and name}
+    assert web == {"web"}
     bake = BAKE.read_text(encoding="utf-8")
     targets = set(re.findall(r'^target "([a-z][a-z0-9-]*)"', bake, re.M))
-    assert targets == finals
+    assert targets == python | web
     default = re.search(r'group "default" \{\s*targets = \[([^\]]*)\]', bake)
     assert default
-    assert set(re.findall(r'"([^"]+)"', default.group(1))) == finals
-    for target in finals:
-        block = bake[bake.index(f'target "{target}"'):].split("\n}\n", 1)[0]
-        assert re.search(r'PACKAGE = "(cloudops-[a-z-]+|all)"', block), target
+    assert set(re.findall(r'"([^"]+)"', default.group(1))) == python | web
+    for target in python:
+        assert re.search(r'PACKAGE = "(cloudops-[a-z-]+|all)"', _bake_block(target)), target
 
 
 def test_dockerignore_is_an_allowlist_that_keeps_tests_out() -> None:
