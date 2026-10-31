@@ -20,7 +20,7 @@ order.
    CloudOps platform* in the console (step 18). Then mark it internal. Nothing in the
    product does that yet; only the dev seed does (`cloudops_devdata.seed.mark_internal`:
    one `UPDATE cloudops.tenant SET internal = true` through `packages/tenancy`, with an
-   ingest scope over that tenant). At most one tenant can be internal (migration 0014).
+   ingest scope over that tenant). At most one tenant can be internal (migration 0019).
 2. **The alias.** In the mapping console (step 14b), map the subscription id
    `cd12743c-f76e-4284-aa62-eb8bd576ac91` (source `azure`) to that tenant. In dev, one
    person may approve. If you skip this, the first run puts the subscription in the
