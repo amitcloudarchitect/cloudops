@@ -44,7 +44,8 @@ function NotCaptured({ m }: { m: MarginView }) {
 
 /** Points of margin, signed: "+2.5 pts", "−4.0 pts". */
 export function points(ratio: string): string {
-  const text = percent(ratio).replace("%", " pts");
+  const pct = percent(ratio);
+  const text = `${pct.endsWith("%") ? pct.slice(0, -1) : pct} pts`;
   return text.startsWith("-") ? `−${text.slice(1)}` : `+${text}`;
 }
 
