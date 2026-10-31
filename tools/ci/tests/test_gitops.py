@@ -109,6 +109,28 @@ def test_secrets_are_files_never_environment(name: str, pod: dict[str, Any]) -> 
             assert v["csi"]["readOnly"] is True
 
 
+@pytest.mark.parametrize(("name", "pod"), list(_workloads(DEV)))
+def test_settings_read_at_start_up_roll_the_pods_when_they_change(
+    name: str, pod: dict[str, Any]
+) -> None:
+    # Environment from a ConfigMap is read once, at start-up: a plain ConfigMap edited
+    # by Argo CD leaves running pods on the old value (the ServiceNow client ID,
+    # 2026-10-31). A generated one is renamed by its content hash, which changes the
+    # pod template and rolls the workload. Kept after pruning, so the previous
+    # revision's pods can still start.
+    configs = {d["metadata"]["name"]: d for d in DEV if d["kind"] == "ConfigMap"}
+    for c in pod["containers"]:
+        for src in c.get("envFrom", []):
+            ref = src.get("configMapRef", {}).get("name")
+            if ref is None:
+                continue
+            assert ref in configs, f"{name} reads ConfigMap {ref}, which the build lacks"
+            notes = configs[ref]["metadata"].get("annotations", {})
+            assert re.search(r"-[a-z0-9]{10}$", ref), f"{name}: {ref} is not generated"
+            assert notes.get("argocd.argoproj.io/sync-options") == "Prune=false", ref
+            assert notes.get("argocd.argoproj.io/compare-options") == "IgnoreExtraneous", ref
+
+
 def test_every_workload_has_its_own_federated_identity() -> None:
     accounts = {(d["metadata"]["namespace"], d["metadata"]["name"]): d for d in ALL_OURS
                 if d["kind"] == "ServiceAccount"}

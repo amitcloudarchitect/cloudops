@@ -1,0 +1,15 @@
+# Kustomize knows Deployments but not Argo Rollouts: without this, the Rollout would
+# keep naming `api` while the generated ConfigMap is `api-<hash>`.
+nameReference:
+  - kind: ConfigMap
+    version: v1
+    fieldSpecs:
+      - kind: Rollout
+        group: argoproj.io
+        path: spec/template/spec/containers/envFrom/configMapRef/name
+      - kind: Rollout
+        group: argoproj.io
+        path: spec/template/spec/containers/env/valueFrom/configMapKeyRef/name
+      - kind: Rollout
+        group: argoproj.io
+        path: spec/template/spec/volumes/configMap/name
