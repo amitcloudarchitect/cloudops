@@ -8,7 +8,8 @@ tenant, resource link or quarantine is known in advance.
 
 Tests share one database. Each uses its own instance URL, so watermarks
 (per source, entity and instance) never collide. The replay test changes an
-alias and therefore runs last.
+alias and therefore runs last; the re-process tests register others and run
+after it.
 """
 
 from __future__ import annotations
@@ -31,7 +32,12 @@ from cloudops_connectors.core import state
 from cloudops_connectors.core.raw import MemoryRawStore
 from cloudops_connectors.servicenow.client import ServiceNowClient
 from cloudops_connectors.servicenow.fake import FakeServiceNow, load_fixture
-from cloudops_connectors.servicenow.pipeline import process_page
+from cloudops_connectors.servicenow.mapping import ENTITIES
+from cloudops_connectors.servicenow.pipeline import (
+    ReprocessRefusedError,
+    process_page,
+    reprocess_page,
+)
 from cloudops_connectors.servicenow.workflows import (
     WORKFLOWS,
     IngestRequest,
@@ -41,6 +47,7 @@ from cloudops_connectors.servicenow.workflows import (
     ServiceNowActivities,
     ServiceNowIngest,
     ServiceNowReplay,
+    ServiceNowReprocess,
     activities,
 )
 from cloudops_devdata.servicenow_fixtures import Expected, expectations
@@ -338,3 +345,135 @@ async def test_z_replay_reprocesses_bronze_without_refetching(
         assert rows == [(tenant_id("NWL"),)]
     assert _rows(synthetic.admin_dsn, "SELECT watermark FROM staging.ingest_watermark"
                  " WHERE scope_key = %s", base) == mark_before
+
+
+# --- re-processing one approved name (ADR 0015): after the replay ------------------
+
+
+def _approve(dsn: str, alias: str, tenant: uuid.UUID, maps_to: uuid.UUID | None,
+             decision: str = "approve") -> uuid.UUID:
+    """What the console's propose, approve and request do, written directly: the
+    functions are tested in test_customer_mapping; this tests the worker."""
+    with psycopg.connect(dsn, autocommit=True) as cx:
+        proposal = cx.execute(
+            "INSERT INTO cloudops.alias_proposal (tenant_id, source_system, alias, proposed_by)"
+            " VALUES (%s, 'servicenow', %s, gen_random_uuid()) RETURNING id",
+            (tenant, alias)).fetchone()
+        assert proposal is not None
+        cx.execute(
+            "INSERT INTO cloudops.alias_decision (proposal_id, tenant_id, decision, reason,"
+            " decided_by, held_occurrences, held_first_seen, held_last_seen)"
+            " VALUES (%s, %s, %s, %s, gen_random_uuid(), %s, now(), now())",
+            (proposal[0], tenant, decision, None if decision == "approve" else "test",
+             1 if decision == "approve" else None))
+        if maps_to is not None:
+            cx.execute("INSERT INTO cloudops.tenant_alias (tenant_id, source_system, alias,"
+                       " confirmed_by) VALUES (%s, 'servicenow', %s, 'test:review')",
+                       (maps_to, alias))
+        today = datetime.now(UTC).date()
+        request = cx.execute(
+            "INSERT INTO cloudops.alias_reprocess (tenant_id, proposal_id, source_system, alias,"
+            " window_start, window_end, requested_by)"
+            " VALUES (%s, %s, 'servicenow', %s, %s, %s, gen_random_uuid()) RETURNING id",
+            (tenant, proposal[0], alias, today, today)).fetchone()
+        assert request is not None
+        return uuid.UUID(str(request[0]))
+
+
+async def _drain(env: WorkflowEnvironment, acts: ServiceNowActivities) -> list[Any]:
+    queue = f"q-{uuid.uuid4().hex[:8]}"
+    out: list[Any] = []
+    async with Worker(env.client, task_queue=queue, workflows=WORKFLOWS,
+                      activities=activities(acts)):
+        while True:
+            report = await env.client.execute_workflow(
+                ServiceNowReprocess.run, id=f"wf-{uuid.uuid4().hex}", task_queue=queue)
+            out.append(report)
+            if report.request_id is None:
+                return out
+
+
+def _request(dsn: str, rid: uuid.UUID) -> tuple[Any, ...]:
+    (row,) = _rows(dsn, "SELECT status, moved, outcome FROM cloudops.alias_reprocess"
+                        " WHERE id = %s", rid)
+    return row
+
+
+async def test_zz_reprocess_moves_exactly_the_held_records_of_one_approved_name(
+    env: WorkflowEnvironment, ingest_db: Database, synthetic: Synthetic
+) -> None:
+    raw, fake, base = MemoryRawStore(), FakeServiceNow.from_fixtures(), _instance()
+    acts = _acts(ingest_db, raw, fake, base)
+    await _run(env, acts, ServiceNowIngest.run, [IngestRequest(e, SINCE) for e in ENTITIES])
+    name, crl = "Contoso", tenant_id("CRL")
+    held = {e.number for e in expectations() if not e.malformed and e.tenant_code is None
+            for entity in ENTITIES for r in load_fixture(entity)
+            if r["number"]["value"] == e.number and r["company"]["display_value"] == name}
+    assert held, "the name is quarantined first"
+    quarantine_before = dict(_rows(synthetic.admin_dsn,
+                                   "SELECT alias, occurrence_count"
+                                   " FROM staging.tenant_alias_quarantine"))
+    mark_before = _rows(synthetic.admin_dsn, "SELECT entity, watermark"
+                        " FROM staging.ingest_watermark WHERE scope_key = %s ORDER BY 1", base)
+    fetched_before = len(fake.requests)
+
+    good = _approve(synthetic.admin_dsn, name, crl, crl)
+    # Approved for Tailspin, but the name now maps to Woodgrove: refused at run time.
+    moved_away = _approve(synthetic.admin_dsn, "Tailspin Airways", tenant_id("TSA"),
+                          tenant_id("WGF"))
+    # Rejected, yet a request exists (only the database's own path prevents that).
+    rejected = _approve(synthetic.admin_dsn, "Woodgrove", tenant_id("WGF"), None, "reject")
+
+    reports = await _drain(env, acts)
+    assert [r.status for r in reports] == ["succeeded", "refused", "refused", "idle"]
+    assert _request(synthetic.admin_dsn, good) == ("succeeded", len(held), None)
+    assert reports[0].moved == len(held)
+    assert _request(synthetic.admin_dsn, moved_away) == ("refused", None, "mapping_changed")
+    assert _request(synthetic.admin_dsn, rejected) == ("refused", None, "not_approved")
+
+    rows = dict(_rows(synthetic.admin_dsn,
+                      "SELECT number, tenant_id FROM cloudops.work_item WHERE company_raw = %s",
+                      name))
+    assert rows == dict.fromkeys(held, crl)
+    for refused in ("Tailspin Airways", "Woodgrove"):
+        assert _rows(synthetic.admin_dsn, "SELECT 1 FROM cloudops.work_item"
+                     " WHERE company_raw = %s", refused) == []
+    # One name only: no other name was counted again, nothing was fetched, and no
+    # watermark moved.
+    after = dict(_rows(synthetic.admin_dsn,
+                       "SELECT alias, occurrence_count FROM staging.tenant_alias_quarantine"))
+    assert {k: v for k, v in after.items() if k != name} == {
+        k: v for k, v in quarantine_before.items() if k != name}
+    assert len(fake.requests) == fetched_before
+    assert _rows(synthetic.admin_dsn, "SELECT entity, watermark FROM staging.ingest_watermark"
+                 " WHERE scope_key = %s ORDER BY 1", base) == mark_before
+
+    # Again: the records are there already, so a page moves nothing.
+    for ref in raw.pages:
+        count = await reprocess_page(ingest_db, raw, ref.split("/")[1], ref, name, crl)
+        assert count.inserted == [], ref
+
+
+async def test_zz_a_page_refuses_when_the_name_no_longer_resolves_to_the_tenant(
+    ingest_db: Database, synthetic: Synthetic
+) -> None:
+    raw = MemoryRawStore()
+    record = next(r for r in load_fixture("incident")
+                  if r["company"]["display_value"] == "Contoso")
+    await raw.put("servicenow/incident/x.json", json.dumps({"result": [record]}).encode(), {})
+    with pytest.raises(ReprocessRefusedError):
+        await reprocess_page(ingest_db, raw, "incident", "servicenow/incident/x.json",
+                             "Contoso", tenant_id("NWL"))
+
+
+def test_zz_the_request_only_moves_forward(synthetic: Synthetic) -> None:
+    rid = _approve(synthetic.admin_dsn, "Forward Only", tenant_id("NWL"), None)
+    with psycopg.connect(synthetic.admin_dsn, autocommit=True) as cx:
+        for statement in (
+            "UPDATE cloudops.alias_reprocess SET status = 'succeeded', moved = 1,"
+            " finished_at = now() WHERE id = %s",  # skips running
+            "UPDATE cloudops.alias_reprocess SET alias = 'Other' WHERE id = %s",
+            "DELETE FROM cloudops.alias_reprocess WHERE id = %s",
+        ):
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                cx.execute(statement, (rid,))

@@ -57,6 +57,10 @@ spec:
           env:
             - { name: CLOUDOPS_MIGRATION_DSN_FILE, value: /etc/cloudops/migration/dsn }
             - { name: CLOUDOPS_MIGRATION_AUTH, value: entra }
+            # Customer-mapping approvals (ADR 0015): two people unless an overlay
+            # says one. Only dev does; absent here, the database keeps two.
+            - name: CLOUDOPS_MAPPING_APPROVERS
+              valueFrom: { configMapKeyRef: { name: migrate, key: mapping_approvers, optional: true } }
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

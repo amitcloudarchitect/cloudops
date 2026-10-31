@@ -7,7 +7,7 @@
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
-.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay eval eval-baseline images image-check web e2e
+.PHONY: help env up migrate seed test check lint down reset psql logs ps api token ingest replay reprocess eval eval-baseline images image-check web e2e
 
 ENV_FILE := .env.local
 COMPOSE := docker compose --env-file $(ENV_FILE)
@@ -40,8 +40,8 @@ up: env ## start the stack, wait until healthy, migrate, create blob containers
 
 # The DSN reaches alembic as a file, as in the pipeline, through process
 # substitution: it is never written to disk.
-migrate: $(ENV_FILE) ## apply database migrations as cloudops_migrator
-	env CLOUDOPS_MIGRATION_DSN_FILE=<($(SECRET) postgres-migration-dsn) uv run alembic upgrade head
+migrate: $(ENV_FILE) ## apply database migrations as cloudops_migrator (one-person mapping approval, as dev)
+	env CLOUDOPS_MIGRATION_DSN_FILE=<($(SECRET) postgres-migration-dsn) CLOUDOPS_MAPPING_APPROVERS=1 uv run alembic upgrade head
 
 seed: $(ENV_FILE) ## load the synthetic dataset, then check isolation (refuses if already seeded)
 	uv run python -m cloudops_devdata.seed
@@ -65,6 +65,9 @@ ingest: env ## run the ServiceNow connector over the recorded fixtures (Temporal
 
 replay: env ## reprocess today's ServiceNow bronze pages without re-fetching
 	uv run python -m cloudops_connectors.servicenow replay --fixtures --start $$(date -u +%F) --end $$(date -u +%F)
+
+reprocess: env ## run the re-process queue once: the oldest request made in the console (ADR 0015)
+	uv run python -m cloudops_connectors.servicenow reprocess --fixtures
 
 # Tests provision their own throwaway databases on the local server, so they
 # never touch seeded data. pg_partman is required, as in CI.

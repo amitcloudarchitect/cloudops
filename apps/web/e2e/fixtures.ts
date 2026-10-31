@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { test as base, expect, type Page } from "@playwright/test";
@@ -6,7 +7,8 @@ import type { WorkItemList } from "@cloudops/contracts";
 
 import { TOKEN_DIR, type RoleName } from "./roles";
 
-const API = "http://127.0.0.1:8000";
+// Overridable so a second checkout can run its own API and console beside a running pair.
+const API = process.env.CLOUDOPS_E2E_API ?? "http://127.0.0.1:8000";
 
 export function token(role: RoleName): string {
   return readFileSync(new URL(`${role}.txt`, TOKEN_DIR), "utf8");
@@ -17,6 +19,16 @@ export async function api<T>(role: RoleName, path: string): Promise<T> {
   const response = await fetch(`${API}${path}`, { headers: { Authorization: `Bearer ${token(role)}` } });
   if (!response.ok) throw new Error(`${path}: ${response.status}`);
   return (await response.json()) as T;
+}
+
+/** Hold a company name in quarantine as a connector would (local only), so a journey
+ * maps a name of its own and never uses up the seeded quarantine. */
+export function holdName(alias: string, sightings: number): void {
+  const repo = new URL("../../../", import.meta.url).pathname;
+  execFileSync("uv", ["run", "--quiet", "python", "-m", "cloudops_devdata.quarantine", "--alias", alias, "--count", String(sightings)], {
+    cwd: repo,
+    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: `${repo}.env.local` },
+  });
 }
 
 export async function triagedTicket(route: "human" | "ready_for_planning"): Promise<string> {

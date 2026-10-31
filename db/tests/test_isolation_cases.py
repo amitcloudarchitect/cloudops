@@ -415,7 +415,9 @@ WRITES = {
 async def test_write_into_another_tenant_is_rejected(
     app_db: Database, ingest_db: Database, seeded: Seeded, table: str
 ) -> None:
-    db = ingest_db if table.startswith("staging.") else app_db
+    # The application writes aliases only through the mapping functions (0009);
+    # ingest still inserts them directly, so it is the writer RLS must stop.
+    db = ingest_db if table.startswith(("staging.", "cloudops.tenant_alias")) else app_db
 
     async def write() -> None:
         await _rows(

@@ -4,6 +4,7 @@ export const ROLES = {
   customer: "customer-nwl",
   finops: "finops-all",
   admin: "platform-admin",
+  customerMaster: "customer-master",
 } as const;
 
 export type RoleName = keyof typeof ROLES;

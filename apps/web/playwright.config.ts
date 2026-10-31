@@ -5,6 +5,10 @@ import { defineConfig, devices } from "@playwright/test";
 // console unless they are already running.
 const ci = !!process.env.CI;
 const repo = new URL("../..", import.meta.url).pathname;
+// Another checkout's API and console may already hold the default ports; point
+// these at your own pair instead (started by you, with CORS for that origin).
+const web = process.env.CLOUDOPS_E2E_WEB ?? "http://localhost:3000";
+const api = process.env.CLOUDOPS_E2E_API ?? "http://127.0.0.1:8000";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,7 +18,7 @@ export default defineConfig({
   retries: ci ? 1 : 0,
   reporter: ci ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: web,
     trace: "retain-on-failure",
   },
   projects: [
@@ -26,16 +30,16 @@ export default defineConfig({
     {
       command: "make api",
       cwd: repo,
-      url: "http://127.0.0.1:8000/healthz",
+      url: `${api}/healthz`,
       reuseExistingServer: !ci,
       timeout: 60_000,
     },
     {
       command: ci ? "npm run build && npm run start" : "npm run dev",
-      url: "http://localhost:3000/signin",
+      url: `${web}/signin`,
       reuseExistingServer: !ci,
       timeout: 180_000,
-      env: { NEXT_PUBLIC_AUTH_MODE: "local", NEXT_PUBLIC_API_BASE: "http://127.0.0.1:8000", NEXT_TELEMETRY_DISABLED: "1" },
+      env: { NEXT_PUBLIC_AUTH_MODE: "local", NEXT_PUBLIC_API_BASE: api, NEXT_TELEMETRY_DISABLED: "1" },
     },
   ],
 });

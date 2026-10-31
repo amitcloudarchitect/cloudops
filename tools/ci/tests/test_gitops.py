@@ -201,7 +201,8 @@ def test_migrations_run_before_the_rollout() -> None:
     for ns in (d for d in PLATFORM if d["kind"] == "Namespace"):
         assert _wave(ns) < min(_wave(d) for d in needs)
     assert "argocd.argoproj.io/hook" not in (needs[0]["metadata"].get("annotations") or {})
-    env = {e["name"]: e["value"] for e in job["spec"]["template"]["spec"]["containers"][0]["env"]}
+    container = job["spec"]["template"]["spec"]["containers"][0]
+    env = {e["name"]: e.get("value") for e in container["env"]}
     assert env["CLOUDOPS_MIGRATION_AUTH"] == "entra"
     (cm,) = [d for d in PLATFORM if d["kind"] == "ConfigMap" and d["metadata"]["name"] == "migrate"]
     assert ":" not in cm["data"]["dsn"].split("//", 1)[1].split("@", 1)[0]  # no password
@@ -220,6 +221,24 @@ def test_applications_pin_their_charts_and_paths() -> None:
         else:
             assert (REPO_ROOT / source["path"]).is_dir()
         assert "argocd.argoproj.io/sync-wave" in app["metadata"]["annotations"]
+
+
+def _mapping_approvers(docs: list[dict[str, Any]]) -> str | None:
+    (cm,) = [d for d in docs if d["kind"] == "ConfigMap" and d["metadata"]["name"] == "migrate"]
+    value = cm.get("data", {}).get("mapping_approvers")
+    return None if value is None else str(value)
+
+
+def test_only_dev_lets_one_person_approve_a_customer_mapping() -> None:
+    """ADR 0015: the database defaults to two people; dev alone says one."""
+    (job,) = [d for d in PLATFORM if d["kind"] == "Job"]
+    (ref,) = [e["valueFrom"]["configMapKeyRef"]
+              for e in job["spec"]["template"]["spec"]["containers"][0]["env"]
+              if e["name"] == "CLOUDOPS_MAPPING_APPROVERS"]
+    assert ref == {"name": "migrate", "key": "mapping_approvers", "optional": True}
+    assert _mapping_approvers(PLATFORM) == "1"
+    for env in ("uat", "prd"):
+        assert _mapping_approvers(_build(GITOPS / "overlays" / env)) in {None, "2"}, env
 
 
 @pytest.mark.parametrize("env", ["uat", "prd"])

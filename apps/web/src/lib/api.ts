@@ -28,11 +28,12 @@ type PostOk<P extends Post> = paths[P] extends {
 }
   ? R
   : never;
+// An endpoint that takes no body takes `undefined`, and nothing is sent.
 type PostBody<P extends Post> = paths[P] extends {
   post: { requestBody: { content: { "application/json": infer B } } };
 }
   ? B
-  : never;
+  : undefined;
 
 export type Query = Record<string, string | undefined>;
 
