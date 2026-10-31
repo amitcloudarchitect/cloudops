@@ -28,8 +28,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     case "loading":
       content = <Loading what="your access" />;
       break;
-    case "signed-out":
-      content = (
+    case "signed-out": {
+      const failure = state.status === "signed-out" ? state.failure : undefined;
+      content = failure ? (
+        <EmptyState
+          title="Sign-in did not complete"
+          next={`Microsoft did not complete the sign-in (${failure}). Try again; if it keeps failing, quote that code.`}
+          action={{ label: "Sign in again", onClick: () => void signIn() }}
+        />
+      ) : (
         <EmptyState
           title="Sign in to use the console"
           next="Use your Getronics account."
@@ -37,6 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         />
       );
       break;
+    }
     case "no-access":
       content = (
         <EmptyState

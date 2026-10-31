@@ -44,6 +44,8 @@ replacements:
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: migrate }
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: bootstrap-admin }
+        fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: temporal-database }
         fieldPaths: [spec.egress.0.to.0.ipBlock.cidr]
   - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.frontdoorId }

@@ -88,6 +88,41 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
    platform Application, the API included. The second pull request adds `base/web`
    and its ConfigMap patch once the release bot has set the tag.
 
+8. **Each environment bootstraps its first administrator on deployment** (added
+   2026-10-31: the first sign-in to dev reached "no access yet", because nothing had
+   ever created dev's administrator).
+   - `bootstrap-admin` (`infra/gitops/base/api`) is a Sync hook after the migration
+     job. It runs `python -m cloudops_api.bootstrap --once` as the API's identity.
+   - The administrator's Entra object id is the Key Vault secret
+     `platform-admin-oid`, set by a person per environment (ADR 0002 D14). It is
+     mounted for this job only, not for the API.
+   - `--once` treats the database's refusal "a platform administrator already
+     exists" as done and exits 0, so it is safe on every sync. It still can never
+     add a second administrator: the database refuses either way. Any other
+     failure fails the job and the sync.
+   - The API's identity already reads the whole vault (stack 04b), so this needs no
+     new role assignment.
+
+9. **A failed sign-in says why** (added 2026-10-31). Before this, a failed return
+   from Entra was swallowed, and the user saw the same "Sign in" button again; the
+   first dev sign-in took several clicks. Now the console says "Sign-in did not
+   complete" with MSAL's error code and Entra's AADSTS number. Both are identifiers,
+   with no token or user detail. The full error goes to the browser console. One
+   MSAL client is shared by every caller in the page, so two cannot race to consume
+   the same redirect response.
+
+## Manual steps (Key Vault, before the administrator job's first run)
+
+Create the secret holding your Entra object id. An object id is an identifier, not a
+credential, but it decides who is administrator, so it lives with the secrets:
+
+```bash
+az keyvault secret set --vault-name kv-cloudops-app-dev-weu --name platform-admin-oid --value "$(az ad signed-in-user show --query id -o tsv)"
+```
+
+Until it exists, the job waits on its volume for 5 minutes, fails, and fails that
+sync; Argo CD retries.
+
 ## Manual steps (Entra; yours, not the pipeline's)
 
 On `app-cloudops-web-dev` (`019f8f28-8c02-4eb7-83ef-f8c80a870ff8`):
