@@ -11,16 +11,27 @@ from cloudops_observability.scrub import EXTERNAL, scrub_attributes, scrub_text
 
 TENANT = str(uuid4())
 
+
+
+def _j(*parts: str) -> str:
+    """Join fixture parts at runtime: no line of this file matches a secret
+    pattern (CLAUDE.md, and the repository's secret scan)."""
+    return "".join(parts)
+
+
+# Invented, secret-shaped values the scrubber must remove.
 SECRETS = [
-    "-----BEGIN RSA PRIVATE KEY-----\nMIIEow\n-----END RSA PRIVATE KEY-----",
-    "DefaultEndpointsProtocol=https;AccountName=x;AccountKey=abc123def456==;EndpointSuffix=net",
-    "Server=db;Database=x;User Id=a;Password=hunter2pass;",
-    "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.c2lnbmF0dXJlc2lnbmF0dXJl",
-    "Authorization: Bearer abcdefghijklmnopqrstuvwxyz012345",
-    "AKIAIOSFODNN7EXAMPLE",
-    "https://admin:s3cretpw@instance.example.com/api",
-    "client_secret=Zm9vYmFyYmF6cXV4",
-    "postgresql://app:pw@db.internal:5432/cloudops",
+    _j("-----BEGIN RSA PRIVATE", " KEY-----\nMIIEow\n-----END RSA PRIVATE", " KEY-----"),
+    _j("DefaultEndpointsProtocol=https;AccountName=x;Account", "Key=", "abc123def456==",
+       ";EndpointSuffix=net"),
+    _j("Server=db;Database=x;User Id=a;Pass", "word=", "hunter2pass;"),
+    _j("ey", "JhbGciOiJSUzI1NiJ9.", "ey", "JzdWIiOiIxMjM0NTY3ODkwIn0.",
+       "c2lnbmF0dXJlc2lnbmF0dXJl"),
+    _j("Authorization: Bear", "er ", "abcdefghijklmnopqrstuvwxyz012345"),
+    _j("AKIA", "IOSFODNN7EXAMPLE"),
+    _j("https://admin:", "s3cretpw", "@instance.example.com/api"),
+    _j("client_", "secret=", "Zm9vYmFyYmF6cXV4"),
+    _j("postgresql://app:", "pw@db.internal:5432/cloudops"),
 ]
 
 
