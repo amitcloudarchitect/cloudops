@@ -242,7 +242,7 @@ def test_migrations_run_before_the_rollout() -> None:
     """Namespaces, then the job's own objects, then the job (a hook Argo CD waits on),
     then the Rollout. Not PreSync: that runs before the namespace and the job's
     ServiceAccount exist, so the job could never start on a fresh cluster."""
-    (job,) = [d for d in PLATFORM if d["kind"] == "Job" and d["metadata"]["name"] == "migrate"]
+    (job,) = [d for d in PLATFORM if d["kind"] == "Job"]
     assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "Sync"
     (rollout,) = [d for d in PLATFORM if d["kind"] == "Rollout" and d["metadata"]["name"] == "api"]
     assert _wave(rollout) > _wave(job)
@@ -276,27 +276,6 @@ def test_applications_pin_their_charts_and_paths() -> None:
         assert "argocd.argoproj.io/sync-wave" in app["metadata"]["annotations"]
 
 
-def test_the_first_administrator_is_bootstrapped_once_after_the_migrations() -> None:
-    """ADR 0002 D14, ADR 0017: a Sync hook after the migration job, idempotent
-    (--once), reading the administrator's oid from Key Vault and nothing else."""
-    jobs = {d["metadata"]["name"]: d for d in PLATFORM if d["kind"] == "Job"}
-    job = jobs["bootstrap-admin"]
-    assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "Sync"
-    assert _wave(job) > _wave(jobs["migrate"])
-    pod = job["spec"]["template"]["spec"]
-    (container,) = pod["containers"]
-    assert container["command"][-2:] == ["cloudops_api.bootstrap", "--once"]
-    assert "args" not in container  # the oid is never on the command line
-    (volume,) = pod["volumes"]
-    spc = _one("SecretProviderClass", volume["csi"]["volumeAttributes"]["secretProviderClass"])
-    objects = yaml.safe_load(spc["spec"]["parameters"]["objects"])["array"]
-    names = {yaml.safe_load(o)["objectName"] for o in objects}
-    assert names == {"postgres-app-dsn", "platform-admin-oid"}
-    assert "platform-admin-oid" not in yaml.safe_dump(_one("SecretProviderClass", "api"))
-    policy = _one("NetworkPolicy", "bootstrap-admin")
-    assert [r["ports"] for r in policy["spec"]["egress"]] == [[{"protocol": "TCP", "port": 5432}]]
-
-
 def _mapping_approvers(docs: list[dict[str, Any]]) -> str | None:
     (cm,) = [d for d in docs if d["kind"] == "ConfigMap" and d["metadata"]["name"] == "migrate"]
     value = cm.get("data", {}).get("mapping_approvers")
@@ -305,7 +284,7 @@ def _mapping_approvers(docs: list[dict[str, Any]]) -> str | None:
 
 def test_only_dev_lets_one_person_approve_a_customer_mapping() -> None:
     """ADR 0015: the database defaults to two people; dev alone says one."""
-    (job,) = [d for d in PLATFORM if d["kind"] == "Job" and d["metadata"]["name"] == "migrate"]
+    (job,) = [d for d in PLATFORM if d["kind"] == "Job"]
     (ref,) = [e["valueFrom"]["configMapKeyRef"]
               for e in job["spec"]["template"]["spec"]["containers"][0]["env"]
               if e["name"] == "CLOUDOPS_MAPPING_APPROVERS"]

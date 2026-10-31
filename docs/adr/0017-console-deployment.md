@@ -102,6 +102,10 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
      failure fails the job and the sync.
    - The API's identity already reads the whole vault (stack 04b), so this needs no
      new role assignment.
+   - It lands in two pull requests, as the console did (decision 7). The job runs
+     the deployed `api` image, and an image without `--once` would fail the hook on
+     every sync. The job is added once the release bot has deployed an image that
+     has the flag.
 
 9. **A failed sign-in says why** (added 2026-10-31). Before this, a failed return
    from Entra was swallowed, and the user saw the same "Sign in" button again; the

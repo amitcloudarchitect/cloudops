@@ -18,7 +18,6 @@ resources:
   - pdb.yaml
   - analysistemplate.yaml
   - networkpolicy.yaml
-  - bootstrap-admin.yaml
 configurations: [kustomizeconfig.yaml]
 configMapGenerator:
   # Generated, so its name carries a hash of its contents (overlay patches included):
