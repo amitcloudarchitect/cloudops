@@ -550,13 +550,14 @@ def test_the_console_reads_only_identifiers() -> None:
 
 
 def test_the_console_and_the_api_agree_on_the_origin() -> None:
-    """Same host (ADR 0017): the API base the console calls is the origin the API's
-    CORS names, and the API's audience is the scope's resource."""
+    """Same host (ADR 0017): the API base the console calls is the staff origin, the
+    first the API's CORS names, and the API's audience is the scope's resource."""
     (web,) = [d for d in WEB if d["kind"] == "ConfigMap"]
     (api,) = [d for d in DEV if d["kind"] == "ConfigMap"
               and d["metadata"]["name"].startswith("api-")
               and "CLOUDOPS_API_AUDIENCE" in d.get("data", {})]
-    assert api["data"]["CLOUDOPS_WEB_ORIGINS"] == web["data"]["CLOUDOPS_WEB_API_BASE"]
+    staff = api["data"]["CLOUDOPS_WEB_ORIGINS"].split(",")[0]
+    assert staff == web["data"]["CLOUDOPS_WEB_API_BASE"]
     scope_resource = web["data"]["CLOUDOPS_WEB_API_SCOPE"].split("/")[2]
     assert scope_resource == api["data"]["CLOUDOPS_API_AUDIENCE"]
 
@@ -565,7 +566,9 @@ def test_the_api_allows_only_https_console_origins() -> None:
     (cm,) = [d for d in DEV if d["kind"] == "ConfigMap" and d["metadata"]["name"].startswith("api-")
              and "CLOUDOPS_API_AUDIENCE" in d.get("data", {})]
     origins = cm["data"]["CLOUDOPS_WEB_ORIGINS"].split(",")
-    assert origins == ["https://cloudops-dev-dne7dpdpfrgfccej.z02.azurefd.net"]
+    # The staff host, then the customer portal's host (ADR 0018), and nothing else.
+    assert origins == ["https://cloudops-dev-dne7dpdpfrgfccej.z02.azurefd.net",
+                       "https://cloudops-portal-dev-c7fcgehpf7h0ame4.z02.azurefd.net"]
 
 
 def _one_values() -> dict[str, str]:
