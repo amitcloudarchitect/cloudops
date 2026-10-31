@@ -52,6 +52,8 @@ _SECRETS: Final = (
         r"|token|sas|sig|accountkey|sharedaccesskey)\b\s*[:=]\s*[\"']?[^\s\"',;&]{4,}")),
 )
 _EMAIL: Final = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+# A URL names a customer's host, path and query (ticket numbers, resource groups).
+_URL: Final = re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s\"'<>]+", re.IGNORECASE)
 _UUID: Final = re.compile(
     r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")
 
@@ -59,10 +61,11 @@ MAX_STRING: Final = 4096
 
 
 def scrub_text(value: str) -> str:
-    """Secrets, e-mail addresses and UUIDs replaced by placeholders; truncated."""
+    """Secrets, URLs, e-mail addresses and UUIDs replaced by placeholders; truncated."""
     out = value
     for kind, pattern in _SECRETS:
         out = pattern.sub(f"[REDACTED:{kind}]", out)
+    out = _URL.sub("[url]", out)
     out = _EMAIL.sub("[REDACTED:EMAIL]", out)
     out = _UUID.sub("[id]", out)
     if len(out) > MAX_STRING:
@@ -85,8 +88,11 @@ ALLOWED: Final = frozenset({
     # RPC / Temporal span kinds
     "rpc.system", "rpc.service", "rpc.method",
     # Errors
-    "error.type", "exception.type", "exception.message", "exception.stacktrace",
-    "exception.escaped", "otel.status_code", "otel.status_description",
+    # Exceptions: the type and where, never the message. A message quotes values
+    # (a constraint's row, a bad input, a URL), and those are customer data.
+    # exception.stacktrace is reduced to its frames (``frames_only``).
+    "error.type", "exception.type", "exception.stacktrace", "exception.escaped",
+    "otel.status_code",
     # Generative AI (model and usage only; prompts stay in the RLS'd trace)
     "gen_ai.system", "gen_ai.operation.name", "gen_ai.request.model", "gen_ai.response.model",
     "gen_ai.usage.input_tokens", "gen_ai.usage.output_tokens",
@@ -120,6 +126,47 @@ def platform_host(host: str) -> bool:
     return h in _PLATFORM_HOSTS or h.endswith(_PLATFORM_HOST_SUFFIXES)
 
 
+def frames_only(stacktrace: str) -> str:
+    """A Python traceback reduced to its frames: file, line and function, and the
+    source line. Never an exception's message, which is the only part that can
+    carry data."""
+    keep: list[str] = []
+    lines = stacktrace.splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith("  File "):
+            keep.append(line)
+            nxt = lines[i + 1] if i + 1 < len(lines) else ""
+            if nxt.startswith("    ") and not nxt.startswith("    ^"):
+                keep.append(nxt)
+    return scrub_text("\n".join(keep))
+
+
+def describe_exception(exc: BaseException) -> str:
+    """An exception as type, SQLSTATE or HTTP status, and frames: what to fix,
+    without the message. Follows the cause chain."""
+    import traceback
+
+    parts: list[str] = []
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        label = type(current).__name__
+        code = getattr(getattr(current, "orig", None), "sqlstate", None) \
+            or getattr(current, "sqlstate", None)
+        if code:
+            label += f" sqlstate={code}"
+        response = getattr(current, "response", None)
+        status = getattr(response, "status_code", None)
+        if isinstance(status, int):
+            label += f" http_status={status}"
+        frames = "".join(traceback.format_tb(current.__traceback__)) if current.__traceback__ \
+            else ""
+        parts.append(label + ("\n" + frames_only(frames) if frames else ""))
+        current = current.__cause__ or current.__context__
+    return "\n caused by ".join(parts)
+
+
 def allowed_key(key: str) -> bool:
     if key in ALLOWED:
         return True
@@ -148,9 +195,12 @@ def scrub_attributes(attributes: Mapping[str, AttributeValue] | None) -> dict[st
         if key == "server.address" and isinstance(value, str) and not platform_host(value):
             out[key] = EXTERNAL
             continue
+        if key == "exception.stacktrace" and isinstance(value, str):
+            out[key] = frames_only(value)
+            continue
         out[key] = _value(value)
     return out
 
 
-__all__ = ["ALLOWED", "EXTERNAL", "allowed_key", "platform_host", "scrub_attributes",
-           "scrub_text"]
+__all__ = ["ALLOWED", "EXTERNAL", "allowed_key", "describe_exception", "frames_only",
+           "platform_host", "scrub_attributes", "scrub_text"]

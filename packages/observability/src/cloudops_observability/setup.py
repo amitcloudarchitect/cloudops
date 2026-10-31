@@ -45,6 +45,7 @@ from opentelemetry.sdk.trace.sampling import ALWAYS_ON
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from cloudops_observability.logs import configure_logging
+from cloudops_observability.metrics import metric_views
 from cloudops_observability.security import SecurityEventCounter
 from cloudops_observability.tracing import ScrubbingSpanExporter
 
@@ -137,7 +138,8 @@ def init(service: str, environ: Mapping[str, str], *, level: int = logging.INFO)
         tracer.add_span_processor(BatchSpanProcessor(ScrubbingSpanExporter(
             OTLPSpanExporter(endpoint=telemetry.signal_endpoint("traces")))))
         trace.set_tracer_provider(tracer)
-        meter = MeterProvider(resource=resource, metric_readers=[PeriodicExportingMetricReader(
+        meter = MeterProvider(resource=resource, views=metric_views(),
+                              metric_readers=[PeriodicExportingMetricReader(
             OTLPMetricExporter(endpoint=telemetry.signal_endpoint("metrics")),
             export_interval_millis=METRIC_INTERVAL_MS)])
         metrics.set_meter_provider(meter)

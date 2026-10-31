@@ -215,6 +215,9 @@ class Database:
             pool_timeout=pool_timeout,
             pool_pre_ping=True,
             pool_reset_on_return="rollback",
+            # Errors never carry bound values: an exception's text reaches logs and
+            # traces, and the values are customer data (ADR 0022).
+            hide_parameters=True,
             # Server-side prepared statements are bound to a server connection,
             # which PgBouncer transaction mode swaps between transactions.
             connect_args={"prepare_threshold": None},

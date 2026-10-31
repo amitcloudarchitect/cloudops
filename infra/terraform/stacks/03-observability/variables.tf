@@ -6,6 +6,11 @@ variable "page_email_receivers" {
   type        = map(string)
   default     = {}
   description = "Name => e-mail address paged for Sev0 (always pages) and Sev1 (P2) alerts."
+  validation {
+    # Outside dev an alert that pages nobody is no alert: name someone, here or as a webhook.
+    condition     = var.env == "dev" || length(var.page_email_receivers) > 0
+    error_message = "page_email_receivers must name at least one receiver outside dev."
+  }
 }
 
 variable "page_webhook_receivers" {

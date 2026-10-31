@@ -94,11 +94,15 @@ spec:
       app.kubernetes.io/name: otel-collector
   policyTypes: [Ingress, Egress]
   ingress:
-    # OTLP from our own workloads only.
+    # OTLP from the instrumented workloads' namespaces only: not the console's
+    # (platform-web), not the edge, not third-party charts. A pod that can reach
+    # this port can write a security_event record, so the list stays short.
     - from:
         - namespaceSelector:
-            matchLabels:
-              cloudops.getronics.com/managed: "true"
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values: [platform-api, platform-ingest, platform-ai]
       ports:
         - { protocol: TCP, port: 4318 }
     # Azure Monitor managed Prometheus (the ama-metrics add-on) scrapes the metrics.

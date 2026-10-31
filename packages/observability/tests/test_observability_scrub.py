@@ -38,7 +38,7 @@ SECRETS = [
 @pytest.mark.parametrize("secret", SECRETS)
 def test_secrets_are_removed(secret: str) -> None:
     out = scrub_text(f"failed with {secret} today")
-    assert "REDACTED" in out
+    assert "REDACTED" in out or "[url]" in out  # a URL goes whole, credentials and all
     for fragment in ("hunter2pass", "abc123def456", "s3cretpw", "AKIAIOSFODNN7EXAMPLE",
                      "Zm9vYmFyYmF6cXV4", "c2lnbmF0dXJl", "MIIEow", "abcdefghijklmnop"):
         assert fragment not in out

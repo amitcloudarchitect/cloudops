@@ -290,3 +290,80 @@ async def test_api_server_spans_and_metrics_use_the_stable_names(mem: MemoryTele
     assert attrs["http.response.status_code"] == 200
     assert TENANT not in repr(attrs) + span.name
     assert mem.points("http.server.request.duration"), "the stable duration histogram"
+
+
+# --- review of #37: exception text and metric labels never carry customer data ----
+
+CUSTOMER_TEXT = "Acme Bank payroll down - call Jane Smith"
+CUSTOMER_URL = "https://acmebank.service-now.com/api/now/table/incident?sysparm_query=number=INC0012345"
+
+
+def _http_error() -> Exception:
+    import httpx
+
+    request = httpx.Request("GET", CUSTOMER_URL)
+    response = httpx.Response(404, request=request)
+    try:
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        return exc
+    raise AssertionError("unreachable")
+
+
+def test_span_exceptions_keep_type_and_frames_never_the_message(mem: MemoryTelemetry) -> None:
+    with pytest.raises(ValueError, match="Acme"), tracer().start_as_current_span("activity"):
+        raise ValueError(f"duplicate row for {CUSTOMER_TEXT} at {CUSTOMER_URL}")
+    with pytest.raises(Exception, match="404"), tracer().start_as_current_span("fetch"):
+        raise _http_error()
+    for span in mem.finished():
+        (event,) = [e for e in span.events if e.name == "exception"]
+        attrs = dict(event.attributes or {})
+        assert "exception.message" not in attrs
+        assert attrs["exception.type"] in ("ValueError", "httpx.HTTPStatusError", "HTTPStatusError")
+        assert 'File "' in str(attrs["exception.stacktrace"]), "frames are kept"
+        exported = repr(attrs) + repr(span.status.description) + span.name
+        for leaked in ("Acme", "Jane Smith", "acmebank", "INC0012345"):
+            assert leaked not in exported, leaked
+        assert span.status.description is None
+
+
+def test_logged_exceptions_are_type_status_and_frames() -> None:
+    def boom(log: logging.Logger) -> None:
+        try:
+            raise _http_error()
+        except Exception:
+            log.exception("page fetch failed")
+    entry = _log(boom)
+    assert "HTTPStatusError http_status=404" in entry["msg"]
+    assert 'File "' in entry["msg"]
+    for leaked in ("acmebank", "INC0012345", "Client error"):
+        assert leaked not in entry["msg"], leaked
+
+
+def test_urls_are_stripped_from_any_text() -> None:
+    from cloudops_observability.scrub import scrub_text
+
+    out = scrub_text(f"GET {CUSTOMER_URL} failed; see postgresql+psycopg://host/db")
+    assert "acmebank" not in out
+    assert out.count("[url]") + out.count("[REDACTED:POSTGRES_DSN]") == 2
+
+
+async def test_outbound_http_metrics_never_name_the_host(mem: MemoryTelemetry) -> None:
+    import httpx
+    from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
+
+    from cloudops_observability.http import instrument_httpx  # noqa: F401 (sets semconv)
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"result": []})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        HTTPXClientInstrumentor.instrument_client(client)
+        await client.get(CUSTOMER_URL)
+    points = mem.points("http.client.request.duration")
+    assert points, "the client duration histogram is recorded"
+    for attrs, _ in points:
+        assert "server.address" not in attrs
+        assert not any("acmebank" in str(v) for v in attrs.values())
+    spans = [s for s in mem.finished() if s.kind.name == "CLIENT"]
+    assert all((s.attributes or {}).get("server.address") == "external" for s in spans)
