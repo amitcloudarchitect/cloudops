@@ -189,7 +189,10 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
             "SELECT c.relname, p.polname, array(SELECT rolname FROM pg_roles"
             "        WHERE oid = ANY(p.polroles)) FROM pg_policy p"
             " JOIN pg_class c ON c.oid = p.polrelid"
-            " WHERE p.polpermissive AND p.polname <> 'tenant_isolation' ORDER BY 1, 2"
+            " WHERE p.polpermissive AND p.polname <> 'tenant_isolation'"
+            # No tenant isolation to widen (0020); its policies are pinned in
+            # test_platform_action_log.py.
+            "   AND c.oid <> 'audit.platform_action_log'::regclass ORDER BY 1, 2"
         ).fetchall()
     assert extra == [
         ("alias_reprocess", "reprocess_queue_claim", ["cloudops_access_admin"]),

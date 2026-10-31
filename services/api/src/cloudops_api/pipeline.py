@@ -72,6 +72,13 @@ _AUDIT: Final = text(
     " (tenant_id, actor, actor_is_agent, action, target_kind, target_ref, outcome)"
     " VALUES (:tenant_id, :actor, false, :action, :target_kind, :target_ref, :outcome)"
 )
+# A request with no tenant in scope (an all-tenant administrator before the first
+# customer exists, ADR 0017 decision 12) has no tenant to be recorded under: it is
+# recorded once here instead (migration 0020), never skipped.
+_PLATFORM_AUDIT: Final = text(
+    "INSERT INTO audit.platform_action_log (actor, action, target_kind, target_ref, outcome)"
+    " VALUES (:actor, :action, :target_kind, :target_ref, :outcome)"
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,7 +123,8 @@ def _outcome(status: int) -> str:
 async def _audit(
     db: Database, access: Access, request: Request, route: APIRoute, status: int
 ) -> None:
-    """Lifecycle stage 7: one immutable row per tenant the request could reach.
+    """Lifecycle stage 7: one immutable row per tenant the request could reach, or one
+    platform row when the scope holds no tenant.
 
     action_log carries a tenant_id, so a request is logged under each tenant
     in scope, or only the ones the handler says it touched. Written in its
@@ -128,19 +136,19 @@ async def _audit(
     if not tenants:
         tenants = access.scope.tenant_ids
     path_params = ",".join(f"{k}={v}" for k, v in sorted(request.path_params.items()))
-    rows = [
-        {
-            "tenant_id": t,
-            "actor": access.identity.principal_id,
-            "action": f"{request.method} {route.path_format}",
-            "target_kind": route.name,
-            "target_ref": path_params or None,
-            "outcome": _outcome(status),
-        }
-        for t in sorted(tenants, key=str)
-    ]
+    record = {
+        "actor": access.identity.principal_id,
+        "action": f"{request.method} {route.path_format}",
+        "target_kind": route.name,
+        "target_ref": path_params or None,
+        "outcome": _outcome(status),
+    }
     async with db.transaction(access.scope) as conn:
-        await conn.execute(_AUDIT, rows)
+        if not tenants:
+            await conn.execute(_PLATFORM_AUDIT, record)
+            return
+        await conn.execute(_AUDIT, [{"tenant_id": t, **record}
+                                    for t in sorted(tenants, key=str)])
 
 
 def _bearer(request: Request) -> str:
