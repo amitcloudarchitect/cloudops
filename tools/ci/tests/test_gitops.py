@@ -40,9 +40,9 @@ PLATFORM = _build(GITOPS / "overlays/dev")
 WORKERS = _build(GITOPS / "overlays/dev/workers")  # its own Application, after Temporal
 DEV = PLATFORM + WORKERS
 # Every workload we own, deployed in dev or not: the worker bases too.
-WEB = _build(GITOPS / "base/web")  # in dev once main has pushed its image (ADR 0017)
+WEB = [d for d in PLATFORM if d["metadata"].get("namespace") == "platform-web"]  # ADR 0017
 ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
-            + _build(GITOPS / "base/worker-ai") + WEB)
+            + _build(GITOPS / "base/worker-ai"))
 TEMPORAL_APP = yaml.safe_load(
     (GITOPS / "applications/dev/temporal.yaml").read_text(encoding="utf-8"))
 INTERNAL_CA = "cloudops-internal-ca"
@@ -489,7 +489,7 @@ def test_every_console_route_requires_our_front_door() -> None:
         for match in rule["matches"]:
             headers = {h["name"].lower(): h for h in match.get("headers", [])}
             assert headers["x-azure-fdid"]["type"] == "Exact"
-            assert headers["x-azure-fdid"]["value"] == "SET-IN-OVERLAY"  # dev sets it
+            assert headers["x-azure-fdid"]["value"] == _one_values()["frontdoorId"]
         assert {b["name"] for b in rule["backendRefs"]} == {"web", "web-canary"}
 
 
@@ -523,6 +523,19 @@ def test_the_console_reads_only_identifiers() -> None:
     (cm,) = [d for d in WEB if d["kind"] == "ConfigMap"]
     assert set(cm["data"]) == {"CLOUDOPS_WEB_API_BASE", "CLOUDOPS_WEB_ENTRA_CLIENT_ID",
                                "CLOUDOPS_WEB_ENTRA_TENANT_ID", "CLOUDOPS_WEB_API_SCOPE"}
+    data = cm["data"]
+    assert data["CLOUDOPS_WEB_API_BASE"].startswith("https://")
+    assert re.fullmatch(r"api://[0-9a-f-]{36}/access_as_user", data["CLOUDOPS_WEB_API_SCOPE"])
+
+
+def test_the_console_and_the_api_agree_on_the_origin() -> None:
+    """Same host (ADR 0017): the API base the console calls is the origin the API's
+    CORS names, and the API's audience is the scope's resource."""
+    (web,) = [d for d in WEB if d["kind"] == "ConfigMap"]
+    (api,) = [d for d in DEV if d["kind"] == "ConfigMap" and d["metadata"]["name"].startswith("api-")
+              and "CLOUDOPS_API_AUDIENCE" in d.get("data", {})]
+    assert api["data"]["CLOUDOPS_WEB_ORIGINS"] == web["data"]["CLOUDOPS_WEB_API_BASE"]
+    assert web["data"]["CLOUDOPS_WEB_API_SCOPE"].split("/")[2] == api["data"]["CLOUDOPS_API_AUDIENCE"]
 
 
 def test_the_api_allows_only_https_console_origins() -> None:

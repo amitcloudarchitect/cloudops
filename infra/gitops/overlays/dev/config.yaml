@@ -22,3 +22,17 @@ data:
   # ADR 0015: in dev one person may propose and approve a customer mapping.
   # UAT and production never set this, so they keep the two-person rule.
   mapping_approvers: "1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: web
+  namespace: platform-web
+data:
+  # Front Door's host, which serves the API's /v1 as well as the console.
+  CLOUDOPS_WEB_API_BASE: https://cloudops-dev-dne7dpdpfrgfccej.z02.azurefd.net
+  # app-cloudops-web-dev: a public client, no secret, pre-authorised on the API.
+  CLOUDOPS_WEB_ENTRA_CLIENT_ID: 019f8f28-8c02-4eb7-83ef-f8c80a870ff8
+  CLOUDOPS_WEB_ENTRA_TENANT_ID: 2fa5e26d-5ad2-415f-88a2-771caca87cbe
+  # app-cloudops-api-dev's delegated scope; the API requires access_as_user.
+  CLOUDOPS_WEB_API_SCOPE: api://f037f7b8-38cc-4add-8aa7-254b4a117e5d/access_as_user
