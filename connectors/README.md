@@ -42,10 +42,31 @@ and `process` (the contract's steps 5 to 8 for one page). `core/identity.py`,
 | --- | --- | --- | --- |
 | `qualys` | `host_detection` | daily | FQDN naming: resources match on asset id, then `name_norm` plus IP, then `name_norm`. KnowledgeBase entries are stored in bronze beside each page. Customer from the `Customer:` host tag. |
 | `corestack` | `finding` | daily | Writes `cost_finding` only, never `cost_fact`: cost comes from the providers' raw exports (HLD). API shape assumed until CoreStack docs and a sandbox exist (`corestack/mapping.py`). |
-| `azure` | `resource` | 15 min | Resource Graph in subscription batches, honouring `x-ms-user-quota-remaining`. The snapshot is authoritative per subscription: resources not seen in a complete run are closed. |
-| `aws` | `config`, `cur` | 15 min, daily | Config aggregator queries; CUR from S3, each assembly staged and swapped into `cost_fact` atomically, so a restatement replaces the period. |
+| `azure` | `resource`, `cost_export`, `cost_total`, `invoice` | 15 min, daily | Resource Graph in subscription batches, honouring `x-ms-user-quota-remaining`. The snapshot is authoritative per subscription: resources not seen in a complete run are closed. Cost exports, totals and invoices: see step 16 below. |
+| `aws` | `config`, `cur`, `cost_total`, `invoice` | 15 min, daily | Config aggregator queries; CUR from S3, each assembly staged and swapped into `cost_fact` atomically, so a restatement replaces the period. Totals and invoices: see step 16 below. |
+| `ecb` | `fx` | daily | ECB euro reference rates into `fx_rate` (step 16 below). |
 | `sharepoint` | `drive_item` | nightly | Per-site selected consent, delta sync per site. Deletion, or a site's consent withdrawn, removes its chunks. |
 | `entra` | `user`, `role_assignment` | daily | Users by delta; role assignments as a snapshot, removals closed. |
+
+### Step 16: cost exports, provider totals and FX rates
+
+| Source / entity | Reads | Writes | Notes |
+| --- | --- | --- | --- |
+| `azure` / `cost_export` | Cost Management scheduled export of the FOCUS 1.0 dataset to blob storage: per run a `manifest.json` (`runInfo`, `blobs[]`) naming gzip CSV parts. One scope per export root (`<container>/<path>`). | `cost_fact` (`source_system` `azure`) | The CUR's staged swap, shared in `core/assembly.py`: a run replaces its subscriptions' period atomically, a superseded run swaps nothing. `charge_class` from the fixed rule in `azure/focus.py` (licence meters separate from consumption, HLD D8). `Tags` to `tags_snapshot`. |
+| `azure` / `cost_total` | Cost Management query per subscription: `ActualCost`, `MonthToDate`, sum of cost with currency. | `billing_total` (`provider_total`) | `as_of` is the run's day. Subscriptions come from the ARM listing, as for `resource`. |
+| `azure` / `invoice` | Billing invoices per subscription of the configured billing account, last three months of invoice periods. | `billing_total` (`invoice`) | `billedAmount` (else `amountDue`), `name` as the document reference. |
+| `aws` / `cost_total` | Cost Explorer `GetCostAndUsage`, MONTHLY `UnblendedCost` by `LINKED_ACCOUNT`, month start to today. One scope per payer. | `billing_total` (`provider_total`) | `as_of` is the period's end minus one day. |
+| `aws` / `invoice` | Invoicing `ListInvoiceSummaries` for the payer, invoices issued in the last 92 days. | `billing_total` (`invoice`) | `BaseCurrencyAmount`, `InvoiceId`; figures for one key in one currency are summed (an invoice and its credit memo). |
+| `ecb` / `fx` | The ECB history file (`eurofxref-hist.xml`). | `fx_rate` (`source` `ecb`), `fx_restatement` | Every directed pair of the configured currencies (EUR, GBP, USD by default), quantised to 8 places half-even: `average` per ECB day, `closing` on the last ECB day of each completed month. A revised ECB rate is updated with an explicit `fx_restatement`; a `finance` rate is never overwritten. |
+
+Shared rules: raw to bronze before parsing; `Decimal` from the payload to the
+column, rounded once; an account resolves only by an exact alias of its
+provider, unknown ones go to the alias quarantine with counts; billing totals
+upsert on (account, kind, period, as_of), so a re-read or a replay rewrites the
+same row; watermarks move in the committing transaction (the newest `as_of`, the
+last manifest swapped in, the newest ECB day). Endpoint shapes of the billing
+APIs and the FOCUS export are assumptions until they are checked against the
+real services (ADR 0016).
 
 Cloud account and directory ids resolve only through an exact, approved alias
 (`azure`, `aws`, `entra`): an unknown one shows up in the customer mapping
@@ -54,6 +75,8 @@ refuse to start (CLAUDE.md rule 2).
 
 ```bash
 make connectors        # every step 15 connector once over its fixtures
+uv run python -m cloudops_connectors.ecb run --fixtures              # step 16: ECB rates
+uv run python -m cloudops_connectors.azure run --fixtures --entity cost_export
 ```
 
 ## Telemetry (not the batch medallion)

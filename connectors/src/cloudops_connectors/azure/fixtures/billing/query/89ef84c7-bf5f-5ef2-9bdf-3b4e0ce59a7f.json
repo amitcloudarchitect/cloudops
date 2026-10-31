@@ -1,0 +1,27 @@
+{
+ "id": "/subscriptions/89ef84c7-bf5f-5ef2-9bdf-3b4e0ce59a7f/providers/Microsoft.CostManagement/query/9c05bd33-c69b-5b23-82d7-5eff79f5cd61",
+ "name": "9c05bd33-c69b-5b23-82d7-5eff79f5cd61",
+ "type": "Microsoft.CostManagement/query",
+ "location": null,
+ "sku": null,
+ "eTag": null,
+ "properties": {
+  "nextLink": null,
+  "columns": [
+   {
+    "name": "totalCost",
+    "type": "Number"
+   },
+   {
+    "name": "Currency",
+    "type": "String"
+   }
+  ],
+  "rows": [
+   [
+    2577.800247,
+    "EUR"
+   ]
+  ]
+ }
+}

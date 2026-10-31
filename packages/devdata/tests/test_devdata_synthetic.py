@@ -225,3 +225,33 @@ def test_planted_injection_and_cross_tenant_bait_exist(ds: Dataset) -> None:
     names = [t.canonical_name for t in ds.tenants]
     assert any(n in t for t in text for n in names)
     assert any("Ignore previous instructions" in v for r in ds.resources for v in r.tags.values())
+
+
+# --- step 16 ------------------------------------------------------------------------------
+
+
+def test_one_customer_has_no_sow_and_the_rest_have_targets(ds: Dataset) -> None:
+    from cloudops_devdata.synthetic import NO_SOW, tenant_id
+
+    without = {t.id for t in ds.tenants} - {s.tenant_id for s in ds.sows}
+    assert without == {tenant_id(code) for code in NO_SOW}
+    assert all(s.target_margin is not None for s in ds.sows)
+
+
+def test_billing_totals_agree_except_the_drift_account_in_two_currencies(ds: Dataset) -> None:
+    from cloudops_devdata.synthetic import DRIFT
+
+    ledger: Counter[tuple[object, str]] = Counter()
+    for c in ds.costs:
+        ledger[(c.account_id, c.invoice_period)] += c.unblended_cost  # type: ignore[assignment]
+    current = f"{ds.anchor:%Y-%m}"
+    drifting = [b for b in ds.billing_totals
+                if Decimal(b.amount) != ledger[(b.account_id, b.invoice_period)]]
+    assert len(drifting) == 1
+    d = drifting[0]
+    assert (d.kind, d.invoice_period) == ("provider_total", current)
+    assert d.amount == (ledger[(d.account_id, current)] * DRIFT).quantize(Decimal("0.000001"))
+    assert {b.currency for b in ds.billing_totals} >= {"EUR", "GBP", "USD"}
+    assert any(b.kind == "invoice" for b in ds.billing_totals)
+    assert not any(b.kind == "invoice" and b.invoice_period == current
+                   for b in ds.billing_totals)

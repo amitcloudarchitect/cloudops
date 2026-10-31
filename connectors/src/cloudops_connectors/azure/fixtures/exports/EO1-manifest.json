@@ -1,0 +1,41 @@
+{
+ "manifestVersion": "2024-04-01",
+ "dataFormat": "Csv",
+ "blobCount": 2,
+ "exportConfig": {
+  "exportName": "getronics-eur",
+  "resourceId": "/providers/Microsoft.Billing/billingAccounts/12345678:getronics-fixture_2019-05-31/providers/Microsoft.CostManagement/exports/getronics-eur",
+  "dataVersion": "1.0",
+  "apiVersion": "2023-07-01-preview",
+  "type": "FocusCost",
+  "timeFrame": "MonthToDate",
+  "granularity": "Daily"
+ },
+ "deliveryConfig": {
+  "partitionData": true,
+  "dataOverwriteBehavior": "CreateNewReport",
+  "fileFormat": "Csv",
+  "compressionMode": "Gzip",
+  "containerUri": "/cost-exports",
+  "rootFolderPath": "focus"
+ },
+ "runInfo": {
+  "executionType": "Scheduled",
+  "submittedTime": "2026-10-25T05:20:00.0000000Z",
+  "runId": "28ed0320-a36a-5928-a2d0-1d4f7b21dd5b",
+  "startDate": "2026-10-01T00:00:00",
+  "endDate": "2026-10-31T00:00:00"
+ },
+ "blobs": [
+  {
+   "blobName": "focus/getronics-eur/20261001-20261031/28ed0320-a36a-5928-a2d0-1d4f7b21dd5b/part_0_0001.csv.gz",
+   "byteCount": 0,
+   "dataRowCount": 0
+  },
+  {
+   "blobName": "focus/getronics-eur/20261001-20261031/28ed0320-a36a-5928-a2d0-1d4f7b21dd5b/part_0_0002.csv.gz",
+   "byteCount": 0,
+   "dataRowCount": 0
+  }
+ ]
+}

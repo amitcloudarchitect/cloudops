@@ -48,7 +48,9 @@ from cloudops_connectors.core.xmlrec import parse
 SOURCE: Final = "aws"
 CONFIG: Final = "config"
 CUR: Final = "cur"
-ENTITIES: Final = frozenset({CONFIG, CUR})
+COST_TOTAL: Final = "cost_total"  # Cost Explorer month to date -> billing_total
+INVOICE: Final = "invoice"  # Invoicing summaries -> billing_total
+ENTITIES: Final = frozenset({CONFIG, CUR, COST_TOTAL, INVOICE})
 MONEY: Final = Decimal("0.000001")  # numeric(18,6)
 ACCOUNT_ID: Final = re.compile(r"\d{12}")
 CURRENCY: Final = re.compile(r"[A-Z]{3}")

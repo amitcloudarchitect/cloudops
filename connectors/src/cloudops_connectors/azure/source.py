@@ -1,4 +1,12 @@
-"""Azure Resource Graph through the connector contract (``core/ingest.py``).
+"""Azure through the connector contract (``core/ingest.py``): four entities.
+
+- ``resource``: Resource Graph, below.
+- ``cost_export``: Cost Management FOCUS exports -> cost_fact (``cost_source.py``),
+  one scope per export root.
+- ``cost_total``, ``invoice``: provider totals and invoices -> billing_total
+  (``billing_source.py``).
+
+The rest of this docstring is the ``resource`` entity.
 
 A run is a snapshot of the delegated estate, not an increment: ``since`` is
 not used, and every run starts from the subscription listing.
@@ -40,15 +48,17 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Final
 from uuid import UUID
 
 from sqlalchemy import text
 
-from cloudops_connectors.azure import mapping
+from cloudops_connectors.azure import cost_source, focus, mapping
+from cloudops_connectors.azure.billing_source import AzureBilling
+from cloudops_connectors.azure.blob import BlobClient
 from cloudops_connectors.azure.client import AzureClient
 from cloudops_connectors.core import drift, identity, state
 from cloudops_connectors.core.ingest import (
@@ -101,12 +111,37 @@ class AzureSource(Source):
     source = mapping.SOURCE
     entities = mapping.ENTITIES
 
-    def __init__(self, client: AzureClient, *, batch_size: int = BATCH) -> None:
+    def __init__(
+        self, client: AzureClient, *, batch_size: int = BATCH,
+        exports: BlobClient | None = None, export_roots: Sequence[str] = (),
+        billing_account: str | None = None, today: Callable[[], date] | None = None,
+    ) -> None:
+        """``exports`` reads the storage account the FOCUS exports land in;
+        ``export_roots`` are ``<container>/<root path>``, one export each.
+        ``billing_account`` names the billing account whose invoices are read.
+        ``today`` is the run's day for the billing entities (UTC by default)."""
         if batch_size < 1:
             raise ValueError("batch_size must be at least 1")
+        for root in export_roots:
+            focus.split_scope(root)
+        if export_roots and exports is None:
+            raise ValueError("export roots need a blob client")
         self._client = client
         self._batch = batch_size
+        self._exports = exports
+        self._roots = list(export_roots)
+        self._billing = AzureBilling(client, billing_account,
+                                     today or (lambda: datetime.now(UTC).date()))
         self.instance = client.base_url
+
+    @staticmethod
+    def _check(entity: str) -> None:
+        if entity not in mapping.ENTITIES:
+            raise ValueError(f"unknown entity {entity!r}")
+
+    async def scopes(self, db: Database, entity: str) -> list[str]:
+        self._check(entity)
+        return list(self._roots) if entity == mapping.COST_EXPORT else [""]
 
     def _batches(self, subs: list[str]) -> list[list[str]]:
         return [subs[i:i + self._batch] for i in range(0, len(subs), self._batch)]
@@ -114,8 +149,13 @@ class AzureSource(Source):
     async def fetch(
         self, entity: str, scope: str, since: datetime, cursor: str | None
     ) -> Fetched:
-        if entity != mapping.ENTITY:
-            raise ValueError(f"unknown entity {entity!r}")
+        self._check(entity)
+        if entity == mapping.COST_EXPORT:
+            if self._exports is None:
+                raise ValueError("no blob client for cost exports")
+            return await cost_source.fetch(self._exports, scope, cursor)
+        if entity in (mapping.COST_TOTAL, mapping.INVOICE):
+            return await self._billing.fetch(entity, cursor)
         at = json.loads(cursor) if cursor else {}
         if not at or "next" in at:
             body = await self._client.subscriptions(at.get("next"))
@@ -127,6 +167,11 @@ class AzureSource(Source):
     async def inspect(
         self, raw: RawStore, entity: str, scope: str, ref: str, body: bytes, cursor: str | None
     ) -> PageInfo:
+        self._check(entity)
+        if entity == mapping.COST_EXPORT:
+            return await cost_source.inspect(raw, scope, ref, body, cursor)
+        if entity in (mapping.COST_TOTAL, mapping.INVOICE):
+            return await self._billing.inspect(raw, entity, ref, body, cursor)
         at = json.loads(cursor) if cursor else {}
         subs: list[str] = list(at.get("subs", []))
         if ref.endswith(SUBS_SUFFIX):
@@ -151,6 +196,11 @@ class AzureSource(Source):
     async def process(
         self, db: Database, raw: RawStore, entity: str, ref: str, ctx: PageContext
     ) -> PageOutcome:
+        self._check(entity)
+        if entity == mapping.COST_EXPORT:
+            return await cost_source.process(db, raw, ref, ctx)
+        if entity in (mapping.COST_TOTAL, mapping.INVOICE):
+            return await self._billing.process(db, raw, entity, ref, ctx)
         body = await raw.get(ref)
         if ref.endswith(SUBS_SUFFIX):
             return await self._listing(db, raw, ref, ctx, body)

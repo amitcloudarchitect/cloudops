@@ -1,6 +1,8 @@
 import AxeBuilder from "@axe-core/playwright";
 
-import { expect, raiseDrift, test, triagedTicket } from "./fixtures";
+import type { FinOpsOverview, MarginOverview } from "@cloudops/contracts";
+
+import { api, expect, raiseDrift, test, triagedTicket } from "./fixtures";
 
 // WCAG 2.1 AA on every screen, in both themes.
 test.use({ role: "engineer" });
@@ -76,6 +78,49 @@ for (const theme of ["light", "dark"] as const) {
       });
     });
   }
+}
+
+// FinOps, margin and pricing (step 16), as the FinOps role: each screen, its detail
+// views, the FX form and a produced quote.
+async function commercialPaths(): Promise<string[]> {
+  const cost = await api<FinOpsOverview>("finops", "/v1/finops/overview");
+  const margin = await api<MarginOverview>("finops", "/v1/commercial/margin");
+  const unverified = cost.customers.find((c) => c.verification === "unverified") ?? cost.customers[0];
+  const captured = margin.customers.find((m) => !m.not_captured) ?? margin.customers[0];
+  if (!unverified || !captured) throw new Error("no seeded cost or margin: run make seed");
+  return ["/finops", `/finops/${unverified.tenant.id}`, "/margin?currency=EUR", `/margin/${captured.tenant.id}`, "/pricing"];
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test.describe(`commercial screens, ${theme} theme`, () => {
+    test.use({ role: "finops", colorScheme: theme });
+
+    test("pass axe (WCAG 2.1 AA) and do not scroll sideways at tablet width", async ({ signedIn: page }) => {
+      test.slow(); // five screens, twice
+      const paths = await commercialPaths();
+      for (const width of [undefined, 768] as const) {
+        if (width) await page.setViewportSize({ width, height: 1024 });
+        for (const path of paths) {
+          await page.goto(path);
+          await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+          await expect(page.getByRole("status").filter({ hasText: /^Loading/ })).toHaveCount(0);
+          if (path === "/pricing") {
+            await page.getByLabel("Azure Virtual Machines / Amazon EC2").fill("12");
+            await page.getByRole("button", { name: "Price it" }).click();
+            await expect(page.getByRole("region", { name: "Quote" })).toBeVisible();
+          }
+          await page.waitForLoadState("networkidle");
+          if (width) {
+            const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+            expect(overflow, path).toBeLessThanOrEqual(0);
+          } else {
+            const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+            expect(results.violations.map((v) => `${path}: ${v.id} ${v.nodes.length}`)).toEqual([]);
+          }
+        }
+      }
+    });
+  });
 }
 
 test.describe("connectors from the keyboard", () => {

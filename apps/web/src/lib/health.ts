@@ -27,6 +27,20 @@ export function band(value: number | null | undefined, [watch, atRisk, critical]
 // step 15): a band that depends on schedules and the run log is decided where the
 // data is, and the screen shows it with its reasons, never re-deriving it here.
 
+// Margin is banded by the API too (the rate card's reference engine, HLD M12), in its
+// own words: "critical", "at risk", "watch", "healthy". This maps them onto the one
+// scale; anything else is unknown, never guessed.
+const MARGIN_BAND: Record<string, Band> = {
+  critical: "critical",
+  "at risk": "at-risk",
+  watch: "watch",
+  healthy: "healthy",
+};
+
+export function marginBand(label: string | null | undefined): Band {
+  return (label ? MARGIN_BAND[label] : undefined) ?? "unknown";
+}
+
 // The product's thresholds, in one place so a screen cannot invent its own.
 export const THRESHOLDS = {
   slaBreachedOpen: [1, 3, 10],

@@ -46,6 +46,26 @@ export type TenantUserRequest = Schemas["TenantUserRequest"];
 export type Onboarding = Schemas["Onboarding"];
 export type CatalogueRole = Schemas["CatalogueRole"];
 export type FederationRequest = Schemas["FederationRequest"];
+// Step 16: FinOps, margin and pricing.
+export type FinOpsOverview = Schemas["FinOpsOverview"];
+export type CustomerCost = Schemas["CustomerCost"];
+export type CustomerFinOps = Schemas["CustomerFinOps"];
+export type ChargeLine = Schemas["ChargeLine"];
+export type AccountCheck = Schemas["AccountCheck"];
+export type Unallocated = Schemas["Unallocated"];
+export type AllocationLine = Schemas["AllocationLine"];
+export type AnomalyView = Schemas["AnomalyView"];
+export type FxCorrectionView = Schemas["FxCorrectionView"];
+export type FxCorrectionRequest = Schemas["FxCorrectionRequest"];
+export type MarginOverview = Schemas["MarginOverview"];
+export type MarginView = Schemas["MarginView"];
+export type MarginDetail = Schemas["MarginDetail"];
+export type TrendPoint = Schemas["TrendPoint"];
+export type VarianceView = Schemas["VarianceView"];
+export type VersionView = Schemas["VersionView"];
+export type RateCardView = Schemas["RateCardView"];
+export type QuoteRequest = Schemas["QuoteRequest"];
+export type QuoteView = Schemas["QuoteView"];
 
 // The values a reviewer may choose, read from the schema itself rather than
 // copied, so a new intent in the API reaches the console by regeneration.

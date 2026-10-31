@@ -25,9 +25,26 @@ export function count(value: number): string {
   return new Intl.NumberFormat("en-GB").format(value);
 }
 
+/** A decimal string in plain notation. The API may send Python's exponent form
+ * ("0E-8", "1.5E+3"); the point is moved on the digits, never through a float. */
+export function plain(value: string): string {
+  const text = value.trim();
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?[eE]([+-]?\d+)$/.exec(text);
+  if (!match) return text.startsWith("+") ? text.slice(1) : text;
+  const [, sign = "", whole = "", fraction = "", exp = "0"] = match;
+  const digits = `${whole}${fraction}` || "0";
+  const point = whole.length + Number(exp);
+  let out: string;
+  if (point <= 0) out = `0.${"0".repeat(-point)}${digits}`;
+  else if (point >= digits.length) out = `${digits}${"0".repeat(point - digits.length)}`;
+  else out = `${digits.slice(0, point)}.${digits.slice(point)}`;
+  out = out.replace(/^0+(?=\d)/, "");
+  return `${sign === "-" ? "-" : ""}${out}`;
+}
+
 /** Round a decimal string half away from zero to `places`, and group thousands. */
 export function decimal(value: string, places = 2): string {
-  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
+  const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(plain(value));
   if (!match) throw new Error(`not a decimal: ${value}`);
   const [, sign = "", whole = "0", fraction = ""] = match;
   const padded = (fraction + "0".repeat(places + 1)).slice(0, places + 1);
@@ -57,7 +74,7 @@ export function money(value: string, currency: string, places = 2): string {
 /** A ratio as a decimal string ("0.6667") shown as a percentage ("66.7%"), on its
  * digits: the point moves two places, then rounds once. */
 export function percent(ratio: string, places = 1): string {
-  const match = /^(-?)(\d+)(?:\.(\d*))?$/.exec(ratio.trim());
+  const match = /^(-?)(\d+)(?:\.(\d*))?$/.exec(plain(ratio));
   if (!match) throw new Error(`not a decimal: ${ratio}`);
   const [, sign = "", whole = "0", fraction = ""] = match;
   const padded = `${fraction}00`;

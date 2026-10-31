@@ -94,6 +94,13 @@ TENANT_TABLES = (
     "cloudops.sharepoint_site",
     "cloudops.document",
     "staging.cost_fact_load",
+    # Step 16.
+    "cloudops.margin_snapshot",
+    "cloudops.margin_variance",
+    "cloudops.billing_total",
+    "cloudops.cost_reconciliation",
+    "cloudops.cost_anomaly",
+    "cloudops.anomaly_threshold",
 )
 
 

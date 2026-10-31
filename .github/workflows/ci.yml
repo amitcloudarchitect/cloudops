@@ -148,9 +148,12 @@ jobs:
           path: evals/last-report.json
           if-no-files-found: ignore
 
-  # The workbook's reference case (321 CIs, 24x7, Gold, India). The reference engine
-  # compares floats within a tolerance; the exact Decimal engine and its exact gate
-  # arrive with the commercial modules (step 16, ADR 0013).
+  # The workbook's reference case (321 CIs, 24x7, Gold, India). The Decimal port in
+  # packages/commercial must equal the reference engine at six decimal places, on
+  # that case and across every coverage, support model and location (step 16; LLD,
+  # CI/CD: "pricing regression against the reference case"). The reference engine's
+  # own float check still runs first: the oracle must pass before anything is
+  # compared with it.
   pricing-regression:
     runs-on: ubuntu-24.04
     steps:
@@ -159,6 +162,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -I reference/pricing_engine.py
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - run: uv sync --locked
+      - name: the Decimal port reproduces the reference case to six places (release gate)
+        run: uv run pytest packages/commercial/tests/test_pricing_reference.py -q
 
   sast:
     name: SAST (CodeQL, high and critical fail)

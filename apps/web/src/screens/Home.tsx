@@ -12,7 +12,7 @@ import { can, useMe } from "@/lib/session";
 export function Home() {
   const me = useMe();
   const router = useRouter();
-  const first = landing(visibleModules((p) => can(me, p)), me.landing);
+  const first = landing(visibleModules((p) => can(me, p), me.kind === "staff"), me.landing);
   useEffect(() => {
     if (first) router.replace(first.href);
   }, [first, router]);

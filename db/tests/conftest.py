@@ -310,6 +310,49 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             " 'consumption', 1.000000, 1.000000, %s)",
             (t.id, t.account_id, t.currency),
         )
+        # Step 16 tables, one row each (margin also with one variance line).
+        snapshot = cx.execute(
+            "INSERT INTO cloudops.margin_snapshot (tenant_id, period, through, status,"
+            " rate_card_version, contract_currency, revenue, modelled_cost, actual_cost,"
+            " modelled_margin, actual_margin, margin_at_prior_rates, margin_pct, band,"
+            " band_basis, target_margin, gap_to_target, effort_hours, effort_items,"
+            " effort_complete) VALUES (%s, date_trunc('month', now())::date, now()::date,"
+            " 'provisional', '2026-v2.14', %s, 41250.500000, 30000.000000, 31000.000000,"
+            " 11250.500000, 10250.500000, 10200.000000, 0.24849394, 'watch', 'actual', 0.3,"
+            " -0.05150606, 120, 4, true) RETURNING id",
+            (t.id, t.currency),
+        ).fetchone()
+        cx.execute(
+            "INSERT INTO cloudops.margin_variance (tenant_id, snapshot_id, workgroup, activity,"
+            " hours, items, items_without_hours, share, excess_hours, excess_cost, currency)"
+            " VALUES (%s, %s, 'Cloud Ops', 'incident', 120, 4, 0, 1, 0, 0, %s)",
+            (t.id, snapshot[0] if snapshot else None, t.currency),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.billing_total (tenant_id, account_id, source_system, kind,"
+            " invoice_period, as_of, amount, currency) VALUES (%s, %s, 'azure',"
+            " 'provider_total', to_char(now(), 'YYYY-MM'), now()::date, 120.125000, %s)",
+            (t.id, t.account_id, t.currency),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.cost_reconciliation (tenant_id, account_id, invoice_period,"
+            " kind, checked_on, reference_as_of, ledger_amount, ledger_currency,"
+            " reference_amount, reference_currency, drift, status) VALUES (%s, %s,"
+            " to_char(now(), 'YYYY-MM'), 'provider_total', now()::date, now()::date,"
+            " 120.125000, %s, 120.125000, %s, 0, 'verified')",
+            (t.id, t.account_id, t.currency, t.currency),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.cost_anomaly (tenant_id, account_id, granularity,"
+            " observed_on, observed, baseline, change, ratio, currency, direction,"
+            " threshold_ratio, threshold_amount) VALUES (%s, %s, 'day', now()::date, 300,"
+            " 100, 200, 2, %s, 'spike', 0.3, 100)",
+            (t.id, t.account_id, t.currency),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.anomaly_threshold VALUES (%s, 'day', 0.5, 250, %s)",
+            (t.id, t.currency),
+        )
     cx.execute(
         "INSERT INTO cloudops.global_knowledge_chunk (source_kind, title, body, embedding)"
         " VALUES ('runbook', 'Global runbook', 'Restart the service', %s)",

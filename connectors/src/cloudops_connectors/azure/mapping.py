@@ -26,7 +26,10 @@ from typing import Any, Final
 
 SOURCE: Final = "azure"
 ENTITY: Final = "resource"
-ENTITIES: Final = frozenset({ENTITY})
+COST_EXPORT: Final = "cost_export"  # FOCUS exports -> cost_fact (cost_source.py)
+COST_TOTAL: Final = "cost_total"  # month-to-date totals -> billing_total (billing_source.py)
+INVOICE: Final = "invoice"  # issued invoices -> billing_total (billing_source.py)
+ENTITIES: Final = frozenset({ENTITY, COST_EXPORT, COST_TOTAL, INVOICE})
 OTHER: Final = "other"
 
 # Fixed: the connector asks for exactly these columns. ``id`` must be projected

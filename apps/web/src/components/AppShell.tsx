@@ -73,7 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       break;
     case "ready": {
       const me = session.me;
-      const modules = visibleModules((p) => can(me, p));
+      const modules = visibleModules((p) => can(me, p), me.kind === "staff");
       content = children;
       nav = (
         <nav aria-label="Modules">
