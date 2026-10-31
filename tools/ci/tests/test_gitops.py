@@ -532,10 +532,12 @@ def test_the_console_and_the_api_agree_on_the_origin() -> None:
     """Same host (ADR 0017): the API base the console calls is the origin the API's
     CORS names, and the API's audience is the scope's resource."""
     (web,) = [d for d in WEB if d["kind"] == "ConfigMap"]
-    (api,) = [d for d in DEV if d["kind"] == "ConfigMap" and d["metadata"]["name"].startswith("api-")
+    (api,) = [d for d in DEV if d["kind"] == "ConfigMap"
+              and d["metadata"]["name"].startswith("api-")
               and "CLOUDOPS_API_AUDIENCE" in d.get("data", {})]
     assert api["data"]["CLOUDOPS_WEB_ORIGINS"] == web["data"]["CLOUDOPS_WEB_API_BASE"]
-    assert web["data"]["CLOUDOPS_WEB_API_SCOPE"].split("/")[2] == api["data"]["CLOUDOPS_API_AUDIENCE"]
+    scope_resource = web["data"]["CLOUDOPS_WEB_API_SCOPE"].split("/")[2]
+    assert scope_resource == api["data"]["CLOUDOPS_API_AUDIENCE"]
 
 
 def test_the_api_allows_only_https_console_origins() -> None:
