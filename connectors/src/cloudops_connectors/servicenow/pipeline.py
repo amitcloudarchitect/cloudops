@@ -20,10 +20,12 @@ sighting, whose traceparent is stored on the row, then ``ticket.updated`` or
 ``ticket.closed`` on later pages, so a ticket from first sighting through triage
 to closure is one trace. Each span links to the page's batch span.
 
-A ticket whose company moves to a different tenant cannot be upserted under
-the new tenant's scope (the existing row belongs to the old one and RLS hides
-it), so the page fails loudly and is dead-lettered for a human, rather than
-the platform guessing which tenant is right.
+A ticket whose company moves to a different tenant is not expected to happen.
+If it does, the ticket cannot be upserted under the new tenant's scope (the
+existing row belongs to the old one and RLS hides it): row-level security
+refuses the write, which pages as a cross-tenant attempt (Sev0, ADR 0022), and
+the page is dead-lettered for a human rather than the platform guessing which
+tenant is right.
 
 ``reprocess_page`` is the same path narrowed to one company name, for an
 approved mapping's held records (ADR 0015): only that name's records, only if
