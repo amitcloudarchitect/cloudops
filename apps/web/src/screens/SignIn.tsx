@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
-import { BrandLogo } from "@/components/BrandLogo";
+import { BrandPhoto } from "@/components/BrandPhoto";
 
 import { LOCAL_TOKEN_KEY, useAuth } from "@/lib/auth";
 import { authMode } from "@/lib/config";
@@ -37,7 +37,7 @@ export function SignIn() {
 
   return (
     <Frame>
-    <form onSubmit={submit} className="card space-y-4 p-6 sm:p-8">
+    <form onSubmit={submit} className="space-y-4">
       <h1 className="font-display text-2xl font-bold text-ink">Local sign-in</h1>
       <p className="text-sm text-muted">
         Development only. On the devbox, mint a token for a seeded principal and paste it here (others: customer-nwl, finops-all, platform-admin):
@@ -63,27 +63,23 @@ export function SignIn() {
   );
 }
 
-// The sign-in page has no shell: the brand panel on the left (above, on a narrow
-// screen), the form on the right.
+// The sign-in page has no shell: a Getronics background fills the screen (the
+// building by day, the sunset office in dark mode), and the form sits in a card on
+// its left, clear of the logo in the image's top-right corner. No text on the photo.
 function Frame({ children }: { children: ReactNode }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
-      <div data-chrome className="relative flex flex-col justify-between gap-10 overflow-hidden bg-chrome p-8 text-chrome-ink lg:p-12">
-        {/* The brand's circle, its one graphic element: green, large, at 20% opacity. */}
-        <span aria-hidden="true" className="pointer-events-none absolute -right-24 -bottom-24 size-96 rounded-full bg-accent opacity-20" />
-        <div className="self-start">
-          <BrandLogo size="hero" />
-        </div>
-        <div className="relative max-w-sm">
-          <p className="font-display text-3xl leading-tight font-bold">
-            CloudOps <span className="font-normal text-chrome-muted">Operations</span>
-          </p>
-          <p className="mt-3 text-sm text-chrome-muted">Getronics CloudOps operations console</p>
+    <BrandPhoto photo="building" dark="sunset" className="min-h-screen">
+      <div className="flex min-h-screen items-start px-4 pt-32 pb-8 sm:px-10 lg:items-center lg:px-[6vw] lg:pt-8">
+        <div className="w-full max-w-md space-y-5 rounded-card bg-surface p-6 shadow-raised sm:p-8">
+          <div>
+            <p className="font-display text-xl leading-tight font-bold text-ink">
+              CloudOps <span className="font-normal text-muted">Operations</span>
+            </p>
+            <p className="mt-1 text-sm text-muted">Getronics CloudOps operations console</p>
+          </div>
+          <div className="border-t border-line-subtle pt-5">{children}</div>
         </div>
       </div>
-      <div className="flex items-center justify-center bg-canvas p-6 sm:p-10">
-        <div className="w-full max-w-lg">{children}</div>
-      </div>
-    </div>
+    </BrandPhoto>
   );
 }

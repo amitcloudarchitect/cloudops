@@ -6,13 +6,16 @@ export function EmptyState({
   title,
   next,
   action,
+  plain = false,
 }: {
   title: string;
   next: ReactNode;
   action?: { label: string; href?: string; onClick?: () => void };
+  /** Without its own card: when it sits in a panel that already is one. */
+  plain?: boolean;
 }) {
   return (
-    <div className="card mx-auto max-w-xl px-6 py-10 text-center" role="status">
+    <div className={`${plain ? "" : "card mx-auto max-w-xl"} px-6 py-10 text-center`} role="status">
       {/* The brand's circle, quiet: an empty state is calm, not an error. */}
       <span aria-hidden="true" className="mx-auto mb-4 flex size-10 items-center justify-center rounded-full bg-surface-raised">
         <span className="size-2.5 rounded-full bg-brand" />

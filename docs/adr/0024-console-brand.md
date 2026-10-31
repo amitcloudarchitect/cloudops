@@ -1,6 +1,6 @@
 # ADR 0024: The console in the Getronics brand
 
-- **Status:** Proposed, 2026-10-31
+- **Status:** Accepted, 2026-10-31; amended 2026-10-31 (decision 8)
 - **Decided by:** Amit Kumar (to accept on merge)
 - **Implements:** the brand for the operations console and customer portal
   (`apps/web`), within ADR 0014's design rules and ADR 0017's CSP.
@@ -47,13 +47,13 @@ rounding. This ADR uses the book's values.
 1. **All brand values live in `tokens.css`, ADR 0014's one token file.** A rebrand is
    still a one-file change for colour, type and shape. New tokens: `line-subtle`
    (Frost Grey hairlines), `accent-hover`, `link`, `selected` (a Mint tint),
-   `brand` (Logo Neon Green), the `chrome-*` set for the black header, and two
+   `brand` (Logo Neon Green), the `chrome-*` set for the header, and two
    shadows. `globals.css` adds a few shared utilities (`btn`, `btn-primary`,
    `btn-secondary`, `field`, `card`, `link`, `section-title`). They set shape and
    type only and read every colour from a token.
 
 2. **How the colours are used.**
-   - **Base layers.** A black header band and white cards on a Frost Grey tint
+   - **Base layers.** A white header band (decision 8) and white cards on a Frost Grey tint
      canvas (`#F5F7F8`).
    - **Getronics Green.** Primary buttons, green with black text (8.7:1). White on
      this green is 2.4:1, so it is never used.
@@ -135,14 +135,46 @@ rounding. This ADR uses the book's values.
    The circle in front of each navigation item is decorative (`aria-hidden`).
    `aria-current` still marks the current page.
 
+8. **Amendment: a white header, and Getronics backgrounds outside the data screens.**
+   Amit Kumar pointed to Getronics' internal service dashboard (gboard,
+   mon.getronics.com) as the look to match. That look is a white header with the
+   full-colour logo, a light sidebar, and white cards with coloured edges, with no
+   imagery on the data screens.
+   - **The header is white** in light mode, with the full-colour (green) logo: the
+     book's default on light backgrounds. In dark mode it is the dark surface with
+     the white logo. The `chrome-*` tokens carry both, and a `dark:` variant in
+     `globals.css` follows the same rule as `tokens.css`. The logo is 44 px tall,
+     so the green artwork is about 74 px wide, above the 68 px minimum.
+   - **Backgrounds are Getronics' official Teams backgrounds**, supplied by Amit
+     Kumar from marketing's brand assets (`Brand assets/_Backgrounds+Wallpapers/
+     _TeamsBackground` on the G-home SharePoint). Three are used:
+     - **sign-in:** the glass building entrance in light mode, the sunset office
+       in dark mode, full screen, with the form in a white card on the left;
+     - **the signed-out, no-access and could-not-reach states:** the white atrium,
+       beside the message.
+
+     Each image carries the full-colour logo in its top-right corner. The book
+     forbids cropping the logo, so every crop is anchored top-right
+     (`object-right-top`): an image loses its left side first, never that corner.
+     Nothing is placed over the logo, and no second logo is added to an image.
+     No text is set on the photographs; it all sits in solid cards.
+   - **Data screens carry no imagery.** The book forbids text over busy
+     backgrounds, and dashboards need the contrast.
+   - **Files and handling.** The images are in `src/brand/` as WebP, re-encoded
+     at their original 1920 × 1080, not cropped or retouched. They are bundled
+     like the logo, so `img-src 'self'` covers them. They are decorative, with
+     empty `alt`.
+
 ## Consequences
 
 - Selectors that use roles and names are unaffected. CSS upper-casing changes how a
   button looks, not its accessible name.
-- The circle and the Mint selection are the only new decoration. There are no
-  images, gradients or icon sets: the book allows only its own icon library, and we
-  do not have it.
-- Open: confirmation from the brand team that the open stand-in fonts are
-  acceptable, and vector logo masters if they want them to replace the PNGs. A licensed webfont kit, if Getronics has one
-  for internal applications, would replace `src/fonts/` and leave the rest
-  unchanged.
+- On the data screens, the circle and the Mint selection are the only decoration.
+  There is no icon set: the book allows only its own icon library, and we do not
+  have it. Background images appear only as decision 8 describes.
+- Open:
+  - brand team confirmation that the open stand-in fonts are acceptable;
+  - vector logo masters, if brand wants them to replace the PNGs.
+
+  A licensed webfont kit, if Getronics has one for internal applications, would
+  replace `src/fonts/` and leave the rest unchanged.

@@ -41,7 +41,8 @@
 
   /* Logo Neon Green: the logo and small marks only (the active dot, the logo slot). */
   --color-brand: var(--brand);
-  /* The header band: black in both themes, a brand base layer. */
+  /* The header band: white with the full-colour logo, as Getronics' own internal
+   * tools are; the dark surface with the white logo in dark mode. */
   --color-chrome: var(--chrome);
   --color-chrome-ink: var(--chrome-ink);
   --color-chrome-muted: var(--chrome-muted);
@@ -100,11 +101,11 @@
   --selected: #e4f3e3;
   --focus: #000000;
 
-  --chrome: #000000;
-  --chrome-ink: #ffffff;
-  --chrome-muted: #b7c0c4;
-  --chrome-line: #2c3237;
-  --chrome-raised: #1d2124;
+  --chrome: #ffffff;
+  --chrome-ink: #000000;
+  --chrome-muted: #5f686c;
+  --chrome-line: #dee4e7;
+  --chrome-raised: #ffffff;
 
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
   --raised-shadow: 0 4px 16px rgb(0 0 0 / 0.1);
@@ -142,6 +143,12 @@
     --selected: #1c2b1d;
     --focus: #57bd37;
 
+    --chrome: #16191c;
+    --chrome-ink: #f2f4f5;
+    --chrome-muted: #a3adb2;
+    --chrome-line: #2c3237;
+    --chrome-raised: #22272b;
+
     --card-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
     --raised-shadow: 0 4px 16px rgb(0 0 0 / 0.5);
 
@@ -176,6 +183,12 @@
   --link: #a4d9a3;
   --selected: #1c2b1d;
   --focus: #57bd37;
+
+  --chrome: #16191c;
+  --chrome-ink: #f2f4f5;
+  --chrome-muted: #a3adb2;
+  --chrome-line: #2c3237;
+  --chrome-raised: #22272b;
 
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   --raised-shadow: 0 4px 16px rgb(0 0 0 / 0.5);
