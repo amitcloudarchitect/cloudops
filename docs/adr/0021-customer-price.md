@@ -69,7 +69,8 @@ inferred.
      uplift changes, while the function is always current.
 
 3. **The cost columns are revoked**: migration 0015, `REVOKE SELECT (unblended_cost,
-   amortized_cost) ON cloudops.cost_fact FROM cloudops_customer`. A customer scope naming
+   amortized_cost) ON cloudops.cost_fact FROM cloudops_customer` (and
+   `cost_finding.estimated_saving`, decision 6). A customer scope naming
    either column, including through `SELECT *` or `ORDER BY`, gets `permission denied`.
    It still reads the line items' dates, services, charge classes and currency. The SOW
    uplift is refused to it as well, since `cloudops_customer` holds no grant on `sow`.
@@ -98,7 +99,16 @@ inferred.
    - **Console.** The customer overview shows "Cloud consumption, 30 days (EUR)" with the
      price, or "Not yet priced" when not captured. Staff still see "Cloud cost".
 
-6. **Synthetic data.** Northwind 8%, Contoso 6%, Fabrikam 10% and Tailspin 7% (both of
+6. **A finding's saving is priced the same way** (user, 2026-10-31). CoreStack's
+   `cost_finding.estimated_saving` is stated in provider-cost terms, so it could reveal
+   part of Getronics' cost base. 0015 revokes it from `cloudops_customer`, and
+   `cloudops.customer_saving()` (0014, same ownership, grants and RLS scoping as the
+   price function) returns each finding's saving × (1 + uplift) in `saving_currency`.
+   A saving is spend avoided from now on, so the uplift is the one in force **today**,
+   not on the detection date. The not-captured rules are the same. No API or console
+   screen shows findings yet; one that does reads the saving through this function.
+
+7. **Synthetic data.** Northwind 8%, Contoso 6%, Fabrikam 10% and Tailspin 7% (both of
    its SOWs). Woodgrove has no SOW, so its customers would see "Not yet priced".
 
 ## Consequences
@@ -110,9 +120,6 @@ inferred.
 - **Customer report packs (step 17, ADR 0020) omit cloud cost.** A pack can now show this
   price instead, read through `cloudops.customer_price` under the customer's scope (as
   `cloudops_customer`). That is a step 17 follow-up, not part of this change.
-- **Open: `cost_finding.estimated_saving`.** It remains granted to customers and is
-  estimated in provider-cost terms, so it may reveal part of Getronics' cost base. It
-  needs the user's decision: price it with the same uplift, or revoke it.
 - **The gateway tool `get_cost_trend` reads `amortized_cost`.** A customer scope calling it
   now gets permission denied (fail closed). If customers reach the assistant, the tool
   should read `cloudops.customer_price` for them instead.

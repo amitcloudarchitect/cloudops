@@ -18,6 +18,10 @@ from that cost and a per-SOW uplift, and never sees the cost or the uplift.
   (1 + the uplift of the one SOW in force on the usage date). No SOW, two
   overlapping SOWs or no uplift on the SOW gives a NULL price: never guess.
   Unrounded. Rounding happens once, at presentation.
+- ``cloudops.customer_saving()``: each CoreStack finding's estimated saving
+  priced the same way (user decision, 2026-10-31): ``estimated_saving`` is in
+  provider-cost terms, so it is uplifted too. A saving is spend avoided from
+  now on, so the uplift is the one in force today. Same not-captured rules.
 
 **The function is the only way a customer reaches the figure.** It is SECURITY
 DEFINER, owned by ``cloudops_resolver``, and only ``cloudops_customer`` may
@@ -26,7 +30,8 @@ could divide the price by the cost and read the uplift, which is commercial.
 Row-level security still decides which rows the definer sees. ``tenant_isolation``
 and ``account_scope`` on ``cost_fact`` apply to every role and read the caller's
 ``app.*`` settings, so the function returns the caller's tenants and
-subscriptions and nothing else. ``commercial_visibility`` on ``sow`` now also
+subscriptions and nothing else (``cost_finding`` has the same two policies).
+``commercial_visibility`` on ``sow`` now also
 admits ``cloudops_resolver`` (as ``current_user``, which is the definer only
 inside its functions). The resolver holds SELECT on four SOW columns: the tenant,
 the dates and the uplift. It gets no revenue column.
@@ -90,19 +95,38 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 $$;
 """
 
+SAVING = """
+CREATE FUNCTION cloudops.customer_saving()
+RETURNS TABLE (id uuid, tenant_id uuid, currency char(3), saving numeric)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
+    SELECT f.id, f.tenant_id, f.saving_currency, f.estimated_saving * (1 + u.uplift)
+    FROM cloudops.cost_finding f
+    LEFT JOIN LATERAL (
+        SELECT CASE WHEN count(*) = 1 THEN max(s.consumption_uplift) END AS uplift
+        FROM cloudops.sow s
+        WHERE s.tenant_id = f.tenant_id AND s.effective_from <= current_date
+          AND (s.effective_to IS NULL OR s.effective_to >= current_date)
+    ) u ON true
+$$;
+"""
+
 SIGNATURE = "cloudops.customer_price(date, date)"
+SAVING_SIGNATURE = "cloudops.customer_saving()"
 
 GRANTS = f"""
 GRANT SELECT (tenant_id, account_id, usage_date, charge_class, amortized_cost, currency)
     ON cloudops.cost_fact TO cloudops_resolver;
+GRANT SELECT (id, tenant_id, account_id, estimated_saving, saving_currency)
+    ON cloudops.cost_finding TO cloudops_resolver;
 GRANT SELECT (tenant_id, effective_from, effective_to, consumption_uplift)
     ON cloudops.sow TO cloudops_resolver;
 GRANT EXECUTE ON FUNCTION cloudops.current_tenant_ids(), cloudops.account_scope_is_all(),
     cloudops.current_account_ids() TO cloudops_resolver;
-REVOKE ALL ON FUNCTION {SIGNATURE} FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION {SIGNATURE} TO cloudops_customer;
+REVOKE ALL ON FUNCTION {SIGNATURE}, {SAVING_SIGNATURE} FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION {SIGNATURE}, {SAVING_SIGNATURE} TO cloudops_customer;
 GRANT CREATE ON SCHEMA cloudops TO cloudops_resolver;
 ALTER FUNCTION {SIGNATURE} OWNER TO cloudops_resolver;
+ALTER FUNCTION {SAVING_SIGNATURE} OWNER TO cloudops_resolver;
 REVOKE CREATE ON SCHEMA cloudops FROM cloudops_resolver;
 """
 
@@ -111,6 +135,7 @@ def upgrade() -> None:
     op.execute(DDL)
     op.execute(_sow_policy())
     op.execute(FUNCTION)
+    op.execute(SAVING)
     op.execute(GRANTS)
 
 

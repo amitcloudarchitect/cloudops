@@ -8,9 +8,12 @@ ADR 0021. 0011 granted ``cloudops_customer`` SELECT on
 ``cost_fact.unblended_cost`` and ``amortized_cost`` on the assumption that they
 were the customer's bill. They are what the provider charges Getronics (user,
 2026-10-31): Getronics' cost base, from which margin can be inferred, so they are
-commercial (ADR 0002, D10). This migration revokes them. A customer reads its
-consumption as a price through ``cloudops.customer_price`` (0014), and a query
-naming either column fails with ``permission denied``.
+commercial (ADR 0002, D10). This migration revokes them, and
+``cost_finding.estimated_saving``, which CoreStack states in the same
+provider-cost terms. A customer reads its
+consumption as a price through ``cloudops.customer_price`` and a finding's
+saving through ``cloudops.customer_saving`` (0014); a query naming any of the
+three columns fails with ``permission denied``.
 
 **A recorded exception to "a contract ships a release after its expand"
 (0003, LLD).** That rule exists so the running release keeps working while the
@@ -34,6 +37,7 @@ CHANGE_KIND = "contract"
 
 CONTRACT = """
 REVOKE SELECT (unblended_cost, amortized_cost) ON cloudops.cost_fact FROM cloudops_customer;
+REVOKE SELECT (estimated_saving) ON cloudops.cost_finding FROM cloudops_customer;
 """
 
 

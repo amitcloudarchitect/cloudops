@@ -4,7 +4,8 @@
 D10). A customer scope is refused its cost columns by the database, and reads
 its consumption at the price Getronics charges it, which is the amortized cost
 times (1 + the uplift of the one SOW in force), through
-``cloudops.customer_price`` alone. Staff cannot call that function, because
+``cloudops.customer_price`` alone; a CoreStack finding's saving, priced the same
+way, through ``cloudops.customer_saving``. Staff cannot call that function, because
 price divided by cost is the uplift.
 
 The seeded tenants each have one cost row today: amortized 118.000000 in the
@@ -77,6 +78,8 @@ _PRICE = ("SELECT tenant_id, currency, sum(price), bool_and(price IS NOT NULL)"
     "SELECT * FROM cloudops.cost_fact",
     "SELECT usage_date FROM cloudops.cost_fact ORDER BY unblended_cost",
     "SELECT consumption_uplift FROM cloudops.sow",
+    "SELECT estimated_saving FROM cloudops.cost_finding",
+    "SELECT * FROM cloudops.cost_finding",
 ])
 async def test_customer_scope_is_refused_getronics_cost(
     app_db: Database, seeded: Seeded, sql: str,
@@ -95,12 +98,23 @@ async def test_customer_scope_still_reads_its_consumption_lines(
 
 
 @pytest.mark.parametrize("role", [r for r in Role if r is not Role.CUSTOMER])
+@pytest.mark.parametrize(("sql", "function"), [
+    (_PRICE, "customer_price"), ("SELECT * FROM cloudops.customer_saving()", "customer_saving"),
+])
 async def test_no_staff_role_can_compute_the_price(
-    app_db: Database, seeded: Seeded, role: Role,
+    app_db: Database, seeded: Seeded, role: Role, sql: str, function: str,
 ) -> None:
     """Price over cost is the uplift: staff who read cost never get the price."""
-    with pytest.raises(Exception, match="permission denied for function customer_price"):
-        await _rows(app_db, scope(seeded.a, role=role), _PRICE)
+    with pytest.raises(Exception, match=f"permission denied for function {function}"):
+        await _rows(app_db, scope(seeded.a, role=role), sql)
+
+
+async def test_customer_scope_still_reads_its_findings(
+    app_db: Database, seeded: Seeded,
+) -> None:
+    rows = await _rows(app_db, scope(seeded.a, role=Role.CUSTOMER),
+                       "SELECT tenant_id, title, saving_currency FROM cloudops.cost_finding")
+    assert rows == [(seeded.a.id, "Idle VM", seeded.a.currency)]
 
 
 # --- the price -------------------------------------------------------------------------------
@@ -150,6 +164,35 @@ async def test_the_function_returns_only_the_callers_tenant(
         "SELECT DISTINCT tenant_id FROM cloudops.customer_price('2000-01-01', current_date)"
         " WHERE tenant_id = ANY(CAST(:ids AS uuid[]))",
         ids=[t.id for t in seeded.tenants])
+    assert rows == [(seeded.a.id,)]
+
+
+_SAVING = ("SELECT f.title, s.currency, s.saving FROM cloudops.customer_saving() s"
+           " JOIN cloudops.cost_finding f ON f.id = s.id")
+
+
+async def test_a_findings_saving_is_priced_in_two_currencies(
+    app_db: Database, seeded: Seeded, priced: None,
+) -> None:
+    """CoreStack's saving is in provider-cost terms (12.500000 seeded): uplifted too."""
+    a = await _rows(app_db, scope(seeded.a, role=Role.CUSTOMER), _SAVING)
+    c = await _rows(app_db, scope(seeded.c, role=Role.CUSTOMER), _SAVING)
+    assert a == [("Idle VM", "EUR", Decimal("12.500000") * (1 + UPLIFT_A))]
+    assert c == [("Idle VM", "USD", Decimal("12.500000") * (1 + UPLIFT_C))]
+
+
+async def test_a_saving_without_an_uplift_is_not_captured(
+    app_db: Database, seeded: Seeded, priced: None,
+) -> None:
+    rows = await _rows(app_db, scope(seeded.b, role=Role.CUSTOMER), _SAVING)
+    assert rows == [("Idle VM", "GBP", None)]
+
+
+async def test_the_saving_function_returns_only_the_callers_tenant(
+    app_db: Database, seeded: Seeded, priced: None,
+) -> None:
+    rows = await _rows(app_db, scope(seeded.a, role=Role.CUSTOMER),
+                       "SELECT DISTINCT tenant_id FROM cloudops.customer_saving()")
     assert rows == [(seeded.a.id,)]
 
 
