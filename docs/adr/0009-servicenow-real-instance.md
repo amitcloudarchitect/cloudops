@@ -24,9 +24,17 @@
    - `svc_cloudops_read`: machine identity, internal integration user, roles `itil`,
      `cmdb_read` and `snc_read_only`.
    - A test write on 2026-10-29 was refused (403 ACL).
-   - The OAuth client has the `useraccount` scope: the token can do what the account
-     can, and no more. **Before UAT,** replace it with a custom REST API auth scope
-     limited to the Table API on the connector's tables.
+   - The OAuth client is auth-scoped (2026-10-31), replacing the first client, which
+     was useraccount-scoped (its token could do whatever the account could):
+     - Client `svc_cloudops_read_scoped` (client ID in the dev overlay) carries only
+       the auth scope `cloudops_read`.
+     - A REST API Auth Scope record requires `cloudops_read` on the Table API.
+     - The connector asks for no scope and gets what the client grants, so the change
+       needed no code.
+     - Table-level limits still come from the account's read-only roles. An auth
+       scope limits which API a token may call, not which tables.
+     - Not yet on: "Enforce token restriction", which needs a REST API Access Policy
+       for the Table API. It is a second layer, for before UAT.
 3. **The integration user's time zone must be GMT, enforced at start-up.**
    - Encoded-query date-times are read in the user's time zone, and watermarks are
      UTC.

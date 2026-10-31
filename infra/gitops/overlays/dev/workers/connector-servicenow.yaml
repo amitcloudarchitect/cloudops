@@ -20,7 +20,7 @@ data:
   CLOUDOPS_REPORTS_CONTAINER_URL: https://stcloudopsreportsdevweu.blob.core.windows.net/reports
   # The dev instance (ADR 0009). The account svc_cloudops_read is on GMT.
   CLOUDOPS_SERVICENOW_URL: https://dev407774.service-now.com
-  CLOUDOPS_SERVICENOW_CLIENT_ID: 82e09795000b4f1693138c3427623f04
+  CLOUDOPS_SERVICENOW_CLIENT_ID: 666769454e68469d8d39fb53b61337dc
 ---
 apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
