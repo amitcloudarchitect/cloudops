@@ -7,6 +7,9 @@ dependencies = [
     "sqlalchemy[asyncio]>=2.0.36",
     "psycopg[binary]>=3.2",
     "httpx>=0.28",
+    # API only (no SDK): a span per statement, a no-op until a service turns
+    # telemetry on (packages/observability).
+    "opentelemetry-api>=1.38",
 ]
 
 [build-system]

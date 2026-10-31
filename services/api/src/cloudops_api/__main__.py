@@ -17,6 +17,9 @@ import uvicorn
 from cloudops_api.app import create_app
 from cloudops_api.auth import KeySource, RemoteKeys, StaticKeys, TokenValidator
 from cloudops_config import Component, ConfigurationError, DbLogin, Environment, load_settings
+from cloudops_observability import TelemetryConfigError
+from cloudops_observability.http import instrument_fastapi
+from cloudops_observability.process import start
 from cloudops_tenancy import Database
 
 # The ingress proxies (Envoy, ADR 0011) keep idle connections to the API for up to an
@@ -29,7 +32,8 @@ KEEP_ALIVE_SECONDS: Final = ENVOY_UPSTREAM_IDLE_SECONDS + 60
 def main() -> int:
     try:
         settings = load_settings(os.environ, require={Component.DATABASE_APP, Component.AUTH})
-    except ConfigurationError as exc:
+        telemetry = start("api", os.environ)
+    except (ConfigurationError, TelemetryConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     auth = settings.auth
@@ -48,12 +52,18 @@ def main() -> int:
         expose_openapi=local,
         web_origins=auth.web_origins,
     )
-    uvicorn.run(
-        app,
-        host="127.0.0.1" if local else "0.0.0.0",  # noqa: S104
-        port=8000,
-        timeout_keep_alive=KEEP_ALIVE_SECONDS,
-    )
+    try:
+        uvicorn.run(
+            # Server spans per route; inbound trace headers dropped (the API is the edge).
+            instrument_fastapi(app) if telemetry.enabled else app,
+            host="127.0.0.1" if local else "0.0.0.0",  # noqa: S104
+            port=8000,
+            timeout_keep_alive=KEEP_ALIVE_SECONDS,
+            # Logging is ours (JSON, scrubbed): uvicorn must not install its own.
+            log_config=None,
+        )
+    finally:
+        telemetry.shutdown()
     return 0
 
 

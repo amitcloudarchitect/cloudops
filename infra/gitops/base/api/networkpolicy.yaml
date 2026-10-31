@@ -29,3 +29,13 @@ spec:
     # FQDNs; the cluster's egress path is the boundary.
     - ports:
         - { protocol: TCP, port: 443 }
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0021).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - { protocol: TCP, port: 4318 }

@@ -19,7 +19,9 @@ One call, in this order. Each refusal is traced before it is raised:
    to the next one; ``large`` falls back to ``small`` (LLD).
 7. **Trace:** one ``cloudops.llm_call`` row with the redacted prompt, retrieval
    set, tool calls, tokens, latency and cost. The ledger and the trace are the
-   same row.
+   same row. It carries the OpenTelemetry trace id; the span (``llm.complete``,
+   ``llm.embed``) and the metrics carry task, tier, tokens, cost and outcome but
+   never the tenant, the user or the prompt (ADR 0021).
 
 Every database access runs under ``ctx.scope``: the conversation's single
 tenant, checked server-side against the caller's resolved scope. Nothing a
@@ -38,6 +40,7 @@ from decimal import Decimal
 from typing import Any, Final, Literal
 from uuid import UUID
 
+from opentelemetry.trace import SpanKind, get_current_span
 from sqlalchemy import text
 
 from cloudops_gateway.pricing import SPEND_BREAKER_FLOOR, Deployment
@@ -52,6 +55,7 @@ from cloudops_gateway.providers import (
     estimate_tokens,
 )
 from cloudops_gateway.redaction import redact
+from cloudops_observability import current_trace_id, record_llm_call, tracer
 from cloudops_tenancy import Database, TenantScope
 
 CacheClass = Literal["live", "static"]
@@ -163,11 +167,12 @@ class GatewayReply:
 _INSERT_CALL: Final = text(
     "INSERT INTO cloudops.llm_call (tenant_id, principal, conversation_id, task, tier_requested,"
     " tier_used, provider, deployment, prompt_redacted, redactions, retrieval, tool_calls,"
-    " tokens_in, tokens_out, cost, cost_currency, latency_ms, cache_hit, outcome, reason)"
+    " tokens_in, tokens_out, cost, cost_currency, latency_ms, cache_hit, outcome, reason,"
+    " trace_id)"
     " VALUES (:tenant_id, :principal, :conversation_id, :task, :tier_requested, :tier_used,"
     " :provider, :deployment, :prompt, :redactions, CAST(:retrieval AS jsonb),"
     " CAST(:tool_calls AS jsonb), :tokens_in, :tokens_out, :cost, :currency, :latency_ms,"
-    " :cache_hit, :outcome, :reason) RETURNING id"
+    " :cache_hit, :outcome, :reason, :trace_id) RETURNING id"
 )
 _USAGE: Final = text(
     "SELECT"
@@ -246,6 +251,29 @@ class Gateway:
         tool_calls: Sequence[Mapping[str, Any]] | None = None,
         turn: int = 1,
     ) -> GatewayReply:
+        with tracer().start_as_current_span("llm.complete", kind=SpanKind.CLIENT, attributes={
+                "gen_ai.operation.name": "chat", "cloudops.llm.task": task,
+                "cloudops.llm.tier": tier.value, "cloudops.llm.turn": turn,
+                "cloudops.llm.retrieved": len(retrieval or ()),
+                "cloudops.llm.tool_calls": len(tool_calls or ()),
+                "cloudops.llm.tools_offered": len(tools)}):
+            return await self._complete(ctx, tier=tier, task=task, messages=messages,
+                                        tools=tools, cache=cache, retrieval=retrieval,
+                                        tool_calls=tool_calls, turn=turn)
+
+    async def _complete(
+        self,
+        ctx: CallContext,
+        *,
+        tier: Tier,
+        task: str,
+        messages: Sequence[Message],
+        tools: Sequence[ToolSpec],
+        cache: CacheClass | None,
+        retrieval: Sequence[Mapping[str, Any]] | None,
+        tool_calls: Sequence[Mapping[str, Any]] | None,
+        turn: int,
+    ) -> GatewayReply:
         if tier is Tier.EMBED:
             raise ValueError("complete() takes the small or large tier")
         clean = [self._redacted(m, ctx) for m in messages]
@@ -292,6 +320,13 @@ class Gateway:
     async def embed(self, ctx: CallContext, texts: Sequence[str], *, task: str = "embed"
                     ) -> list[list[float]]:
         """Embeddings of redacted text. Counted against quotas and traced."""
+        with tracer().start_as_current_span("llm.embed", kind=SpanKind.CLIENT, attributes={
+                "gen_ai.operation.name": "embeddings", "cloudops.llm.task": task,
+                "cloudops.llm.texts": len(texts)}):
+            return await self._embed(ctx, texts, task=task)
+
+    async def _embed(self, ctx: CallContext, texts: Sequence[str], *, task: str
+                     ) -> list[list[float]]:
         trace = {"ctx": ctx, "task": task, "tier": Tier.EMBED,
                  "prompt": f"{len(texts)} text(s)", "redactions": 0,
                  "retrieval": None, "tool_calls": None}
@@ -448,7 +483,26 @@ class Gateway:
                 "tool_calls": _json(trace["tool_calls"]), "tokens_in": tokens_in,
                 "tokens_out": tokens_out, "cost": cost, "currency": currency,
                 "latency_ms": latency_ms, "cache_hit": cache_hit, "outcome": outcome,
-                "reason": reason,
+                "reason": reason, "trace_id": current_trace_id(),
             })
+        tier_requested = Tier(trace["tier"]).value
+        record_llm_call(task=trace["task"], tier=tier_requested, outcome=outcome,
+                        provider=provider, cache_hit=cache_hit, tokens_in=tokens_in,
+                        tokens_out=tokens_out, cost=cost, currency=currency,
+                        latency_ms=latency_ms, refusal=reason if outcome == "refused" else None)
+        span = get_current_span()
+        span.set_attributes({
+            "cloudops.llm.call_id": int(call_id), "cloudops.llm.outcome": outcome,
+            "cloudops.llm.tier_used": "none" if tier_used is None else tier_used.value,
+            "cloudops.llm.cache_hit": cache_hit, "cloudops.llm.redactions": trace["redactions"],
+            "cloudops.llm.cost": str(cost), "cloudops.llm.currency": currency,
+            "gen_ai.usage.input_tokens": tokens_in, "gen_ai.usage.output_tokens": tokens_out,
+        })
+        if deployment is not None:
+            span.set_attribute("gen_ai.request.model", deployment)
+        if latency_ms is not None:
+            span.set_attribute("cloudops.llm.latency_ms", latency_ms)
+        if reason is not None and outcome != "succeeded":
+            span.set_attribute("cloudops.llm.reason", reason)
         return int(call_id)
 

@@ -17,6 +17,9 @@ spec:
         dashboard: { enabled: false }
         controller:
           replicas: 1
+          # Step 19: its rollout events feed the rollback-rate alert (stack 03), scraped
+          # by managed Prometheus (base/observability/ama-metrics-prometheus-config.yaml).
+          metrics: { enabled: true }
           # Mirrored into ACR, pinned by digest (ADR 0008, third-party images).
           image:
             registry: crcloudopsdevweu.azurecr.io

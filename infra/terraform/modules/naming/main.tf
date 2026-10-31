@@ -28,5 +28,8 @@ locals {
   # "migrate" runs database migrations (LLD: a dedicated role, applied by a
   # pipeline job), as a Kubernetes job federated in stack 05. "cicd" is the
   # pipeline itself (LLD: id-cloudops-cicd, federated to GitHub OIDC; ADR 0013).
-  workload_identities = ["api", "ingest", "telemetry", "ai", "workflow", "migrate", "cicd"]
+  # "observability" is the OpenTelemetry Collector's (step 19, ADR 0021): it
+  # publishes traces and logs to Application Insights, nothing else.
+  workload_identities = ["api", "ingest", "telemetry", "ai", "workflow", "migrate", "cicd",
+  "observability"]
 }

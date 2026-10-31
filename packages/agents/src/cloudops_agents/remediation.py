@@ -49,6 +49,7 @@ with workflow.unsafe.imports_passed_through():
     from cloudops_agents.trace import DbTraceSink
     from cloudops_gateway.gateway import CallContext, Gateway, GatewayRefusedError
     from cloudops_gateway.registry import ToolRegistry
+    from cloudops_observability import ticket_span, traceparent
     from cloudops_tenancy import Database, Role, TenantScope
 
 TASK_QUEUE: Final = "remediation-triage"
@@ -207,6 +208,19 @@ class TriageActivities:
                 {"w": req.workflow_id})
             if existing is not None:
                 return str(existing)
+            parent = await conn.scalar(text(
+                "SELECT trace_parent FROM cloudops.work_item WHERE number = :n"
+                " ORDER BY opened_at DESC LIMIT 1"), {"n": o.number})
+            # One trace per ticket (ADR 0021): triage joins the trace the
+            # connector started at first sighting, or starts it.
+            with ticket_span("triaged", parent, {"cloudops.triage.route": o.route,
+                                                 "cloudops.triage.stage": o.stage}) as span:
+                stored = traceparent(span)
+                if parent is None and stored is not None:
+                    await conn.execute(text(
+                        "UPDATE cloudops.work_item SET trace_parent = :p"
+                        " WHERE number = :n AND trace_parent IS NULL"),
+                        {"p": stored, "n": o.number})
             new_id = await conn.scalar(text(
                 "INSERT INTO cloudops.triage_result (tenant_id, number, resource_id, route, stage,"
                 " reasons, classification, enrichment, injection_signals, agent_run_ids, cost,"

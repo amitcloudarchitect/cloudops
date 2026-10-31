@@ -133,3 +133,20 @@ output "openai" {
 output "container_registry" {
   value = "crcloudops${local.e}${local.r}"
 }
+
+# Step 19 (ADR 0021): managed Prometheus, Grafana, paging.
+output "monitor_workspace" {
+  value = "amw-cloudops-${local.e}-${local.r}"
+}
+
+output "grafana" {
+  # Azure Managed Grafana names are 2-23 characters.
+  value = "amg-cloudops-${local.e}-${local.r}"
+}
+
+output "action_group" {
+  value = {
+    page   = "ag-cloudops-page-${local.e}"
+    notify = "ag-cloudops-notify-${local.e}"
+  }
+}

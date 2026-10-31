@@ -2,7 +2,9 @@
 
 One row per run, written under the conversation's scope through
 packages/tenancy, so a run is visible to exactly the people who could see
-the tenant it was about. ``MemoryTraceSink`` is for tests.
+the tenant it was about. It carries the trace id of the ``agent.run`` span:
+the span holds no tenant (ADR 0021), so this row is where the run is
+attributed to its tenant and user. ``MemoryTraceSink`` is for tests.
 """
 
 from __future__ import annotations
@@ -13,16 +15,18 @@ from typing import Final
 from sqlalchemy import text
 
 from cloudops_agents.base import AgentRunRecord
+from cloudops_observability import current_trace_id
 from cloudops_tenancy import Database
 
 _INSERT: Final = text(
     "INSERT INTO cloudops.agent_run (id, tenant_id, principal, conversation_id, agent,"
     " prompt_version, prompt_hash, tier, status, attempts, retrieval, tool_calls, llm_call_ids,"
-    " tokens_in, tokens_out, cost, cost_currency, latency_ms, confidence, output, error)"
+    " tokens_in, tokens_out, cost, cost_currency, latency_ms, confidence, output, error,"
+    " trace_id)"
     " VALUES (:id, :tenant_id, :principal, :conversation_id, :agent, :prompt_version,"
     " :prompt_hash, :tier, :status, :attempts, CAST(:retrieval AS jsonb),"
     " CAST(:tool_calls AS jsonb), CAST(:llm_call_ids AS bigint[]), :tokens_in, :tokens_out,"
-    " :cost, :currency, :latency_ms, :confidence, CAST(:output AS jsonb), :error)"
+    " :cost, :currency, :latency_ms, :confidence, CAST(:output AS jsonb), :error, :trace_id)"
 )
 
 
@@ -43,7 +47,7 @@ class DbTraceSink:
                 "currency": run.currency, "latency_ms": run.latency_ms,
                 "confidence": run.confidence,
                 "output": None if run.output is None else json.dumps(run.output),
-                "error": run.error,
+                "error": run.error, "trace_id": current_trace_id(),
             })
 
 

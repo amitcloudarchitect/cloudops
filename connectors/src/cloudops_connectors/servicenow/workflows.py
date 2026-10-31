@@ -278,6 +278,7 @@ class ServiceNowActivities:
             mark = await state.read_watermark(conn, SOURCE, update.entity, self.scope_key)
             await state.finish_run(conn, UUID(update.run_id), update.status, update.counts,
                                    at, mark)
+        state.report_run(SOURCE, update.entity, update.mode, update.status, update.counts)
 
     @activity.defn
     async def record_dead_letter(self, letter: DeadLetter) -> None:

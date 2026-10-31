@@ -15,3 +15,12 @@ regexes = [
   '''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.dozjgNryP4J3jVmNHl0w5N''',
   '''^abc123def456ghi789==$''',
 ]
+
+[[allowlists]]
+description = "Telemetry scrubbing test fixtures (step 19, ADR 0021): invented secret-shaped strings the log and span scrubber must remove. Reviewed 2026-10-31."
+condition = "AND"
+paths = ['''^packages/observability/tests/test_observability_scrub\.py$''']
+regexes = [
+  '''eyJhbGciOiJSUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.c2lnbmF0dXJlc2lnbmF0dXJl''',
+  '''^abc123def456==$''',
+]

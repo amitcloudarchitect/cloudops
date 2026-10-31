@@ -1,0 +1,191 @@
+# OpenTelemetry Collector configuration (ADR 0021). Changes here roll the collector
+# (the ConfigMap is generated, so its name carries a hash of this file).
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  # Entra ID for Application Insights: the pod's federated workload identity, no key.
+  azure_auth:
+    workload_identity:
+      client_id: ${env:AZURE_CLIENT_ID}
+      tenant_id: ${env:AZURE_TENANT_ID}
+      federated_token_file: ${env:AZURE_FEDERATED_TOKEN_FILE}
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 80
+    spike_limit_percentage: 20
+
+  # The second layer of the services' scrubbing (cloudops_observability.scrub): the
+  # same allowlist, and UUIDs and e-mail addresses masked wherever they appear. A
+  # key added by a library upgrade is dropped here even if a service let it through.
+  redaction:
+    allow_all_keys: false
+    allowed_keys:
+      - http.request.method
+      - http.request.method_original
+      - http.method
+      - http.response.status_code
+      - http.status_code
+      - http.route
+      - url.scheme
+      - server.address
+      - server.port
+      - network.protocol.version
+      - db.system
+      - db.system.name
+      - db.operation
+      - db.operation.name
+      - db.statement
+      - db.query.text
+      - db.name
+      - db.namespace
+      - rpc.system
+      - rpc.service
+      - rpc.method
+      - error.type
+      - exception.type
+      - exception.message
+      - exception.stacktrace
+      - exception.escaped
+      - otel.status_code
+      - otel.status_description
+      - gen_ai.system
+      - gen_ai.operation.name
+      - gen_ai.request.model
+      - gen_ai.response.model
+      - gen_ai.usage.input_tokens
+      - gen_ai.usage.output_tokens
+      - code.file.path
+      - code.function.name
+      - code.line.number
+      - logger
+      - level
+      - service
+      - security_event
+      - source
+      - code
+      - alert
+      - connector
+      - entity
+      - workflow_type
+      - activity_type
+      - task_queue
+      - status
+      - outcome
+      - route
+      - method
+      - status_code
+      - duration_ms
+      - request_id
+      - run_id
+      - period
+      - version
+      - kind
+      - reason
+      - drift
+      - window
+      - cloudops.execution
+      - cloudops.ticket.stage
+      - cloudops.ticket.kind
+      - cloudops.ticket.state
+      - cloudops.ticket.linked
+      - cloudops.source
+      - cloudops.triage.route
+      - cloudops.triage.stage
+      - cloudops.agent
+      - cloudops.agent.version
+      - cloudops.agent.tier
+      - cloudops.agent.status
+      - cloudops.agent.attempts
+      - cloudops.agent.tool_rounds
+      - cloudops.agent.retrieved
+      - cloudops.tool
+      - cloudops.tool.ok
+      - cloudops.tool.refused
+      - cloudops.llm.task
+      - cloudops.llm.tier
+      - cloudops.llm.turn
+      - cloudops.llm.retrieved
+      - cloudops.llm.tool_calls
+      - cloudops.llm.tools_offered
+      - cloudops.llm.texts
+      - cloudops.llm.call_id
+      - cloudops.llm.outcome
+      - cloudops.llm.tier_used
+      - cloudops.llm.cache_hit
+      - cloudops.llm.redactions
+      - cloudops.llm.cost
+      - cloudops.llm.currency
+      - cloudops.llm.latency_ms
+      - cloudops.llm.reason
+    blocked_values:
+      - "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+      - "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
+    summary: silent
+
+  # LLD: 10% sampling, 100% on errors and on all execution workflows. A trace is
+  # kept if any policy says so. The probabilistic policy hashes the trace id, so a
+  # ticket's trace (spans arriving over days) gets the same decision every time.
+  tail_sampling:
+    decision_wait: 30s
+    num_traces: 50000
+    expected_new_traces_per_sec: 100
+    policies:
+      - name: errors
+        type: status_code
+        status_code: { status_codes: [ERROR] }
+      - name: execution-spans
+        type: boolean_attribute
+        boolean_attribute: { key: cloudops.execution, value: true }
+      - name: execution-workflows
+        type: ottl_condition
+        ottl_condition:
+          error_mode: ignore
+          span:
+            - IsMatch(name, "^(StartWorkflow|RunWorkflow|SignalWorkflow):Execute")
+      - name: baseline
+        type: probabilistic
+        probabilistic: { sampling_percentage: 10 }
+
+  batch:
+    send_batch_size: 1024
+    timeout: 5s
+
+exporters:
+  azuremonitor:
+    connection_string: ${env:APPLICATIONINSIGHTS_CONNECTION_STRING}
+    auth:
+      authenticator: azure_auth
+  # Scraped by Azure Monitor managed Prometheus. Names without type or unit
+  # suffixes: the alert rules and dashboards (stack 03) use these exact names.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    translation_strategy: UnderscoreEscapingWithoutSuffixes
+    metric_expiration: 10m
+
+service:
+  extensions: [health_check, azure_auth]
+  telemetry:
+    logs:
+      level: info
+      encoding: json
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, redaction, tail_sampling, batch]
+      exporters: [azuremonitor]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, redaction, batch]
+      exporters: [azuremonitor]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]

@@ -449,3 +449,90 @@ async def test_ping_fails_when_the_server_is_unreachable() -> None:
             await down.ping()
     finally:
         await down.dispose()
+
+
+# --- a cross-tenant attempt is a security event (LLD, Observability: always pages) ---
+
+
+def _security_events(caplog: pytest.LogCaptureFixture) -> list[tuple[str, str]]:
+    return [(r.security_event, r.source) for r in caplog.records  # type: ignore[attr-defined]
+            if r.name == "cloudops.security"]
+
+
+@pytest.mark.isolation
+async def test_rls_refusal_is_a_security_event_even_when_caught(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    insert = text("INSERT INTO cloudops.tenancy_probe (tenant_id, label) VALUES (:t, 'x')")
+    with caplog.at_level("CRITICAL", logger="cloudops.security"), \
+            pytest.raises(Exception, match="row-level security"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn.execute(insert, {"t": provisioned.tenant_b})
+    assert _security_events(caplog) == [("cross_tenant_attempt", "tenancy.row_level_security")]
+    # The record names neither tenant.
+    text_logged = " ".join(r.getMessage() for r in caplog.records)
+    assert str(provisioned.tenant_a) not in text_logged
+    assert str(provisioned.tenant_b) not in text_logged
+
+
+@pytest.mark.isolation
+async def test_guard_refusal_is_a_security_event(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    widen = text(f"SELECT set_config('app.tenant_ids', '{provisioned.tenant_b}', true)")
+    with caplog.at_level("CRITICAL", logger="cloudops.security"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            with pytest.raises(ScopeTamperingError):
+                await conn.execute(widen)
+    assert _security_events(caplog) == [("cross_tenant_attempt", "tenancy.statement_guard")]
+
+
+@pytest.mark.isolation
+async def test_commit_check_is_a_security_event(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    from cloudops_tenancy.database import _INTERNAL
+
+    widen = text("SELECT set_config('app.tenant_ids', :t, true)")
+    with caplog.at_level("CRITICAL", logger="cloudops.security"), \
+            pytest.raises(ScopeTamperingError):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn._conn.execute(
+                widen, {"t": str(provisioned.tenant_b)}, execution_options={_INTERNAL: True})
+    assert _security_events(caplog) == [("cross_tenant_attempt", "tenancy.commit_check")]
+
+
+async def test_ordinary_errors_are_not_security_events(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level("CRITICAL", logger="cloudops.security"), \
+            pytest.raises(Exception, match="does not exist"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn.execute(text("SELECT * FROM cloudops.no_such_table"))
+    assert _security_events(caplog) == []
+
+
+# --- a span per statement (step 19, ADR 0021) -------------------------------------
+
+
+async def test_statements_are_spans_with_text_never_values(
+    db: Database, provisioned: Provisioned
+) -> None:
+    from cloudops_observability.testing import memory_telemetry
+
+    mem = memory_telemetry()
+    mem.spans.clear()
+    marker = "value-that-must-not-appear"
+    async with db.transaction(scope(provisioned.tenant_a)) as conn:
+        await conn.execute(text("SELECT CAST(:v AS text)"), {"v": marker})
+    with pytest.raises(Exception, match="does not exist"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn.execute(text("SELECT * FROM cloudops.no_such_table"))
+    spans = [s for s in mem.finished() if s.name.startswith("db ")]
+    texts = [str((s.attributes or {}).get("db.query.text")) for s in spans]
+    assert any("set_config" in t for t in texts), "scope application is visible"
+    assert "SELECT CAST(%(v)s AS text)" in texts
+    assert marker not in repr([dict(s.attributes or {}) for s in spans])
+    assert str(provisioned.tenant_a) not in repr([dict(s.attributes or {}) for s in spans])
+    (failed,) = [s for s in spans if s.status.status_code.name == "ERROR"]
+    assert (failed.attributes or {})["error.type"] == "42P01"

@@ -42,6 +42,7 @@ from sqlalchemy import text
 
 from cloudops_commercial import finops, margin
 from cloudops_commercial.ratecard import RateCard, rate_card_on
+from cloudops_observability import record_reconciliation
 from cloudops_tenancy import Database, Role, ScopedConnection, TenantScope
 
 log = logging.getLogger("cloudops.finops")
@@ -194,6 +195,7 @@ async def reconcile(db: Database, on: date) -> ReconcileReport:
                                      Decimal(total), list(currencies), None, None))
         for c in checks:
             row = tuple((await conn.execute(_RECORD_CHECK, c)).one())
+            record_reconciliation(kind=c["kind"], status=c["status"], reason=c["reason"])
             report.checked += 1
             if c["status"] == "verified":
                 report.verified += 1

@@ -78,6 +78,8 @@ from cloudops_connectors.servicenow.workflows import (
     ServiceNowReprocess,
     activities,
 )
+from cloudops_observability import TelemetryConfigError
+from cloudops_observability.process import start, temporal_options
 from cloudops_tenancy import Database
 
 AZURITE = "UseDevelopmentStorage=true"
@@ -113,7 +115,7 @@ async def _main(args: argparse.Namespace) -> int:
     if args.command == "schedule":
         # Temporal only: the schedule job needs no database, storage or instance.
         settings = load_settings(os.environ, require={Component.TEMPORAL})
-        temporal = await connect(settings.temporal)
+        temporal = await connect(settings.temporal, **temporal_options())
         for entity in args.entity or sorted(ENTITIES):
             print(await _schedule(temporal, entity))
         if not args.entity:
@@ -123,7 +125,7 @@ async def _main(args: argparse.Namespace) -> int:
     if not args.fixtures:
         wanted.add(Component.SERVICENOW)
     settings = load_settings(os.environ, require=wanted)
-    temporal = await connect(settings.temporal)
+    temporal = await connect(settings.temporal, **temporal_options())
 
     async with AsyncExitStack() as stack:
         db = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=2)
@@ -242,8 +244,12 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--end", required=True, help="last bronze day, YYYY-MM-DD")
     args = parser.parse_args(argv)
     try:
-        return asyncio.run(_main(args))
-    except (ConfigurationError, IntegrationUserError) as exc:
+        telemetry = start("connector-servicenow", os.environ)
+        try:
+            return asyncio.run(_main(args))
+        finally:
+            telemetry.shutdown()
+    except (ConfigurationError, IntegrationUserError, TelemetryConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

@@ -109,3 +109,13 @@ variable "api_server_authorized_ip_ranges" {
     error_message = "api_server_authorized_ip_ranges must be CIDRs; leave it empty, not 0.0.0.0/0, for no restriction."
   }
 }
+
+variable "observability_enabled" {
+  type        = bool
+  default     = false
+  description = <<-EOT
+    Step 19 (ADR 0021): managed Prometheus on this cluster and the collector's
+    federated identity. Set true once stacks 02 (id-cloudops-observability) and 03
+    (the Azure Monitor workspace) are applied: before that, their lookups fail.
+  EOT
+}

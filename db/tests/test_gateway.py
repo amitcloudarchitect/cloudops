@@ -35,6 +35,7 @@ from cloudops_gateway.providers import (
 from cloudops_gateway.registry import ToolRegistry
 from cloudops_gateway.retrieval import KnowledgeIndex
 from cloudops_gateway.tools import TOOLS
+from cloudops_observability.testing import memory_telemetry
 from cloudops_tenancy import Database, Role, TenantScope
 
 from .conftest import Seeded, Tenant
@@ -108,6 +109,36 @@ async def test_nothing_unredacted_ever_reaches_a_provider(
     assert (row[6] > 0, row[7] > 0, row[9]) == (True, True, "USD")
     assert isinstance(row[8], Decimal)
     assert row[8] > 0
+
+
+async def test_llm_tracing_attributes_the_tenant_only_under_rls(
+    app: Database, providers: Providers, seeded: Seeded
+) -> None:
+    """LLD: LLM tracing per request, attributed to tenant and user. The span and
+    metrics carry task, tier, tokens and cost; the tenant, the user and the
+    prompt stay in the RLS'd row, joined by trace id (ADR 0021)."""
+    mem = memory_telemetry()
+    mem.spans.clear()
+    c = ctx(seeded.a, names=("Asha Patel",))
+    before = mem.total("cloudops.llm.calls", task="classify_ticket")
+    await _gateway(app, providers).complete(c, tier=Tier.SMALL, task="classify_ticket", messages=[
+        Message("user", "Asha Patel reports vm-alpha-01 disk full")])
+    (span,) = [s for s in mem.finished() if s.name == "llm.complete"]
+    attrs = dict(span.attributes or {})
+    assert attrs["cloudops.llm.task"] == "classify_ticket"
+    assert attrs["cloudops.llm.outcome"] == "succeeded"
+    assert int(str(attrs["gen_ai.usage.input_tokens"])) > 0
+    assert Decimal(str(attrs["cloudops.llm.cost"])) > 0
+    exported = repr(attrs) + span.name
+    for leaked in (str(seeded.a.id), seeded.a.name, c.principal_id, "Asha", "vm-alpha-01"):
+        assert leaked not in exported
+    assert mem.total("cloudops.llm.calls", task="classify_ticket") == before + 1
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        trace_id, tenant = cx.execute(
+            "SELECT trace_id, tenant_id FROM cloudops.llm_call WHERE id = %s",
+            (attrs["cloudops.llm.call_id"],)).fetchone() or (None, None)
+    assert trace_id == format(span.context.trace_id, "032x")
+    assert tenant == seeded.a.id
 
 
 # --- fallback --------------------------------------------------------------------------

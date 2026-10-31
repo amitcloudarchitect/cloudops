@@ -1,0 +1,117 @@
+# Federated to id-cloudops-observability-{env} (stack 05). Its one role: Monitoring
+# Metrics Publisher on the Application Insights resource (stack 04b).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector
+  namespace: observability
+  annotations:
+    azure.workload.identity/client-id: SET-IN-OVERLAY
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: observability
+spec:
+  replicas: 1  # tail sampling: every span of a trace on one collector (kustomization.yaml)
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: otel-collector
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: otel-collector
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 40  # tail sampling's decision wait, then flush
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [app] }
+      containers:
+        - name: collector
+          image: otel-collector
+          args: ["--config=/conf/collector.yaml"]
+          ports:
+            - { name: otlp-http, containerPort: 4318 }
+            - { name: metrics, containerPort: 8889 }
+            - { name: health, containerPort: 13133 }
+          envFrom:
+            - configMapRef: { name: otel-collector }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 1Gi }
+          livenessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet: { path: /, port: health }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          volumeMounts:
+            - { name: config, mountPath: /conf, readOnly: true }
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: observability
+spec:
+  selector:
+    app.kubernetes.io/name: otel-collector
+  ports:
+    - { name: otlp-http, port: 4318, targetPort: otlp-http }
+    - { name: metrics, port: 8889, targetPort: metrics }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: otel-collector
+  namespace: observability
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # OTLP from our own workloads only.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              cloudops.getronics.com/managed: "true"
+      ports:
+        - { protocol: TCP, port: 4318 }
+    # Azure Monitor managed Prometheus (the ama-metrics add-on) scrapes the metrics.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              rsName: ama-metrics
+      ports:
+        - { protocol: TCP, port: 8889 }
+  egress:
+    # Application Insights ingestion and Entra ID token exchange.
+    - ports:
+        - { protocol: TCP, port: 443 }

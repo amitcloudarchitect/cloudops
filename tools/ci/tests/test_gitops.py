@@ -20,7 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 GITOPS = REPO_ROOT / "infra/gitops"
 WORKLOAD_KINDS = {"Deployment", "Rollout", "Job"}
 OUR_NAMESPACES = {"platform-api", "platform-ingest", "platform-ai", "platform-web",
-                  "platform-edge", "temporal", "monitoring"}
+                  "platform-edge", "temporal", "monitoring", "observability"}
 POOLS = {"app", "ingest", "telemetry", "ai"}
 # Workloads that reach nothing in Azure, so hold no workload identity at all: the
 # operations console (ADR 0017), whose browser, not its pod, calls the API and Entra.
@@ -42,7 +42,9 @@ DEV = PLATFORM + WORKERS
 # Every workload we own, deployed in dev or not: the worker bases too.
 WEB = [d for d in PLATFORM if d["metadata"].get("namespace") == "platform-web"]  # ADR 0017
 ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
-            + _build(GITOPS / "base/worker-ai"))
+            + _build(GITOPS / "base/worker-ai")
+            # Step 19 (ADR 0021): in dev once id-cloudops-observability-dev exists.
+            + _build(GITOPS / "base/observability") + _build(GITOPS / "base/platform-metrics"))
 TEMPORAL_APP = yaml.safe_load(
     (GITOPS / "applications/dev/temporal.yaml").read_text(encoding="utf-8"))
 INTERNAL_CA = "cloudops-internal-ca"
@@ -182,9 +184,13 @@ def test_every_pod_gets_its_workload_identity_injected() -> None:
 def test_federated_accounts_match_terraform() -> None:
     """Stack 05 federates exactly the service accounts that carry a client id."""
     tf = (REPO_ROOT / "infra/terraform/stacks/05-aks/main.tf").read_text(encoding="utf-8")
-    block = tf[tf.index("federated_service_accounts = {"):]
+    block = tf[tf.index("  federated_service_accounts = {"):]
     block = block[:block.index("}")]
     federated = set(re.findall(r'= "([a-z0-9-]+/[a-z0-9-]+)"', block))
+    # Further service accounts of an identity above (step 19: platform-metrics).
+    extra = tf[tf.index("additional_federated_service_accounts = {"):]
+    extra = extra[:extra.index("\n  }")]
+    federated |= set(re.findall(r'account = "([a-z0-9-]+/[a-z0-9-]+)"', extra))
     declared = {f'{d["metadata"]["namespace"]}/{d["metadata"]["name"]}' for d in ALL_OURS
                 if d["kind"] == "ServiceAccount"
                 and "azure.workload.identity/client-id" in (d["metadata"].get("annotations") or {})}

@@ -255,3 +255,31 @@ def test_billing_totals_agree_except_the_drift_account_in_two_currencies(ds: Dat
     assert any(b.kind == "invoice" for b in ds.billing_totals)
     assert not any(b.kind == "invoice" and b.invoice_period == current
                    for b in ds.billing_totals)
+
+
+def test_the_internal_tenant_is_a_tenant_like_any_other() -> None:
+    """Step 19 (ADR 0021): the platform's own cost, for the FinOps code to process."""
+    from decimal import Decimal
+
+    from cloudops_devdata.seed import INTERNAL_CODE, demo_internal
+
+    ds = generate(date(2026, 10, 30), 7)
+    before = {t.id for t in ds.tenants}
+    internal = demo_internal(ds)
+    assert internal not in before
+    assert [t.short_code for t in ds.tenants if t.id == internal] == [INTERNAL_CODE]
+    rows = ds.for_tenant(internal)
+    assert len(rows["cloudops.cloud_account"]) == 1
+    costs = rows["cloudops.cost_fact"]
+    assert costs
+    assert {c.currency for c in costs} == {"EUR"}
+    assert all(c.tags_snapshot == {"application": "cloudops", "costcentre": "CC-PLATFORM"}
+               for c in costs)
+    assert all(isinstance(c.amortized_cost, Decimal) for c in costs)
+    for b in rows["cloudops.billing_total"]:
+        if b.kind == "provider_total":
+            assert b.amount == sum((c.unblended_cost for c in costs
+                                    if c.invoice_period == b.invoice_period
+                                    and c.usage_date <= b.as_of), Decimal(0))
+    # Nothing of any customer's moved.
+    assert all(ds.for_tenant(t)["cloudops.cost_fact"] for t in before)

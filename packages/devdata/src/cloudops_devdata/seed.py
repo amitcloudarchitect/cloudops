@@ -299,6 +299,47 @@ def demo_spike(ds: Dataset) -> None:
         else b for b in ds.billing_totals]
 
 
+# Step 19 (ADR 0021): Getronics itself, so the platform-cost dashboard has figures
+# made by the customer FinOps code. Its cost is a quarter of the first customer's
+# first account, re-tagged as the platform's, and the provider's total agrees.
+INTERNAL_NAME: Final = "Getronics CloudOps platform"
+INTERNAL_CODE: Final = "GTX"
+
+
+def demo_internal(ds: Dataset) -> UUID:
+    """Append the internal tenant, one Azure subscription and its cost. Added here,
+    not in ``generate``: the recorded connector fixtures must not move."""
+    template = ds.tenants[0]
+    tenant = replace(template, id=uuid5(NAMESPACE, "tenant:internal"),
+                     canonical_name=INTERNAL_NAME, short_code=INTERNAL_CODE)
+    source = next(a for a in ds.accounts if a.tenant_id == template.id)
+    account = replace(source, id=uuid5(NAMESPACE, "account:internal"), tenant_id=tenant.id,
+                      native_id=str(uuid5(NAMESPACE, "subscription:internal")),
+                      display_name="sub-cloudops-dev", billing_currency="EUR")
+    quarter = Decimal("0.25")
+    costs = [replace(c, tenant_id=tenant.id, account_id=account.id, resource_id=None,
+                     unblended_cost=(c.unblended_cost * quarter).quantize(Decimal("0.000001")),
+                     amortized_cost=(c.amortized_cost * quarter).quantize(Decimal("0.000001")),
+                     currency="EUR",
+                     tags_snapshot={"application": "cloudops", "costcentre": "CC-PLATFORM"})
+             for c in ds.costs if c.account_id == source.id]
+    ds.tenants.append(tenant)
+    ds.accounts.append(account)
+    ds.costs.extend(costs)
+    for b in [b for b in ds.billing_totals if b.account_id == source.id]:
+        total = sum((c.unblended_cost for c in costs if c.invoice_period == b.invoice_period
+                     and c.usage_date <= b.as_of), Decimal(0))
+        ds.billing_totals.append(replace(b, tenant_id=tenant.id, account_id=account.id,
+                                         amount=total, currency="EUR"))
+    return tenant.id
+
+
+async def mark_internal(ingest: Database, tenant: UUID) -> None:
+    async with ingest.transaction(_scope([tenant], Role.INGEST)) as conn:
+        await conn.execute(text("UPDATE cloudops.tenant SET internal = true WHERE id = :t"),
+                           {"t": tenant})
+
+
 async def finops(ingest: Database, anchor: date) -> str:
     """The FinOps worker's daily run for the day after the last cost day, so the
     console has reconciliation, anomalies and margin to show (the worker's own
@@ -322,12 +363,14 @@ async def run(anchor: date, seed: int) -> None:
         raise SeedError("the synthetic seed is local-only; it must never touch Azure")
     ds = generate(anchor, seed)
     demo_spike(ds)
+    internal = demo_internal(ds)
     print(f"seeding synthetic data: cost {anchor - timedelta(days=89)} .. {anchor}, seed {seed}")
     ingest = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=1)
     app = Database.create(settings.database_dsn(DbLogin.APP), pool_size=1)
     admin = UUID(settings.secrets.get("platform-admin-oid"))
     try:
         await load(ingest, ds)
+        await mark_internal(ingest, internal)
         await verify(app, ds)
         print(f"  triage results for the console: {await triage(app, ds)}")
         print(f"  connector runs for the console: {await ingest_health.record(ingest)}")

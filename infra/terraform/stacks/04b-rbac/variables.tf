@@ -29,3 +29,29 @@ variable "dev_secret_writer_ids" {
     error_message = "Nobody writes secrets by hand outside dev."
   }
 }
+
+variable "observability_enabled" {
+  type        = bool
+  default     = false
+  description = "Step 19 (ADR 0021): the observability roles. Set true once stacks 02 and 03 are applied: their identities and resources must exist first."
+}
+
+variable "grafana_admin_principal_ids" {
+  type        = list(string)
+  default     = []
+  description = "Entra object IDs (groups, ideally grp-cloudops-platform-admin) that administer Managed Grafana and apply the dashboards stack (03b)."
+  validation {
+    condition     = alltrue([for id in var.grafana_admin_principal_ids : can(regex("^[0-9a-f-]{36}$", id))])
+    error_message = "grafana_admin_principal_ids must be Entra object IDs."
+  }
+}
+
+variable "grafana_viewer_principal_ids" {
+  type        = list(string)
+  default     = []
+  description = "Entra object IDs (groups) that read the dashboards. Grafana shows no tenant: every figure is platform-wide (ADR 0021)."
+  validation {
+    condition     = alltrue([for id in var.grafana_viewer_principal_ids : can(regex("^[0-9a-f-]{36}$", id))])
+    error_message = "grafana_viewer_principal_ids must be Entra object IDs."
+  }
+}

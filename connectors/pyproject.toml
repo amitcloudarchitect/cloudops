@@ -7,6 +7,7 @@ dependencies = [
     "cloudops-tenancy",
     "cloudops-commercial",
     "cloudops-config[temporal]",
+    "cloudops-observability[httpx,temporal]",
     "httpx>=0.28",
     "temporalio>=1.34",
     "azure-storage-blob[aio]>=12.24",
@@ -20,6 +21,7 @@ dependencies = [
 cloudops-tenancy = { workspace = true }
 cloudops-commercial = { workspace = true }
 cloudops-config = { workspace = true }
+cloudops-observability = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

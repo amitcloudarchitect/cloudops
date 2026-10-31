@@ -1,0 +1,29 @@
+# The OpenTelemetry Collector (step 19; LLD, Observability; ADR 0021). Every service
+# sends OTLP here; the collector tail-samples traces (100% errors, 100% execution,
+# 10% the rest), applies the same attribute allowlist as the services a second
+# time, and exports traces and logs to Application Insights as its own workload
+# identity (id-cloudops-observability-{env}), and metrics on :8889 for Azure Monitor
+# managed Prometheus to scrape (ama-metrics-prometheus-config.yaml).
+#
+# One replica: tail sampling needs every span of a trace on the same collector. At
+# production volume, a load-balancing tier routed by trace id goes in front (ADR 0021).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - otel-collector.yaml
+  - ama-metrics-prometheus-config.yaml
+configMapGenerator:
+  - name: otel-collector-config
+    namespace: observability
+    files: [collector.yaml]
+    options:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous
+  - name: otel-collector
+    namespace: observability
+    envs: [config.env]
+    options:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous

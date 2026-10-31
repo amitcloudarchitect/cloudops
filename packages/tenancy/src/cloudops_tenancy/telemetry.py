@@ -50,6 +50,7 @@ from uuid import UUID
 
 import httpx
 
+from cloudops_tenancy.database import _cross_tenant_attempt
 from cloudops_tenancy.errors import TenancyError
 from cloudops_tenancy.scope import Role, TenantScope
 
@@ -68,6 +69,12 @@ class TelemetryError(TenancyError):
 class TelemetryScopeError(TelemetryError):
     """A write named a tenant or account outside its scope, or the role may not
     do this. Nothing was sent."""
+
+
+def _refused(source: str, message: str) -> TelemetryScopeError:
+    """A refusal that is also a cross-tenant query attempt: it pages (LLD)."""
+    _cross_tenant_attempt(source, message)
+    return TelemetryScopeError(message)
 
 
 class Grain(enum.StrEnum):
@@ -257,7 +264,8 @@ class TelemetryStore:
             row: dict[str, Any] = json.loads(line)
             tenant = UUID(str(row["tenant_id"]))
             if tenant not in scope.tenant_ids:  # belt and braces: never hand one back
-                raise TelemetryScopeError("the store returned a row outside the scope")
+                raise _refused("tenancy.telemetry_read",
+                               "the store returned a row outside the scope")
             out.append(MetricPoint(
                 tenant_id=tenant, resource_id=UUID(str(row["resource_id"])),
                 metric=str(row["metric"]),
@@ -277,9 +285,11 @@ class TelemetryStore:
             if not isinstance(s, MetricSample):
                 raise TelemetryError("samples must be MetricSample values")
             if s.tenant_id not in scope.tenant_ids:
-                raise TelemetryScopeError("a sample names a tenant outside the scope")
+                raise _refused("tenancy.telemetry_write",
+                               "a sample names a tenant outside the scope")
             if scope.account_ids is not None and s.account_id not in scope.account_ids:
-                raise TelemetryScopeError("a sample names an account outside the scope")
+                raise _refused("tenancy.telemetry_write",
+                               "a sample names an account outside the scope")
         if not samples:
             return 0
         lines = "\n".join(json.dumps({
@@ -299,7 +309,8 @@ class TelemetryStore:
 
     async def _send(self, sql: str, params: dict[str, str], *, read_only: bool) -> str:
         if _PREDICATE not in sql:
-            raise TelemetryScopeError("refusing a statement without the tenant predicate")
+            raise _refused("tenancy.telemetry_predicate",
+                           "refusing a statement without the tenant predicate")
         query = {f"param_{k}": v for k, v in params.items()}
         if read_only:
             query["readonly"] = "2"

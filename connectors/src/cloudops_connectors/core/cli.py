@@ -67,6 +67,8 @@ from cloudops_connectors.core.ingest import (
     task_queue,
 )
 from cloudops_connectors.core.raw import BlobRawStore
+from cloudops_observability import TelemetryConfigError
+from cloudops_observability.process import start, temporal_options
 from cloudops_tenancy import Database
 
 AZURITE = "UseDevelopmentStorage=true"
@@ -116,7 +118,7 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
     queue = task_queue(name)
     if args.command == "schedule":
         settings = load_settings(os.environ, require={Component.TEMPORAL})
-        temporal = await connect(settings.temporal)
+        temporal = await connect(settings.temporal, **temporal_options())
         for entity in args.entity or sorted(entities):
             since = (datetime.now(UTC) - timedelta(days=90)).isoformat()
             wanted = Schedule(
@@ -131,7 +133,7 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
     settings = load_settings(os.environ, require={Component.DATABASE_INGEST, Component.BLOB,
                                                   Component.TEMPORAL})
     source = _fixture_source(settings, args.fixtures, name, factory)
-    temporal = await connect(settings.temporal)
+    temporal = await connect(settings.temporal, **temporal_options())
     async with AsyncExitStack() as stack:
         db = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=2)
         stack.push_async_callback(db.dispose)
@@ -194,7 +196,11 @@ def main(name: str, entities: Mapping[str, timedelta], factory: Callable[[], Sou
             p.add_argument("--end", required=True, help="last bronze day, YYYY-MM-DD")
     args = parser.parse_args(argv)
     try:
-        return asyncio.run(_main(args, name, entities, factory))
-    except ConfigurationError as exc:
+        telemetry = start(f"connector-{name}", os.environ)
+        try:
+            return asyncio.run(_main(args, name, entities, factory))
+        finally:
+            telemetry.shutdown()
+    except (ConfigurationError, TelemetryConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
