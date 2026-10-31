@@ -66,36 +66,3 @@ ignore:
     fix-state: not-fixed
     package: { name: '^zlib1g$', type: deb }
     reason: "distroless base; no Debian 13 fix yet; reviewed 2026-10-28"
-
-  # SCA false positives (step 19, ADR 0022): grype matches Grafana *server* CVEs to the
-  # Grafana *Terraform provider* in stacks/03b-dashboards/.terraform.lock.hcl by name.
-  # The provider is a Terraform plugin, not Grafana; the server is Azure Managed
-  # Grafana, patched by Microsoft. Exact CVE and package each; a new provider CVE
-  # still fails. Reviewed 2026-10-31.
-  - vulnerability: CVE-2019-15043
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2020-13379
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2020-27846
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2021-39226
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2022-21703
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2022-26148
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2022-31130
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2026-21720
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"
-  - vulnerability: CVE-2026-42127
-    package: { name: '^registry\.terraform\.io/grafana/grafana$', type: terraform }
-    reason: "Grafana server CVE matched to the Terraform provider by name; reviewed 2026-10-31"

@@ -6,6 +6,8 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.30"
     }
+    # No committed lock file for this stack (.gitignore says why): the patch-level
+    # constraint is the pin.
     grafana = {
       source  = "grafana/grafana"
       version = "~> 4.49.0"
