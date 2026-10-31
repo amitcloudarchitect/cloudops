@@ -34,8 +34,21 @@ resource "azurerm_storage_container" "raw_azure" {
   container_access_type = "private"
 }
 
-resource "azapi_resource" "platform_cost_export" {
+# Exports are served by their own resource provider, which a subscription does not
+# have registered until something asks for it ("RP Not Registered" on the export's
+# PUT). Registered here, once per platform subscription, so uat and prd get it too.
+resource "azapi_resource_action" "register_cost_exports" {
   for_each = local.platform_subscriptions
+
+  type        = "Microsoft.Resources/subscriptions@2022-12-01"
+  resource_id = "/subscriptions/${each.value}"
+  action      = "providers/Microsoft.CostManagementExports/register"
+  method      = "POST"
+}
+
+resource "azapi_resource" "platform_cost_export" {
+  for_each   = local.platform_subscriptions
+  depends_on = [azapi_resource_action.register_cost_exports]
 
   type      = "Microsoft.CostManagement/exports@2025-03-01"
   name      = "cloudops-platform-${var.env}-${substr(each.value, 0, 8)}"
@@ -44,6 +57,13 @@ resource "azapi_resource" "platform_cost_export" {
 
   identity {
     type = "SystemAssigned"
+  }
+
+  # Registration completes asynchronously: retry the PUT until the provider is ready.
+  retry = {
+    error_message_regex  = ["RP Not Registered"]
+    interval_seconds     = 15
+    max_interval_seconds = 60
   }
 
   # No tags: an export is not a taggable resource (ARM refuses them).
