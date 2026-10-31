@@ -42,13 +42,20 @@ This ADR records the shape of the decision. The pack holds the detail.
 4. **Every control in the review's checklist has a named test.** A phase does not exit
    with a control untested.
 
-## Open decisions
+## Decisions taken by the user (2026-10-31)
 
-| Ref | Decision | Recommendation in the pack | Owner |
-| --- | --- | --- | --- |
-| D1 | Autonomy ceiling: may class B run unattended, and from when? | Supervised first; unattended per runbook only after a documented number of clean runs, promoted by the user. C and D always approved; E never | The user |
-| D2 | Consent for agentic execution | For this lab, the user consents in writing in this ADR. The consent names the action classes and the resources it covers, and covers nothing beyond them | The user |
-| — | The dev credential option, where the execution plane runs in dev, the target scope, ServiceNow close behaviour, transcript retention and redaction (LLD L10), the signing ceremony (LLD L9), separation of duties, and who signs the review | In the private pack | The user |
+| Ref | Decision | The user's answer |
+| --- | --- | --- |
+| D1 | Autonomy ceiling | **Supervised first.** A class B runbook becomes unattended only after it has a documented record of clean supervised runs, and only when the user promotes it. The platform never promotes itself. C and D are always approved. E is never agent-initiated |
+| D2 | Action classes consented to | **A and B only, for now.** That covers phases 1 and 2. Phase 3 (classes C and D) needs an amendment to the consent below before it starts |
+| — | Dev credential | **A managed identity, federated to the executor's workload. No stored secret.** ADR 0003 stays read-only |
+| — | Who signs | **The user, as lab owner, for dev.** A named Getronics security reviewer, other than the user, signs before UAT or any real customer |
+
+## Still open
+
+Where the execution plane runs in dev, ServiceNow close behaviour, transcript retention
+and redaction (LLD L10), the signing ceremony (LLD L9), and separation of duties. All
+are in the private pack, owned by the user.
 
 ## Consent (D2)
 
@@ -60,8 +67,8 @@ This ADR records the shape of the decision. The pack holds the detail.
 
 | Role | Name | Date | Scope signed |
 | --- | --- | --- | --- |
-| Lab owner | | | |
-| Security reviewer | | | |
+| Lab owner | | | Dev, phases 0–2 |
+| Security reviewer (before UAT or any real customer) | | | |
 
 ## Consequences
 
