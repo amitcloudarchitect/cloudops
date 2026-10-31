@@ -41,7 +41,7 @@ export function TicketDetail({ number }: { number: string }) {
   return (
     <>
       <p className="mb-2 text-sm">
-        <Link href="/work" className="text-accent underline">
+        <Link href="/work" className="link font-medium">
           ← Work queue
         </Link>
       </p>
@@ -49,8 +49,8 @@ export function TicketDetail({ number }: { number: string }) {
         <HealthBadge band={priorityBand(w.priority)} label={`Priority ${w.priority ?? "none"}`} />
       </PageHeader>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
-        <section aria-labelledby="ticket-heading" className="rounded-card border border-line bg-surface p-4">
-          <h2 id="ticket-heading" className="mb-3 text-lg font-semibold text-ink">
+        <section aria-labelledby="ticket-heading" className="card p-4">
+          <h2 id="ticket-heading" className="mb-3 section-title">
             Ticket
           </h2>
           <dl className="grid grid-cols-2 gap-3">
@@ -64,7 +64,7 @@ export function TicketDetail({ number }: { number: string }) {
             <Field label="Change request">{w.change_request}</Field>
             <Field label="Configuration item">
               {w.resource_id && can(me, "inventory.read") ? (
-                <Link href={`/resources/${w.resource_id}`} className="text-accent underline">
+                <Link href={`/resources/${w.resource_id}`} className="link font-medium">
                   {w.configuration_item ?? "Resource"}
                 </Link>
               ) : (

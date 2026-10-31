@@ -83,7 +83,7 @@ export function Knowledge() {
       value: (d) => d.name,
       render: (d) =>
         safeHttps(d.web_url) ? (
-          <a href={safeHttps(d.web_url) ?? undefined} target="_blank" rel="noreferrer noopener" className="font-medium text-accent underline">
+          <a href={safeHttps(d.web_url) ?? undefined} target="_blank" rel="noreferrer noopener" className="link font-medium">
             {d.name}
           </a>
         ) : (
@@ -125,7 +125,7 @@ export function Knowledge() {
         title="Knowledge"
         subtitle="Customers' design documents and handover packs, checked against the live estate. A document's kind comes from its name and folder, never from what it says."
       >
-        <button type="button" onClick={loaded.reload} className="rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink">
+        <button type="button" onClick={loaded.reload} className="btn btn-secondary">
           Refresh
         </button>
       </PageHeader>
@@ -137,7 +137,7 @@ export function Knowledge() {
           band={documents.stale.value > 0 ? "at-risk" : "healthy"}
           display={(m) => count(Number(m.value))}
         />
-        <div className="rounded-card border border-line bg-surface p-4">
+        <div className="card p-4">
           <h3 className="text-sm font-medium text-muted">Customers with a gap</h3>
           <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">
             {count(withGaps.length)} <span className="text-base font-normal text-muted">of {count(gaps.length)}</span>
@@ -145,7 +145,7 @@ export function Knowledge() {
         </div>
       </div>
 
-      <details className="mb-6 rounded-card border border-line bg-surface p-3 text-sm text-ink">
+      <details className="mb-6 card p-3 text-sm text-ink">
         <summary className="cursor-pointer font-medium">How staleness is decided</summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
           {Object.entries(rules).map(([reason, rule]) => (
@@ -156,7 +156,7 @@ export function Knowledge() {
 
       <div className="space-y-6">
         <section aria-labelledby="gaps-heading">
-          <h2 id="gaps-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="gaps-heading" className="mb-2 section-title">
             Gaps
           </h2>
           <DataTable
@@ -171,7 +171,7 @@ export function Knowledge() {
           />
         </section>
         <section aria-labelledby="documents-heading">
-          <h2 id="documents-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="documents-heading" className="mb-2 section-title">
             Documents
           </h2>
           <DataTable

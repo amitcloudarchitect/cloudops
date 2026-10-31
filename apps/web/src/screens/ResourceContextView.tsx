@@ -24,7 +24,7 @@ function WorkList({ items, empty }: { items: WorkItemSummary[]; empty: string })
     <ul className="divide-y divide-line text-sm">
       {items.map((w) => (
         <li key={w.number} className="flex flex-wrap items-center gap-2 py-2">
-          <Link href={`/work/${encodeURIComponent(w.number)}`} className="font-medium text-accent underline">
+          <Link href={`/work/${encodeURIComponent(w.number)}`} className="link font-medium">
             {w.number}
           </Link>
           <HealthBadge band={priorityBand(w.priority)} label={w.priority ?? "None"} />
@@ -72,7 +72,7 @@ export function ResourceContextView({ id }: { id: string }) {
           band={ctx.open_vulnerabilities ? band(ctx.open_vulnerabilities.value, THRESHOLDS.criticalVulnerabilities) : undefined}
           href="#vulnerabilities"
         />
-        <section aria-labelledby="metrics-heading" className="rounded-card border border-line bg-surface p-4 lg:col-span-2">
+        <section aria-labelledby="metrics-heading" className="card p-4 lg:col-span-2">
           <h2 id="metrics-heading" className="text-sm font-medium text-muted">
             Live metrics
           </h2>
@@ -85,8 +85,8 @@ export function ResourceContextView({ id }: { id: string }) {
       </div>
 
       {tags ? (
-        <section aria-labelledby="tags-heading" className="mt-4 rounded-card border border-line bg-surface p-4">
-          <h2 id="tags-heading" className="mb-2 text-lg font-semibold text-ink">
+        <section aria-labelledby="tags-heading" className="mt-4 card p-4">
+          <h2 id="tags-heading" className="mb-2 section-title">
             Tags
           </h2>
           {Object.keys(tags).length === 0 ? (
@@ -105,8 +105,8 @@ export function ResourceContextView({ id }: { id: string }) {
       ) : null}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <section aria-labelledby="incidents-heading" className="rounded-card border border-line bg-surface p-4">
-          <h2 id="incidents-heading" className="mb-2 text-lg font-semibold text-ink">
+        <section aria-labelledby="incidents-heading" className="card p-4">
+          <h2 id="incidents-heading" className="mb-2 section-title">
             Open incidents
           </h2>
           {ctx.open_incidents ? (
@@ -115,8 +115,8 @@ export function ResourceContextView({ id }: { id: string }) {
             <p className="text-sm text-muted">Tickets are not available to your role.</p>
           )}
         </section>
-        <section aria-labelledby="changes-heading" className="rounded-card border border-line bg-surface p-4">
-          <h2 id="changes-heading" className="mb-2 text-lg font-semibold text-ink">
+        <section aria-labelledby="changes-heading" className="card p-4">
+          <h2 id="changes-heading" className="mb-2 section-title">
             Recent changes (30 days)
           </h2>
           {ctx.recent_changes ? (
@@ -128,7 +128,7 @@ export function ResourceContextView({ id }: { id: string }) {
       </div>
 
       <section id="vulnerabilities" aria-labelledby="vuln-heading" className="mt-4">
-        <h2 id="vuln-heading" className="mb-2 text-lg font-semibold text-ink">
+        <h2 id="vuln-heading" className="mb-2 section-title">
           Vulnerabilities
         </h2>
         {ctx.vulnerabilities ? (

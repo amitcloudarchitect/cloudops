@@ -168,12 +168,13 @@ export function DataTable<Row>({
     URL.revokeObjectURL(link.href);
   }
 
-  const control = "rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
+  const control = "field";
+  const action = "btn btn-secondary";
 
   return (
     <section aria-label={caption} className="space-y-3">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col text-xs font-medium text-muted">
+        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
           View
           <select
             className={control}
@@ -202,7 +203,7 @@ export function DataTable<Row>({
           />
         </label>
         {facets.map((facet) => (
-          <label key={facet.key} className="flex flex-col text-xs font-medium text-muted">
+          <label key={facet.key} className="flex flex-col gap-1 text-xs font-semibold text-muted">
             {facet.label}
             <select
               className={control}
@@ -221,15 +222,15 @@ export function DataTable<Row>({
           </label>
         ))}
         <div className="flex gap-2">
-          <button type="button" className={control} onClick={saveView}>
+          <button type="button" className={action} onClick={saveView}>
             Save view
           </button>
           {saved.some((v) => v.name === view.name) ? (
-            <button type="button" className={control} onClick={() => removeView(view.name)}>
+            <button type="button" className={action} onClick={() => removeView(view.name)}>
               Delete view
             </button>
           ) : null}
-          <button type="button" className={control} onClick={exportCsv} disabled={shown.length === 0}>
+          <button type="button" className={action} onClick={exportCsv} disabled={shown.length === 0}>
             Export CSV
           </button>
         </div>
@@ -244,7 +245,7 @@ export function DataTable<Row>({
           action={rows.length === 0 ? undefined : { label: "Show all", onClick: () => setView(BLANK) }}
         />
       ) : (
-        <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <div className="card overflow-x-auto">
           <table className="w-full border-collapse text-left text-sm">
             <caption className="sr-only">{caption}</caption>
             <thead className="bg-surface-raised">
@@ -256,7 +257,7 @@ export function DataTable<Row>({
                       key={c.key}
                       scope="col"
                       aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined}
-                      className={`border-b border-line px-3 py-2 font-semibold text-ink ${c.className ?? ""}`}
+                      className={`border-b border-line px-3 py-2.5 text-[0.8125rem] font-bold text-ink ${c.className ?? ""}`}
                     >
                       {c.sortable === false ? (
                         c.header
@@ -275,7 +276,7 @@ export function DataTable<Row>({
             </thead>
             <tbody>
               {shown.map((row) => (
-                <tr key={rowKey(row)} className="border-b border-line last:border-b-0 hover:bg-surface-raised">
+                <tr key={rowKey(row)} className="border-b border-line-subtle last:border-b-0 hover:bg-surface-raised">
                   {columns.map((c) => (
                     <td key={c.key} className={`px-3 py-2 align-top text-ink ${c.className ?? ""}`}>
                       {c.render ? c.render(row) : (c.value(row) ?? "—")}

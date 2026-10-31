@@ -109,7 +109,7 @@ export function FinOps() {
       header: "Customer",
       value: (c) => c.tenant.name,
       render: (c) => (
-        <Link href={link(c.tenant.id)} className="font-medium text-accent underline">
+        <Link href={link(c.tenant.id)} className="link font-medium">
           {c.tenant.name}
         </Link>
       ),
@@ -176,7 +176,7 @@ export function FinOps() {
         />
       </div>
       <section aria-labelledby="finops-customers" className="space-y-2">
-        <h2 id="finops-customers" className="text-lg font-semibold text-ink">
+        <h2 id="finops-customers" className="section-title">
           {periodLabel(data.period)}
           {unverified > 0 ? <span className="ml-2 text-sm font-normal text-muted">{count(unverified)} unverified</span> : null}
         </h2>

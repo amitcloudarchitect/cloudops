@@ -34,7 +34,7 @@ export function MarginCustomer({ tenantId }: { tenantId: string }) {
   const choice = usePeriodChoice();
   const loaded = useApi(load(tenantId, choice.period, choice.currency), `margin:${tenantId}:${choice.query}`);
   const back = (
-    <Link href={`/margin${choice.query ? `?${choice.query}` : ""}`} className="text-sm font-medium text-accent underline">
+    <Link href={`/margin${choice.query ? `?${choice.query}` : ""}`} className="text-sm link font-medium">
       All customers
     </Link>
   );
@@ -183,7 +183,7 @@ export function MarginCustomer({ tenantId }: { tenantId: string }) {
             ) : null}
           </div>
           <section aria-labelledby="trend-heading" className="mb-6 space-y-2">
-            <h2 id="trend-heading" className="text-lg font-semibold text-ink">
+            <h2 id="trend-heading" className="section-title">
               Last six months
             </h2>
             <Trend points={m.trend} />
@@ -193,7 +193,7 @@ export function MarginCustomer({ tenantId }: { tenantId: string }) {
 
       <div className="space-y-8">
         <section aria-labelledby="variance-heading" className="space-y-2">
-          <h2 id="variance-heading" className="text-lg font-semibold text-ink">
+          <h2 id="variance-heading" className="section-title">
             Variance by workgroup and activity type
           </h2>
           <p className="text-sm text-muted">
@@ -214,7 +214,7 @@ export function MarginCustomer({ tenantId }: { tenantId: string }) {
         </section>
 
         <section aria-labelledby="versions-heading" className="space-y-2">
-          <h2 id="versions-heading" className="text-lg font-semibold text-ink">
+          <h2 id="versions-heading" className="section-title">
             Version history
           </h2>
           <p className="text-sm text-muted">A restatement (for example after an FX correction) is a new version; earlier versions are kept as they were.</p>

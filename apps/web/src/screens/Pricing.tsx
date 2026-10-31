@@ -22,8 +22,8 @@ import { useAuth } from "@/lib/auth";
 import { count, date, decimal, money } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
 
-const control = "w-full rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
-const labelStyle = "flex flex-col gap-1 text-xs font-medium text-muted";
+const control = "w-full field";
+const labelStyle = "flex flex-col gap-1 text-xs font-semibold text-muted";
 const AMOUNT = /^\d{1,12}(\.\d{1,6})?$/;
 const WHOLE = /^\d{1,7}$/;
 
@@ -52,7 +52,7 @@ function Quote({ quote }: { quote: QuoteView }) {
   return (
     <section aria-labelledby="quote-heading" className="space-y-4" aria-live="polite">
       <div className="flex flex-wrap items-center gap-3">
-        <h2 id="quote-heading" className="text-lg font-semibold text-ink">
+        <h2 id="quote-heading" className="section-title">
           Quote
         </h2>
         <span className="text-sm text-muted">
@@ -78,7 +78,7 @@ function Quote({ quote }: { quote: QuoteView }) {
         <MetricCard label="Transition" metric={quote.transition_weeks} display={(x) => `${count(Number(x.value))} weeks`} />
       </div>
       {quote.team.length > 0 ? (
-        <div className="rounded-card border border-line bg-surface p-4">
+        <div className="card p-4">
           <h3 className="mb-2 font-semibold text-ink">Team</h3>
           <table className="w-full text-left text-sm">
             <caption className="sr-only">Implied team by role</caption>
@@ -94,7 +94,7 @@ function Quote({ quote }: { quote: QuoteView }) {
             </thead>
             <tbody>
               {quote.team.map((t) => (
-                <tr key={t.role} className="border-t border-line">
+                <tr key={t.role} className="border-t border-line-subtle">
                   <td className="py-1 text-ink">{t.role}</td>
                   <td className="py-1 text-right tabular-nums text-ink">{decimal(t.fte.value, 2)}</td>
                 </tr>
@@ -170,7 +170,7 @@ function QuoteForm({ card }: { card: RateCardView }) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={(e) => void submit(e)} className="space-y-4 rounded-card border border-line bg-surface p-4" aria-label="Quote">
+      <form onSubmit={(e) => void submit(e)} className="space-y-4 card p-4" aria-label="Quote">
         <fieldset className="space-y-2">
           <legend className="font-semibold text-ink">Inventory: critical CIs by resource type</legend>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -236,7 +236,7 @@ function QuoteForm({ card }: { card: RateCardView }) {
             {error}
           </p>
         ) : null}
-        <button type="submit" disabled={busy} className="rounded-control bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-60">
+        <button type="submit" disabled={busy} className="btn btn-primary">
           {busy ? "Pricing…" : "Price it"}
         </button>
       </form>

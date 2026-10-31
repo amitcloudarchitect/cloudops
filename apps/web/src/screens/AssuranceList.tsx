@@ -65,10 +65,10 @@ function OpenAssessment({ frameworks }: { frameworks: FrameworkView[] }) {
 
   if (tenants.length === 0 || frameworks.length === 0) return null;
   return (
-    <form onSubmit={(e) => void submit(e)} className="mb-6 grid gap-3 rounded-card border border-line bg-surface p-4 sm:grid-cols-4" aria-label="Open an assessment">
+    <form onSubmit={(e) => void submit(e)} className="mb-6 grid gap-3 card p-4 sm:grid-cols-4" aria-label="Open an assessment">
       <label className="text-sm text-ink">
         Customer
-        <select name="tenant" required className="mt-1 block w-full rounded-control border border-line bg-surface px-2 py-1.5">
+        <select name="tenant" required className="mt-1 block w-full field">
           {tenants.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -78,7 +78,7 @@ function OpenAssessment({ frameworks }: { frameworks: FrameworkView[] }) {
       </label>
       <label className="text-sm text-ink">
         Framework
-        <select name="framework" required className="mt-1 block w-full rounded-control border border-line bg-surface px-2 py-1.5">
+        <select name="framework" required className="mt-1 block w-full field">
           {frameworks.map((f) => (
             <option key={f.framework} value={f.framework}>
               {f.framework} ({f.library_version})
@@ -88,10 +88,10 @@ function OpenAssessment({ frameworks }: { frameworks: FrameworkView[] }) {
       </label>
       <label className="text-sm text-ink">
         Title
-        <input name="title" required maxLength={200} className="mt-1 block w-full rounded-control border border-line bg-surface px-2 py-1.5" />
+        <input name="title" required maxLength={200} className="mt-1 block w-full field" />
       </label>
       <div className="flex items-end gap-2">
-        <button type="submit" disabled={busy} className="rounded-control bg-accent px-3 py-1.5 text-sm font-semibold text-accent-ink disabled:opacity-60">
+        <button type="submit" disabled={busy} className="btn btn-primary">
           Open assessment
         </button>
       </div>
@@ -117,7 +117,7 @@ export function AssuranceList() {
       header: "Assessment",
       value: (a) => a.title,
       render: (a) => (
-        <Link href={`/assurance/${a.id}`} className="font-medium text-accent underline">
+        <Link href={`/assurance/${a.id}`} className="link font-medium">
           {a.title}
         </Link>
       ),
@@ -146,7 +146,7 @@ export function AssuranceList() {
       ) : (
         <ul className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Control libraries">
           {frameworks.map((f) => (
-            <li key={f.framework} className="rounded-card border border-line bg-surface p-4 text-sm">
+            <li key={f.framework} className="card p-4 text-sm">
               <p className="font-semibold text-ink">
                 {f.framework} <span className="font-normal text-muted">{f.library_version}</span>
               </p>

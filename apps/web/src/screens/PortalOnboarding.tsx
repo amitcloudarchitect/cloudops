@@ -16,10 +16,10 @@ import type { Band } from "@/lib/health";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
-const control = "w-full rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
-const label = "flex flex-col gap-1 text-xs font-medium text-muted";
-const primary = "rounded-control bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-60";
-const secondary = "rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink disabled:opacity-60";
+const control = "w-full field";
+const label = "flex flex-col gap-1 text-xs font-semibold text-muted";
+const primary = "btn btn-primary";
+const secondary = "btn btn-secondary";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const STATUS: Record<Onboarding["status"], { band: Band; label: string }> = {
@@ -57,7 +57,7 @@ function Feedback({ message }: { message: Message }) {
 
 function Step({ n, title, done, children }: { n: number; title: string; done: string | null; children: ReactNode }) {
   return (
-    <section aria-labelledby={`step-${n}`} className="space-y-3 rounded-card border border-line bg-surface p-4">
+    <section aria-labelledby={`step-${n}`} className="space-y-3 card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 id={`step-${n}`} className="text-base font-semibold text-ink">
           {n}. {title}
@@ -263,7 +263,7 @@ export function PortalOnboarding() {
       header: "Customer",
       value: (o) => o.tenant.name,
       render: (o) => (
-        <button type="button" className="font-medium text-accent underline" onClick={() => setSelected(o.tenant.id)}>
+        <button type="button" className="link font-medium" onClick={() => setSelected(o.tenant.id)}>
           {o.tenant.name}
         </button>
       ),
@@ -293,7 +293,7 @@ export function PortalOnboarding() {
         {current ? (
           <section aria-labelledby="onboarding-customer" className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 id="onboarding-customer" className="text-lg font-semibold text-ink">
+              <h2 id="onboarding-customer" className="section-title">
                 {current.tenant.name}
               </h2>
               <button type="button" className={secondary} onClick={() => setSelected(null)}>

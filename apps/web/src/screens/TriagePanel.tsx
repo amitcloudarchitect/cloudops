@@ -49,7 +49,7 @@ function Fields({ data, caption }: { data: Record<string, unknown>; caption: str
       <caption className="sr-only">{caption}</caption>
       <tbody>
         {entries.map(([key, value]) => (
-          <tr key={key} className="border-b border-line last:border-b-0">
+          <tr key={key} className="border-b border-line-subtle last:border-b-0">
             <th scope="row" className="w-40 py-1.5 pr-3 text-left font-medium text-muted">
               {FIELD_LABEL[key] ?? key}
             </th>
@@ -115,9 +115,9 @@ export function TriagePanel({ number, triage, onReviewed }: { number: string; tr
     void submit({ decision: "override", overrides, reason: reason.trim() });
   }
 
-  const control = "w-full rounded-control border border-line bg-surface px-2 py-1.5 text-sm text-ink";
+  const control = "w-full field";
   const select = (field: "intent" | "action_class" | "risk") => (
-    <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+    <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
       {FIELD_LABEL[field]}
       <select className={control} value={draft[field]} onChange={(e) => setDraft({ ...draft, [field]: e.target.value })}>
         <option value="">Keep “{text(classification[field])}”</option>
@@ -131,9 +131,9 @@ export function TriagePanel({ number, triage, onReviewed }: { number: string; tr
   );
 
   return (
-    <section aria-labelledby="triage-heading" className="rounded-card border border-line bg-surface p-4">
+    <section aria-labelledby="triage-heading" className="card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="triage-heading" className="text-lg font-semibold text-ink">
+        <h2 id="triage-heading" className="section-title">
           Agent triage
         </h2>
         <HealthBadge band={route.band} label={route.label} />
@@ -180,7 +180,7 @@ export function TriagePanel({ number, triage, onReviewed }: { number: string; tr
         </p>
       </div>
 
-      <div className="mt-4 border-t border-line pt-4">
+      <div className="mt-4 border-t border-line-subtle pt-4">
         <h3 className="text-sm font-semibold text-ink">Reviews</h3>
         {triage.reviews.length === 0 ? (
           <p className="text-sm text-muted">Not reviewed yet.</p>
@@ -216,7 +216,7 @@ export function TriagePanel({ number, triage, onReviewed }: { number: string; tr
                 type="button"
                 disabled={busy}
                 onClick={() => void submit({ decision: "accept" })}
-                className="rounded-control bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-60"
+                className="btn btn-primary"
               >
                 Accept triage
               </button>
@@ -224,7 +224,7 @@ export function TriagePanel({ number, triage, onReviewed }: { number: string; tr
                 type="button"
                 disabled={busy}
                 onClick={() => setMode("override")}
-                className="rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink"
+                className="btn btn-secondary"
               >
                 Override…
               </button>
@@ -237,24 +237,24 @@ export function TriagePanel({ number, triage, onReviewed }: { number: string; tr
                 {select("risk")}
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+                <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
                   Affected CI
                   <input className={control} maxLength={200} value={draft.affected_ci} onChange={(e) => setDraft({ ...draft, affected_ci: e.target.value })} placeholder={`Keep “${text(classification.affected_ci)}”`} />
                 </label>
-                <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+                <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
                   Customer
                   <input className={control} maxLength={200} value={draft.customer} onChange={(e) => setDraft({ ...draft, customer: e.target.value })} placeholder={`Keep “${text(classification.customer)}”`} />
                 </label>
               </div>
-              <label className="flex flex-col gap-1 text-xs font-medium text-muted">
+              <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
                 Reason (required)
                 <textarea className={control} rows={3} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} required />
               </label>
               <div className="flex gap-2">
-                <button type="submit" disabled={busy} className="rounded-control bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-60">
+                <button type="submit" disabled={busy} className="btn btn-primary">
                   Record override
                 </button>
-                <button type="button" onClick={() => setMode("idle")} className="rounded-control border border-line px-3 py-1.5 text-sm text-ink">
+                <button type="button" onClick={() => setMode("idle")} className="btn btn-secondary">
                   Cancel
                 </button>
               </div>

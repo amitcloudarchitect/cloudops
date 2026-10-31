@@ -94,7 +94,7 @@ function AcknowledgeButton({ drift, onDone }: { drift: DriftView; onDone: (messa
       disabled={busy}
       onClick={() => void acknowledge()}
       aria-label={`Acknowledge ${name}`}
-      className="rounded-control border border-line px-2 py-1 text-sm font-medium text-ink disabled:opacity-60"
+      className="btn btn-secondary"
     >
       Acknowledge
     </button>
@@ -214,7 +214,7 @@ export function ConnectorHealth() {
       render: (c) => (
         <span className="tabular-nums">
           {mapping && c.alias_quarantine_depth.value > 0 ? (
-            <Link href="/mapping" className="font-medium text-accent underline" aria-label={`${count(c.alias_quarantine_depth.value)} names held from ${c.source_system}: map them`}>
+            <Link href="/mapping" className="link font-medium" aria-label={`${count(c.alias_quarantine_depth.value)} names held from ${c.source_system}: map them`}>
               {count(c.alias_quarantine_depth.value)} names
             </Link>
           ) : (
@@ -260,7 +260,7 @@ export function ConnectorHealth() {
         title="Connectors"
         subtitle="Ingest health for every scheduled source: when it last succeeded, how its runs went over the last 24 hours, and what waits for a person."
       >
-        <button type="button" onClick={loaded.reload} className="rounded-control border border-line px-3 py-1.5 text-sm font-medium text-ink">
+        <button type="button" onClick={loaded.reload} className="btn btn-secondary">
           Refresh
         </button>
       </PageHeader>
@@ -272,7 +272,7 @@ export function ConnectorHealth() {
         <MetricCard label="Never run" metric={health.never_run} display={(m) => count(Number(m.value))} />
       </div>
 
-      <details className="mb-6 rounded-card border border-line bg-surface p-3 text-sm text-ink">
+      <details className="mb-6 card p-3 text-sm text-ink">
         <summary className="cursor-pointer font-medium">How health is decided</summary>
         <ul className="mt-2 list-disc space-y-1 pl-5 text-muted">
           <li>
@@ -299,7 +299,7 @@ export function ConnectorHealth() {
 
       <div className="space-y-6">
         <section aria-labelledby="health-heading">
-          <h2 id="health-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="health-heading" className="mb-2 section-title">
             Sources
           </h2>
           <div className="mb-2">
@@ -322,7 +322,7 @@ export function ConnectorHealth() {
         </section>
 
         <section aria-labelledby="drift-heading">
-          <h2 id="drift-heading" className="mb-2 text-lg font-semibold text-ink">
+          <h2 id="drift-heading" className="mb-2 section-title">
             Schema drift ({count(drift.open.value)})
           </h2>
           <p className="mb-2 text-sm text-muted">

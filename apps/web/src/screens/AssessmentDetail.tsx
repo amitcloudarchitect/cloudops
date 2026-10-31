@@ -91,7 +91,7 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
   }
 
   return (
-    <article aria-labelledby={`${id}-title`} className="rounded-card border border-line bg-surface p-4">
+    <article aria-labelledby={`${id}-title`} className="card p-4">
       <header className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 id={`${id}-title`} className="font-semibold text-ink">
@@ -120,7 +120,7 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
           <summary className="cursor-pointer font-medium text-ink">Evidence ({count(r.evidence.length)})</summary>
           <ul className="mt-1 space-y-2">
             {r.evidence.map((e) => (
-              <li key={e.id} className="rounded-control border border-line p-2">
+              <li key={e.id} className="rounded-control border border-line-subtle p-2">
                 <p className="text-ink">
                   {e.query_name} from {e.source_system}, retrieved {dateTime(e.retrieved_at)}
                 </p>
@@ -151,7 +151,7 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
                   {r.draft_citations.map((c, i) => (
                     <li key={i}>
                       {safeHttps(c.web_url) ? (
-                        <a href={safeHttps(c.web_url) ?? undefined} target="_blank" rel="noreferrer noopener" className="text-accent underline">
+                        <a href={safeHttps(c.web_url) ?? undefined} target="_blank" rel="noreferrer noopener" className="link font-medium">
                           {String(c.label)}
                         </a>
                       ) : (
@@ -162,7 +162,7 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
                 </ul>
               ) : null}
               {manage ? (
-                <button type="button" className="mt-2 rounded-control border border-line px-2 py-1 text-sm" onClick={() => { setText(r.draft_narrative ?? ""); setKeepCitations(true); }}>
+                <button type="button" className="mt-2 btn btn-secondary" onClick={() => { setText(r.draft_narrative ?? ""); setKeepCitations(true); }}>
                   Start from the draft
                 </button>
               ) : null}
@@ -172,7 +172,7 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
             <button
               type="button"
               disabled={busy}
-              className="mt-2 ml-2 rounded-control border border-line px-2 py-1 text-sm"
+              className="mt-2 ml-2 btn btn-secondary"
               onClick={() =>
                 void act(
                   (t) => apiPost(t, "/v1/assurance/assessments/{assessment_id}/drafts", { assessment_id: assessment }, undefined, { control: r.control.code }),
@@ -201,12 +201,12 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
           >
             <label className="block text-ink">
               Narrative for {r.control.code}
-              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={8000} className="mt-1 block w-full rounded-control border border-line bg-surface p-2" />
+              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} maxLength={8000} className="mt-1 block w-full field" />
             </label>
             <label className="mt-1 flex items-center gap-2 text-xs text-muted">
               <input type="checkbox" checked={keepCitations} onChange={(e) => setKeepCitations(e.target.checked)} /> Keep the draft's citations (I checked them)
             </label>
-            <button type="submit" disabled={busy || !text.trim()} className="mt-1 rounded-control border border-line px-2 py-1 font-medium disabled:opacity-60">
+            <button type="submit" disabled={busy || !text.trim()} className="mt-1 btn btn-secondary">
               Save narrative
             </button>
           </form>
@@ -234,7 +234,7 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
           >
             <label className="text-ink">
               Result for {r.control.code}
-              <select value={result} onChange={(e) => setResult(e.target.value as Result)} className="mt-1 block rounded-control border border-line bg-surface px-2 py-1">
+              <select value={result} onChange={(e) => setResult(e.target.value as Result)} className="mt-1 block field">
                 {ALLOWED[r.control.assessment].map((v) => (
                   <option key={v} value={v}>
                     {RESULT[v].label}
@@ -244,9 +244,9 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
             </label>
             <label className="text-ink">
               Note
-              <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} className="mt-1 block rounded-control border border-line bg-surface px-2 py-1" />
+              <input value={note} onChange={(e) => setNote(e.target.value)} maxLength={2000} className="mt-1 block field" />
             </label>
-            <button type="submit" disabled={busy} className="rounded-control bg-accent px-3 py-1 font-semibold text-accent-ink disabled:opacity-60">
+            <button type="submit" disabled={busy} className="btn btn-primary">
               Approve
             </button>
           </form>
@@ -300,7 +300,7 @@ export function AssessmentDetail({ id }: { id: string }) {
             <button
               type="button"
               disabled={busy}
-              className="rounded-control border border-line px-3 py-1.5 text-sm font-medium"
+              className="btn btn-secondary"
               onClick={() =>
                 void run(async (t) => {
                   const got = await apiPost(t, "/v1/assurance/assessments/{assessment_id}/collect", { assessment_id: id }, undefined);
@@ -313,7 +313,7 @@ export function AssessmentDetail({ id }: { id: string }) {
             <button
               type="button"
               disabled={busy}
-              className="rounded-control border border-line px-3 py-1.5 text-sm font-medium"
+              className="btn btn-secondary"
               onClick={() =>
                 void run(async (t) => {
                   const got = await apiPost(t, "/v1/assurance/assessments/{assessment_id}/drafts", { assessment_id: id }, undefined);
@@ -326,7 +326,7 @@ export function AssessmentDetail({ id }: { id: string }) {
             <button
               type="button"
               disabled={busy}
-              className="rounded-control bg-accent px-3 py-1.5 text-sm font-semibold text-accent-ink"
+              className="btn btn-primary"
               onClick={() =>
                 void run(async (t) => {
                   const pack = await apiPost(t, "/v1/assurance/assessments/{assessment_id}/evidence-packs", { assessment_id: id }, undefined);

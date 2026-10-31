@@ -34,12 +34,12 @@ export function MetricCard({ label, metric, display, band, trend, href, unavaila
   const body = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-medium text-muted">{label}</h3>
+        <h3 className="font-sans text-sm font-semibold text-muted">{label}</h3>
         {band && metric ? <HealthBadge band={band} /> : null}
       </div>
       {metric ? (
         <>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-ink">
+          <p className="mt-2 font-display text-[1.75rem] leading-none font-bold tabular-nums text-ink">
             {display ? display(metric) : String(metric.value)}
             <span className="sr-only">
               {" "}
@@ -48,29 +48,28 @@ export function MetricCard({ label, metric, display, band, trend, href, unavaila
             </span>
           </p>
           {trend ? (
-            <p className="text-xs text-muted">
+            <p className="mt-1.5 text-xs text-muted">
               <span aria-hidden="true">{ARROW[trend.direction]} </span>
               {trend.text}
               <span className="sr-only">{trend.better ? " (improving)" : " (worsening)"}</span>
             </p>
           ) : null}
-          <div className="mt-2">
+          <div className="mt-3 border-t border-line-subtle pt-2">
             <Provenance metric={metric} />
           </div>
         </>
       ) : (
-        <p className="mt-1 text-sm text-muted">{unavailable ?? "Not available to your role"}</p>
+        <p className="mt-2 text-sm text-muted">{unavailable ?? "Not available to your role"}</p>
       )}
     </>
   );
-  const frame = `block rounded-card border border-line border-l-4 ${edge} bg-surface p-4 ${
-    modelled ? "border-dashed" : ""
-  }`;
+  // Modelled figures keep the full-strength dashed outline; observed ones the hairline.
+  const frame = `block rounded-card border border-l-4 ${modelled ? "border-dashed border-line" : "border-line-subtle"} ${edge} bg-surface p-4 shadow-card`;
   return href && metric ? (
     // The visible text stays the link's name (WCAG 2.5.3); the hint is added to it.
-    <Link href={href} className={`${frame} hover:bg-surface-raised`}>
+    <Link href={href} className={`${frame} transition-shadow hover:shadow-raised`}>
       {body}
-      <span className="mt-2 block text-xs font-medium text-accent underline">View the evidence</span>
+      <span className="link mt-2 block text-xs font-semibold">View the evidence</span>
     </Link>
   ) : (
     <div className={frame}>{body}</div>
