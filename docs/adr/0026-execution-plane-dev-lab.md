@@ -57,6 +57,11 @@ This ADR records the shape of the decision. The pack holds the detail.
 | L9 | Signing key | **Created by Terraform that the user applies.** Only the CI pipeline identity may sign. The ceremony record and the key-compromise procedure are written before first use |
 | — | Separation of duties | **One-person control accepted for dev only.** Class D stays off until a second named human can approve. A second human is required before UAT |
 
+**The internal tenant is never an execution target.** Under ADR 0027 the test
+customer's subscription may also be held by the internal tenant. Only the customer's
+account can be enabled for action, and the broker takes tenant and account from the
+workflow, never from the alias.
+
 ## Still open
 
 Nothing blocks phase 0 except the review sign-off below. The private pack lists smaller
