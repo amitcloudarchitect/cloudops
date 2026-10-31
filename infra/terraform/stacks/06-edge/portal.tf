@@ -138,23 +138,5 @@ resource "azurerm_cdn_frontdoor_route" "portal" {
   link_to_default_domain        = true
 }
 
-# Content-hashed build assets, cached at the edge as on the staff host.
-resource "azurerm_cdn_frontdoor_route" "portal_static" {
-  count                         = local.public ? 1 : 0
-  name                          = "route-portal-static"
-  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.portal.id
-  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.portal.id
-  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.portal_gateway[0].id]
-  enabled                       = true
-  patterns_to_match             = ["/_next/static/*"]
-  supported_protocols           = ["Http", "Https"]
-  https_redirect_enabled        = true
-  forwarding_protocol           = local.origin_protocol
-  link_to_default_domain        = true
-
-  cache {
-    query_string_caching_behavior = "IgnoreQueryString"
-    compression_enabled           = true
-    content_types_to_compress     = ["application/javascript", "text/css", "text/javascript"]
-  }
-}
+# No cached route for /_next/static/*: the staff host's hung every gzip request
+# (ADR 0017, decision 11), and this one was the same. route "portal" carries them.

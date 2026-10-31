@@ -4,7 +4,7 @@
 - **Decided by:** Amit Kumar
 - **Implements:** ADR 0014 "Not decided here" (deployment, redirect URIs, CSP).
   `infra/docker/web.Dockerfile`, `docker-bake.hcl` target `web`, `infra/gitops/base/web`,
-  `infra/gitops/base/edge`, stack `06-edge` (`route-console-static`),
+  `infra/gitops/base/edge`, stack `06-edge`,
   `apps/web/src/{proxy.ts,lib/csp.ts,lib/config.ts,app/healthz}`.
 
 ## Context
@@ -34,9 +34,8 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
    shadowed, and a test checks the split. The console's route has no open path:
    every rule needs our Front Door's `X-Azure-FDID` (lock 2, ADR 0011). The gateway
    now admits routes from `platform-api` and `platform-web` only.
-   Front Door's existing `route-all` carries the pages. A new route,
-   `route-console-static`, caches `/_next/static/*` (content-hashed and immutable) at
-   the edge. Nothing else is cached. The console's calls to the API are same-origin.
+   Front Door's existing `route-all` carries the pages and their build assets.
+   Nothing is cached at the edge (decision 11 removed the cached asset route). The console's calls to the API are same-origin.
    The API's `CLOUDOPS_WEB_ORIGINS` still names the origin, so CORS stays correct if
    the console ever moves to its own host.
 
@@ -133,6 +132,29 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
       only the old build had, and Next.js then reloads the page. The cure for that
       is serving every build's static files from storage that keeps them all. That
       was considered and deferred.
+
+11. **No edge-cached asset route** (added 2026-10-31). `route-console-static`
+    cached `/_next/static/*` with Front Door compression on. It hung every request
+    that accepted gzip: no response, until the client gave up. Requests without
+    gzip, or with Brotli only, were answered. Every browser offers gzip, so no
+    console script loaded and the page stayed unstyled on "Loading your access…".
+    The cause is Front Door's, not the console's: the same files through
+    `route-all`, with gzip, are fine. The route is removed, and so is the
+    customer portal's copy (`route-portal-static`, ADR 0018).
+    `tools/ci/tests/test_terraform.py` refuses compression on a Front Door route.
+    Edge caching can come back only with a test against the live endpoint that
+    sends a browser's `Accept-Encoding`.
+12. **An all-tenant administrator with no tenant yet gets an empty scope** (added
+    2026-10-31). Before this, the resolver refused every staff principal with no
+    tenant ("no tenants assigned", 403), the all-tenant platform administrator
+    included. So on a new environment the first administrator could never reach
+    Customer mapping to onboard the first customer. Dev hit exactly this.
+    - Now a staff principal assigned all tenants (D3) resolves to an empty
+      `TenantScope`. It reads no row, so it exposes nothing, and its permissions
+      (onboarding included) still apply.
+    - The first onboarded tenant joins its scope on the next request (D9).
+    - A staff principal assigned named tenants, none granted, is still refused.
+    - Tested in `services/api/tests/test_access_resolver.py`.
 
 ## Manual steps (Key Vault, before the administrator job's first run)
 
