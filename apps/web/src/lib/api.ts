@@ -28,6 +28,8 @@ type PostOk<P extends Post> = paths[P] extends {
 }
   ? R
   : never;
+// Endpoints that answer 204 No Content.
+type PostEmpty = { [P in Post]: paths[P] extends { post: { responses: { 204: unknown } } } ? P : never }[Post];
 // An endpoint that takes no body takes `undefined`, and nothing is sent.
 type PostBody<P extends Post> = paths[P] extends {
   post: { requestBody: { content: { "application/json": infer B } } };
@@ -71,6 +73,7 @@ async function send(token: string, method: string, target: string, body?: unknow
     }
     throw new ApiError(response.status, code, response.headers.get("x-request-id"));
   }
+  if (response.status === 204) return undefined;
   return response.json();
 }
 
@@ -90,4 +93,14 @@ export async function apiPost<P extends Post>(
   body: PostBody<P>,
 ): Promise<PostOk<P>> {
   return (await send(token, "POST", url(path, params), body)) as PostOk<P>;
+}
+
+/** A POST answered with 204 No Content: it resolves to nothing, or throws ApiError. */
+export async function apiPostEmpty<P extends PostEmpty>(
+  token: string,
+  path: P,
+  params: Record<string, string>,
+  body: PostBody<P>,
+): Promise<void> {
+  await send(token, "POST", url(path, params), body);
 }

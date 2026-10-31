@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 
-import { expect, test, triagedTicket } from "./fixtures";
+import { expect, raiseDrift, test, triagedTicket } from "./fixtures";
 
 // WCAG 2.1 AA on every screen, in both themes.
 test.use({ role: "engineer" });
@@ -11,7 +11,7 @@ for (const theme of ["light", "dark"] as const) {
 
     test("every screen passes axe (WCAG 2.1 AA)", async ({ signedIn: page }) => {
       const number = await triagedTicket("human");
-      for (const path of ["/work", `/work/${number}`, "/resources", "/customers"]) {
+      for (const path of ["/work", `/work/${number}`, "/resources", "/customers", "/connectors"]) {
         await page.goto(path);
         await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
         await page.waitForLoadState("networkidle");
@@ -39,6 +39,39 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+for (const theme of ["light", "dark"] as const) {
+  test.describe(`connectors with acknowledge, ${theme} theme`, () => {
+    test.use({ role: "admin", colorScheme: theme });
+
+    test("passes axe (WCAG 2.1 AA) and does not scroll sideways at tablet width", async ({ signedIn: page }) => {
+      await page.goto("/connectors");
+      await expect(page.getByRole("table", { name: "Connector health" })).toBeVisible();
+      await page.getByText("How health is decided").click();
+      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      expect(results.violations.map((v) => `/connectors: ${v.id} ${v.nodes.length}`)).toEqual([]);
+      await page.setViewportSize({ width: 768, height: 1024 });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow).toBeLessThanOrEqual(0);
+    });
+  });
+}
+
+test.describe("connectors from the keyboard", () => {
+  test.use({ role: "admin" });
+
+  test("drift is acknowledged with the keyboard alone", async ({ signedIn: page }) => {
+    const field = `e2eKeys_${Date.now().toString(36)}`;
+    raiseDrift("aws", "config", field);
+    await page.goto("/connectors");
+    const button = page.getByRole("button", { name: `Acknowledge ${field} on aws · config` });
+    await expect(button).toBeVisible();
+    await button.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("status").filter({ hasText: `Drift on ${field} on aws · config acknowledged.` })).toBeVisible();
+    await expect(button).toHaveCount(0);
+  });
+});
+
 test("the queue is usable from the keyboard alone", async ({ signedIn: page }) => {
   await page.goto("/work");
   await expect(page.getByRole("table", { name: "Work items" })).toBeVisible();
@@ -54,7 +87,7 @@ test("the queue is usable from the keyboard alone", async ({ signedIn: page }) =
 
 test("no screen scrolls sideways at tablet width", async ({ signedIn: page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
-  for (const path of ["/work", "/resources", "/customers"]) {
+  for (const path of ["/work", "/resources", "/customers", "/connectors"]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

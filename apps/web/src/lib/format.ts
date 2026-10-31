@@ -53,3 +53,31 @@ export function decimal(value: string, places = 2): string {
 export function money(value: string, currency: string, places = 2): string {
   return `${currency} ${decimal(value, places)}`;
 }
+
+/** A ratio as a decimal string ("0.6667") shown as a percentage ("66.7%"), on its
+ * digits: the point moves two places, then rounds once. */
+export function percent(ratio: string, places = 1): string {
+  const match = /^(-?)(\d+)(?:\.(\d*))?$/.exec(ratio.trim());
+  if (!match) throw new Error(`not a decimal: ${ratio}`);
+  const [, sign = "", whole = "0", fraction = ""] = match;
+  const padded = `${fraction}00`;
+  return `${decimal(`${sign}${whole}${padded.slice(0, 2)}.${padded.slice(2) || "0"}`, places)}%`;
+}
+
+/** Seconds as the largest unit and the next: "45 s", "12 min", "2 h 5 min", "4 d 3 h". */
+export function duration(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const units: readonly (readonly [number, string])[] = [
+    [86_400, "d"],
+    [3_600, "h"],
+    [60, "min"],
+    [1, "s"],
+  ];
+  const i = units.findIndex(([size]) => s >= size);
+  const major = units[i];
+  if (!major) return "0 s";
+  const minor = units[i + 1];
+  const whole = Math.floor(s / major[0]);
+  const part = minor ? Math.floor((s % major[0]) / minor[0]) : 0;
+  return minor && part > 0 ? `${whole} ${major[1]} ${part} ${minor[1]}` : `${whole} ${major[1]}`;
+}

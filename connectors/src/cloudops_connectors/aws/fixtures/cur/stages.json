@@ -1,0 +1,81 @@
+{
+ "bucket": "getronics-cur-fixture",
+ "reports": [
+  "cur/getronics/cur-usd",
+  "cur/getronics/cur-eur"
+ ],
+ "stages": [
+  {
+   "cur/getronics/cur-eur/20261001-20261101/55dca333-30c0-5660-89ab-35b6746af030/cur-eur-00001.csv.gz": {
+    "file": "E1-1.csv",
+    "last_modified": "2026-10-26T05:50:00Z"
+   },
+   "cur/getronics/cur-eur/20261001-20261101/55dca333-30c0-5660-89ab-35b6746af030/cur-eur-Manifest.json": {
+    "file": "E1-Manifest.json",
+    "last_modified": "2026-10-26T06:00:00Z"
+   },
+   "cur/getronics/cur-eur/20261001-20261101/cur-eur-Manifest.json": {
+    "file": "E1-Manifest.json",
+    "last_modified": "2026-10-26T06:00:00Z"
+   },
+   "cur/getronics/cur-usd/20260901-20261001/881d463a-7e3c-5927-9674-f0f10fc57a54/cur-usd-00001.csv.gz": {
+    "file": "S1-1.csv",
+    "last_modified": "2026-10-03T05:50:00Z"
+   },
+   "cur/getronics/cur-usd/20260901-20261001/881d463a-7e3c-5927-9674-f0f10fc57a54/cur-usd-00002.csv.gz": {
+    "file": "S1-2.csv",
+    "last_modified": "2026-10-03T05:50:00Z"
+   },
+   "cur/getronics/cur-usd/20260901-20261001/881d463a-7e3c-5927-9674-f0f10fc57a54/cur-usd-Manifest.json": {
+    "file": "S1-Manifest.json",
+    "last_modified": "2026-10-03T06:00:00Z"
+   },
+   "cur/getronics/cur-usd/20260901-20261001/cur-usd-Manifest.json": {
+    "file": "S1-Manifest.json",
+    "last_modified": "2026-10-03T06:00:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/cur-usd-Manifest.json": {
+    "file": "O1-Manifest.json",
+    "last_modified": "2026-10-25T06:00:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/e61bfe84-13b9-55ac-81e7-c7afd090273d/cur-usd-00001.csv.gz": {
+    "file": "O1-1.csv",
+    "last_modified": "2026-10-25T05:50:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/e61bfe84-13b9-55ac-81e7-c7afd090273d/cur-usd-00002.csv.gz": {
+    "file": "O1-2.csv",
+    "last_modified": "2026-10-25T05:50:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/e61bfe84-13b9-55ac-81e7-c7afd090273d/cur-usd-Manifest.json": {
+    "file": "O1-Manifest.json",
+    "last_modified": "2026-10-25T06:00:00Z"
+   }
+  },
+  {
+   "cur/getronics/cur-eur/20261001-20261101/55dca333-30c0-5660-89ab-35b6746af030/cur-eur-00002.csv.gz": {
+    "file": "E1-2.csv",
+    "last_modified": "2026-10-27T07:00:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/a3b4e5f2-00a5-5a66-baa6-b94dc494c555/cur-usd-00001.csv.gz": {
+    "file": "O2-1.csv",
+    "last_modified": "2026-10-28T05:50:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/a3b4e5f2-00a5-5a66-baa6-b94dc494c555/cur-usd-00002.csv.gz": {
+    "file": "O2-2.csv",
+    "last_modified": "2026-10-28T05:50:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/a3b4e5f2-00a5-5a66-baa6-b94dc494c555/cur-usd-00003.csv.gz": {
+    "file": "O2-3.csv",
+    "last_modified": "2026-10-28T05:50:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/a3b4e5f2-00a5-5a66-baa6-b94dc494c555/cur-usd-Manifest.json": {
+    "file": "O2-Manifest.json",
+    "last_modified": "2026-10-28T06:00:00Z"
+   },
+   "cur/getronics/cur-usd/20261001-20261101/cur-usd-Manifest.json": {
+    "file": "O2-Manifest.json",
+    "last_modified": "2026-10-28T06:00:00Z"
+   }
+  }
+ ]
+}

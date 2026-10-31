@@ -191,6 +191,36 @@ aio = [
 ]
 
 [[package]]
+name = "azure-eventhub"
+version = "5.15.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/20/bf/96eec5aa57cb08f1e84e1dfa3888e52dbba53e218596cdab5b61d795a1ae/azure_eventhub-5.15.1.tar.gz", hash = "sha256:201de7b6e10b7517c594e529aa7d21c6887ac2a4757fc4850c991a3f640a02fb", size = 378879, upload-time = "2025-10-30T11:28:21.74Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/ba/b54e0f76384b00a8682b1e041673f43947f668dbc8508f026d67446a7d2f/azure_eventhub-5.15.1-py3-none-any.whl", hash = "sha256:ebe1379d228632d12892f0e2d480e0c13a234c384249b0c2c0fe862cd58b3e48", size = 317133, upload-time = "2025-10-30T11:28:23.395Z" },
+]
+
+[[package]]
+name = "azure-eventhub-checkpointstoreblob-aio"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "azure-core" },
+    { name = "azure-eventhub" },
+    { name = "cryptography" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6d/2a/bde3f0eaded75791a4cb2822d7107077d51c0f076afff95bcdd56764bec0/azure_eventhub_checkpointstoreblob_aio-1.2.0.tar.gz", hash = "sha256:d61d5e425c1a59bbe042ce287de072386e73a3b19ea21f8a7ac04d2a54c7c12b", size = 356719, upload-time = "2025-02-13T19:12:43.107Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/6d/c717c7cf917dad0db2dc43489ea668f3dfb5215d6dd32a47d614bf454939/azure_eventhub_checkpointstoreblob_aio-1.2.0-py3-none-any.whl", hash = "sha256:c59d76c1b6f92b7781b823bb4c3254b099b9f6313bb9cddd432a1c2241b446f0", size = 419721, upload-time = "2025-02-13T19:12:44.605Z" },
+]
+
+[[package]]
 name = "azure-identity"
 version = "1.27.0"
 source = { registry = "https://pypi.org/simple" }
@@ -375,20 +405,26 @@ name = "cloudops-connectors"
 version = "0.1.0"
 source = { editable = "connectors" }
 dependencies = [
+    { name = "azure-eventhub" },
+    { name = "azure-eventhub-checkpointstoreblob-aio" },
     { name = "azure-identity" },
     { name = "azure-storage-blob", extra = ["aio"] },
     { name = "cloudops-config", extra = ["temporal"] },
     { name = "cloudops-tenancy" },
+    { name = "defusedxml" },
     { name = "httpx" },
     { name = "temporalio" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "azure-eventhub", specifier = ">=5.12" },
+    { name = "azure-eventhub-checkpointstoreblob-aio", specifier = ">=1.2" },
     { name = "azure-identity", specifier = ">=1.19" },
     { name = "azure-storage-blob", extras = ["aio"], specifier = ">=12.24" },
     { name = "cloudops-config", extras = ["temporal"], editable = "packages/config" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
+    { name = "defusedxml", specifier = ">=0.7" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "temporalio", specifier = ">=1.34" },
 ]
@@ -477,6 +513,7 @@ dev = [
     { name = "pyyaml" },
     { name = "ruff" },
     { name = "testcontainers" },
+    { name = "types-defusedxml" },
     { name = "types-pyyaml" },
 ]
 
@@ -502,6 +539,7 @@ dev = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruff", specifier = ">=0.8" },
     { name = "testcontainers", extras = ["postgres"], specifier = ">=4.8" },
+    { name = "types-defusedxml", specifier = ">=0.7" },
     { name = "types-pyyaml", specifier = ">=6.0" },
 ]
 
@@ -510,12 +548,14 @@ name = "cloudops-tenancy"
 version = "0.1.0"
 source = { editable = "packages/tenancy" }
 dependencies = [
+    { name = "httpx" },
     { name = "psycopg", extra = ["binary"] },
     { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "httpx", specifier = ">=0.28" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
 ]
@@ -601,6 +641,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/10/bf/8d6ebc7dded797bd0f0160d52188021211f011a2b164ef0ae1dac4587465/cryptography-50.0.2-cp39-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:7a8701d6b584d76e909e3d305b7d126b41439876a5aaf76cddc67fc230eafa2e", size = 4897738, upload-time = "2026-09-30T15:29:43.106Z" },
     { url = "https://files.pythonhosted.org/packages/d4/aa/f3f6e0de7e6253b8baa8b2d8fb9d50924fa75cee3d4624bd4bc1208ee923/cryptography-50.0.2-cp39-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:ce47f66801c20ec6c6632453bb5960fe38939e9306970b48b3a5a26de7745d94", size = 5058280, upload-time = "2026-09-30T15:29:44.827Z" },
     { url = "https://files.pythonhosted.org/packages/f6/b6/a1faf3a27ae9405fb34b1713cc73b2d8a26b04d5c561578fa2e6ef3e5bb9/cryptography-50.0.2-cp39-abi3-win_amd64.whl", hash = "sha256:4e81d95e5bafc2d6e34e4bed780e53e4d5b9a2f928573428aa4d35fbec1eb0de", size = 3854095, upload-time = "2026-09-30T15:29:46.782Z" },
+]
+
+[[package]]
+name = "defusedxml"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/d5/c66da9b79e5bdb124974bfe172b4daf3c984ebd9c2a06e2b8a4dc7331c72/defusedxml-0.7.1.tar.gz", hash = "sha256:1bb3032db185915b62d7c6209c5a8792be6a32ab2fedacc84e01b52c51aa3e69", size = 75520, upload-time = "2021-03-08T10:59:26.269Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/6c/aa3f2f849e01cb6a001cd8554a88d4c77c5c1a31c95bdf1cf9301e6d9ef4/defusedxml-0.7.1-py2.py3-none-any.whl", hash = "sha256:a352e7e428770286cc899e2542b6cdaedb2b4953ff269a210103ec58f6198a61", size = 25604, upload-time = "2021-03-08T10:59:24.45Z" },
 ]
 
 [[package]]
@@ -1361,6 +1410,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/13/2cc466bddf26d0085f30a2b2bd56b7f8708b54a54db833eec97c5c69129b/testcontainers-4.15.0.tar.gz", hash = "sha256:085cde086337632e19002719460b7b80bbab2bdd51bb3ea04f77d0de96504706", size = 95340, upload-time = "2026-07-24T23:08:01.731Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/7e/424aac8b355597835deb333e757a0e94b5ccf38ad00f07fe6ed1f4e17c88/testcontainers-4.15.0-py3-none-any.whl", hash = "sha256:8796c14e76604031ad39cf0ed3b8e9806283a1fbf5270965c2b1c594caa31b74", size = 160771, upload-time = "2026-07-24T23:08:00.13Z" },
+]
+
+[[package]]
+name = "types-defusedxml"
+version = "0.7.0.20260504"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/da/d2/4553c8fa9cdebfe1e84b950cf790a4d2376a97fa016e43f7c65323fa6c7d/types_defusedxml-0.7.0.20260504.tar.gz", hash = "sha256:2ab2828a3f97111ba1c16cee273ad4124a831fc9198c41bf8368ff6ea48ad300", size = 10729, upload-time = "2026-05-04T05:22:50.192Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/2d/8a4b5ba1d732b8bc691f0efbb1c6f77cb5f6f473b2afe181d83d910773c5/types_defusedxml-0.7.0.20260504-py3-none-any.whl", hash = "sha256:a959e3a0a43b93e464bd625d91ec9193a2703ddc10443bdd627792485fae0b10", size = 13467, upload-time = "2026-05-04T05:22:49.319Z" },
 ]
 
 [[package]]

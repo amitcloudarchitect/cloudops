@@ -1,0 +1,514 @@
+{
+ "directories": [
+  {
+   "directory_id": "e4642f06-fba8-5231-94c0-5084666135d6",
+   "code": "NWL",
+   "name": "Northwind Logistics B.V.",
+   "users": [
+    {
+     "id": "87363ddc-4396-5513-9c09-6a4f994b63da",
+     "displayName": "Ana Ruiz",
+     "userPrincipalName": "ana.ruiz@northwind.local",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-31T00:00:00Z"
+    },
+    {
+     "id": "b0b92bc7-c383-5c48-8bae-16ea729e13d3",
+     "displayName": "Bram de Vries",
+     "userPrincipalName": "bram.devries@northwind.local",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-30T00:00:00Z",
+     "employeeType": "Contractor"
+    },
+    {
+     "id": "14c304bd-3d98-5549-a19e-5d771e075f17",
+     "displayName": "Chloe Martin",
+     "userPrincipalName": "chloe.martin@northwind.local",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-29T00:00:00Z"
+    },
+    {
+     "id": "63b93178-e0a7-5652-95ca-e8361e41fed7",
+     "displayName": "Dev Patel",
+     "userPrincipalName": "dev.patel@northwind.local",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-28T00:00:00Z"
+    },
+    {
+     "id": "1e0dd612-cfa1-5414-adea-4e5c5dfe9569",
+     "displayName": "Elif Kaya",
+     "userPrincipalName": "elif.kaya@northwind.local",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-27T00:00:00Z"
+    },
+    {
+     "id": "8f94d65d-abfc-52e6-94f1-44aee1b2f8d7",
+     "displayName": "Finn Olsen",
+     "userPrincipalName": "finn.olsen_partner.example#EXT#@northwind.local",
+     "accountEnabled": true,
+     "userType": "Guest",
+     "createdDateTime": "2026-09-12T00:00:00Z"
+    },
+    {
+     "id": "ac946328-9751-5a32-8afa-bd15dca6bb48",
+     "displayName": "Greta Novak",
+     "userPrincipalName": "greta.novak@northwind.local",
+     "accountEnabled": false,
+     "userType": "Member",
+     "createdDateTime": "2025-06-08T00:00:00Z"
+    },
+    {
+     "displayName": "Hugo Laurent",
+     "userPrincipalName": "hugo.laurent@northwind.local",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-24T00:00:00Z"
+    }
+   ],
+   "user_changes": [
+    {
+     "id": "63b93178-e0a7-5652-95ca-e8361e41fed7",
+     "displayName": "Dev Patel",
+     "userPrincipalName": "dev.patel@northwind.local",
+     "accountEnabled": false,
+     "userType": "Member",
+     "createdDateTime": "2025-12-28T00:00:00Z"
+    },
+    {
+     "id": "1e0dd612-cfa1-5414-adea-4e5c5dfe9569",
+     "@removed": {
+      "reason": "deleted"
+     }
+    },
+    {
+     "id": "ded5dd28-f1c7-5c1c-9858-0dd39fb7f31f",
+     "displayName": "Ana Ruiz",
+     "userPrincipalName": "ana.ruiz_partner.example#EXT#@northwind.local",
+     "accountEnabled": true,
+     "userType": "Guest",
+     "createdDateTime": "2026-10-18T00:00:00Z"
+    }
+   ],
+   "role_assignments": [
+    {
+     "id": "8iuDSTBVUzCG4cbidGq4e_Irg0kwVVMwhuHG4nRquHs",
+     "principalId": "87363ddc-4396-5513-9c09-6a4f994b63da",
+     "roleDefinitionId": "62e90394-69f5-4237-9190-012177145e10",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "62e90394-69f5-4237-9190-012177145e10",
+      "templateId": "62e90394-69f5-4237-9190-012177145e10",
+      "displayName": "Global Administrator",
+      "description": "Built-in role: Global Administrator.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "0KfdK-fEVbuEOokIGONMjdCn3SvnxFW7hDqJCBjjTI0",
+     "principalId": "b0b92bc7-c383-5c48-8bae-16ea729e13d3",
+     "roleDefinitionId": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+      "templateId": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+      "displayName": "User Administrator",
+      "description": "Built-in role: User Administrator.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "q9tBcaMMXPaQkD3s1wY-X6vbQXGjDFz2kJA97NcGPl8",
+     "principalId": "14c304bd-3d98-5549-a19e-5d771e075f17",
+     "roleDefinitionId": "5d6b6bb7-de71-4623-b4af-96380a352509",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "5d6b6bb7-de71-4623-b4af-96380a352509",
+      "templateId": "5d6b6bb7-de71-4623-b4af-96380a352509",
+      "displayName": "Security Reader",
+      "description": "Built-in role: Security Reader.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "6NK_4pDfW3SrFzLgYj_G5ejSv-KQ31t0qxcy4GI_xuU",
+     "principalId": "8f94d65d-abfc-52e6-94f1-44aee1b2f8d7",
+     "roleDefinitionId": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+      "templateId": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+      "displayName": "Global Reader",
+      "description": "Built-in role: Global Reader.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "ypyvbw8aVoCBASXH193Qscqcr28PGlaAgQElx9fd0LE",
+     "roleDefinitionId": "62e90394-69f5-4237-9190-012177145e10",
+     "directoryScopeId": "/",
+     "roleDefinition": {
+      "id": "62e90394-69f5-4237-9190-012177145e10",
+      "displayName": "Global Administrator"
+     }
+    }
+   ]
+  },
+  {
+   "directory_id": "b7363879-06ee-538f-9e86-fe46a79af2ef",
+   "code": "CRL",
+   "name": "Contoso Retail Ltd",
+   "users": [
+    {
+     "id": "6b7a2e3d-b041-5216-87af-a34bcf4185d8",
+     "displayName": "Ana Ruiz",
+     "userPrincipalName": "ana.ruiz@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-31T00:00:00Z"
+    },
+    {
+     "id": "2d40a45f-a4ec-563e-8624-76e68fce5221",
+     "displayName": "Bram de Vries",
+     "userPrincipalName": "bram.devries@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-30T00:00:00Z",
+     "employeeType": "Contractor"
+    },
+    {
+     "id": "66ac9f0d-1c1b-56ec-8bab-5ad69373980c",
+     "displayName": "Chloe Martin",
+     "userPrincipalName": "chloe.martin@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-29T00:00:00Z"
+    },
+    {
+     "id": "e6c4435b-f56a-5894-b866-d970d92807c2",
+     "displayName": "Dev Patel",
+     "userPrincipalName": "dev.patel@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-28T00:00:00Z"
+    },
+    {
+     "id": "b4ff4af8-57f3-541d-91e1-3203379f6084",
+     "displayName": "Elif Kaya",
+     "userPrincipalName": "elif.kaya@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-27T00:00:00Z"
+    },
+    {
+     "id": "ed36a4fd-8acd-5beb-ac0b-9480869934da",
+     "displayName": "Finn Olsen",
+     "userPrincipalName": "finn.olsen_partner.example#EXT#@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Guest",
+     "createdDateTime": "2026-09-12T00:00:00Z"
+    },
+    {
+     "id": "414a51f7-0711-5e0b-8546-910d037dfc71",
+     "displayName": "Greta Novak",
+     "userPrincipalName": "greta.novak@contoso-retail.co.uk",
+     "accountEnabled": false,
+     "userType": "Member",
+     "createdDateTime": "2025-06-08T00:00:00Z"
+    },
+    {
+     "displayName": "Hugo Laurent",
+     "userPrincipalName": "hugo.laurent@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-24T00:00:00Z"
+    }
+   ],
+   "user_changes": [
+    {
+     "id": "e6c4435b-f56a-5894-b866-d970d92807c2",
+     "displayName": "Dev Patel",
+     "userPrincipalName": "dev.patel@contoso-retail.co.uk",
+     "accountEnabled": false,
+     "userType": "Member",
+     "createdDateTime": "2025-12-28T00:00:00Z"
+    },
+    {
+     "id": "b4ff4af8-57f3-541d-91e1-3203379f6084",
+     "@removed": {
+      "reason": "deleted"
+     }
+    },
+    {
+     "id": "db2cc277-a75d-504f-9876-1ee9cfa40a3b",
+     "displayName": "Ana Ruiz",
+     "userPrincipalName": "ana.ruiz_partner.example#EXT#@contoso-retail.co.uk",
+     "accountEnabled": true,
+     "userType": "Guest",
+     "createdDateTime": "2026-10-18T00:00:00Z"
+    }
+   ],
+   "role_assignments": [
+    {
+     "id": "BqCy2GlIUR2LxbLnCxb1UQagsthpSFEdi8Wy5wsW9VE",
+     "principalId": "6b7a2e3d-b041-5216-87af-a34bcf4185d8",
+     "roleDefinitionId": "62e90394-69f5-4237-9190-012177145e10",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "62e90394-69f5-4237-9190-012177145e10",
+      "templateId": "62e90394-69f5-4237-9190-012177145e10",
+      "displayName": "Global Administrator",
+      "description": "Built-in role: Global Administrator.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "ZnhYRM1hUZiUH_UJXNU0G2Z4WETNYVGYlB_1CVzVNBs",
+     "principalId": "2d40a45f-a4ec-563e-8624-76e68fce5221",
+     "roleDefinitionId": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+      "templateId": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+      "displayName": "User Administrator",
+      "description": "Built-in role: User Administrator.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "6zTSofEkVlWVTjlCzC2L2us00qHxJFZVlU45Qswti9o",
+     "principalId": "66ac9f0d-1c1b-56ec-8bab-5ad69373980c",
+     "roleDefinitionId": "5d6b6bb7-de71-4623-b4af-96380a352509",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "5d6b6bb7-de71-4623-b4af-96380a352509",
+      "templateId": "5d6b6bb7-de71-4623-b4af-96380a352509",
+      "displayName": "Security Reader",
+      "description": "Built-in role: Security Reader.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "fHefaZEIXFamuDFhfRjaEHx3n2mRCFxWprgxYX0Y2hA",
+     "principalId": "ed36a4fd-8acd-5beb-ac0b-9480869934da",
+     "roleDefinitionId": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+      "templateId": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+      "displayName": "Global Reader",
+      "description": "Built-in role: Global Reader.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "9PJRgNn_VM6I0f7E6W7maPTyUYDZ_1TOiNH-xOlu5mg",
+     "roleDefinitionId": "62e90394-69f5-4237-9190-012177145e10",
+     "directoryScopeId": "/",
+     "roleDefinition": {
+      "id": "62e90394-69f5-4237-9190-012177145e10",
+      "displayName": "Global Administrator"
+     }
+    }
+   ]
+  },
+  {
+   "directory_id": "8bf79ca6-a81d-59ee-85aa-0d3a374ab597",
+   "code": null,
+   "name": "Litware Inc.",
+   "users": [
+    {
+     "id": "a7b5a446-ae92-5799-9af8-c34627f7e84d",
+     "displayName": "Ana Ruiz",
+     "userPrincipalName": "ana.ruiz@litware.example",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-31T00:00:00Z"
+    },
+    {
+     "id": "8a674394-fb7d-5eb5-b2b7-a527c5f802d0",
+     "displayName": "Bram de Vries",
+     "userPrincipalName": "bram.devries@litware.example",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-30T00:00:00Z",
+     "employeeType": "Contractor"
+    },
+    {
+     "id": "2ea99bf9-bc45-5609-aa99-82ac2435d3ba",
+     "displayName": "Chloe Martin",
+     "userPrincipalName": "chloe.martin@litware.example",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-29T00:00:00Z"
+    },
+    {
+     "id": "d5cbafcc-a63b-59ed-b369-6b02d3d4a04d",
+     "displayName": "Dev Patel",
+     "userPrincipalName": "dev.patel@litware.example",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-28T00:00:00Z"
+    },
+    {
+     "id": "d67e50d1-7cf9-5353-bd69-0a3008c04d52",
+     "displayName": "Elif Kaya",
+     "userPrincipalName": "elif.kaya@litware.example",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-27T00:00:00Z"
+    },
+    {
+     "id": "d72e2c32-adca-5bed-a67f-ad06f8fc96d7",
+     "displayName": "Finn Olsen",
+     "userPrincipalName": "finn.olsen_partner.example#EXT#@litware.example",
+     "accountEnabled": true,
+     "userType": "Guest",
+     "createdDateTime": "2026-09-12T00:00:00Z"
+    },
+    {
+     "id": "91e2eb8e-0b1b-5faf-917b-f03d96ad91c5",
+     "displayName": "Greta Novak",
+     "userPrincipalName": "greta.novak@litware.example",
+     "accountEnabled": false,
+     "userType": "Member",
+     "createdDateTime": "2025-06-08T00:00:00Z"
+    },
+    {
+     "displayName": "Hugo Laurent",
+     "userPrincipalName": "hugo.laurent@litware.example",
+     "accountEnabled": true,
+     "userType": "Member",
+     "createdDateTime": "2025-12-24T00:00:00Z"
+    }
+   ],
+   "user_changes": [
+    {
+     "id": "d5cbafcc-a63b-59ed-b369-6b02d3d4a04d",
+     "displayName": "Dev Patel",
+     "userPrincipalName": "dev.patel@litware.example",
+     "accountEnabled": false,
+     "userType": "Member",
+     "createdDateTime": "2025-12-28T00:00:00Z"
+    },
+    {
+     "id": "d67e50d1-7cf9-5353-bd69-0a3008c04d52",
+     "@removed": {
+      "reason": "deleted"
+     }
+    },
+    {
+     "id": "2ce8f016-80c4-58d7-9269-b0a984cd7a42",
+     "displayName": "Ana Ruiz",
+     "userPrincipalName": "ana.ruiz_partner.example#EXT#@litware.example",
+     "accountEnabled": true,
+     "userType": "Guest",
+     "createdDateTime": "2026-10-18T00:00:00Z"
+    }
+   ],
+   "role_assignments": [
+    {
+     "id": "1ln4dU6PXp-fJg7TB7VePtZZ-HVOj16fnyYO0we1Xj4",
+     "principalId": "a7b5a446-ae92-5799-9af8-c34627f7e84d",
+     "roleDefinitionId": "62e90394-69f5-4237-9190-012177145e10",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "62e90394-69f5-4237-9190-012177145e10",
+      "templateId": "62e90394-69f5-4237-9190-012177145e10",
+      "displayName": "Global Administrator",
+      "description": "Built-in role: Global Administrator.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "rYBoIaxcWjeRaoQp8Dl9y62AaCGsXFo3kWqEKfA5fcs",
+     "principalId": "8a674394-fb7d-5eb5-b2b7-a527c5f802d0",
+     "roleDefinitionId": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+      "templateId": "fe930be7-5e62-47db-91af-98c3a49a38b1",
+      "displayName": "User Administrator",
+      "description": "Built-in role: User Administrator.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "VAv--OaZVjaH5ZNTlkIl7lQL_vjmmVY2h-WTU5ZCJe4",
+     "principalId": "2ea99bf9-bc45-5609-aa99-82ac2435d3ba",
+     "roleDefinitionId": "5d6b6bb7-de71-4623-b4af-96380a352509",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "5d6b6bb7-de71-4623-b4af-96380a352509",
+      "templateId": "5d6b6bb7-de71-4623-b4af-96380a352509",
+      "displayName": "Security Reader",
+      "description": "Built-in role: Security Reader.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "X6sRETrgXj68bqBufmVJ-F-rERE64F4-vG6gbn5lSfg",
+     "principalId": "d72e2c32-adca-5bed-a67f-ad06f8fc96d7",
+     "roleDefinitionId": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+     "directoryScopeId": "/",
+     "appScopeId": null,
+     "condition": null,
+     "roleDefinition": {
+      "id": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+      "templateId": "f2ef992c-3afb-46b9-b7cf-a126ee74c451",
+      "displayName": "Global Reader",
+      "description": "Built-in role: Global Reader.",
+      "isBuiltIn": true,
+      "isEnabled": true
+     }
+    },
+    {
+     "id": "ybRnFtPYVZWbDSGbJcm2Msm0ZxbT2FWVmw0hmyXJtjI",
+     "roleDefinitionId": "62e90394-69f5-4237-9190-012177145e10",
+     "directoryScopeId": "/",
+     "roleDefinition": {
+      "id": "62e90394-69f5-4237-9190-012177145e10",
+      "displayName": "Global Administrator"
+     }
+    }
+   ]
+  }
+ ]
+}

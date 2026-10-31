@@ -1,0 +1,127 @@
+<?xml version='1.0' encoding='utf-8'?>
+<KNOWLEDGE_BASE_VULN_LIST_OUTPUT>
+ <RESPONSE>
+  <VULN_LIST>
+   <VULN>
+    <QID>105500</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>5</SEVERITY_LEVEL>
+    <TITLE>EOL/Obsolete Software: Windows Server 2012 R2 Detected</TITLE>
+    <CATEGORY>Windows</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>91850</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>4</SEVERITY_LEVEL>
+    <TITLE>Microsoft .NET Framework Security Update</TITLE>
+    <CATEGORY>Web server</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>91934</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>4</SEVERITY_LEVEL>
+    <TITLE>Microsoft Windows Cumulative Security Update</TITLE>
+    <CATEGORY>Windows</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>105489</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>5</SEVERITY_LEVEL>
+    <TITLE>Microsoft SQL Server Unsupported Version Detected</TITLE>
+    <CATEGORY>Web server</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>197240</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>3</SEVERITY_LEVEL>
+    <TITLE>Ubuntu Security Notification for Linux Kernel</TITLE>
+    <CATEGORY>Ubuntu</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>239960</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>3</SEVERITY_LEVEL>
+    <TITLE>Red Hat Update for openssh</TITLE>
+    <CATEGORY>Ubuntu</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>376190</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>4</SEVERITY_LEVEL>
+    <TITLE>OpenSSL Multiple Vulnerabilities</TITLE>
+    <CATEGORY>Web server</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>730297</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>5</SEVERITY_LEVEL>
+    <TITLE>Apache Log4j Remote Code Execution (Log4Shell)</TITLE>
+    <CATEGORY>Web server</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>38657</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>3</SEVERITY_LEVEL>
+    <TITLE>Birthday attacks against TLS ciphers with 64bit block size (SWEET32)</TITLE>
+    <CATEGORY>Ubuntu</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>38173</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>2</SEVERITY_LEVEL>
+    <TITLE>SSL Certificate - Signature Verification Failed</TITLE>
+    <CATEGORY>Ubuntu</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>11827</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>2</SEVERITY_LEVEL>
+    <TITLE>HTTP Security Header Not Detected</TITLE>
+    <CATEGORY>Web server</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+   <VULN>
+    <QID>45017</QID>
+    <VULN_TYPE>Vulnerability</VULN_TYPE>
+    <SEVERITY_LEVEL>1</SEVERITY_LEVEL>
+    <TITLE>Operating System Detected</TITLE>
+    <CATEGORY>Ubuntu</CATEGORY>
+    <SOLUTION>Apply the vendor update referenced in the advisory.</SOLUTION>
+    <DIAGNOSIS>An attacker may exploit this to compromise the host.</DIAGNOSIS>
+    <PATCHABLE>1</PATCHABLE>
+   </VULN>
+  </VULN_LIST>
+ </RESPONSE>
+</KNOWLEDGE_BASE_VULN_LIST_OUTPUT>

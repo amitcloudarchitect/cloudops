@@ -57,6 +57,11 @@ def test_repository_has_no_data_access_outside_tenancy() -> None:
         "q = \"SELECT set_config('app.tenant_ids', '', false)\"",
         "q = 'SET app.role = cfo'",
         "q = \"SELECT current_setting('app.account_ids')\"",
+        # Telemetry: no RLS there, so a hand-built query is a bypass.
+        "q = 'SELECT value FROM telemetry.metric_sample'",
+        "q = 'SELECT avgMerge(avg) FROM metric_5m'",
+        "q = 'INSERT INTO x FORMAT JSONEachRow'",
+        "h = {'X-ClickHouse-User': 'cloudops_telemetry'}",
     ],
 )
 def test_python_violations_are_detected(source: str) -> None:
@@ -71,6 +76,8 @@ def test_python_violations_are_detected(source: str) -> None:
         "from cloudops_tenancy import Database, TenantScope, Role",
         "import requests\ns = requests.Session()",
         "x = 'application role'",
+        "x = 'the telemetry store (ClickHouse or ADX) is undecided'",
+        "metric = 'cpu.utilisation'",
     ],
 )
 def test_allowed_python_is_not_flagged(source: str) -> None:

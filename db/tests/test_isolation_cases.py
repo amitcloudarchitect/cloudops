@@ -87,6 +87,13 @@ TENANT_TABLES = (
     "cloudops.knowledge_chunk",
     "audit.action_log",
     "staging.resource_quarantine",
+    # Step 15.
+    "cloudops.cost_finding",
+    "cloudops.directory_principal",
+    "cloudops.directory_role_assignment",
+    "cloudops.sharepoint_site",
+    "cloudops.document",
+    "staging.cost_fact_load",
 )
 
 
@@ -408,7 +415,36 @@ WRITES = {
         "INSERT INTO staging.resource_quarantine (tenant_id, source_system, external_key)"
         " VALUES (:t, 'qualys', :u)"
     ),
+    # Step 15: written by connectors only, so the ingest role is the writer.
+    "cloudops.cost_finding": (
+        "INSERT INTO cloudops.cost_finding (tenant_id, source_system, finding_id, category,"
+        " title, status, customer_raw, detected_at, updated_at)"
+        " VALUES (:t, 'corestack', :u, 'idle', 'x', 'open', 'x', now(), now())"
+    ),
+    "cloudops.directory_principal": (
+        "INSERT INTO cloudops.directory_principal (tenant_id, directory_id, object_id, kind)"
+        " VALUES (:t, 'd', :u, 'user')"
+    ),
+    "cloudops.directory_role_assignment": (
+        "INSERT INTO cloudops.directory_role_assignment (tenant_id, directory_id,"
+        " assignment_id, principal_object_id, role_definition_id, directory_scope_id)"
+        " VALUES (:t, 'd', :u, 'p', 'r', '/')"
+    ),
+    "cloudops.sharepoint_site": (
+        "INSERT INTO cloudops.sharepoint_site (tenant_id, site_id, site_url, customer_raw)"
+        " VALUES (:t, :u, 'https://x', 'x')"
+    ),
+    "cloudops.document": (
+        "INSERT INTO cloudops.document (tenant_id, source_system, site_id, item_id, name,"
+        " extraction) VALUES (:t, 'sharepoint', 's', :u, 'x', 'text')"
+    ),
 }
+
+# Tables only connectors write: the application role holds SELECT alone.
+INGEST_WRITTEN = (
+    "staging.", "cloudops.tenant_alias", "cloudops.cost_finding", "cloudops.directory_",
+    "cloudops.sharepoint_site", "cloudops.document",
+)
 
 
 @pytest.mark.parametrize("table", sorted(WRITES))
@@ -417,7 +453,7 @@ async def test_write_into_another_tenant_is_rejected(
 ) -> None:
     # The application writes aliases only through the mapping functions (0009);
     # ingest still inserts them directly, so it is the writer RLS must stop.
-    db = ingest_db if table.startswith(("staging.", "cloudops.tenant_alias")) else app_db
+    db = ingest_db if table.startswith(INGEST_WRITTEN) else app_db
 
     async def write() -> None:
         await _rows(

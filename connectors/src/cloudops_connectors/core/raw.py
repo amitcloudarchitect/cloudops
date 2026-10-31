@@ -15,6 +15,7 @@ silent overwrite.
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Mapping
 from datetime import date, datetime, timedelta
 from typing import Final, Protocol
@@ -30,12 +31,17 @@ class RawConflictError(Exception):
 
 
 def page_ref(
-    source: str, entity: str, fetched_at: datetime, run_id: str, page: int
+    source: str, entity: str, fetched_at: datetime, run_id: str, page: int,
+    suffix: str = PAGE_SUFFIX,
 ) -> str:
+    """``suffix`` names the payload's format (``.json``, ``.xml``, ``.csv.gz``);
+    it never changes the bytes."""
     if fetched_at.tzinfo is None:
         raise ValueError("fetched_at must be timezone-aware")
+    if not re.fullmatch(r"(\.[a-z0-9]{1,8}){1,3}", suffix):
+        raise ValueError(f"bad page suffix {suffix!r}")
     day = fetched_at.date()
-    return f"{source}/{entity}/{day:%Y/%m/%d}/{run_id}-{page:05d}{PAGE_SUFFIX}"
+    return f"{source}/{entity}/{day:%Y/%m/%d}/{run_id}-{page:05d}{suffix}"
 
 
 def day_prefixes(source: str, entity: str, start: date, end: date) -> list[str]:
@@ -55,6 +61,11 @@ class RawStore(Protocol):
     async def put(self, ref: str, body: bytes, metadata: Mapping[str, str]) -> None: ...
 
     async def get(self, ref: str) -> bytes: ...
+
+    async def meta(self, ref: str) -> dict[str, str]:
+        """The metadata stored with the page: where it came from, never parsed
+        out of the payload."""
+        ...
 
     async def list(self, prefix: str) -> list[str]:
         """Page references under ``prefix``, sorted."""
@@ -82,6 +93,9 @@ class MemoryRawStore:
         self.events.append(("get", ref))
         return self.pages[ref]
 
+    async def meta(self, ref: str) -> dict[str, str]:
+        return dict(self.metadata[ref])
+
     async def list(self, prefix: str) -> list[str]:
         return sorted(r for r in self.pages if r.startswith(prefix))
 
@@ -104,6 +118,10 @@ class BlobRawStore:
     async def get(self, ref: str) -> bytes:
         stream = await self._container.get_blob_client(ref).download_blob()
         return bytes(await stream.readall())
+
+    async def meta(self, ref: str) -> dict[str, str]:
+        props = await self._container.get_blob_client(ref).get_blob_properties()
+        return dict(props.metadata or {})
 
     async def list(self, prefix: str) -> list[str]:
         return sorted([b.name async for b in self._container.list_blobs(name_starts_with=prefix)])

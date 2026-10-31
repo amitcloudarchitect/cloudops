@@ -482,6 +482,15 @@ def _tenant(ds: Dataset, spec: _Spec, rng: random.Random) -> None:
             )
         )
         ds.alias_truth.append(AliasTruth(source, alias, spec.code, Resolution.EXACT))
+    # Step 15: the SharePoint customer name and the Entra directory id the Graph
+    # fixtures use (graph_fixtures), so the local fixture runs resolve them.
+    if spec.code in ("NWL", "CRL"):
+        directory = str(uuid.uuid5(NAMESPACE, f"graph:directory:{spec.code}"))
+        for source, alias in (("sharepoint", spec.name), ("entra", directory)):
+            ds.tenant_aliases.append(TenantAliasRow(
+                tid, source, alias, Decimal("1.00"), "delivery.lead@getronics.example",
+                _at(start, 3600 * 10)))
+            ds.alias_truth.append(AliasTruth(source, alias, spec.code, Resolution.EXACT))
     for source, variant in spec.normalised:
         ds.alias_truth.append(AliasTruth(source, variant, spec.code, Resolution.NORMALISED))
     for source, text, _suggest, note in spec.quarantined:
@@ -545,6 +554,13 @@ def _accounts(
         )
         ds.accounts.append(acct)
         out.append(acct)
+        # How an account is onboarded (step 15): its id is an approved alias for
+        # the provider, so the cloud connectors resolve it exactly.
+        ds.tenant_aliases.append(TenantAliasRow(
+            tid, provider, native, Decimal("1.00"), "delivery.lead@getronics.example",
+            datetime.combine(ds.anchor, time.min, UTC) - timedelta(days=200),
+        ))
+        ds.alias_truth.append(AliasTruth(provider, native, spec.code, Resolution.EXACT))
     return out
 
 

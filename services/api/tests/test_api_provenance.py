@@ -68,7 +68,11 @@ def test_every_route_declares_a_permission_and_a_response_model() -> None:
     assert len(routes) >= 5
     for route in routes:
         assert isinstance(getattr(route.endpoint, REQUIRED_PERMISSION, None), str), route.path
-        assert route.response_model is not None, route.path
+        # 204 No Content has no body to model (FastAPI refuses one); anything else does.
+        if route.status_code == 204:
+            assert route.response_model is None, route.path
+        else:
+            assert route.response_model is not None, route.path
 
 
 def test_no_response_carries_a_number_outside_a_metric() -> None:

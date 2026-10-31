@@ -10,6 +10,9 @@ dependencies = [
     "temporalio>=1.34",
     "azure-storage-blob[aio]>=12.24",
     "azure-identity>=1.19",
+    "defusedxml>=0.7",
+    "azure-eventhub>=5.12",
+    "azure-eventhub-checkpointstoreblob-aio>=1.2",
 ]
 
 [tool.uv.sources]

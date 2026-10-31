@@ -264,6 +264,42 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             " external_key, name) VALUES (%s, %s, 'qualys', %s, 'unknown-host')",
             (t.id, t.account_id, f"q-{t.name}"),
         )
+        # Step 15 tables, one row each, so "zero rows" is never an empty table.
+        cx.execute(
+            "INSERT INTO cloudops.cost_finding (tenant_id, account_id, source_system, finding_id,"
+            " category, title, status, estimated_saving, saving_currency, customer_raw,"
+            " detected_at, updated_at) VALUES (%s, %s, 'corestack', %s, 'idle', 'Idle VM',"
+            " 'open', 12.500000, %s, %s, now(), now())",
+            (t.id, t.account_id, f"f-{t.name}", t.currency, t.name),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.directory_principal (tenant_id, directory_id, object_id, kind,"
+            " display_name) VALUES (%s, %s, %s, 'user', %s)",
+            (t.id, f"dir-{t.name}", f"u-{t.name}", f"{t.name} admin"),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.directory_role_assignment (tenant_id, directory_id,"
+            " assignment_id, principal_object_id, role_definition_id, role_name,"
+            " directory_scope_id) VALUES (%s, %s, %s, %s, 'r-ga', 'Global Administrator', '/')",
+            (t.id, f"dir-{t.name}", f"ra-{t.name}", f"u-{t.name}"),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.sharepoint_site (tenant_id, site_id, site_url, customer_raw)"
+            " VALUES (%s, %s, %s, %s)",
+            (t.id, f"site-{t.name}", f"https://{t.name}.sharepoint.example/sites/ops", t.name),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.document (tenant_id, source_system, site_id, item_id, name,"
+            " extraction) VALUES (%s, 'sharepoint', %s, %s, 'design.md', 'text')",
+            (t.id, f"site-{t.name}", f"item-{t.name}"),
+        )
+        cx.execute(
+            "INSERT INTO staging.cost_fact_load (tenant_id, account_id, assembly_id, object_key,"
+            " usage_date, invoice_period, charge_class, unblended_cost, amortized_cost,"
+            " currency) VALUES (%s, %s, 'asm-1', 'k', now()::date, to_char(now(), 'YYYY-MM'),"
+            " 'consumption', 1.000000, 1.000000, %s)",
+            (t.id, t.account_id, t.currency),
+        )
     cx.execute(
         "INSERT INTO cloudops.global_knowledge_chunk (source_kind, title, body, embedding)"
         " VALUES ('runbook', 'Global runbook', 'Restart the service', %s)",
@@ -530,8 +566,9 @@ class Synthetic:
     ingest_dsn: str
 
 
-@pytest.fixture(scope="session")
-async def synthetic(admin_server: str) -> AsyncIterator[Synthetic]:
+async def _synthetic(
+    admin_server: str, label: str, *clear: str
+) -> AsyncIterator[Synthetic]:
     from dataclasses import replace
 
     from cloudops_devdata.seed import load
@@ -542,10 +579,111 @@ async def synthetic(admin_server: str) -> AsyncIterator[Synthetic]:
         generate(FIXTURE_ANCHOR, FIXTURE_SEED),
         work_items=[], alias_quarantine=[], resource_quarantine=[],
     )
-    with _database(admin_server, "connector") as db:
+    for field in clear:
+        setattr(ds, field, [])
+    with _database(admin_server, label) as db:
         ingest = Database.create(db.ingest_dsn, pool_size=1, max_overflow=0)
         try:
             await load(ingest, ds)
         finally:
             await ingest.dispose()
         yield Synthetic(db.admin_dsn, db.app_dsn, db.ingest_dsn)
+
+
+@pytest.fixture(scope="session")
+async def synthetic(admin_server: str) -> AsyncIterator[Synthetic]:
+    async for s in _synthetic(admin_server, "connector"):
+        yield s
+
+
+@pytest.fixture(scope="module")
+async def synthetic_module(admin_server: str) -> AsyncIterator[Synthetic]:
+    """The same dataset in a database of the test module's own, for connectors
+    whose tests assert on whole tables (step 15): no findings and no cost either,
+    so whatever is there, the connector under test put there."""
+    async for s in _synthetic(admin_server, "conn", "vulnerabilities", "costs"):
+        yield s
+
+
+# --- The telemetry column store (step 15) -------------------------------------------
+
+CLICKHOUSE_URL_ENV = "CLOUDOPS_TEST_CLICKHOUSE_URL"  # an admin URL: http://user:pw@host:8123
+CLICKHOUSE_IMAGE = "clickhouse/clickhouse-server:24.8.14.39"  # as docker-compose.yml
+
+
+@dataclass(frozen=True)
+class Telemetry:
+    url: str
+    username: str  # the application's user: SELECT and INSERT only
+    password: str
+    admin: Any  # httpx.Client as the store's administrator, for assertions
+
+
+@contextmanager
+def _clickhouse_admin() -> Iterator[tuple[str, str, str]]:
+    if url := os.environ.get(CLICKHOUSE_URL_ENV):
+        parts = make_url(url.replace("http://", "clickhouse://", 1))
+        yield (f"http://{parts.host}:{parts.port or 8123}", parts.username or "",
+               parts.password or "")
+        return
+    import urllib.request
+
+    try:
+        from testcontainers.core.container import DockerContainer
+
+        password = secrets.token_hex(16)
+        container = (
+            DockerContainer(CLICKHOUSE_IMAGE)
+            .with_env("CLICKHOUSE_USER", "cloudops_admin")
+            .with_env("CLICKHOUSE_PASSWORD", password)
+            .with_env("CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT", "1")
+            .with_exposed_ports(8123)
+        )
+        container.start()
+    except Exception as exc:
+        pytest.fail(
+            f"No telemetry store: set {CLICKHOUSE_URL_ENV} to an admin URL, or make Docker "
+            f"available for Testcontainers ({type(exc).__name__}).",
+            pytrace=False,
+        )
+    try:
+        base = (f"http://{container.get_container_host_ip()}:"
+                f"{container.get_exposed_port(8123)}")
+        for _ in range(120):
+            try:
+                with urllib.request.urlopen(f"{base}/ping", timeout=2) as r:  # noqa: S310
+                    if r.read().strip() == b"Ok.":
+                        break
+            except OSError:
+                pass
+            import time
+
+            time.sleep(0.5)
+        yield base, "cloudops_admin", password
+    finally:
+        container.stop()
+
+
+@pytest.fixture(scope="session")
+def telemetry_store() -> Iterator[Telemetry]:
+    """The schema from db/telemetry, applied as the administrator, and an
+    application user with SELECT and INSERT only, as production has."""
+    import httpx
+
+    from db.telemetry.migrate import migrate
+
+    with _clickhouse_admin() as (base, user, password):
+        admin = httpx.Client(base_url=base, timeout=30.0,
+                             headers={"X-ClickHouse-User": user, "X-ClickHouse-Key": password})
+        migrate(admin)
+        app_user, app_password = f"cloudops_t_{secrets.token_hex(4)}", secrets.token_hex(16)
+        for statement in (
+            f"CREATE USER {app_user} IDENTIFIED WITH sha256_password BY '{app_password}'",
+            f"GRANT SELECT, INSERT ON telemetry.* TO {app_user}",
+        ):
+            admin.post("/", content=statement.encode()).raise_for_status()
+        try:
+            yield Telemetry(base, app_user, app_password, admin)
+        finally:
+            admin.post("/", content=f"DROP USER IF EXISTS {app_user}".encode())
+            admin.close()

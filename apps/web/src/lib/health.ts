@@ -23,6 +23,10 @@ export function band(value: number | null | undefined, [watch, atRisk, critical]
   return "healthy";
 }
 
+// Connector health is banded by the API on this same scale (cloudops_api.connectors,
+// step 15): a band that depends on schedules and the run log is decided where the
+// data is, and the screen shows it with its reasons, never re-deriving it here.
+
 // The product's thresholds, in one place so a screen cannot invent its own.
 export const THRESHOLDS = {
   slaBreachedOpen: [1, 3, 10],
