@@ -24,6 +24,11 @@ from cloudops_config import AuthConfig
 from cloudops_tenancy import Database
 
 NUMERIC = (int, float, Decimal, complex)
+# Routes that answer with a document rather than JSON, and its media type.
+BINARY_ROUTES = {
+    "/v1/reports/packs/{pack_id}/pdf": "application/pdf",
+    "/v1/reports/packs/{pack_id}/text": "text/plain",
+}
 
 
 def _app() -> Any:
@@ -68,9 +73,13 @@ def test_every_route_declares_a_permission_and_a_response_model() -> None:
     assert len(routes) >= 5
     for route in routes:
         assert isinstance(getattr(route.endpoint, REQUIRED_PERMISSION, None), str), route.path
-        # 204 No Content has no body to model (FastAPI refuses one); anything else does.
+        # 204 No Content has no body to model (FastAPI refuses one), and a binary
+        # document (the report pack's PDF) is not JSON; anything else has a model.
         if route.status_code == 204:
             assert route.response_model is None, route.path
+        elif route.path in BINARY_ROUTES:
+            assert route.response_model is None, route.path
+            assert set(route.responses[200]["content"]) == {BINARY_ROUTES[route.path]}
         else:
             assert route.response_model is not None, route.path
 

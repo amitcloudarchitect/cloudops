@@ -25,6 +25,227 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/assurance/assessments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assessments */
+        get: operations["list_assessments_v1_assurance_assessments_get"];
+        put?: never;
+        /** Open Assessment */
+        post: operations["open_assessment_v1_assurance_assessments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/assessments/{assessment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Assessment */
+        get: operations["get_assessment_v1_assurance_assessments__assessment_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/assessments/{assessment_id}/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Collect Evidence
+         * @description Run every automated control's evidence query now, and store what came back.
+         */
+        post: operations["collect_evidence_v1_assurance_assessments__assessment_id__collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/assessments/{assessment_id}/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Drafts
+         * @description Ask the drafting worker for drafts of the narrative controls (all, or one).
+         */
+        post: operations["request_drafts_v1_assurance_assessments__assessment_id__drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/assessments/{assessment_id}/evidence-packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Packs */
+        get: operations["list_packs_v1_assurance_assessments__assessment_id__evidence_packs_get"];
+        put?: never;
+        /**
+         * Export Pack
+         * @description Build, sign and record the evidence pack. Returns the signed document.
+         */
+        post: operations["export_pack_v1_assurance_assessments__assessment_id__evidence_packs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/assessments/{assessment_id}/responses/{code}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Response */
+        post: operations["approve_response_v1_assurance_assessments__assessment_id__responses__code__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/assessments/{assessment_id}/responses/{code}/narrative": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Edit Narrative
+         * @description A person's narrative. Editing an approved response withdraws its approval.
+         */
+        post: operations["edit_narrative_v1_assurance_assessments__assessment_id__responses__code__narrative_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/evidence-packs/{pack_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pack
+         * @description The pack exactly as signed: verifiable with the signing key's public half.
+         */
+        get: operations["get_pack_v1_assurance_evidence_packs__pack_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/evidence-routing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Evidence Routing */
+        get: operations["evidence_routing_v1_assurance_evidence_routing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/frameworks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Frameworks */
+        get: operations["list_frameworks_v1_assurance_frameworks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/frameworks/{framework}/controls": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Controls */
+        get: operations["list_controls_v1_assurance_frameworks__framework__controls_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assurance/library": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Load Library */
+        post: operations["load_library_v1_assurance_library_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/margin": {
         parameters: {
             query?: never;
@@ -277,6 +498,57 @@ export interface paths {
          *     a customer reads its own cost through the portal (step 18).
          */
         get: operations["finops_overview_v1_finops_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/knowledge/chunks/{chunk_id}/citation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chunk Citation */
+        get: operations["chunk_citation_v1_knowledge_chunks__chunk_id__citation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/knowledge/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Documents */
+        get: operations["list_documents_v1_knowledge_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/knowledge/gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coverage Gaps */
+        get: operations["coverage_gaps_v1_knowledge_gaps_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -547,6 +819,171 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/reports/packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Packs */
+        get: operations["list_packs_v1_reports_packs_get"];
+        put?: never;
+        /** Generate Pack */
+        post: operations["generate_pack_v1_reports_packs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/packs/{pack_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pack */
+        get: operations["get_pack_v1_reports_packs__pack_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/packs/{pack_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve Pack */
+        post: operations["approve_pack_v1_reports_packs__pack_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/packs/{pack_id}/narratives/{section}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Edit Narrative
+         * @description A person's text for a section: written, or the draft accepted as it stands.
+         */
+        post: operations["edit_narrative_v1_reports_packs__pack_id__narratives__section__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/packs/{pack_id}/narratives/{section}/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request Draft */
+        post: operations["request_draft_v1_reports_packs__pack_id__narratives__section__draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/packs/{pack_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pack Pdf
+         * @description The pack as printed: a person's narrative only, and a draft banner until
+         *     it is published.
+         */
+        get: operations["pack_pdf_v1_reports_packs__pack_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/packs/{pack_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish Pack */
+        post: operations["publish_pack_v1_reports_packs__pack_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/packs/{pack_id}/text": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pack Text
+         * @description The PDF's lines as text, one per printed line: what the acceptance diff
+         *     compares against the manually assembled pack.
+         */
+        get: operations["pack_text_v1_reports_packs__pack_id__text_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/reports/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Portfolio */
+        get: operations["portfolio_v1_reports_portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/resources": {
         parameters: {
             query?: never;
@@ -805,6 +1242,18 @@ export interface components {
             observed_on: string;
             ratio: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /** Approval */
+        Approval: {
+            /** Narrative Seen */
+            narrative_seen: string | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "compliant" | "partially_compliant" | "non_compliant" | "not_applicable" | "manual";
+        };
         /** Approvals */
         Approvals: {
             /**
@@ -816,6 +1265,72 @@ export interface components {
             count: components["schemas"]["Metric_int_"];
             /** Items */
             items: components["schemas"]["PendingChange"][];
+        };
+        /** AssessmentDetail */
+        AssessmentDetail: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Framework */
+            framework: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Library Version */
+            library_version: string;
+            /** Responses */
+            responses: components["schemas"]["ResponseView"][];
+            score: components["schemas"]["ScoreView"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            tenant: components["schemas"]["TenantView"];
+            /** Title */
+            title: string;
+        };
+        /** AssessmentRequest */
+        AssessmentRequest: {
+            /** Framework */
+            framework: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+            /** Title */
+            title: string;
+        };
+        /** AssessmentSummary */
+        AssessmentSummary: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Framework */
+            framework: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Library Version */
+            library_version: string;
+            score: components["schemas"]["ScoreView"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "closed";
+            tenant: components["schemas"]["TenantView"];
+            /** Title */
+            title: string;
         };
         /**
          * BandRules
@@ -849,6 +1364,44 @@ export interface components {
             /** Feeds Margin */
             feeds_margin: boolean;
             unblended: components["schemas"]["Metric_Decimal_"];
+        };
+        /** CitationView */
+        CitationView: {
+            /**
+             * Chunk Id
+             * Format: uuid
+             */
+            chunk_id: string;
+            /** Document Id */
+            document_id: string | null;
+            /** Document Name */
+            document_name: string | null;
+            /** Label */
+            label: string;
+            /** Page */
+            page: string | null;
+            /** Source Kind */
+            source_kind: string;
+            /** Source Ref */
+            source_ref: string | null;
+            /** Web Url */
+            web_url: string | null;
+        };
+        /** CollectedView */
+        CollectedView: {
+            /** Basis */
+            basis: string;
+            /** Control Code */
+            control_code: string;
+            /**
+             * Evidence Id
+             * Format: uuid
+             */
+            evidence_id: string;
+            /** Proposed Result */
+            proposed_result: ("compliant" | "partially_compliant" | "non_compliant") | null;
+            /** Query Name */
+            query_name: string;
         };
         /** ConnectorHealth */
         ConnectorHealth: {
@@ -905,6 +1458,78 @@ export interface components {
             outages: components["schemas"]["Metric_int_"];
             rules: components["schemas"]["BandRules"];
         };
+        /** ControlDefinition */
+        ControlDefinition: {
+            /**
+             * Assessment
+             * @enum {string}
+             */
+            assessment: "automated" | "narrative" | "manual";
+            /** Code */
+            code: string;
+            /** Domain */
+            domain: string;
+            /** Evidence Query */
+            evidence_query?: string | null;
+            /**
+             * Evidence Source
+             * @enum {string}
+             */
+            evidence_source: "azure" | "aws" | "servicenow" | "qualys" | "corestack" | "entra" | "sharepoint" | "policy_library" | "human";
+            /** Parameters */
+            parameters?: {
+                [key: string]: unknown;
+            };
+            /** Requirement */
+            requirement: string;
+            /** Title */
+            title: string;
+        };
+        /** ControlLibrary */
+        ControlLibrary: {
+            /** Controls */
+            controls: components["schemas"]["ControlDefinition"][];
+            /** Expected Count */
+            expected_count: number;
+            /** Framework */
+            framework: string;
+            /** Version */
+            version: string;
+        };
+        /** ControlNarrativeEdit */
+        ControlNarrativeEdit: {
+            /**
+             * Keep Draft Citations
+             * @default false
+             */
+            keep_draft_citations: boolean;
+            /** Narrative */
+            narrative: string;
+        };
+        /** ControlView */
+        ControlView: {
+            /**
+             * Assessment
+             * @enum {string}
+             */
+            assessment: "automated" | "narrative" | "manual";
+            /** Code */
+            code: string;
+            /** Domain */
+            domain: string;
+            /** Evidence Query */
+            evidence_query: string | null;
+            /** Evidence Source */
+            evidence_source: string;
+            /** Framework */
+            framework: string;
+            /** Library Version */
+            library_version: string;
+            /** Requirement */
+            requirement: string;
+            /** Title */
+            title: string;
+        };
         /** CostLine */
         CostLine: {
             amortized: components["schemas"]["Metric_Decimal_"];
@@ -927,6 +1552,22 @@ export interface components {
              * Format: date
              */
             period_start: string;
+        };
+        /** CoverageView */
+        CoverageView: {
+            /**
+             * Design
+             * @enum {string}
+             */
+            design: "current" | "stale" | "missing";
+            /**
+             * Handover
+             * @enum {string}
+             */
+            handover: "current" | "stale" | "missing";
+            /** Has Gap */
+            has_gap: boolean;
+            tenant: components["schemas"]["TenantView"];
         };
         /** CustomerCost */
         CustomerCost: {
@@ -999,6 +1640,44 @@ export interface components {
             /** Reason */
             reason: string | null;
         };
+        /** DocumentList */
+        DocumentList: {
+            /** Items */
+            items: components["schemas"]["DocumentView"][];
+            /** Rules */
+            rules: {
+                [key: string]: string;
+            };
+            stale: components["schemas"]["Metric_int_"];
+        };
+        /** DocumentView */
+        DocumentView: {
+            /**
+             * Doc Kind
+             * @enum {string}
+             */
+            doc_kind: "design" | "handover" | "runbook" | "policy";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Modified At */
+            modified_at: string | null;
+            /** Name */
+            name: string;
+            /** Reasons */
+            reasons: ("removed_resources" | "estate_changed" | "not_updated")[];
+            /** Removed Resources */
+            removed_resources: string[];
+            resources_added_since: components["schemas"]["Metric_int_"];
+            resources_named: components["schemas"]["Metric_int_"];
+            /** Stale */
+            stale: boolean;
+            tenant: components["schemas"]["TenantView"];
+            /** Web Url */
+            web_url: string | null;
+        };
         /** DriftList */
         DriftList: {
             /** Items */
@@ -1031,6 +1710,65 @@ export interface components {
             items_without_hours: components["schemas"]["Metric_int_"];
             modelled_hours: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /** EvidencePackSummary */
+        EvidencePackSummary: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Created By
+             * Format: uuid
+             */
+            created_by: string;
+            /** Framework */
+            framework: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key Id */
+            key_id: string;
+            /** Manifest Sha256 */
+            manifest_sha256: string;
+            /** Signature Alg */
+            signature_alg: string;
+        };
+        /** EvidenceView */
+        EvidenceView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Parameters */
+            parameters: {
+                [key: string]: unknown;
+            };
+            /** Query Name */
+            query_name: string;
+            /** Query Ref */
+            query_ref: string;
+            /** Query Text */
+            query_text: string;
+            /** Raw Value */
+            raw_value: {
+                [key: string]: unknown;
+            };
+            /**
+             * Retrieved At
+             * Format: date-time
+             */
+            retrieved_at: string;
+            /** Retrieved By */
+            retrieved_by: string;
+            /** Sha256 */
+            sha256: string;
+            /** Source System */
+            source_system: string;
+        };
         /** FederationRequest */
         FederationRequest: {
             /** Domains */
@@ -1042,6 +1780,32 @@ export interface components {
             idp_kind: "entra" | "saml" | "wsfed";
             /** Idp Reference */
             idp_reference: string;
+        };
+        /**
+         * FigureSnapshot
+         * @description A figure as generated: the value is unrounded text (an int, or a Decimal
+         *     in ``unit`` for money); presentation rounds it once.
+         */
+        FigureSnapshot: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "count" | "percent" | "days" | "hours" | "money" | "text";
+            /** Label */
+            label: string;
+            /** Note */
+            note: string | null;
+            /** Query Ref */
+            query_ref: string;
+            /** Source System */
+            source_system: string;
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
         };
         /** FinOpsOverview */
         FinOpsOverview: {
@@ -1063,6 +1827,17 @@ export interface components {
             oid: string;
             /** Role */
             role: string;
+        };
+        /** FrameworkView */
+        FrameworkView: {
+            automated: components["schemas"]["Metric_int_"];
+            controls: components["schemas"]["Metric_int_"];
+            /** Framework */
+            framework: string;
+            /** Library Version */
+            library_version: string;
+            manual: components["schemas"]["Metric_int_"];
+            narrative: components["schemas"]["Metric_int_"];
         };
         /** FxCorrectionRequest */
         FxCorrectionRequest: {
@@ -1112,6 +1887,16 @@ export interface components {
             /** To Currency */
             to_currency: string;
         };
+        /** GenerateRequest */
+        GenerateRequest: {
+            /** Period */
+            period: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1121,6 +1906,14 @@ export interface components {
         LiveRequest: {
             /** Live */
             live: boolean;
+        };
+        /** LoadResult */
+        LoadResult: {
+            /** Framework */
+            framework: string;
+            /** Library Version */
+            library_version: string;
+            loaded: components["schemas"]["Metric_int_"];
         };
         /** MarginDetail */
         MarginDetail: {
@@ -1250,6 +2043,25 @@ export interface components {
             service_requests: components["schemas"]["Metric_int_"];
             sla_attainment: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /** NarrativeView */
+        NarrativeView: {
+            /** Draft Note */
+            draft_note: string | null;
+            /** Draft State */
+            draft_state: ("none" | "requested" | "drafting" | "drafted" | "declined" | "failed") | null;
+            /** Draft Text */
+            draft_text: string | null;
+            /** Drafted At */
+            drafted_at: string | null;
+            /** Edited At */
+            edited_at: string | null;
+            /** Edited By */
+            edited_by: string | null;
+            /** Section */
+            section: string;
+            /** Text */
+            text: string | null;
+        };
         /** OnboardedTenant */
         OnboardedTenant: {
             /** Short Code */
@@ -1345,6 +2157,29 @@ export interface components {
             months: components["schemas"]["MonthPerformance"][];
             open_incidents: components["schemas"]["Metric_int_"];
             sla_breached_open: components["schemas"]["Metric_int_"];
+        };
+        /** PortfolioLine */
+        PortfolioLine: {
+            consumption: components["schemas"]["Metric_Decimal_"] | null;
+            /** Gap */
+            gap: string | null;
+            incidents_opened: components["schemas"]["Metric_int_"];
+            open_high_vulnerabilities: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** PortfolioView */
+        PortfolioView: {
+            /** Complete */
+            complete: boolean;
+            /** Customers */
+            customers: components["schemas"]["PortfolioLine"][];
+            incidents_opened: components["schemas"]["Metric_int_"];
+            open_high_vulnerabilities: components["schemas"]["Metric_int_"];
+            /** Period */
+            period: string;
+            /** Reporting Currency */
+            reporting_currency: string;
+            total_consumption: components["schemas"]["Metric_Decimal_"];
         };
         /** Posture */
         Posture: {
@@ -1532,6 +2367,75 @@ export interface components {
             margin: components["schemas"]["Metric_Decimal_"];
             margin_at_prior_rates: components["schemas"]["Metric_Decimal_"];
         };
+        /** ReportPackSummary */
+        ReportPackSummary: {
+            /** Approved At */
+            approved_at: string | null;
+            /** Contract Currency */
+            contract_currency: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Period */
+            period: string;
+            /** Published At */
+            published_at: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "approved" | "published" | "superseded";
+            tenant: components["schemas"]["TenantView"];
+            /** Version */
+            version: string;
+        };
+        /** ReportPackView */
+        ReportPackView: {
+            /** Approved At */
+            approved_at: string | null;
+            /** Contract Currency */
+            contract_currency: string;
+            /**
+             * Data As Of
+             * Format: date-time
+             */
+            data_as_of: string;
+            /**
+             * Generated At
+             * Format: date-time
+             */
+            generated_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Narratives */
+            narratives: components["schemas"]["NarrativeView"][];
+            /** Period */
+            period: string;
+            /** Published At */
+            published_at: string | null;
+            /** Releasable */
+            releasable: boolean;
+            /** Sections */
+            sections: components["schemas"]["SectionSnapshot"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "approved" | "published" | "superseded";
+            tenant: components["schemas"]["TenantView"];
+            /** Version */
+            version: string;
+        };
         /** ReprocessPreview */
         ReprocessPreview: {
             /** Available */
@@ -1656,6 +2560,47 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** ResponseView */
+        ResponseView: {
+            /** Approval Note */
+            approval_note: string | null;
+            /** Approved At */
+            approved_at: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /** Citations */
+            citations: {
+                [key: string]: unknown;
+            }[];
+            control: components["schemas"]["ControlView"];
+            /** Draft Citations */
+            draft_citations: {
+                [key: string]: unknown;
+            }[];
+            /** Draft Narrative */
+            draft_narrative: string | null;
+            /** Draft Note */
+            draft_note: string | null;
+            /**
+             * Draft State
+             * @enum {string}
+             */
+            draft_state: "none" | "requested" | "drafting" | "drafted" | "declined" | "failed";
+            /** Draft Sufficiency */
+            draft_sufficiency: ("sufficient" | "partial" | "insufficient") | null;
+            /** Drafted At */
+            drafted_at: string | null;
+            /** Evidence */
+            evidence: components["schemas"]["EvidenceView"][];
+            /** Narrative */
+            narrative: string | null;
+            /** Proposed Basis */
+            proposed_basis: string | null;
+            /** Proposed Result */
+            proposed_result: ("compliant" | "partially_compliant" | "non_compliant") | null;
+            /** Result */
+            result: ("compliant" | "partially_compliant" | "non_compliant" | "not_applicable" | "manual") | null;
+        };
         /** ReviewRequest */
         ReviewRequest: {
             /**
@@ -1712,6 +2657,50 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** RoutingView */
+        RoutingView: {
+            /** Description */
+            description: string;
+            /** Direction */
+            direction: string;
+            /** Name */
+            name: string;
+            /** Parameters */
+            parameters: string[];
+            /** Source System */
+            source_system: string;
+        };
+        /** ScoreView */
+        ScoreView: {
+            /** Counts */
+            counts: {
+                [key: string]: components["schemas"]["Metric_int_"];
+            };
+            excluded: components["schemas"]["Metric_int_"];
+            pending: components["schemas"]["Metric_int_"];
+            percent: components["schemas"]["Metric_Decimal_"] | null;
+            scorable: components["schemas"]["Metric_int_"];
+        };
+        /** SectionNarrativeEdit */
+        SectionNarrativeEdit: {
+            /** Text */
+            text: string;
+        };
+        /** SectionSnapshot */
+        SectionSnapshot: {
+            /** Captured */
+            captured: boolean;
+            /** Figures */
+            figures: components["schemas"]["FigureSnapshot"][];
+            /** Gap */
+            gap: string | null;
+            /** Key */
+            key: string;
+            /** Tables */
+            tables: components["schemas"]["TableSnapshot"][];
+            /** Title */
+            title: string;
+        };
         /** SeverityCount */
         SeverityCount: {
             open: components["schemas"]["Metric_int_"];
@@ -1735,6 +2724,19 @@ export interface components {
             monthly_manage_revenue: components["schemas"]["Metric_Decimal_"];
             /** Reference */
             reference: string;
+        };
+        /** TableSnapshot */
+        TableSnapshot: {
+            /** Columns */
+            columns: string[];
+            /** Key */
+            key: string;
+            /** Kinds */
+            kinds: ("count" | "percent" | "days" | "hours" | "money" | "text")[];
+            /** Rows */
+            rows: string[][];
+            /** Title */
+            title: string;
         };
         /** TeamLine */
         TeamLine: {
@@ -2059,6 +3061,427 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Approvals"];
+                };
+            };
+        };
+    };
+    list_assessments_v1_assurance_assessments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentSummary"][];
+                };
+            };
+        };
+    };
+    open_assessment_v1_assurance_assessments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssessmentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_assessment_v1_assurance_assessments__assessment_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssessmentDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    collect_evidence_v1_assurance_assessments__assessment_id__collect_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectedView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_drafts_v1_assurance_assessments__assessment_id__drafts_post: {
+        parameters: {
+            query?: {
+                control?: string | null;
+            };
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Metric_int_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_packs_v1_assurance_assessments__assessment_id__evidence_packs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidencePackSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_pack_v1_assurance_assessments__assessment_id__evidence_packs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_response_v1_assurance_assessments__assessment_id__responses__code__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Approval"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponseView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_narrative_v1_assurance_assessments__assessment_id__responses__code__narrative_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assessment_id: string;
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ControlNarrativeEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponseView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pack_v1_assurance_evidence_packs__pack_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evidence_routing_v1_assurance_evidence_routing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutingView"][];
+                };
+            };
+        };
+    };
+    list_frameworks_v1_assurance_frameworks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FrameworkView"][];
+                };
+            };
+        };
+    };
+    list_controls_v1_assurance_frameworks__framework__controls_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                framework: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ControlView"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    load_library_v1_assurance_library_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ControlLibrary"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoadResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2446,6 +3869,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    chunk_citation_v1_knowledge_chunks__chunk_id__citation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chunk_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CitationView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_documents_v1_knowledge_documents_get: {
+        parameters: {
+            query?: {
+                kind?: ("design" | "handover" | "runbook" | "policy") | null;
+                stale?: boolean | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coverage_gaps_v1_knowledge_gaps_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CoverageView"][];
                 };
             };
         };
@@ -2920,6 +4426,326 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Posture"];
+                };
+            };
+        };
+    };
+    list_packs_v1_reports_packs_get: {
+        parameters: {
+            query?: {
+                period?: string | null;
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPackSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_pack_v1_reports_packs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPackView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pack_v1_reports_packs__pack_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPackView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_pack_v1_reports_packs__pack_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPackView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_narrative_v1_reports_packs__pack_id__narratives__section__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SectionNarrativeEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPackView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_draft_v1_reports_packs__pack_id__narratives__section__draft_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+                section: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPackView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pack_pdf_v1_reports_packs__pack_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_pack_v1_reports_packs__pack_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportPackView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    pack_text_v1_reports_packs__pack_id__text_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portfolio_v1_reports_portfolio_get: {
+        parameters: {
+            query: {
+                currency: string;
+                period: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

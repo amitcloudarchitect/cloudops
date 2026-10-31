@@ -101,7 +101,25 @@ TENANT_TABLES = (
     "cloudops.cost_reconciliation",
     "cloudops.cost_anomaly",
     "cloudops.anomaly_threshold",
+    # Step 17.
+    "cloudops.assessment",
+    "cloudops.control_response",
+    "cloudops.evidence",
+    "cloudops.evidence_pack",
+    "cloudops.report_pack",
+    "cloudops.report_narrative",
+    "cloudops.report_pack_commercial",
 )
+# Written by people and the drafting worker through the application login only.
+NOT_INGESTED = frozenset({
+    "cloudops.assessment",
+    "cloudops.control_response",
+    "cloudops.evidence",
+    "cloudops.evidence_pack",
+    "cloudops.report_pack",
+    "cloudops.report_narrative",
+    "cloudops.report_pack_commercial",
+})
 
 
 # migrator_dsn is the schema owner, the role migrations run as: without FORCE it
@@ -114,8 +132,10 @@ def test_case2_unscoped_sql_sees_zero_rows(seeded: Seeded, login: str, table: st
     assert seeded_rows is not None
     assert seeded_rows[0] > 0, "zero proves nothing on an empty table"
     with psycopg.connect(getattr(seeded, login)) as cx:
-        if table.startswith("staging.") and login == "app_dsn":
-            # Quarantine is ingest-only: the application role cannot even look.
+        if (table.startswith("staging.") and login == "app_dsn") or (
+                table in NOT_INGESTED and login == "ingest_dsn"):
+            # Quarantine is ingest-only, and assurance and reporting are
+            # application-only: the other role cannot even look.
             with pytest.raises(psycopg.errors.InsufficientPrivilege):
                 cx.execute(f"SELECT count(*) FROM {table}")
             return
@@ -301,6 +321,7 @@ def test_case6_unknown_and_customer_roles_see_no_commercial_rows(seeded: Seeded,
     outside the commercial list gets no rows. Fails closed by construction."""
     with raw_scope(seeded.app_dsn, str(seeded.a.id), role) as cx:
         rows = cx.execute("SELECT monthly_manage_revenue FROM cloudops.sow").fetchall()
+        rows += cx.execute("SELECT sections FROM cloudops.report_pack_commercial").fetchall()
         tenant_rows = cx.execute("SELECT count(*) FROM cloudops.resource").fetchone()
     assert rows == []
     assert tenant_rows == (1,), "the role, not the scope, is what hides the row"
@@ -310,8 +331,11 @@ def test_case6_unknown_and_customer_roles_see_no_commercial_rows(seeded: Seeded,
 async def test_case6_commercial_visibility_matches_the_role_list(
     app_db: Database, seeded: Seeded, role: Role
 ) -> None:
-    rows = await _rows(app_db, scope(seeded.a, role=role), "SELECT id FROM cloudops.sow")
-    assert len(rows) == (1 if role.value in COMMERCIAL_ROLES else 0)
+    expected = 1 if role.value in COMMERCIAL_ROLES else 0
+    for sql in ("SELECT id FROM cloudops.sow",
+                "SELECT pack_id FROM cloudops.report_pack_commercial"):
+        rows = await _rows(app_db, scope(seeded.a, role=role), sql)
+        assert len(rows) == expected, sql
 
 
 @pytest.mark.parametrize(

@@ -24,14 +24,16 @@ type GetOk<P extends Get> = paths[P] extends {
   ? R
   : never;
 // 201 for a POST that creates; 200 for one that changes and answers with the result, or
-// that computes and stores nothing (a quote).
+// that computes and stores nothing (a quote); 202 for one that queues work (a draft request).
 type PostOk<P extends Post> = paths[P] extends {
   post: { responses: { 201: { content: { "application/json": infer R } } } };
 }
   ? R
   : paths[P] extends { post: { responses: { 200: { content: { "application/json": infer R } } } } }
     ? R
-    : never;
+    : paths[P] extends { post: { responses: { 202: { content: { "application/json": infer R } } } } }
+      ? R
+      : never;
 // Endpoints that answer 204 No Content.
 type PostEmpty = { [P in Post]: paths[P] extends { post: { responses: { 204: unknown } } } ? P : never }[Post];
 // An endpoint that takes no body takes `undefined`, and nothing is sent.
@@ -95,8 +97,19 @@ export async function apiPost<P extends Post>(
   path: P,
   params: Record<string, string>,
   body: PostBody<P>,
+  query?: Query,
 ): Promise<PostOk<P>> {
-  return (await send(token, "POST", url(path, params), body)) as PostOk<P>;
+  return (await send(token, "POST", url(path, params, query), body)) as PostOk<P>;
+}
+
+// Endpoints that answer with a document rather than JSON (the report pack's PDF).
+type Download = { [P in Get]: paths[P] extends { get: { responses: { 200: { content: { "application/pdf": unknown } } } } } ? P : never }[Get];
+
+/** Fetch a document with the user's token, as a Blob the browser can save. */
+export async function apiDownload<P extends Download>(token: string, path: P, params: Record<string, string>): Promise<Blob> {
+  const response = await fetch(url(path, params), { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+  if (!response.ok) throw new ApiError(response.status, "error", response.headers.get("x-request-id"));
+  return response.blob();
 }
 
 /** A POST answered with 204 No Content: it resolves to nothing, or throws ApiError. */
