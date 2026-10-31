@@ -1413,7 +1413,7 @@
               }
             ]
           },
-          "price_30d": {
+          "price_last_month": {
             "anyOf": [
               {
                 "items": {
@@ -1425,7 +1425,7 @@
                 "type": "null"
               }
             ],
-            "title": "Price 30D"
+            "title": "Price Last Month"
           },
           "resources": {
             "anyOf": [
@@ -1458,14 +1458,14 @@
           "sla_breached_open",
           "critical_vulnerabilities",
           "cost_30d",
-          "price_30d"
+          "price_last_month"
         ],
         "title": "CustomerOverview",
         "type": "object"
       },
       "CustomerPrice": {
         "additionalProperties": false,
-        "description": "What a customer sees instead of cost (ADR 0021): its consumption at the\nprice Getronics charges. ``price`` is None, and ``not_captured`` says why,\nwhen any day in the period has no uplift in force: never the cost, never a\nzero.",
+        "description": "What a customer sees instead of cost (ADR 0021): its consumption at the\nprice Getronics charges, for one closed calendar month and nothing finer, so\nno single line's price can be isolated (decision 8). ``price`` is None, and\n``not_captured`` says why, when any line in the month has no uplift in force:\nnever the cost, never a zero.",
         "properties": {
           "currency": {
             "title": "Currency",
@@ -1483,6 +1483,11 @@
             ],
             "title": "Not Captured"
           },
+          "period": {
+            "format": "date",
+            "title": "Period",
+            "type": "string"
+          },
           "price": {
             "anyOf": [
               {
@@ -1495,6 +1500,7 @@
           }
         },
         "required": [
+          "period",
           "currency",
           "price",
           "not_captured"
@@ -3536,6 +3542,11 @@
             ],
             "title": "Not Captured"
           },
+          "period": {
+            "format": "date",
+            "title": "Period",
+            "type": "string"
+          },
           "price": {
             "anyOf": [
               {
@@ -3552,6 +3563,7 @@
           }
         },
         "required": [
+          "period",
           "currency",
           "price",
           "not_captured",
@@ -7256,7 +7268,7 @@
     },
     "/v1/cost/summary": {
       "get": {
-        "description": "Cloud consumption by provider and transaction currency. Staff see the\nprovider's charge to Getronics; a customer sees the price Getronics charges\nit (ADR 0021). Given ``currency``, each line is also converted at the rate\nin force on each usage date; a line with any day unconverted has none.",
+        "description": "Cloud consumption by provider and transaction currency. Staff see the\nprovider's charge to Getronics over the last ``days``. A customer sees the\nprice Getronics charges it (ADR 0021) for each of the last ``months``\nclosed calendar months, and nothing finer. Given ``currency``, each figure\nis also converted at the rate in force on each usage date; a figure with any\nday unconverted has none.",
         "operationId": "cost_summary_v1_cost_summary_get",
         "parameters": [
           {
@@ -7268,6 +7280,18 @@
               "maximum": 90,
               "minimum": 1,
               "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Months",
               "type": "integer"
             }
           },

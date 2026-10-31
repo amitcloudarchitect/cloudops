@@ -7,7 +7,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { apiGet } from "@/lib/api";
-import { count, money } from "@/lib/format";
+import { count, money, month } from "@/lib/format";
 import { band, THRESHOLDS, type Band } from "@/lib/health";
 import { can, useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
@@ -28,17 +28,18 @@ function workLink(tenant: string, facets: Record<string, string>): string {
 }
 
 // A customer sees its consumption at the price Getronics charges, never
-// Getronics' cost (ADR 0021). Not captured is said, never shown as zero.
+// Getronics' cost, and only for a closed month: nothing finer, so no single
+// line's price shows (ADR 0021). Not captured is said, never shown as zero.
 function PriceCards({ prices }: { prices: CustomerPrice[] }) {
   if (prices.length === 0) {
-    return <MetricCard label="Cloud consumption, 30 days" metric={null} unavailable="No consumption in the last 30 days" />;
+    return <MetricCard label="Cloud consumption, last month" metric={null} unavailable="No consumption last month" />;
   }
   return (
     <>
       {prices.map((p) => (
         <MetricCard
-          key={p.currency}
-          label={`Cloud consumption, 30 days (${p.currency})`}
+          key={`${p.period}-${p.currency}`}
+          label={`Cloud consumption, ${month(p.period)} (${p.currency})`}
           metric={p.price}
           display={(x) => money(String(x.value), x.unit)}
           unavailable={p.not_captured ? "Not yet priced: your Getronics service manager can confirm the rate" : undefined}
@@ -100,8 +101,8 @@ export function CustomerOverviewView() {
                   display={(m) => count(Number(m.value))}
                   band={c.critical_vulnerabilities ? band(c.critical_vulnerabilities.value, THRESHOLDS.criticalVulnerabilities) : undefined}
                 />
-                {c.price_30d !== null ? (
-                  <PriceCards prices={c.price_30d} />
+                {c.price_last_month !== null ? (
+                  <PriceCards prices={c.price_last_month} />
                 ) : c.cost_30d === null ? (
                   <MetricCard label="Cloud cost, 30 days" metric={null} />
                 ) : c.cost_30d.length === 0 ? (

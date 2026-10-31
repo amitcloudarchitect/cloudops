@@ -73,7 +73,7 @@ test.describe("CXO", () => {
     await page.goto("/customers");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Northwind/);
     // The price Getronics charges, never Getronics' cost (ADR 0021).
-    await expect(page.getByText(/Cloud consumption, 30 days \([A-Z]{3}\)/).first()).toBeVisible();
+    await expect(page.getByText(/Cloud consumption, [A-Z][a-z]+ \d{4} \([A-Z]{3}\)/).first()).toBeVisible();
     await expect(page.getByText(/Cloud cost/)).toHaveCount(0);
     await expect(page.getByText(/Not yet priced/)).toHaveCount(0); // Northwind's SOW has an uplift
     await expect(page.getByText(/margin|rate card|revenue|SOW/i)).toHaveCount(0);

@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import copy
 import hashlib
+from dataclasses import asdict, replace
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -38,6 +39,7 @@ from cloudops_domain.reporting.sections import (
     PackContent,
     Section,
     Table,
+    for_storage,
     month_bounds,
     narrative_input,
 )
@@ -353,6 +355,32 @@ def test_snapshot_round_trips() -> None:
     content = _content()
     again = PackContent.from_json(content.tenant_id, content.to_json())
     assert again == content
+
+
+def test_storage_gives_the_customer_the_price_and_commercial_roles_the_cost() -> None:
+    base = _content()
+    summary = base.section("executive_summary")
+    for price in (Figure("customer_price", "Cloud consumption", "1333.3302", "money", "EUR",
+                         "cloud_billing", "q", "each day at the average rate on its usage date"),
+                  Figure("customer_price", "Cloud consumption", "", "text", "",
+                         "cloud_billing", "q", "not captured: no consumption uplift agreed")):
+        content = replace(base, sections=(replace(summary, figures=(*summary.figures, price)),
+                                          *base.sections[1:]))
+        stored = for_storage(content)
+
+        def keys(part: dict[str, Any]) -> set[str]:
+            return {f["key"] for f in part["executive_summary"]["figures"]}
+
+        # Every reports.read holder: neither, since price over cost is the uplift.
+        assert keys(stored.public).isdisjoint({"cloud_cost", "customer_price"})
+        assert set(stored.public) == {"executive_summary", "volumetrics", "csat"}
+        # The customer: the price (or its gap) in the cost's place.
+        assert set(stored.priced) == {"executive_summary"}
+        priced = {f["key"]: f for f in stored.priced["executive_summary"]["figures"]}
+        assert "cloud_cost" not in priced
+        assert priced["customer_price"] == asdict(price)
+        # Commercial roles: both.
+        assert {"cloud_cost", "customer_price"} <= keys(stored.commercial)
 
 
 def test_narrative_input_is_figures_and_tables_only() -> None:
