@@ -7,22 +7,6 @@ metadata:
     azure.workload.identity/client-id: SET-IN-OVERLAY
 automountServiceAccountToken: false
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: connector-servicenow
-data:
-  CLOUDOPS_ENV: azure
-  CLOUDOPS_SECRETS_DIR: /mnt/secrets
-  CLOUDOPS_TEMPORAL_ADDRESS: temporal-frontend.temporal.svc.cluster.local:7233
-  CLOUDOPS_TEMPORAL_NAMESPACE: default
-  CLOUDOPS_TEMPORAL_TLS_DIR: /mnt/temporal-tls  # the Certificate below
-  CLOUDOPS_BRONZE_CONTAINER_URL: SET-IN-OVERLAY
-  CLOUDOPS_REPORTS_CONTAINER_URL: SET-IN-OVERLAY
-  # Not secret (ADR 0009); the client secret is a mounted file (below).
-  CLOUDOPS_SERVICENOW_URL: SET-IN-OVERLAY
-  CLOUDOPS_SERVICENOW_CLIENT_ID: SET-IN-OVERLAY
----
 # Its client certificate for Temporal (mutual TLS, ADR 0010), from the internal CA.
 # Also KEDA's, for reading this queue's depth (TriggerAuthentication below).
 apiVersion: cert-manager.io/v1

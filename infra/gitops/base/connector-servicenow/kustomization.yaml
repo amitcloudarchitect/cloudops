@@ -6,3 +6,14 @@ kind: Kustomization
 namespace: platform-ingest
 resources:
   - connector-servicenow.yaml
+configMapGenerator:
+  # Generated, so its name carries a hash of its contents (overlay patches included):
+  # a changed setting renames it and rolls the pods that read it at start-up. Old
+  # copies are kept, unpruned and ignored, so a pod of the previous revision (a canary's
+  # stable side, a rollback) can still start.
+  - name: connector-servicenow
+    envs: [config.env]
+    options:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous
