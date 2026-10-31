@@ -3,6 +3,9 @@
     outcomes = await run_cases(cases, app_dsn=..., tenants={"alpha": id, ...},
                                cassettes=Path("evals/cassettes"))
 
+``knowledge`` is each tenant's own knowledge, by tenant key (default
+``OWN_KNOWLEDGE``); the simulation's tenant brings its own runbook summaries.
+
 For each case:
 1. Insert the ticket for its tenant, through packages/tenancy, as the connector
    would.
@@ -138,6 +141,7 @@ async def run_cases(
     app_dsn: str,
     tenants: Mapping[str, UUID],
     cassettes: Path,
+    knowledge: Mapping[str, Sequence[tuple[str, str, str, str]]] = OWN_KNOWLEDGE,
 ) -> tuple[dict[str, Outcome], dict[str, TriageOutcome]]:
     db = Database.create(app_dsn, pool_size=4, max_overflow=0)
     replay = ReplayProvider.from_directory(cassettes, "mock")
@@ -148,7 +152,7 @@ async def run_cases(
     for tool in (*TOOLS, knowledge_tool(index)):
         registry.register(tool)
     try:
-        for key, docs in OWN_KNOWLEDGE.items():
+        for key, docs in knowledge.items():
             if key in tenants:
                 for ref, kind, title, body in docs:
                     await index.add(_ctx(tenants[key]), source_kind=kind, source_ref=ref,
