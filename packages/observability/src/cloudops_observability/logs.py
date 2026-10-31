@@ -7,7 +7,8 @@
 ``ScrubFilter`` sits on every handler ``configure_logging`` installs (stdout
 and, when telemetry is on, OpenTelemetry to Log Analytics). It rewrites the
 record in place: the message is formatted and scrubbed (``scrub.scrub_text``),
-an exception becomes scrubbed text, and every ``extra`` field not on the
+an exception becomes its type, SQLSTATE or HTTP status and frames, never its
+message (``scrub.describe_exception``), and every ``extra`` field not on the
 allowlist (``scrub.allowed_key``) is removed. So ``extra={"tenant_id": t}``
 never leaves the process, and neither does ``"... oid=%s" % oid``.
 
@@ -20,13 +21,12 @@ from __future__ import annotations
 import json
 import logging
 import sys
-import traceback
 from datetime import UTC, datetime
 from typing import Any, Final
 
 from opentelemetry import trace
 
-from cloudops_observability.scrub import allowed_key, scrub_text
+from cloudops_observability.scrub import allowed_key, describe_exception, scrub_text
 
 # Attributes every LogRecord has; anything else on a record came from ``extra``.
 _STANDARD: Final = frozenset(logging.LogRecord(
@@ -50,7 +50,10 @@ class ScrubFilter(logging.Filter):
         except Exception:  # a bad format string must not lose the record
             message = str(record.msg)
         if record.exc_info:
-            message += "\n" + "".join(traceback.format_exception(*record.exc_info))
+            exc = record.exc_info[1]
+            if exc is not None:
+                # Type, SQLSTATE or HTTP status, and frames: never the message.
+                message += "\n" + describe_exception(exc)
             record.exc_info = None
             record.exc_text = None
         if record.stack_info:

@@ -111,9 +111,9 @@ def scrub_span(span: ReadableSpan) -> ReadableSpan:
     events = [Event(e.name, scrub_attributes(e.attributes), e.timestamp)
               for e in span.events if e.name in _KEPT_EVENTS or e.name.startswith("cloudops.")]
     links = [Link(link.context, scrub_attributes(link.attributes)) for link in span.links]
-    status = span.status
-    if status.description:
-        status = Status(status.status_code, scrub_text(status.description))
+    # The status keeps its code, never its description: the description is an
+    # exception's message (ADR 0022).
+    status = Status(span.status.status_code) if span.status.description else span.status
     return ReadableSpan(
         name=scrub_text(span.name), context=span.context, parent=span.parent,
         resource=span.resource, attributes=scrub_attributes(span.attributes), events=events,

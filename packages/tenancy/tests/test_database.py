@@ -536,3 +536,51 @@ async def test_statements_are_spans_with_text_never_values(
     assert str(provisioned.tenant_a) not in repr([dict(s.attributes or {}) for s in spans])
     (failed,) = [s for s in spans if s.status.status_code.name == "ERROR"]
     assert (failed.attributes or {})["error.type"] == "42P01"
+
+
+async def test_errors_never_carry_bound_values_into_telemetry(
+    db: Database, provisioned: Provisioned
+) -> None:
+    """Review of #37: a failed statement's exception reaches spans and logs. The
+    engine hides bound parameters, and the exporter and log filter keep only the
+    type, SQLSTATE and frames, never PostgreSQL's message, which quotes input."""
+    import io
+    import json
+    import logging
+
+    from sqlalchemy.exc import DBAPIError
+
+    from cloudops_observability.logs import JsonFormatter, ScrubFilter
+    from cloudops_observability.testing import memory_telemetry
+    from cloudops_observability.tracing import tracer
+
+    customer = "Acme Bank payroll down - call Jane Smith"
+    mem = memory_telemetry()
+    mem.spans.clear()
+    buf = io.StringIO()
+    handler = logging.StreamHandler(buf)
+    handler.setFormatter(JsonFormatter("test"))
+    handler.addFilter(ScrubFilter())
+    log = logging.getLogger("cloudops.test.db_errors")
+    log.addHandler(handler)
+    log.propagate = False
+    try:
+        for sql in ("SELECT CAST(:v AS integer)",  # PostgreSQL quotes the input
+                    "SELECT CAST(:v AS text) FROM cloudops.no_such_table"):
+            with pytest.raises(DBAPIError) as caught, tracer().start_as_current_span("activity"):
+                async with db.transaction(scope(provisioned.tenant_a)) as conn:
+                    await conn.execute(text(sql), {"v": customer})
+            assert "[parameters:" not in str(caught.value)
+            try:
+                raise caught.value
+            except Exception:
+                log.exception("statement failed")
+    finally:
+        log.removeHandler(handler)
+    exported = repr([(s.name, dict(s.attributes or {}), s.status.description,
+                      [dict(e.attributes or {}) for e in s.events]) for s in mem.finished()])
+    logged = [json.loads(line)["msg"] for line in buf.getvalue().splitlines()]
+    assert "sqlstate=22P02" in logged[0]
+    for leaked in ("Acme", "Jane Smith"):
+        assert leaked not in exported
+        assert not any(leaked in m for m in logged)

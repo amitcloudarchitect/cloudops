@@ -47,12 +47,24 @@ live. The user decided those before the build.
    - In each process, `cloudops_observability.scrub`: an attribute allowlist (semantic
      convention keys that carry no customer data, plus `cloudops.*` keys whose names
      contain no tenant-, person- or account-shaped fragment), every kept string
-     scrubbed of secrets, e-mail addresses and UUIDs, `server.address` kept only for
-     platform hosts (anything else becomes `external`), URLs and paths dropped
-     (`http.route` says the same safely). Log records go through the same rules:
-     `extra` fields off the allowlist are removed, messages and exceptions scrubbed.
-   - In the collector, the `redaction` processor with the same allowlist and the UUID
-     and e-mail patterns. A test keeps the two lists in step with each other and with
+     scrubbed of secrets, URLs, e-mail addresses and UUIDs, `server.address` kept only
+     for platform hosts (anything else becomes `external`), URL and path attributes
+     dropped (`http.route` says the same safely). **An exception is its type, SQLSTATE
+     or HTTP status and its frames, never its message**: messages quote values (a
+     constraint's row, PostgreSQL's "invalid input" text, a request URL), so span
+     events lose `exception.message`, stack traces keep only frame lines, span status
+     keeps its code without the description, and logged exceptions are rewritten the
+     same way. The engine is built with `hide_parameters`. Log records follow the same
+     rules: `extra` fields off the allowlist are removed, messages scrubbed.
+   - Metrics: SDK views keep only listed keys on `http.client.*` and `http.server.*`
+     (method, status, route, error type, scheme, protocol); instrumentation would
+     otherwise label outbound calls with the customer's host. Our own instruments use
+     fixed vocabularies.
+   - In the collector, the `redaction` processor with the same allowlist and the URL,
+     UUID and e-mail patterns on traces and logs, and an `attributes` processor on
+     metrics that deletes host, URL and person-shaped keys. OTLP is accepted only from
+     the instrumented namespaces (platform-api, -ingest, -ai), so the console's pods
+     cannot write a security event. A test keeps the two lists in step with each other and with
      every `cloudops.*` key the code sets; it caught `cloudops.agent.prompt_version`,
      which the services' rule dropped, now `cloudops.agent.version`.
    Customer names cannot be found by pattern; code must not put one in a message
@@ -165,6 +177,12 @@ live. The user decided those before the build.
 - Grafana and Azure Monitor never answer "which customer": that question goes to the
   console, which asks the database under the caller's scope. On-call pivots from a
   trace id to RLS'd rows (`llm_call`, `agent_run`, `work_item`, `audit.action_log`).
+- A row-level security refusal on write is a Sev0 page, including the ServiceNow
+  page that fails because a ticket's company moved to another tenant (dead-lettered by
+  design, retried first). Whether that case should be a lower-severity event is open.
+- The collector's egress is any destination on 443 (NetworkPolicy has no FQDNs), as
+  for the other workloads; an FQDN policy (Cilium) would narrow it to App Insights and
+  Entra.
 - A dropped attribute is silent by design. A new `cloudops.*` attribute must be added
   to the collector's allowlist (a test fails otherwise).
 - Execution-plane signals (unsigned runbook, credential mint, verification rate,

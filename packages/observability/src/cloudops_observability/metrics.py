@@ -21,6 +21,7 @@ from functools import cache
 from typing import Final
 
 from opentelemetry import metrics
+from opentelemetry.sdk.metrics.view import View
 
 METER: Final = "cloudops"
 _MICRO: Final = Decimal("0.000001")
@@ -44,6 +45,26 @@ def _counter(name: str, unit: str, description: str) -> metrics.Counter:
 @cache
 def _histogram(name: str, unit: str, description: str) -> metrics.Histogram:
     return _meter().create_histogram(name, unit=unit, description=description)
+
+
+# Metric attributes are allowlisted per instrument family, like span attributes
+# (ADR 0022). Instrumentation libraries label HTTP metrics with server.address
+# and url.*, which for an outbound call name a customer's host; a View keeps
+# only the keys listed here. Our own instruments (cloudops.*) are labelled by
+# this package alone, from fixed vocabularies.
+_HTTP_KEYS: Final = frozenset({
+    "http.request.method", "http.response.status_code", "error.type", "url.scheme",
+    "network.protocol.name", "network.protocol.version",
+})
+_HTTP_SERVER_KEYS: Final = _HTTP_KEYS | {"http.route"}
+
+
+def metric_views() -> list[View]:
+    """The views every MeterProvider in this codebase is built with."""
+    return [
+        View(instrument_name="http.client.*", attribute_keys=set(_HTTP_KEYS)),
+        View(instrument_name="http.server.*", attribute_keys=set(_HTTP_SERVER_KEYS)),
+    ]
 
 
 def reset_instruments() -> None:
@@ -110,5 +131,5 @@ def record_reconciliation(*, kind: str, status: str, reason: str | None) -> None
         1, {"kind": kind, "status": status, "reason": reason or "none"})
 
 
-__all__ = ["METER", "micros", "record_agent_run", "record_connector_run", "record_llm_call",
-           "record_reconciliation", "reset_instruments"]
+__all__ = ["METER", "metric_views", "micros", "record_agent_run", "record_connector_run",
+           "record_llm_call", "record_reconciliation", "reset_instruments"]

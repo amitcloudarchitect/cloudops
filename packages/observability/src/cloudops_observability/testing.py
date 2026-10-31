@@ -17,6 +17,7 @@ from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
+from cloudops_observability.metrics import metric_views
 from cloudops_observability.tracing import ScrubbingSpanExporter
 
 
@@ -55,7 +56,7 @@ def memory_telemetry() -> MemoryTelemetry:
     tracer.add_span_processor(SimpleSpanProcessor(ScrubbingSpanExporter(spans)))
     trace.set_tracer_provider(tracer)
     reader = InMemoryMetricReader()
-    metrics.set_meter_provider(MeterProvider(metric_readers=[reader]))
+    metrics.set_meter_provider(MeterProvider(metric_readers=[reader], views=metric_views()))
     return MemoryTelemetry(spans, reader)
 
 
