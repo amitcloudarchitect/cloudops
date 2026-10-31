@@ -30,6 +30,7 @@ _FIRST = TODAY.replace(day=1)
 PERIOD: date = (_FIRST - timedelta(days=1)).replace(day=1)  # last month: its partitions exist
 LABEL = f"{PERIOD:%Y-%m}"
 D1, D2 = PERIOD + timedelta(days=2), PERIOD + timedelta(days=15)
+UPLIFT_A = Decimal("0.08")  # alpha's SOW; bravo's and charlie's have none (ADR 0021)
 
 # Rates in force on each row's date. CHF is used by no other suite.
 RATES = (
@@ -44,6 +45,7 @@ RATES = (
 class Month:
     expected_eur: Decimal  # tenant a's consumption in EUR, row by row
     expected_gbp: Decimal  # tenant a's consumption in GBP, from the same rows
+    expected_price_eur: Decimal  # tenant a's price for it: cost x (1 + its SOW's uplift)
 
 
 @pytest.fixture(scope="module")
@@ -112,10 +114,11 @@ def month(step17: Step17) -> Month:
                     " excess_cost, currency) VALUES (%s, %s, 'Cloud Ops', 'incident', 90.25,"
                     " 3, 1, 0.75, 10, 1234.567800, 'EUR')", (a.id, sid[0]))
         cx.execute("UPDATE cloudops.sow SET hosting_acv = 120000, manage_acv = 495006,"
-                   " professional_services = 0 WHERE tenant_id = %s", (a.id,))
+                   " professional_services = 0, consumption_uplift = %s WHERE tenant_id = %s",
+                   (UPLIFT_A, a.id))
     eur = Decimal("100") + Decimal("200") * Decimal("1.05") + Decimal("50") * Decimal("1.10")
     gbp = Decimal("100") * Decimal("0.85") + Decimal("250") * Decimal("0.90")
-    return Month(eur, gbp)
+    return Month(eur, gbp, eur * (1 + UPLIFT_A))
 
 
 async def _generate(step17: Step17, oid: UUID, tenant: UUID, period: str = LABEL) -> Any:
@@ -141,6 +144,11 @@ async def test_a_pack_is_generated_from_live_rows_in_the_contract_currency(
     spend = _figure(pack, "executive_summary", "cloud_cost")
     assert (spend["kind"], spend["unit"]) == ("money", "EUR")
     assert Decimal(spend["value"]) == month.expected_eur  # unrounded until presentation
+    # The approver sees the price the customer will see, beside the cost.
+    price = _figure(pack, "executive_summary", "customer_price")
+    assert (price["kind"], price["unit"], price["label"]) == ("money", "EUR",
+                                                             "Cloud consumption")
+    assert Decimal(price["value"]) == month.expected_price_eur
     assert _figure(pack, "volumetrics", "incidents_opened")["value"] == "4"
     assert _figure(pack, "volumetrics", "incidents_closed")["value"] == "3"
     assert Decimal(_figure(pack, "volumetrics", "incident_sla_attainment")["value"]
@@ -243,6 +251,58 @@ async def test_a_missing_rate_is_a_gap_never_zero(step17: Step17, month: Month) 
     assert spend["value"] == ""
     assert spend["kind"] == "text"
     assert spend["note"] == f"not shown: no average FX rate for CHF->USD from {D1.isoformat()}"
+    # Charlie's SOW has no uplift: the price is a named gap, never the cost.
+    price = _figure(admin_pack, "executive_summary", "customer_price")
+    assert (price["value"], price["kind"]) == ("", "text")
+    assert price["note"].startswith("not captured: no consumption uplift agreed for 1 of 1")
+
+
+async def test_a_priced_day_without_a_rate_is_a_gap_never_a_partial_price(
+    step17: Step17, month: Month
+) -> None:
+    s = step17.seeded
+    with psycopg.connect(s.admin_dsn, autocommit=True) as cx:
+        cx.execute("UPDATE cloudops.sow SET consumption_uplift = 0.1 WHERE tenant_id = %s",
+                   (s.c.id,))
+    try:
+        pack = (await _generate(step17, step17.admin, s.c.id)).json()
+    finally:
+        with psycopg.connect(s.admin_dsn, autocommit=True) as cx:
+            cx.execute("UPDATE cloudops.sow SET consumption_uplift = NULL WHERE tenant_id = %s",
+                       (s.c.id,))
+    price = _figure(pack, "executive_summary", "customer_price")
+    assert (price["value"], price["kind"]) == ("", "text")
+    assert price["note"] == (
+        f"not captured: no average FX rate for CHF->USD from {D1.isoformat()}")
+
+
+def test_only_commercial_roles_may_compute_a_packs_price(step17: Step17, month: Month) -> None:
+    """Price over cost is the uplift: the pack's price function answers only the
+    roles that may read the SOW, and a customer scope cannot call it at all."""
+    s = step17.seeded
+    sql = ("SELECT sum(price) FROM cloudops.pack_customer_price(%s, %s, %s)")
+    args = (s.a.id, PERIOD, D2)
+    with psycopg.connect(s.app_dsn) as cx:
+        for role in ("engineer", "secops", "customer", "ingest", ""):
+            _as_role(cx, s.a.id, role)
+            with pytest.raises(psycopg.errors.InsufficientPrivilege,
+                               match="pack_customer_price"):
+                cx.execute(sql, args)
+            cx.rollback()
+        cx.execute("SET LOCAL ROLE cloudops_customer")
+        _as_role(cx, s.a.id, "delivery_lead")  # a forged role class does not help
+        with pytest.raises(psycopg.errors.InsufficientPrivilege,
+                           match="permission denied for function pack_customer_price"):
+            cx.execute(sql, args)
+        cx.rollback()
+        _as_role(cx, s.a.id, "delivery_lead")
+        got = cx.execute(sql, args).fetchone()
+        assert got
+        assert got[0] is not None
+        cx.rollback()
+        # Row-level security still scopes the definer: another tenant prices nothing.
+        _as_role(cx, s.a.id, "delivery_lead")
+        assert cx.execute(sql, (s.c.id, PERIOD, D2)).fetchone() == (None,)
 
 
 async def test_who_may_generate(step17: Step17, month: Month) -> None:
@@ -257,6 +317,23 @@ async def test_who_may_generate(step17: Step17, month: Month) -> None:
         409, "contract_currency_not_captured")
     future = f"{TODAY.year + 1}-01"
     assert (await _generate(step17, step17.delivery_a, s.a.id, future)).status_code == 422
+
+
+# The pack's sections as the API assembles them (reports._PACK_COLS), under
+# whatever scope runs it: each table joins in only where its policy admits the row.
+READABLE = (
+    "SELECT p.sections"
+    " || coalesce((SELECT r.sections FROM cloudops.report_pack_price r"
+    "  WHERE r.pack_id = p.id), '{}'::jsonb)"
+    " || coalesce((SELECT c.sections FROM cloudops.report_pack_commercial c"
+    "  WHERE c.pack_id = p.id), '{}'::jsonb)"
+    " FROM cloudops.report_pack p WHERE p.id = %s")
+
+
+def _summary_keys(cx: psycopg.Connection[Any], pack: UUID) -> set[str]:
+    found = cx.execute(READABLE, (pack,)).fetchone()
+    assert found
+    return {f["key"] for f in found[0]["executive_summary"]["figures"]}
 
 
 def _as_role(cx: psycopg.Connection[Any], tenant: UUID, role: str) -> None:
@@ -303,8 +380,11 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
                           (pid,)).fetchone()
         texts = cx.execute("SELECT count(*) FROM cloudops.report_narrative WHERE pack_id = %s",
                            (pid,)).fetchone()
+        priced = cx.execute("SELECT count(*) FROM cloudops.report_pack_price WHERE pack_id = %s",
+                            (pid,)).fetchone()
     assert seen == (0,)
     assert texts == (0,)
+    assert priced == (0,)
 
     draft_pdf = await api.get(f"/v1/reports/packs/{pid}/pdf", step17.auditor_all)
     assert draft_pdf.headers["content-type"] == "application/pdf"
@@ -320,18 +400,28 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
     # scope reads: the pack as the API assembles it, under that scope.
     with psycopg.connect(s.app_dsn) as cx:
         _as_role(cx, s.a.id, "customer")
-        found = cx.execute(
-            "SELECT p.sections || coalesce((SELECT c.sections FROM"
-            " cloudops.report_pack_commercial c WHERE c.pack_id = p.id), '{}'::jsonb)"
-            " FROM cloudops.report_pack p WHERE p.id = %s", (pid,)).fetchone()
+        found = cx.execute(READABLE, (pid,)).fetchone()
     assert found
     readable = found[0]
     assert {"financial_dashboard", "revenue_mix"}.isdisjoint(readable)
     money = [f for sec in readable.values() for f in sec["figures"] if f["kind"] == "money"]
-    assert money == []
-    cost = next(f for f in readable["executive_summary"]["figures"] if f["key"] == "cloud_cost")
-    assert (cost["value"], cost["kind"]) == ("", "text")
-    assert "not the customer's price" in cost["note"]
+    # The customer's price is the only money a customer reads, in the cost's place.
+    assert [(f["key"], f["unit"], Decimal(f["value"])) for f in money] == [
+        ("customer_price", "EUR", month.expected_price_eur)]
+    assert "cloud_cost" not in {f["key"] for f in readable["executive_summary"]["figures"]}
+    # And the same scope is refused the cost itself, and the pack's price function.
+    with psycopg.connect(s.app_dsn) as cx:
+        cx.execute("SET LOCAL ROLE cloudops_customer")
+        _as_role(cx, s.a.id, "customer")
+        for sql in ("SELECT unblended_cost FROM cloudops.cost_fact",
+                    "SELECT amortized_cost FROM cloudops.cost_fact",
+                    "SELECT * FROM cloudops.pack_customer_price("
+                    f"'{s.a.id}', '{PERIOD}', '{D2}')"):
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                cx.execute(sql)
+            cx.rollback()
+            cx.execute("SET LOCAL ROLE cloudops_customer")
+            _as_role(cx, s.a.id, "customer")
     staff_view = (await api.get(f"/v1/reports/packs/{pid}", step17.delivery_a)).json()
     assert Decimal(_figure(staff_view, "executive_summary", "cloud_cost")["value"]) == (
         month.expected_eur)
@@ -348,8 +438,10 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
     lines = (await api.get(f"/v1/reports/packs/{pid}/text", step17.delivery_a)).text.splitlines()
     assert "Reviewed volumetrics." in lines
     assert DRAFT_BANNER not in lines
-    assert (f"Cloud cost: EUR {month.expected_eur.quantize(Decimal('0.01')):,}"
+    assert (f"Cloud cost (unblended): EUR {month.expected_eur.quantize(Decimal('0.01')):,}"
             " (unreconciled; each row at the average rate on its usage date)") in lines
+    assert (f"Cloud consumption: EUR {month.expected_price_eur.quantize(Decimal('0.01')):,}"
+            " (each day at the average rate on its usage date)") in lines
     assert pdf.startswith(b"%PDF")
     assert DRAFT_BANNER.encode() not in pdf
     assert b"Reviewed volumetrics." in pdf
@@ -438,3 +530,81 @@ async def test_a_customer_scope_reads_no_report_yet(step17: Step17, month: Month
             "SELECT DISTINCT unnest(array(SELECT rolname FROM pg_roles WHERE oid = ANY(polroles)))"
             " FROM pg_policy WHERE polname = 'published_only_for_customers' ORDER BY 1").fetchall()
     assert roles == [("cloudops_app",), ("cloudops_customer",)]
+
+
+async def test_a_non_commercial_role_with_reports_and_cost_never_reads_the_price(
+    step17: Step17, month: Month
+) -> None:
+    """reports.read and cost.read are both non-commercial, so an administrator may
+    grant both to an Engineer-class role. Price over cost is the uplift: such a
+    role must read neither the price nor the cost from a pack, draft or published,
+    and the database, not the API, is what refuses it (ADR 0021, decision 8)."""
+    s = step17.seeded
+    api = step17.api
+    pack = (await _generate(step17, step17.delivery_a, s.a.id)).json()
+    pid = pack["id"]
+    for stage in ("draft", "published"):
+        if stage == "published":
+            for n in pack["narratives"]:
+                await api.post(f"/v1/reports/packs/{pid}/narratives/{n['section']}",
+                               step17.delivery_a, {"text": "Reviewed."})
+            await api.post(f"/v1/reports/packs/{pid}/approve", step17.delivery_a)
+            got = await api.post(f"/v1/reports/packs/{pid}/publish", step17.delivery_a)
+            assert got.json()["status"] == "published"
+        with psycopg.connect(s.app_dsn) as cx:
+            for role in ("engineer", "secops", "", "ingest"):
+                _as_role(cx, s.a.id, role)
+                assert cx.execute("SELECT count(*) FROM cloudops.report_pack_price"
+                                  " WHERE pack_id = %s", (pid,)).fetchone() == (0,), role
+                assert _summary_keys(cx, pid).isdisjoint(
+                    {"customer_price", "cloud_cost"}), (stage, role)
+                cx.rollback()
+            # A commercial role sees both; the customer, once published, the price only.
+            _as_role(cx, s.a.id, "auditor")
+            assert {"customer_price", "cloud_cost"} <= _summary_keys(cx, pid)
+            cx.rollback()
+            _as_role(cx, s.a.id, "customer")
+            if stage == "published":
+                keys = _summary_keys(cx, pid)
+                assert "customer_price" in keys
+                assert "cloud_cost" not in keys
+            cx.rollback()
+            # Nobody but a commercial role writes a price, and nobody rewrites one.
+            for role in ("engineer", "customer"):
+                _as_role(cx, s.a.id, role)
+                with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                    cx.execute("INSERT INTO cloudops.report_pack_price (pack_id, tenant_id,"
+                               " sections) VALUES (%s, %s, '{}')", (pid, s.a.id))
+                cx.rollback()
+            _as_role(cx, s.a.id, "delivery_lead")
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                cx.execute("UPDATE cloudops.report_pack_price SET sections = '{}'"
+                           " WHERE pack_id = %s", (pid,))
+            cx.rollback()
+
+
+async def test_a_month_without_billing_rows_has_no_price_never_zero(
+    step17: Step17, month: Month
+) -> None:
+    earlier = (PERIOD - timedelta(days=1)).replace(day=1)  # no cost rows seeded
+    got = await _generate(step17, step17.delivery_a, step17.seeded.a.id, f"{earlier:%Y-%m}")
+    assert got.status_code == 201, got.text
+    price = _figure(got.json(), "executive_summary", "customer_price")
+    assert (price["value"], price["kind"], price["note"]) == (
+        "", "text", "not captured: no billing rows for this month")
+
+
+async def test_an_open_month_has_no_price_so_no_day_can_be_isolated(
+    step17: Step17, month: Month
+) -> None:
+    """ADR 0021, decision 9: a pack regenerated day by day through the current
+    month would show each day's price, and from it the uplift."""
+    got = await _generate(step17, step17.delivery_a, step17.seeded.a.id, f"{TODAY:%Y-%m}")
+    assert got.status_code == 201, got.text
+    pack = got.json()
+    price = _figure(pack, "executive_summary", "customer_price")
+    assert (price["value"], price["kind"], price["note"]) == (
+        "", "text", "not captured: the month is not closed; the price is shown for closed"
+        " months")
+    # Staff still see the month's cost to date.
+    assert _figure(pack, "executive_summary", "cloud_cost")["kind"] == "money"

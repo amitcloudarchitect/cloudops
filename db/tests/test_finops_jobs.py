@@ -237,6 +237,7 @@ async def test_invoice_documents_issued_on_different_days_are_summed(
              fdb.eur.account, day)
     assert rows == [("verified", None, Decimal(1050 * 30 - 10), date(2026, 10, 12), False)]
     assert r.alerted == 1  # gbp's drifting provider total only
+    _forget_checks(fdb, day)
 
 
 async def test_invoice_documents_in_two_currencies_are_never_summed(
@@ -257,6 +258,13 @@ async def test_invoice_documents_in_two_currencies_are_never_summed(
              " AND invoice_period = '2026-09' AND kind = 'invoice' AND checked_on = %s",
              fdb.eur.account, day)
     assert rows == [("unverified", "currency_mismatch", None, True)]
+    _forget_checks(fdb, day)
+
+
+def _forget_checks(fdb: Db, day: date) -> None:
+    """Checks of a day after ON stay out of the margin tests that follow."""
+    with psycopg.connect(fdb.admin, autocommit=True) as cx:
+        cx.execute("DELETE FROM cloudops.cost_reconciliation WHERE checked_on = %s", (day,))
 
 
 # --- anomalies -------------------------------------------------------------------------------
@@ -407,6 +415,31 @@ async def test_gaps_are_not_captured_never_zero(fdb: Db, ingest: Database) -> No
         assert s["band"] is None
 
 
+async def test_a_provisional_month_has_no_band_until_it_closes(
+    fdb: Db, ingest: Database
+) -> None:
+    await jobs.margins(ingest, ON)
+    oct_eur = _snapshot(fdb.admin, fdb.eur.id, date(2026, 10, 1))
+    sep_eur = _snapshot(fdb.admin, fdb.eur.id, date(2026, 9, 1))
+    assert oct_eur["status"] == "provisional"
+    assert oct_eur["margin_pct"] is not None
+    assert oct_eur["band"] is None
+    assert oct_eur["gap_to_target"] is None
+    assert sep_eur["band"] is not None
+    assert sep_eur["gap_to_target"] is not None
+
+
+async def test_margin_records_whether_its_cost_reconciled(fdb: Db, ingest: Database) -> None:
+    """eur's September invoice agrees: verified. gbp's October provider total
+    drifts 1%: not verified. June was never checked: not verified either."""
+    await jobs.reconcile(ingest, ON)
+    await jobs.margins(ingest, ON)
+    assert _snapshot(fdb.admin, fdb.eur.id, date(2026, 9, 1))["cost_verified"] is True
+    assert _snapshot(fdb.admin, fdb.gbp.id, date(2026, 10, 1))["cost_verified"] is False
+    assert _snapshot(fdb.admin, fdb.eur.id, date(2026, 6, 1))["cost_verified"] is False
+    assert _snapshot(fdb.admin, fdb.mixed.id, date(2026, 9, 1))["cost_verified"] is None
+
+
 async def test_partial_effort_bands_on_the_model(fdb: Db, ingest: Database) -> None:
     await jobs.margins(ingest, ON)
     s = _snapshot(fdb.admin, fdb.eur.id, date(2026, 10, 1))
@@ -500,3 +533,32 @@ async def test_one_customers_margin_failure_stops_only_theirs(
         await jobs.margins(ingest, ON)
     assert {fdb.eur.id, fdb.nosow.id, fdb.mixed.id} <= set(seen)
     assert fdb.gbp.id not in seen
+
+
+async def test_a_closed_month_whose_cost_stops_reconciling_is_restated(
+    fdb: Db, ingest: Database
+) -> None:
+    """A later invoice check that disagrees makes September unverified: a new
+    version, the verified one kept."""
+    await jobs.reconcile(ingest, ON)
+    await jobs.margins(ingest, ON)
+    before = _snapshot(fdb.admin, fdb.eur.id, date(2026, 9, 1))
+    assert before["cost_verified"] is True
+    later = ON + timedelta(days=9)
+    with psycopg.connect(fdb.admin, autocommit=True) as cx:
+        cx.execute("INSERT INTO cloudops.cost_reconciliation (tenant_id, account_id,"
+                   " invoice_period, kind, checked_on, ledger_amount, ledger_currency,"
+                   " reference_amount, reference_currency, drift, status, reason) VALUES"
+                   " (%s, %s, '2026-09', 'invoice', %s, 31500, 'EUR', 30000, 'EUR', 0.05,"
+                   " 'unverified', 'drift')", (fdb.eur.id, fdb.eur.account, later))
+        try:
+            r = await jobs.reprocess(ingest, date(2026, 9, 1))
+            after = _snapshot(fdb.admin, fdb.eur.id, date(2026, 9, 1))
+            assert r.restated >= 1
+            assert after["version"] == before["version"] + 1
+            assert after["restates"] == before["id"]
+            assert after["cost_verified"] is False
+        finally:
+            cx.execute("DELETE FROM cloudops.cost_reconciliation WHERE checked_on = %s",
+                       (later,))
+            await jobs.reprocess(ingest, date(2026, 9, 1))

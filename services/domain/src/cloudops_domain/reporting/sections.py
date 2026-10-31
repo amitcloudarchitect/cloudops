@@ -7,7 +7,7 @@ Sections, in pack order:
 
 | Section | Source | Built here |
 | --- | --- | --- |
-| Executive summary | the other sections' key figures, and the month's cloud cost | yes |
+| Executive summary | other sections' key figures; cloud cost (staff) and price | yes |
 | Volumetrics | ServiceNow work items | yes |
 | Financial dashboard | the commercial engine's margin snapshot (step 16) | ``financial.py`` |
 | Vulnerabilities | Qualys detections | yes |
@@ -36,15 +36,15 @@ import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass, field, replace
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
-from typing import Any, Final, Literal, Protocol
+from typing import Any, Final, Literal, NamedTuple, Protocol
 from uuid import UUID
 
 from sqlalchemy import text
 
 from cloudops_domain.reporting.money import check_currency
-from cloudops_tenancy import ScopedConnection, TenantScope
+from cloudops_tenancy import Role, ScopedConnection, TenantScope
 
 Kind = Literal["count", "percent", "days", "hours", "money", "text"]
 
@@ -386,6 +386,9 @@ WHERE NOT EXISTS (
       AND f.rate_type = 'average' AND f.effective_date <= c.usage_date)
 GROUP BY c.currency ORDER BY c.currency
 """)
+# Unblended, as the provider bills Getronics; the price is amortized x (1 + uplift),
+# so in a month with a reservation purchase the two differ in basis, and say so.
+COST_LABEL: Final = "Cloud cost (unblended)"
 _CONSUMPTION: Final = text("""
 SELECT count(*), coalesce(sum(cloudops.to_currency(unblended_cost, currency, :target,
                                                    usage_date, 'average')), 0),
@@ -410,23 +413,91 @@ async def consumption(conn: ScopedConnection, tenant: UUID, period: date, curren
     missing = [tuple(r) for r in await conn.execute(_MISSING_RATES, p)]
     if missing:
         pairs = ", ".join(f"{c}->{currency} from {d.isoformat()}" for c, d in missing)
-        return Figure("cloud_cost", "Cloud cost", "", "text", "",
+        return Figure("cloud_cost", COST_LABEL, "", "text", "",
                       "cloud_billing", q, f"not shown: no average FX rate for {pairs}")
     rows, total, _first, _last = tuple((await conn.execute(_CONSUMPTION, p)).one())
     note = "unreconciled; each row at the average rate on its usage date"
     if not rows:
         note = "no billing rows for this month"
-    return Figure("cloud_cost", "Cloud cost", str(Decimal(total)), "money",
+    return Figure("cloud_cost", COST_LABEL, str(Decimal(total)), "money",
                   currency, "cloud_billing", q, note)
 
 
-def executive_summary(sections: Mapping[str, Section], spend: Figure) -> Section:
+# Together they give the uplift away: never both where a non-commercial role reads.
+PRICE_AND_COST: Final = ("cloud_cost", "customer_price")
+# The roles commercial_visibility admits (migration 0001): they may read the SOW's
+# uplift, so they may hold price and cost side by side (migration 0017).
+PRICE_ROLES: Final = frozenset({Role.CEO, Role.CFO, Role.FINOPS, Role.DELIVERY_LEAD,
+                                Role.COMMERCIAL, Role.AUDITOR, Role.PLATFORM_ADMIN})
+_PRICE_MISSING_RATES: Final = text("""
+SELECT p.currency, min(p.usage_date)
+FROM cloudops.pack_customer_price(:t, :s, :e) p
+WHERE p.currency <> :target AND NOT EXISTS (
+    SELECT 1 FROM cloudops.fx_rate f
+    WHERE f.from_currency = p.currency AND f.to_currency = :target
+      AND f.rate_type = 'average' AND f.effective_date <= p.usage_date)
+GROUP BY p.currency ORDER BY p.currency
+""")
+_PRICED_DAYS: Final = text("""
+SELECT count(DISTINCT usage_date), count(DISTINCT usage_date) FILTER (WHERE price IS NULL)
+FROM cloudops.pack_customer_price(:t, :s, :e)
+""")
+_PRICE: Final = text("""
+SELECT coalesce(sum(cloudops.to_currency(price, currency, :target, usage_date, 'average')), 0)
+FROM cloudops.pack_customer_price(:t, :s, :e)
+""")
+
+
+def _price_gap(why: str, q: str) -> Figure:
+    return Figure("customer_price", "Cloud consumption", "", "text", "", "cloud_billing", q,
+                  f"not captured: {why}")
+
+
+async def customer_price(conn: ScopedConnection, scope: TenantScope, tenant: UUID,
+                         period: date, currency: str, now: datetime) -> Figure:
+    """The month's cloud consumption at the price Getronics charges the customer
+    (ADR 0021), in ``currency``: each day's price converted at the average rate
+    in force on that day, then summed, unrounded.
+
+    The figure is whole or a named gap. A day without a price (no uplift on the
+    SOW, no SOW, or two in force) or without a rate makes the month not
+    captured: never a partial total, and never the cost in its place.
+
+    Closed months only (ADR 0021, decision 9): a month-to-date price, regenerated
+    day after day, would isolate a day's price and from it the uplift."""
+    start, end = month_bounds(period)
+    # ``month_bounds`` is half-open; the price function takes inclusive dates.
+    p = {"t": tenant, "s": start.date(), "e": end.date() - timedelta(days=1),
+         "target": check_currency(currency)}
+    q = ref("customer_price", period=period, currency=currency)
+    if scope.role not in PRICE_ROLES:
+        return _price_gap("this role may not compute the customer's price", q)
+    if end > now:
+        return _price_gap("the month is not closed; the price is shown for closed months", q)
+    rows, unpriced = tuple((await conn.execute(_PRICED_DAYS, p)).one())
+    if unpriced:
+        return _price_gap(f"no consumption uplift agreed for {unpriced} of {rows} billed days"
+                          " (no SOW in force, two in force, or no uplift on it)", q)
+    missing = [tuple(r) for r in await conn.execute(_PRICE_MISSING_RATES, p)]
+    if missing:
+        pairs = ", ".join(f"{c}->{currency} from {d.isoformat()}" for c, d in missing)
+        return _price_gap(f"no average FX rate for {pairs}", q)
+    if not rows:
+        return _price_gap("no billing rows for this month", q)
+    total = await conn.scalar(_PRICE, p)
+    note = "each day at the average rate on its usage date"
+    return Figure("customer_price", "Cloud consumption", str(Decimal(total)), "money",
+                  currency, "cloud_billing", q, note)
+
+
+def executive_summary(sections: Mapping[str, Section], spend: Figure,
+                      price: Figure) -> Section:
     picks = (("volumetrics", "incidents_opened"), ("volumetrics", "incident_sla_attainment"),
              ("vulnerabilities", "open_high"), ("availability", "mean_availability"),
              ("automation_progress", "triage_acceptance"))
     figures = [f for key, fig in picks if (s := sections.get(key)) is not None and s.captured
                and (f := s.figure(fig)) is not None]
-    figures.append(spend)
+    figures.extend((spend, price))
     # The commercial sections' gaps stay with them: the summary is not commercial.
     gaps = [(k, s) for k, s in sections.items()
             if not s.captured and k not in COMMERCIAL_SECTIONS]
@@ -451,32 +522,43 @@ async def generate(conn: ScopedConnection, scope: TenantScope, *, tenant_id: UUI
         "revenue_mix": await financial.revenue_mix(conn, tenant_id, period, contract_currency),
     }
     spend = await consumption(conn, tenant_id, period, contract_currency)
-    summary = executive_summary(built, spend)
+    price = await customer_price(conn, scope, tenant_id, period, contract_currency, now)
+    summary = executive_summary(built, spend, price)
     ordered = tuple(summary if k == "executive_summary" else built[k] for k in SECTION_ORDER)
     return PackContent(tenant_id, tenant_name, period, contract_currency, now, ordered)
 
 
-COST_WITHHELD: Final = ("not in the customer's pack: this is Getronics' cost, not the"
-                        " customer's price")
+class Stored(NamedTuple):
+    """A pack's sections as stored, each where its readers are (ADR 0020, 0021).
+
+    ``public`` (``report_pack.sections``) is what every reader of the pack sees:
+    a summary with neither the cost nor the customer's price, since a staff role
+    holding ``reports.read`` and ``cost.read`` could divide one by the other and
+    read the uplift. ``priced`` (``report_pack_price``) is the summary as the
+    customer sees it, with the price in the cost's place: commercial roles, and
+    the customer once the pack is published. ``commercial``
+    (``report_pack_commercial``) adds the commercial sections and the summary
+    with both figures, for commercial roles only. Each overrides the one before,
+    section by section, wherever its row is visible."""
+
+    public: dict[str, Any]
+    priced: dict[str, Any]
+    commercial: dict[str, Any]
 
 
-def for_storage(content: PackContent) -> tuple[dict[str, Any], dict[str, Any]]:
-    """The pack's sections as stored: what any reader of the pack may see (a
-    customer, once published), and what only commercial roles read
-    (``report_pack_commercial``), which overrides the first section by section.
-    The commercial sections and the cloud cost go only to the second; the first
-    says the cost is withheld, and why."""
+def for_storage(content: PackContent) -> Stored:
     every = content.to_json()["sections"]
     public = {k: v for k, v in every.items() if k not in COMMERCIAL_SECTIONS}
-    restricted = {k: v for k, v in every.items() if k in COMMERCIAL_SECTIONS}
+    commercial = {k: v for k, v in every.items() if k in COMMERCIAL_SECTIONS}
     summary = content.section("executive_summary")
-    if summary.figure("cloud_cost") is not None:
-        restricted["executive_summary"] = every["executive_summary"]
-        withheld = replace(summary, figures=tuple(
-            replace(f, value="", kind="text", unit="", note=COST_WITHHELD)
-            if f.key == "cloud_cost" else f for f in summary.figures))
-        public["executive_summary"] = asdict(withheld)
-    return public, restricted
+    commercial["executive_summary"] = every["executive_summary"]
+
+    def without(*keys: str) -> dict[str, Any]:
+        return asdict(replace(summary, figures=tuple(
+            f for f in summary.figures if f.key not in keys)))
+
+    public["executive_summary"] = without(*PRICE_AND_COST)
+    return Stored(public, {"executive_summary": without("cloud_cost")}, commercial)
 
 
 def narrative_input(section: Section) -> dict[str, Any]:

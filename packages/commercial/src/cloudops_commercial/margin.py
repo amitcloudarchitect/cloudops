@@ -21,6 +21,11 @@ month's average rate, so the serving layer can report FX impact as its own line
 (step 16 decision): this month at this month's rates minus this month at last
 month's rates, covering cost-to-contract here and contract-to-reporting there.
 
+A *provisional* month (month to date) carries its figures but no band and no gap
+to target (step 16 decision): full-month revenue against part of a month's cost
+would band too well, and nothing is projected to make up the difference. The
+band arrives when the month closes.
+
 Gaps are visible (HLD principle 7): no SOW is *not captured*, never zero; a
 delivery location the rate card has no people cost for, a month with no billing
 data, or a missing rate leaves the figure not captured too.
@@ -82,6 +87,7 @@ class MarginInputs:
     effort: tuple[EffortBucket, ...]
     rate: MonthRate | None  # rate card currency -> contract currency, this month
     prior_rate: MonthRate | None  # the same, last month
+    provisional: bool = False  # month to date: figures, no band, no gap to target
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,10 +220,10 @@ def compute(inputs: MarginInputs, card: RateCard) -> MarginFigures:
         actual_margin=revenue - actual,
         margin_pct=pct,
         band_basis=basis,
-        band=None if pct is None else card.health(pct),
+        band=None if pct is None or inputs.provisional else card.health(pct),
         target_margin=inputs.target_margin,
         gap_to_target=(None if pct is None or inputs.target_margin is None
-                       else pct - inputs.target_margin),
+                       or inputs.provisional else pct - inputs.target_margin),
         margin_at_prior_rates=revenue - conv(basis_eur, inputs.prior_rate),
         fte=q.fte_count,
         modelled_hours=modelled_hours,

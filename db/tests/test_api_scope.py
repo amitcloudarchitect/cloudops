@@ -85,8 +85,11 @@ async def test_customer_lists_and_costs_contain_only_their_tenant(
 ) -> None:
     resources = await api.get("/v1/resources", principals.customer_a)
     assert _ids(resources.json()) == {str(seeded.a.resource_id)}
-    cost = await api.get("/v1/cost/summary", principals.customer_a, params={"days": "7"})
-    assert {line["currency"] for line in cost.json()["lines"]} == {seeded.a.currency}
+    # Closed months only (ADR 0021): which lines exist depends on other suites'
+    # rows; whatever exists is this tenant's.
+    cost = await api.get("/v1/cost/summary", principals.customer_a, params={"months": "12"})
+    assert cost.status_code == 200
+    assert {line["currency"] for line in cost.json()["lines"]} <= {seeded.a.currency}
 
 
 async def test_customer_sees_the_customer_view_and_staff_the_staff_view(
@@ -210,8 +213,9 @@ async def test_a_subscription_limited_customer_sees_only_that_subscription(
     assert _ids(resources.json()) == {str(seeded.c.resource_id)}
     hidden = await api.get(f"/v1/resources/{seeded.c_resource2}", principals.customer_c_limited)
     assert hidden.status_code == 404
-    cost = await api.get("/v1/cost/summary", principals.customer_c_limited, params={"days": "7"})
-    assert {line["provider"] for line in cost.json()["lines"]} == {"azure"}
+    cost = await api.get("/v1/cost/summary", principals.customer_c_limited, params={"months": "12"})
+    assert cost.status_code == 200
+    assert {line["provider"] for line in cost.json()["lines"]} <= {"azure"}
     # The same tenant, unrestricted, sees both subscriptions.
     staff = await api.get("/v1/resources", principals.finops_all)
     assert {str(seeded.c.resource_id), str(seeded.c_resource2)} <= _ids(staff.json())
