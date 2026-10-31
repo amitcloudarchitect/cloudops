@@ -1,0 +1,27 @@
+# Front Door -> the Gateway API ingress (base/edge) -> the console (ADR 0017). The
+# same host as the API: the API's route keeps /v1 and /healthz (more specific
+# matches win), and everything else comes here. Argo Rollouts sets the weights
+# during a canary, as for the API.
+#
+# Every request must carry our Front Door profile's X-Azure-FDID (lock 2, stack 06);
+# one without it matches no rule and gets a 404 from the gateway. There is no open
+# probe path: Front Door probes the API's /healthz, and the kubelet probes the pods.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: web
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: api
+      namespace: platform-edge
+      sectionName: http
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: / }
+          headers:
+            - { type: Exact, name: X-Azure-FDID, value: SET-IN-OVERLAY }
+      backendRefs:
+        - { group: "", kind: Service, name: web, port: 3000, weight: 100 }
+        - { group: "", kind: Service, name: web-canary, port: 3000, weight: 0 }

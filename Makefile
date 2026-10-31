@@ -96,7 +96,7 @@ lint: ## ruff, mypy --strict and the data-access gate
 
 check: lint test ## what CI runs
 
-IMAGES := api connector-servicenow worker-ai migrate
+IMAGES := api connector-servicenow worker-ai migrate web
 
 images: ## build every image (docker-bake.hcl), then SBOM and scan each
 	docker buildx bake -f docker-bake.hcl --load

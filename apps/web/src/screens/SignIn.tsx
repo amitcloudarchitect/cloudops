@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 
 import { LOCAL_TOKEN_KEY, useAuth } from "@/lib/auth";
-import { config } from "@/lib/config";
+import { authMode } from "@/lib/config";
 
 // Entra: straight to Microsoft's sign-in. Local: paste a dev token, which only
 // the API on this machine accepts (make token).
 export function SignIn() {
   const { signIn } = useAuth();
-  const mode = config().authMode;
+  const mode = authMode();
   const [token, setToken] = useState("");
 
   useEffect(() => {

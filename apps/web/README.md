@@ -1,6 +1,7 @@
 # Operations console
 
-Next.js (App Router), TypeScript strict, Tailwind. Decisions: ADR 0014.
+Next.js (App Router), TypeScript strict, Tailwind. Decisions: ADR 0014; deployment,
+runtime configuration and the CSP: ADR 0017.
 
 ## Run it locally
 

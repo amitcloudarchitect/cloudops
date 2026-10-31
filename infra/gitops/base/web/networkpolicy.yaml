@@ -1,0 +1,22 @@
+# Explicit allows on top of the namespace's default-deny. In: the ingress only.
+# Out: nothing (DNS aside, allow-dns). The server renders layout and hands out
+# identifiers; the browser, not the pod, talks to the API and to Entra.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: web
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: platform-edge
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: api
+      ports:
+        - { protocol: TCP, port: 3000 }

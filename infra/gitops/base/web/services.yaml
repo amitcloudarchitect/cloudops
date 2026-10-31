@@ -1,0 +1,20 @@
+# Rollouts points these at the stable and canary ReplicaSets.
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+spec:
+  selector:
+    app.kubernetes.io/name: web
+  ports:
+    - { name: http, port: 3000, targetPort: http }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-canary
+spec:
+  selector:
+    app.kubernetes.io/name: web
+  ports:
+    - { name: http, port: 3000, targetPort: http }

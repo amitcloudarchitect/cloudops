@@ -22,6 +22,9 @@ WORKLOAD_KINDS = {"Deployment", "Rollout", "Job"}
 OUR_NAMESPACES = {"platform-api", "platform-ingest", "platform-ai", "platform-web",
                   "platform-edge", "temporal", "monitoring"}
 POOLS = {"app", "ingest", "telemetry", "ai"}
+# Workloads that reach nothing in Azure, so hold no workload identity at all: the
+# operations console (ADR 0017), whose browser, not its pod, calls the API and Entra.
+NO_AZURE_IDENTITY = {"Rollout/web"}
 
 
 def _build(path: Path) -> list[dict[str, Any]]:
@@ -37,8 +40,9 @@ PLATFORM = _build(GITOPS / "overlays/dev")
 WORKERS = _build(GITOPS / "overlays/dev/workers")  # its own Application, after Temporal
 DEV = PLATFORM + WORKERS
 # Every workload we own, deployed in dev or not: the worker bases too.
+WEB = _build(GITOPS / "base/web")  # in dev once main has pushed its image (ADR 0017)
 ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
-            + _build(GITOPS / "base/worker-ai"))
+            + _build(GITOPS / "base/worker-ai") + WEB)
 TEMPORAL_APP = yaml.safe_load(
     (GITOPS / "applications/dev/temporal.yaml").read_text(encoding="utf-8"))
 INTERNAL_CA = "cloudops-internal-ca"
@@ -131,34 +135,59 @@ def test_settings_read_at_start_up_roll_the_pods_when_they_change(
             assert notes.get("argocd.argoproj.io/compare-options") == "IgnoreExtraneous", ref
 
 
-def test_every_workload_has_its_own_federated_identity() -> None:
+def _account(name: str, pod: dict[str, Any]) -> dict[str, Any]:
     accounts = {(d["metadata"]["namespace"], d["metadata"]["name"]): d for d in ALL_OURS
                 if d["kind"] == "ServiceAccount"}
+    ns = next(d["metadata"]["namespace"] for d in ALL_OURS
+              if f'{d["kind"]}/{d["metadata"]["name"]}' == name)
+    return accounts[(ns, pod["serviceAccountName"])]
+
+
+def test_every_workload_has_its_own_federated_identity() -> None:
     for name, pod in _workloads(ALL_OURS):
-        ns = next(d["metadata"]["namespace"] for d in ALL_OURS
-                  if f'{d["kind"]}/{d["metadata"]["name"]}' == name)
-        sa = accounts[(ns, pod["serviceAccountName"])]
+        if name in NO_AZURE_IDENTITY:
+            continue
+        sa = _account(name, pod)
         assert sa["metadata"]["annotations"]["azure.workload.identity/client-id"], name
         assert sa.get("automountServiceAccountToken") is False, name
+
+
+def test_a_workload_without_azure_identity_has_none_at_all() -> None:
+    """No client id, no injection, no Key Vault mount: nothing to exchange for a token."""
+    found = {name for name, _ in _workloads(ALL_OURS)} & NO_AZURE_IDENTITY
+    assert found == NO_AZURE_IDENTITY
+    for d in ALL_OURS:
+        name = f'{d["kind"]}/{d["metadata"]["name"]}'
+        if name not in NO_AZURE_IDENTITY:
+            continue
+        pod = d["spec"]["template"]["spec"]
+        sa = _account(name, pod)
+        assert not sa["metadata"].get("annotations"), name
+        assert sa.get("automountServiceAccountToken") is False, name
+        labels = d["spec"]["template"]["metadata"].get("labels", {})
+        assert "azure.workload.identity/use" not in labels, name
+        assert not [v for v in pod.get("volumes", []) if "csi" in v or "secret" in v], name
 
 
 def test_every_pod_gets_its_workload_identity_injected() -> None:
     """Without the label the webhook injects nothing, and the Azure profile refuses
     to start: a pod that always fails, found only in the cluster."""
     for d in ALL_OURS:
-        if d["kind"] in WORKLOAD_KINDS:
+        if d["kind"] in WORKLOAD_KINDS and f'{d["kind"]}/{d["metadata"]["name"]}' \
+                not in NO_AZURE_IDENTITY:
             labels = d["spec"]["template"]["metadata"].get("labels", {})
             assert labels.get("azure.workload.identity/use") == "true", d["metadata"]["name"]
 
 
 def test_federated_accounts_match_terraform() -> None:
-    """Stack 05 federates exactly the service accounts the bases declare."""
+    """Stack 05 federates exactly the service accounts that carry a client id."""
     tf = (REPO_ROOT / "infra/terraform/stacks/05-aks/main.tf").read_text(encoding="utf-8")
     block = tf[tf.index("federated_service_accounts = {"):]
     block = block[:block.index("}")]
     federated = set(re.findall(r'= "([a-z0-9-]+/[a-z0-9-]+)"', block))
     declared = {f'{d["metadata"]["namespace"]}/{d["metadata"]["name"]}' for d in ALL_OURS
-                if d["kind"] == "ServiceAccount"}
+                if d["kind"] == "ServiceAccount"
+                and "azure.workload.identity/client-id" in (d["metadata"].get("annotations") or {})}
     assert federated == declared
 
 
@@ -194,12 +223,14 @@ def test_images_come_only_from_the_platform_registry_by_tag() -> None:
             assert not image.endswith(":latest"), name
 
 
-def test_api_releases_by_canary_with_analysis() -> None:
-    (rollout,) = [d for d in DEV if d["kind"] == "Rollout"]
+@pytest.mark.parametrize("name", ["api", "web"])
+def test_releases_are_canaries_with_analysis(name: str) -> None:
+    (rollout,) = [d for d in ALL_OURS if d["kind"] == "Rollout" and d["metadata"]["name"] == name]
     canary = rollout["spec"]["strategy"]["canary"]
     assert canary["steps"] == [{"setWeight": 10}, {"pause": {"duration": "15m"}}]
-    assert canary["analysis"]["templates"] == [{"templateName": "api-canary-health"}]
-    (template,) = [d for d in DEV if d["kind"] == "AnalysisTemplate"]
+    assert canary["analysis"]["templates"] == [{"templateName": f"{name}-canary-health"}]
+    (template,) = [d for d in ALL_OURS if d["kind"] == "AnalysisTemplate"
+                   and d["metadata"]["name"] == f"{name}-canary-health"]
     assert {m["name"] for m in template["spec"]["metrics"]} == {"error-rate", "p95-latency"}
 
 
@@ -213,7 +244,7 @@ def test_migrations_run_before_the_rollout() -> None:
     ServiceAccount exist, so the job could never start on a fresh cluster."""
     (job,) = [d for d in PLATFORM if d["kind"] == "Job"]
     assert job["metadata"]["annotations"]["argocd.argoproj.io/hook"] == "Sync"
-    (rollout,) = [d for d in PLATFORM if d["kind"] == "Rollout"]
+    (rollout,) = [d for d in PLATFORM if d["kind"] == "Rollout" and d["metadata"]["name"] == "api"]
     assert _wave(rollout) > _wave(job)
     sa_name = job["spec"]["template"]["spec"]["serviceAccountName"]
     needs = [d for d in PLATFORM if d["metadata"]["name"] in {sa_name, "migrate"}
@@ -416,7 +447,7 @@ def _one(kind: str, name: str) -> dict[str, Any]:
     return doc
 
 
-def test_the_gateway_admits_only_front_door_and_only_the_api_namespace() -> None:
+def test_the_gateway_admits_only_front_door_and_only_the_api_and_console_namespaces() -> None:
     gateway = _one("Gateway", "api")
     assert gateway["metadata"]["namespace"] == "platform-edge"
     assert gateway["spec"]["gatewayClassName"] == "approuting-istio"
@@ -427,8 +458,9 @@ def test_the_gateway_admits_only_front_door_and_only_the_api_namespace() -> None
     for listener in gateway["spec"]["listeners"]:
         allowed = listener["allowedRoutes"]["namespaces"]
         assert allowed["from"] == "Selector"
-        assert allowed["selector"]["matchLabels"] == {
-            "kubernetes.io/metadata.name": "platform-api"}
+        assert allowed["selector"] == {"matchExpressions": [{
+            "key": "kubernetes.io/metadata.name", "operator": "In",
+            "values": ["platform-api", "platform-web"]}]}
 
 
 def test_every_api_route_but_the_probe_requires_our_front_door() -> None:
@@ -447,6 +479,57 @@ def test_every_api_route_but_the_probe_requires_our_front_door() -> None:
             assert fdid["value"] == values["frontdoorId"]
         # The Rollouts plugin moves weight between these two; both must be present.
         assert {b["name"] for b in rule["backendRefs"]} == {"api", "api-canary"}
+
+
+def test_every_console_route_requires_our_front_door() -> None:
+    """The console's route has no open path at all: Front Door probes the API."""
+    (route,) = [d for d in WEB if d["kind"] == "HTTPRoute"]
+    assert route["metadata"]["namespace"] == "platform-web"
+    for rule in route["spec"]["rules"]:
+        for match in rule["matches"]:
+            headers = {h["name"].lower(): h for h in match.get("headers", [])}
+            assert headers["x-azure-fdid"]["type"] == "Exact"
+            assert headers["x-azure-fdid"]["value"] == "SET-IN-OVERLAY"  # dev sets it
+        assert {b["name"] for b in rule["backendRefs"]} == {"web", "web-canary"}
+
+
+def test_the_api_keeps_its_paths_on_the_shared_host() -> None:
+    """One host, two routes (ADR 0017): the API's matches are more specific than the
+    console's catch-all, so /v1 and the probe always reach the API."""
+    (web,) = [d for d in WEB if d["kind"] == "HTTPRoute"]
+    (path,) = [m["path"] for r in web["spec"]["rules"] for m in r["matches"]]
+    assert path == {"type": "PathPrefix", "value": "/"}
+    api_paths = [m["path"] for r in _one("HTTPRoute", "api")["spec"]["rules"] for m in r["matches"]]
+    assert {"type": "Exact", "value": "/healthz"} in api_paths
+    assert {"type": "PathPrefix", "value": "/v1"} in api_paths
+
+
+def test_the_console_is_reached_from_the_ingress_and_reaches_nothing() -> None:
+    (policy,) = [d for d in WEB if d["kind"] == "NetworkPolicy" and d["metadata"]["name"] == "web"]
+    assert set(policy["spec"]["policyTypes"]) == {"Ingress", "Egress"}
+    assert "egress" not in policy["spec"]  # DNS only, from allow-dns
+    (rule,) = policy["spec"]["ingress"]
+    (peer,) = rule["from"]
+    assert peer["namespaceSelector"]["matchLabels"] == {
+        "kubernetes.io/metadata.name": "platform-edge"}
+    assert peer["podSelector"]["matchLabels"] == {"gateway.networking.k8s.io/gateway-name": "api"}
+    gateway = _one("NetworkPolicy", "api-gateway")
+    ports = {(p["to"][0]["namespaceSelector"]["matchLabels"]["kubernetes.io/metadata.name"],
+              p["ports"][0]["port"]) for p in gateway["spec"]["egress"]}
+    assert ("platform-web", 3000) in ports
+
+
+def test_the_console_reads_only_identifiers() -> None:
+    (cm,) = [d for d in WEB if d["kind"] == "ConfigMap"]
+    assert set(cm["data"]) == {"CLOUDOPS_WEB_API_BASE", "CLOUDOPS_WEB_ENTRA_CLIENT_ID",
+                               "CLOUDOPS_WEB_ENTRA_TENANT_ID", "CLOUDOPS_WEB_API_SCOPE"}
+
+
+def test_the_api_allows_only_https_console_origins() -> None:
+    (cm,) = [d for d in DEV if d["kind"] == "ConfigMap" and d["metadata"]["name"].startswith("api-")
+             and "CLOUDOPS_API_AUDIENCE" in d.get("data", {})]
+    origins = cm["data"]["CLOUDOPS_WEB_ORIGINS"].split(",")
+    assert origins == ["https://cloudops-dev-dne7dpdpfrgfccej.z02.azurefd.net"]
 
 
 def _one_values() -> dict[str, str]:
@@ -506,9 +589,11 @@ def test_canaries_route_through_the_gateway_and_are_judged_on_its_metrics() -> N
     assert "milliseconds" in p95["provider"]["prometheus"]["query"]
     assert p95["successCondition"].endswith("< 500")  # Istio reports milliseconds
     app = yaml.safe_load((GITOPS / "applications/dev/platform.yaml").read_text(encoding="utf-8"))
-    (ignored,) = app["spec"]["ignoreDifferences"]
-    assert (ignored["kind"], ignored["name"]) == ("HTTPRoute", "api")
-    assert ignored["jqPathExpressions"][0] == ".spec.rules[].backendRefs[].weight"
+    ignored = app["spec"]["ignoreDifferences"]
+    assert {(i["kind"], i["namespace"], i["name"]) for i in ignored} == {
+        ("HTTPRoute", "platform-api", "api"), ("HTTPRoute", "platform-web", "web")}
+    for i in ignored:
+        assert i["jqPathExpressions"][0] == ".spec.rules[].backendRefs[].weight"
     assert "RespectIgnoreDifferences=true" in app["spec"]["syncPolicy"]["syncOptions"]
 
 

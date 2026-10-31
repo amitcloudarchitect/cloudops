@@ -11,6 +11,18 @@
 !connectors/src/
 !alembic.ini
 !db/migrations/
+# The operations console (infra/docker/web.Dockerfile): sources and the lockfile,
+# never node_modules, a local build (.next) or the browser journeys (e2e).
+!package.json
+!package-lock.json
+!packages/contracts/package.json
+!packages/contracts/openapi.json
+!packages/contracts/src/
+!apps/web/package.json
+!apps/web/next.config.ts
+!apps/web/postcss.config.mjs
+!apps/web/tsconfig.json
+!apps/web/src/
 **/__pycache__
 **/*.pyc
 **/tests/

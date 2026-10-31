@@ -1,4 +1,4 @@
-# The platform: namespaces, policies, the migration job, the API Rollout and
+# The platform: namespaces, policies, the migration job, the API and console Rollouts and
 # Temporal's secret sync (overlays/dev), in that order (sync waves).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -15,13 +15,20 @@ spec:
     path: infra/gitops/overlays/dev
   destination:
     server: https://kubernetes.default.svc
-  # Argo Rollouts owns the API route's weights and its in-progress label during a
-  # canary (ADR 0011): self-heal must not reset them mid-rollout.
+  # Argo Rollouts owns the API's and the console's route weights and their
+  # in-progress label during a canary (ADR 0011): self-heal must not reset them.
   ignoreDifferences:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       name: api
       namespace: platform-api
+      jqPathExpressions:
+        - .spec.rules[].backendRefs[].weight
+        - '.metadata.labels."rollouts.argoproj.io/gatewayapi-canary"'
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: web
+      namespace: platform-web
       jqPathExpressions:
         - .spec.rules[].backendRefs[].weight
         - '.metadata.labels."rollouts.argoproj.io/gatewayapi-canary"'

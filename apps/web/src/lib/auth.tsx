@@ -6,6 +6,7 @@
 // (make token) from session storage; the API outside this machine refuses it.
 
 import {
+  CacheLookupPolicy,
   InteractionRequiredAuthError,
   PublicClientApplication,
   type AccountInfo,
@@ -13,7 +14,7 @@ import {
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
-import { config } from "./config";
+import { authMode, config } from "./config";
 
 export const LOCAL_TOKEN_KEY = "cloudops.dev-token";
 
@@ -80,7 +81,7 @@ function claimName(token: string): string {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ status: "loading" });
-  const mode = config().authMode;
+  const mode = authMode();
 
   useEffect(() => {
     let cancelled = false;
@@ -116,7 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!account) throw new Error("signed out");
     const scopes = [config().entra.apiScope];
     try {
-      return (await client.acquireTokenSilent({ scopes, account })).accessToken;
+      // The cached token, else the refresh token over fetch; never the hidden iframe,
+      // which the CSP forbids (src/lib/csp.ts). When the refresh token is spent, the
+      // user goes round Entra again by redirect.
+      const cacheLookupPolicy = CacheLookupPolicy.AccessTokenAndRefreshToken;
+      return (await client.acquireTokenSilent({ scopes, account, cacheLookupPolicy })).accessToken;
     } catch (error) {
       if (error instanceof InteractionRequiredAuthError) {
         await client.acquireTokenRedirect({ scopes, account });

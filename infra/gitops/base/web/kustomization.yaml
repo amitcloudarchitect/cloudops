@@ -1,0 +1,30 @@
+# The operations console (ADR 0014, ADR 0017; LLD, Compute: npapp). Next.js
+# standalone, released by an Argo Rollouts canary like the API. It holds no Azure
+# identity and no secret: the browser signs in with Entra and calls the API itself.
+# Values that differ per environment are SET-IN-OVERLAY here; a test fails if one
+# reaches a built overlay.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-web
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: cloudops
+    includeSelectors: false
+resources:
+  - serviceaccount.yaml
+  - rollout.yaml
+  - services.yaml
+  - httproute.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - analysistemplate.yaml
+  - networkpolicy.yaml
+configurations: [kustomizeconfig.yaml]
+configMapGenerator:
+  # Generated, so a changed setting renames it and rolls the pods (base/api explains).
+  - name: web
+    envs: [config.env]
+    options:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous
