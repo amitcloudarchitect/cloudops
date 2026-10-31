@@ -6,6 +6,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "cloudops-tenancy",
     "cloudops-config",
+    "cloudops-observability",
     "jsonschema>=4.23",
     "httpx>=0.28",
 ]
@@ -13,6 +14,7 @@ dependencies = [
 [tool.uv.sources]
 cloudops-tenancy = { workspace = true }
 cloudops-config = { workspace = true }
+cloudops-observability = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

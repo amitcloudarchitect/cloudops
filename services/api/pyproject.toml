@@ -8,6 +8,7 @@ dependencies = [
     "cloudops-config",
     "cloudops-commercial",
     "cloudops-domain",
+    "cloudops-observability[fastapi,httpx]",
     "fastapi>=0.115",
     "uvicorn>=0.32",
     "pyjwt[crypto]>=2.10",
@@ -19,6 +20,7 @@ cloudops-tenancy = { workspace = true }
 cloudops-config = { workspace = true }
 cloudops-commercial = { workspace = true }
 cloudops-domain = { workspace = true }
+cloudops-observability = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

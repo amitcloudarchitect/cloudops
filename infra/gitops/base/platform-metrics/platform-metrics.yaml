@@ -1,0 +1,112 @@
+# Federated to id-cloudops-ingest-{env} (stack 05): the ingest login's DSN, nothing else.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: platform-metrics
+  annotations:
+    azure.workload.identity/client-id: SET-IN-OVERLAY
+automountServiceAccountToken: false
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: platform-metrics
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: SET-IN-OVERLAY
+    keyvaultName: SET-IN-OVERLAY
+    tenantId: SET-IN-OVERLAY
+    objects: |
+      array:
+        - |
+          objectName: postgres-ingest-dsn
+          objectType: secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-metrics
+spec:
+  replicas: 1  # one snapshot per minute is enough; two would double the queries
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: platform-metrics
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: platform-metrics
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: platform-metrics
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ingest] }
+      containers:
+        - name: metrics
+          image: connector-servicenow  # the connectors package, another entry point
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.platform_metrics"]
+          ports:
+            - { name: probes, containerPort: 8080 }
+          envFrom:
+            - configMapRef: { name: platform-metrics }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: probes }
+            periodSeconds: 30
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet: { path: /readyz, port: probes }
+            periodSeconds: 30
+            timeoutSeconds: 3
+          volumeMounts:
+            - { name: secrets, mountPath: /mnt/secrets, readOnly: true }
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: platform-metrics
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: platform-metrics
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: platform-metrics
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - { protocol: TCP, port: 4318 }
+    - to:
+        - ipBlock: { cidr: SET-IN-OVERLAY }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    - ports:
+        - { protocol: TCP, port: 443 }  # Entra: the workload identity token exchange

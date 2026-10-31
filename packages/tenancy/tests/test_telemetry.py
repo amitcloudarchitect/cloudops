@@ -181,3 +181,25 @@ async def test_store_errors_do_not_echo_the_statement() -> None:
     with pytest.raises(TelemetryError) as err:
         await store.query(TenantScope([A], Role.ENGINEER, "p"), _q())
     assert str(A) not in str(err.value)
+
+
+async def test_cross_tenant_refusals_are_security_events(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """LLD, Observability: any cross-tenant query attempt pages. A role refusal
+    (wrong role, unresolved scope) is not a cross-tenant attempt and does not."""
+    row = {"tenant_id": str(B), "resource_id": str(uuid4()), "metric": "cpu.utilisation",
+           "at": "2026-10-30 00:00:00.000", "value": 1.0, "unit": "percent"}
+    with caplog.at_level("CRITICAL", logger="cloudops.security"):
+        with pytest.raises(TelemetryScopeError):
+            await _store(_Recorder(json.dumps(row))).query(
+                TenantScope([A], Role.ENGINEER, "p"), _q())
+        with pytest.raises(TelemetryScopeError):
+            await _store(_Recorder()).write(TenantScope([A], Role.INGEST, "p"),
+                                            [_sample(tenant=B)], dedupe_token="t")
+        with pytest.raises(TelemetryScopeError):
+            await _store(_Recorder()).query(TenantScope.for_resolution("p"), _q())
+    events = [(r.security_event, r.source) for r in caplog.records]  # type: ignore[attr-defined]
+    assert events == [("cross_tenant_attempt", "tenancy.telemetry_read"),
+                      ("cross_tenant_attempt", "tenancy.telemetry_write")]
+    assert str(B) not in caplog.text

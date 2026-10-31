@@ -15,6 +15,11 @@ the ingest path itself, fed from bronze instead of the source.
    unmatched companies and unlinked CIs with counts; advance the watermark.
    All or nothing: a failure leaves the watermark where it was.
 
+Each ticket written gets a span in its own trace (ADR 0022): ``ticket`` at first
+sighting, whose traceparent is stored on the row, then ``ticket.updated`` or
+``ticket.closed`` on later pages, so a ticket from first sighting through triage
+to closure is one trace. Each span links to the page's batch span.
+
 A ticket whose company moves to a different tenant cannot be upserted under
 the new tenant's scope (the existing row belongs to the old one and RLS hides
 it), so the page fails loudly and is dead-lettered for a human, rather than
@@ -49,7 +54,8 @@ from cloudops_connectors.servicenow.mapping import (
     normalise,
     updated_at,
 )
-from cloudops_tenancy import Database, Role, TenantScope
+from cloudops_observability import ticket_span, traceparent
+from cloudops_tenancy import Database, Role, ScopedConnection, TenantScope
 
 PRINCIPAL: Final = "connector:servicenow"
 
@@ -61,13 +67,21 @@ _COLUMNS: Final = (
     "sla_breached", "duration_seconds", "resolve_time_seconds", "pending_total_seconds",
     "planned_hours", "actual_hours", "closure_code", "close_notes",
 )
-_INSERT_COLUMNS: Final = ("tenant_id", *_COLUMNS, "resource_id", "raw_extra")
+_INSERT_COLUMNS: Final = ("tenant_id", *_COLUMNS, "resource_id", "raw_extra", "trace_parent")
 _UPSERT: Final = text(
     f"INSERT INTO cloudops.work_item ({', '.join(_INSERT_COLUMNS)}) VALUES ("  # noqa: S608
     + ", ".join(f"CAST(:{c} AS jsonb)" if c == "raw_extra" else f":{c}" for c in _INSERT_COLUMNS)
     + ") ON CONFLICT (number, opened_at) DO UPDATE SET "
     + ", ".join(f"{c} = EXCLUDED.{c}" for c in (*_COLUMNS, "resource_id", "raw_extra"))
     + ", ingested_at = now()"
+    # A ticket's trace is fixed at first sighting; a later page never replaces it.
+    + ", trace_parent = coalesce(cloudops.work_item.trace_parent, EXCLUDED.trace_parent)"
+)
+# The trace each ticket already has, and whether it was already closed.
+_TRACES: Final = text(
+    "SELECT number, opened_at, trace_parent, closed_at IS NOT NULL FROM cloudops.work_item"
+    " WHERE (number, opened_at) IN (SELECT * FROM unnest(CAST(:numbers AS text[]),"
+    " CAST(:opened AS timestamptz[])))"
 )
 # Re-process: which of these tickets are there already, read in the transaction
 # that upserts them, so "moved" counts only records that were not.
@@ -200,12 +214,31 @@ async def _commit(
                     "opened": [r["opened_at"] for r in rows]})}
                 returning.extend((r["number"], r["opened_at"],
                                   (r["number"], r["opened_at"]) not in existing) for r in rows)
+            await _trace_tickets(conn, rows)
             await conn.execute(_UPSERT, rows)
         await state.quarantine_aliases(conn, SOURCE, unmatched, ref)
         await state.quarantine_resources(conn, SOURCE, unlinked, ref)
         if watermark is not None:
             await state.advance_watermark(conn, SOURCE, entity, scope_key, watermark)
     return rows, unlinked
+
+
+async def _trace_tickets(conn: ScopedConnection, rows: list[dict[str, Any]]) -> None:
+    """One span per ticket, in the ticket's trace; sets each row's trace_parent."""
+    result = await conn.execute(_TRACES, {
+        "numbers": [r["number"] for r in rows], "opened": [r["opened_at"] for r in rows]})
+    known: dict[tuple[str, datetime], tuple[str | None, bool]] = {
+        (str(r[0]), r[1]): (r[2], bool(r[3])) for r in (tuple(x) for x in result)}
+    for row in rows:
+        parent, was_closed = known.get((row["number"], row["opened_at"]), (None, False))
+        stage = ("ingested" if parent is None
+                 else "closed" if row["closed_at"] is not None and not was_closed
+                 else "updated")
+        with ticket_span(stage, parent, {"cloudops.ticket.kind": row["kind"],
+                                         "cloudops.ticket.state": row["state"] or "none",
+                                         "cloudops.ticket.linked": row["resource_id"] is not None,
+                                         "cloudops.source": SOURCE}) as span:
+            row["trace_parent"] = parent or traceparent(span)
 
 
 class ReprocessRefusedError(Exception):

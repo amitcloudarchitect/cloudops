@@ -142,6 +142,13 @@ resource "azurerm_kubernetes_cluster" "this" {
     msi_auth_for_monitoring_enabled = true
   }
 
+  # Azure Monitor managed Prometheus (step 19, ADR 0022): the ama-metrics add-on
+  # scrapes the OpenTelemetry Collector into the workspace of stack 03.
+  dynamic "monitor_metrics" {
+    for_each = var.observability_enabled ? [1] : []
+    content {}
+  }
+
   microsoft_defender {
     log_analytics_workspace_id = data.azurerm_log_analytics_workspace.this.id
   }
@@ -258,6 +265,17 @@ locals {
     ai       = "platform-ai/worker-ai"
     workflow = "temporal/temporal-secrets"
   }
+  # Further service accounts (step 19, ADR 0022): the platform metrics job runs on
+  # the ingest login, so it is the ingest identity too; the collector has its own,
+  # federated once var.observability_enabled says stacks 02 and 03 are applied.
+  additional_federated_service_accounts = {
+    ingest-platform-metrics      = { identity = "ingest", account = "platform-ingest/platform-metrics" }
+    observability-otel-collector = { identity = "observability", account = "observability/otel-collector" }
+  }
+  additional_enabled = {
+    for k, v in local.additional_federated_service_accounts : k => v
+    if v.identity != "observability" || var.observability_enabled
+  }
 }
 
 data "azurerm_user_assigned_identity" "workload" {
@@ -276,4 +294,49 @@ resource "azurerm_federated_identity_credential" "workload" {
   audience            = ["api://AzureADTokenExchange"]
   issuer              = azurerm_kubernetes_cluster.this.oidc_issuer_url
   subject             = "system:serviceaccount:${replace(each.value, "/", ":")}"
+}
+
+data "azurerm_user_assigned_identity" "additional" {
+  provider            = azurerm.sec
+  for_each            = toset([for v in values(local.additional_enabled) : v.identity])
+  name                = module.names.workload_identity[each.key]
+  resource_group_name = module.names.resource_group["sec"]
+}
+
+resource "azurerm_federated_identity_credential" "additional" {
+  provider            = azurerm.sec
+  for_each            = local.additional_enabled
+  name                = "aks-${replace(each.value.account, "/", "-")}"
+  resource_group_name = module.names.resource_group["sec"]
+  parent_id           = data.azurerm_user_assigned_identity.additional[each.value.identity].id
+  audience            = ["api://AzureADTokenExchange"]
+  issuer              = azurerm_kubernetes_cluster.this.oidc_issuer_url
+  subject             = "system:serviceaccount:${replace(each.value.account, "/", ":")}"
+}
+
+# --- Managed Prometheus (step 19, ADR 0022) --------------------------------------
+#
+# The add-on's samples go to the Azure Monitor workspace through the workspace's own
+# default data collection rule and endpoint, associated with this cluster.
+
+data "azurerm_monitor_workspace" "this" {
+  provider            = azurerm.obs
+  count               = var.observability_enabled ? 1 : 0
+  name                = module.names.monitor_workspace
+  resource_group_name = module.names.resource_group["obs"]
+}
+
+resource "azurerm_monitor_data_collection_rule_association" "prometheus" {
+  count                   = var.observability_enabled ? 1 : 0
+  name                    = "dcra-cloudops-prometheus-${var.env}"
+  target_resource_id      = azurerm_kubernetes_cluster.this.id
+  data_collection_rule_id = data.azurerm_monitor_workspace.this[0].default_data_collection_rule_id
+  description             = "Managed Prometheus: ama-metrics to the platform's Azure Monitor workspace."
+}
+
+resource "azurerm_monitor_data_collection_rule_association" "prometheus_endpoint" {
+  count                       = var.observability_enabled ? 1 : 0
+  target_resource_id          = azurerm_kubernetes_cluster.this.id
+  data_collection_endpoint_id = data.azurerm_monitor_workspace.this[0].default_data_collection_endpoint_id
+  description                 = "Managed Prometheus: the workspace's ingestion endpoint."
 }

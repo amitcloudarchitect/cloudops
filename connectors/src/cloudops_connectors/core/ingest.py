@@ -343,6 +343,7 @@ class ConnectorActivities:
             mark = min(marks) if marks else None  # the most lagging scope
             await state.finish_run(conn, UUID(update.run_id), update.status, update.counts,
                                    at, mark)
+        state.report_run(src, update.entity, update.mode, update.status, update.counts)
         return None if mark is None else mark.isoformat()
 
     @activity.defn

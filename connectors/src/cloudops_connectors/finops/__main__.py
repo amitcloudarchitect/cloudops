@@ -46,6 +46,8 @@ from cloudops_connectors.finops.workflows import (
     PeriodRequest,
     activities,
 )
+from cloudops_observability import TelemetryConfigError
+from cloudops_observability.process import start, temporal_options
 from cloudops_tenancy import Database
 
 SCHEDULE_ID = "finops-daily"
@@ -54,7 +56,7 @@ SCHEDULE_ID = "finops-daily"
 async def _main(args: argparse.Namespace) -> int:
     if args.command == "schedule":
         settings = load_settings(os.environ, require={Component.TEMPORAL})
-        temporal = await connect(settings.temporal)
+        temporal = await connect(settings.temporal, **temporal_options())
         wanted = Schedule(
             action=ScheduleActionStartWorkflow(
                 FinOpsDaily.run, DayRequest(datetime.now(UTC).date().isoformat()),
@@ -72,7 +74,7 @@ async def _main(args: argparse.Namespace) -> int:
             print(f"updated {SCHEDULE_ID}")
         return 0
     settings = load_settings(os.environ, require={Component.DATABASE_INGEST, Component.TEMPORAL})
-    temporal = await connect(settings.temporal)
+    temporal = await connect(settings.temporal, **temporal_options())
     async with AsyncExitStack() as stack:
         db = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=2)
         stack.push_async_callback(db.dispose)
@@ -125,8 +127,12 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("schedule")
     args = parser.parse_args(argv)
     try:
-        return asyncio.run(_main(args))
-    except ConfigurationError as exc:
+        telemetry = start("worker-finops", os.environ)
+        try:
+            return asyncio.run(_main(args))
+        finally:
+            telemetry.shutdown()
+    except (ConfigurationError, TelemetryConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

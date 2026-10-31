@@ -1,0 +1,21 @@
+# Azure Monitor managed Prometheus (the AKS ama-metrics add-on, stack 05) reads its
+# custom scrape jobs from this ConfigMap: the collector, which carries every service's
+# metrics (honor_labels keeps each metric's own job label, the service), and Argo
+# Rollouts' controller, whose aborted rollouts drive the rollback-rate alert.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ama-metrics-prometheus-config
+  namespace: kube-system
+data:
+  prometheus-config: |
+    global:
+      scrape_interval: 30s
+    scrape_configs:
+      - job_name: otel-collector
+        honor_labels: true
+        static_configs:
+          - targets: [otel-collector.observability.svc.cluster.local:8889]
+      - job_name: argo-rollouts
+        static_configs:
+          - targets: [argo-rollouts-metrics.argo-rollouts.svc.cluster.local:8090]

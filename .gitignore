@@ -38,3 +38,8 @@ apps/web/test-results/
 apps/web/playwright-report/
 apps/web/e2e/.tokens/
 evals/drafting/last-report.json
+
+# Step 19 (ADR 0022): the dashboards stack's lock file is not committed. Grype reads
+# it and matches Grafana *server* CVEs to the grafana/grafana Terraform provider by
+# name; .grype.yaml admits base-image exceptions only. versions.tf pins ~> 4.49.0.
+infra/terraform/stacks/03b-dashboards/.terraform.lock.hcl

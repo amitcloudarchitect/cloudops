@@ -449,3 +449,138 @@ async def test_ping_fails_when_the_server_is_unreachable() -> None:
             await down.ping()
     finally:
         await down.dispose()
+
+
+# --- a cross-tenant attempt is a security event (LLD, Observability: always pages) ---
+
+
+def _security_events(caplog: pytest.LogCaptureFixture) -> list[tuple[str, str]]:
+    return [(r.security_event, r.source) for r in caplog.records  # type: ignore[attr-defined]
+            if r.name == "cloudops.security"]
+
+
+@pytest.mark.isolation
+async def test_rls_refusal_is_a_security_event_even_when_caught(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    insert = text("INSERT INTO cloudops.tenancy_probe (tenant_id, label) VALUES (:t, 'x')")
+    with caplog.at_level("CRITICAL", logger="cloudops.security"), \
+            pytest.raises(Exception, match="row-level security"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn.execute(insert, {"t": provisioned.tenant_b})
+    assert _security_events(caplog) == [("cross_tenant_attempt", "tenancy.row_level_security")]
+    # The record names neither tenant.
+    text_logged = " ".join(r.getMessage() for r in caplog.records)
+    assert str(provisioned.tenant_a) not in text_logged
+    assert str(provisioned.tenant_b) not in text_logged
+
+
+@pytest.mark.isolation
+async def test_guard_refusal_is_a_security_event(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    widen = text(f"SELECT set_config('app.tenant_ids', '{provisioned.tenant_b}', true)")
+    with caplog.at_level("CRITICAL", logger="cloudops.security"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            with pytest.raises(ScopeTamperingError):
+                await conn.execute(widen)
+    assert _security_events(caplog) == [("cross_tenant_attempt", "tenancy.statement_guard")]
+
+
+@pytest.mark.isolation
+async def test_commit_check_is_a_security_event(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    from cloudops_tenancy.database import _INTERNAL
+
+    widen = text("SELECT set_config('app.tenant_ids', :t, true)")
+    with caplog.at_level("CRITICAL", logger="cloudops.security"), \
+            pytest.raises(ScopeTamperingError):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn._conn.execute(
+                widen, {"t": str(provisioned.tenant_b)}, execution_options={_INTERNAL: True})
+    assert _security_events(caplog) == [("cross_tenant_attempt", "tenancy.commit_check")]
+
+
+async def test_ordinary_errors_are_not_security_events(
+    db: Database, provisioned: Provisioned, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level("CRITICAL", logger="cloudops.security"), \
+            pytest.raises(Exception, match="does not exist"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn.execute(text("SELECT * FROM cloudops.no_such_table"))
+    assert _security_events(caplog) == []
+
+
+# --- a span per statement (step 19, ADR 0022) -------------------------------------
+
+
+async def test_statements_are_spans_with_text_never_values(
+    db: Database, provisioned: Provisioned
+) -> None:
+    from cloudops_observability.testing import memory_telemetry
+
+    mem = memory_telemetry()
+    mem.spans.clear()
+    marker = "value-that-must-not-appear"
+    async with db.transaction(scope(provisioned.tenant_a)) as conn:
+        await conn.execute(text("SELECT CAST(:v AS text)"), {"v": marker})
+    with pytest.raises(Exception, match="does not exist"):
+        async with db.transaction(scope(provisioned.tenant_a)) as conn:
+            await conn.execute(text("SELECT * FROM cloudops.no_such_table"))
+    spans = [s for s in mem.finished() if s.name.startswith("db ")]
+    texts = [str((s.attributes or {}).get("db.query.text")) for s in spans]
+    assert any("set_config" in t for t in texts), "scope application is visible"
+    assert "SELECT CAST(%(v)s AS text)" in texts
+    assert marker not in repr([dict(s.attributes or {}) for s in spans])
+    assert str(provisioned.tenant_a) not in repr([dict(s.attributes or {}) for s in spans])
+    (failed,) = [s for s in spans if s.status.status_code.name == "ERROR"]
+    assert (failed.attributes or {})["error.type"] == "42P01"
+
+
+async def test_errors_never_carry_bound_values_into_telemetry(
+    db: Database, provisioned: Provisioned
+) -> None:
+    """Review of #37: a failed statement's exception reaches spans and logs. The
+    engine hides bound parameters, and the exporter and log filter keep only the
+    type, SQLSTATE and frames, never PostgreSQL's message, which quotes input."""
+    import io
+    import json
+    import logging
+
+    from sqlalchemy.exc import DBAPIError
+
+    from cloudops_observability.logs import JsonFormatter, ScrubFilter
+    from cloudops_observability.testing import memory_telemetry
+    from cloudops_observability.tracing import tracer
+
+    customer = "Acme Bank payroll down - call Jane Smith"
+    mem = memory_telemetry()
+    mem.spans.clear()
+    buf = io.StringIO()
+    handler = logging.StreamHandler(buf)
+    handler.setFormatter(JsonFormatter("test"))
+    handler.addFilter(ScrubFilter())
+    log = logging.getLogger("cloudops.test.db_errors")
+    log.addHandler(handler)
+    log.propagate = False
+    try:
+        for sql in ("SELECT CAST(:v AS integer)",  # PostgreSQL quotes the input
+                    "SELECT CAST(:v AS text) FROM cloudops.no_such_table"):
+            with pytest.raises(DBAPIError) as caught, tracer().start_as_current_span("activity"):
+                async with db.transaction(scope(provisioned.tenant_a)) as conn:
+                    await conn.execute(text(sql), {"v": customer})
+            assert "[parameters:" not in str(caught.value)
+            try:
+                raise caught.value
+            except Exception:
+                log.exception("statement failed")
+    finally:
+        log.removeHandler(handler)
+    exported = repr([(s.name, dict(s.attributes or {}), s.status.description,
+                      [dict(e.attributes or {}) for e in s.events]) for s in mem.finished()])
+    logged = [json.loads(line)["msg"] for line in buf.getvalue().splitlines()]
+    assert "sqlstate=22P02" in logged[0]
+    for leaked in ("Acme", "Jane Smith"):
+        assert leaked not in exported
+        assert not any(leaked in m for m in logged)

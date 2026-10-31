@@ -17,16 +17,21 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import sys
+from collections.abc import Sequence
 from typing import Final, Protocol
 
-from temporalio.client import Client, TLSConfig
+from temporalio.client import Client, Interceptor, TLSConfig
+from temporalio.runtime import Runtime
 
 from cloudops_config.settings import TemporalConfig
 
 ROTATION_CHECK_SECONDS: Final = 300.0
 
 
-async def connect(config: TemporalConfig) -> Client:
+async def connect(config: TemporalConfig, *, interceptors: Sequence[Interceptor] = (),
+                  runtime: Runtime | None = None) -> Client:
+    """``interceptors`` and ``runtime`` carry tracing and the SDK's metrics
+    (``cloudops_observability.temporal``); both empty when telemetry is off."""
     tls: TLSConfig | bool = False
     if config.tls is not None:
         material = config.tls.read()
@@ -36,7 +41,8 @@ async def connect(config: TemporalConfig) -> Client:
             client_private_key=material.key,
             domain=config.tls.server_name,
         )
-    return await Client.connect(config.address, namespace=config.namespace, tls=tls)
+    return await Client.connect(config.address, namespace=config.namespace, tls=tls,
+                                interceptors=interceptors, runtime=runtime)
 
 
 class Runnable(Protocol):

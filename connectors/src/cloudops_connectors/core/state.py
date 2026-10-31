@@ -24,6 +24,7 @@ from uuid import UUID
 
 from sqlalchemy import text
 
+from cloudops_observability import record_connector_run
 from cloudops_tenancy import ScopedConnection
 
 _READ_WATERMARK: Final = text(
@@ -179,6 +180,14 @@ async def finish_run(
             "rejected": counts.rejected, "ci_unlinked": counts.ci_unlinked,
         },
     )
+
+
+def report_run(source: str, entity: str, mode: str, status: str, counts: RunCounts) -> None:
+    """The finished run as metrics (``cloudops_connector_runs_total`` and records),
+    after its row is committed. No tenant: one run covers many."""
+    record_connector_run(source=source, entity=entity, mode=mode, status=status,
+                         records=counts.records, written=counts.written,
+                         rejected=counts.rejected, quarantined=counts.quarantined)
 
 
 async def dead_letter(

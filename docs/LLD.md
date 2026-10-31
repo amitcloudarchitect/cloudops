@@ -505,6 +505,8 @@ Error budget policy: two consecutive months below an availability SLO freezes fe
 
 **Alerts that always page, regardless of hour:** any cross-tenant query attempt, any unsigned runbook execution attempt, any credential mint without a valid approval, any signing-key operation outside the expected pattern, and any break-glass activation. P2 pages cover connector outage beyond three intervals, reconciliation drift, rollback rate breach and the AI spend circuit breaker.
 
+Instrumentation (ADR 0022): services export OTLP to an in-cluster OpenTelemetry Collector, which tail-samples and exports traces and logs to Application Insights as its own workload identity, and metrics to managed Prometheus. **No tenant attribute leaves the database for Azure Monitor**: spans, logs and metrics are allowlisted and scrubbed in each process and again in the collector; per-tenant LLM attribution stays in `llm_call` and `agent_run` under RLS, joined by trace id. A ticket is one trace from first sighting to closure (`work_item.trace_parent`). Alert rules and the six dashboards are Terraform (stacks 03, 03b).
+
 ### CI/CD
 
 Monorepo: `apps/web`, `services`, `connectors`, `execution`, `runbooks`, `packages/tenancy`, `packages/contracts`, `packages/ui`, `db/migrations`, `infra/terraform`, `infra/gitops`, `evals`, `docs`.

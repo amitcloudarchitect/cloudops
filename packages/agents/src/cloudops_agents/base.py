@@ -37,12 +37,14 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Final, Literal, Protocol
 
+from opentelemetry.trace import get_current_span
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from cloudops_agents.prompts import DataItem, PromptTemplate, build_messages
 from cloudops_gateway.gateway import CallContext, GatewayRefusedError, GatewayReply
 from cloudops_gateway.providers import Message, Tier, ToolCallRequest, ToolSpec
 from cloudops_gateway.registry import ToolOutcome
+from cloudops_observability import record_agent_run, tracer
 
 TOOL_ITERATION_CEILING: Final = 10  # LLD: ten tool-call iterations, then escalate
 OUTPUT_ATTEMPTS: Final = 2  # the first answer, and one retry with the errors
@@ -180,6 +182,23 @@ class Agent[O: AgentOutput]:
         data: Sequence[DataItem] = (),
         retrieval_ids: Sequence[str] = (),
     ) -> AgentResult[O]:
+        """One bounded agent run, as one span (``agent.run``) whose children are
+        the gateway calls and tool invocations. The span names the agent and its
+        prompt version, never the tenant (ADR 0022)."""
+        with tracer().start_as_current_span("agent.run", attributes={
+                "cloudops.agent": self.spec.name,
+                "cloudops.agent.version": self.spec.prompt.version,
+                "cloudops.agent.tier": self.spec.tier.value}):
+            return await self._run(ctx, request=request, data=data, retrieval_ids=retrieval_ids)
+
+    async def _run(
+        self,
+        ctx: CallContext,
+        *,
+        request: str,
+        data: Sequence[DataItem],
+        retrieval_ids: Sequence[str],
+    ) -> AgentResult[O]:
         spec = self.spec
         run_id = uuid.uuid4()
         history: list[Message] = build_messages(
@@ -201,14 +220,20 @@ class Agent[O: AgentOutput]:
 
         async def finish(status: str, *, output: O | None = None, error: str | None = None
                          ) -> None:
+            elapsed = int((time.monotonic() - started) * 1000)
             await self._trace.record(AgentRunRecord(
                 run_id, ctx, spec.name, spec.prompt.version,
                 hashlib.sha256(prompt.encode()).hexdigest(), spec.tier, status, attempts,
                 list(retrieval_ids), tools_trace, calls, tokens_in, tokens_out, cost, currency,
-                int((time.monotonic() - started) * 1000),
+                elapsed,
                 None if output is None else output.confidence,
                 None if output is None else output.model_dump(mode="json"), error,
             ))
+            record_agent_run(agent=spec.name, status=status, latency_ms=elapsed)
+            get_current_span().set_attributes({
+                "cloudops.agent.status": status, "cloudops.agent.attempts": attempts,
+                "cloudops.agent.tool_rounds": rounds, "cloudops.agent.retrieved":
+                    len(retrieval_ids)})
 
         try:
             while True:
@@ -274,8 +299,15 @@ class Agent[O: AgentOutput]:
             raise
 
     async def _tool(self, call: ToolCallRequest, ctx: CallContext) -> ToolOutcome:
-        if call.name not in self.spec.tools or self._registry is None:
-            # Never reaches the registry, let alone a service.
-            return ToolOutcome(call.id, call.name, False,
-                               json.dumps({"refused": "not_in_allowlist"}), "not_in_allowlist")
-        return await self._registry.invoke(call, ctx)
+        with tracer().start_as_current_span("agent.tool") as span:
+            if call.name not in self.spec.tools or self._registry is None:
+                # Never reaches the registry, let alone a service. The name is
+                # the model's, so it is not recorded on the span.
+                span.set_attribute("cloudops.tool.refused", "not_in_allowlist")
+                return ToolOutcome(call.id, call.name, False,
+                                   json.dumps({"refused": "not_in_allowlist"}),
+                                   "not_in_allowlist")
+            span.set_attribute("cloudops.tool", call.name)
+            outcome = await self._registry.invoke(call, ctx)
+            span.set_attribute("cloudops.tool.ok", outcome.ok)
+            return outcome

@@ -26,18 +26,20 @@ Defence in depth, in order of strength:
 
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Final, final
 
 from sqlalchemy import event, text
-from sqlalchemy.engine import URL, Connection, CursorResult, Result, make_url
+from sqlalchemy.engine import URL, Connection, CursorResult, ExceptionContext, Result, make_url
 from sqlalchemy.engine.interfaces import DBAPIConnection, ExecutionContext
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_engine
 from sqlalchemy.pool import ConnectionPoolEntry
 from sqlalchemy.sql import Executable
 
+from cloudops_tenancy import _spans
 from cloudops_tenancy._guard import check_statement
 from cloudops_tenancy.errors import (
     ScopeClosedError,
@@ -46,6 +48,35 @@ from cloudops_tenancy.errors import (
     UnsafeDatabaseRoleError,
 )
 from cloudops_tenancy.scope import Role, TenantScope
+
+# Security events (LLD, Observability: a cross-tenant query attempt always pages).
+# Emitted with the standard library so this package needs no telemetry
+# dependency; packages/observability counts them and stack 03's alert rule
+# matches these exact fields. Never a tenant id, principal or statement.
+_security_log: Final = logging.getLogger("cloudops.security")
+CROSS_TENANT_EVENT: Final = "cross_tenant_attempt"
+# PostgreSQL's insufficient_privilege, with the message row-level security uses
+# when a write's WITH CHECK fails: a row for a tenant outside the scope.
+_RLS_SQLSTATE: Final = "42501"
+_RLS_MESSAGE: Final = "row-level security"
+
+
+def _cross_tenant_attempt(source: str, message: str) -> None:
+    _security_log.critical("SECURITY %s: %s", CROSS_TENANT_EVENT, message,
+                           extra={"security_event": CROSS_TENANT_EVENT, "source": source})
+
+
+def _rls_refusal(error: BaseException) -> bool:
+    first = str(error).splitlines()[0] if str(error) else ""
+    return getattr(error, "sqlstate", None) == _RLS_SQLSTATE and _RLS_MESSAGE in first
+
+
+def _on_error(context: ExceptionContext) -> None:
+    """Every statement error, whether or not the caller goes on to catch it."""
+    if _rls_refusal(context.original_exception):
+        _cross_tenant_attempt("tenancy.row_level_security",
+                              "row-level security refused a write outside scope")
+
 
 # Marks the package's own statements so the guard lets them through. Only this
 # module sets it; ScopedConnection offers no way to pass execution options.
@@ -184,12 +215,17 @@ class Database:
             pool_timeout=pool_timeout,
             pool_pre_ping=True,
             pool_reset_on_return="rollback",
+            # Errors never carry bound values: an exception's text reaches logs and
+            # traces, and the values are customer data (ADR 0022).
+            hide_parameters=True,
             # Server-side prepared statements are bound to a server connection,
             # which PgBouncer transaction mode swaps between transactions.
             connect_args={"prepare_threshold": None},
         )
         event.listen(engine.sync_engine, "connect", _verify_role_on_connect)
         event.listen(engine.sync_engine, "before_cursor_execute", _guard_statement)
+        event.listen(engine.sync_engine, "handle_error", _on_error)
+        _spans.instrument(engine.sync_engine)
         return cls(engine, _token=_CONSTRUCT)
 
     @classmethod
@@ -259,6 +295,7 @@ async def _assert_scope_intact(conn: AsyncConnection, scope: TenantScope) -> Non
         CUSTOMER_DB_ROLE if scope.role is Role.CUSTOMER else "",
     )
     if (row[0], row[1], row[2], row[3]) != expected:
+        _cross_tenant_attempt("tenancy.commit_check", "scope changed during the transaction")
         raise ScopeTamperingError("scope changed during the transaction; rolled back")
 
 
@@ -272,7 +309,12 @@ def _guard_statement(
 ) -> None:
     if context is not None and context.execution_options.get(_INTERNAL):
         return
-    check_statement(statement)
+    try:
+        check_statement(statement)
+    except ScopeTamperingError:
+        _cross_tenant_attempt("tenancy.statement_guard",
+                              "a statement tried to change scope or end the transaction")
+        raise
 
 
 def _verify_role_on_connect(dbapi_connection: DBAPIConnection, record: ConnectionPoolEntry) -> None:

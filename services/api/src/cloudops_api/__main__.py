@@ -26,6 +26,9 @@ from cloudops_config import (
 )
 from cloudops_domain.assurance.pack import Ed25519Signer, Signer, UnavailableSigner
 from cloudops_domain.reporting.availability import TelemetryAvailability
+from cloudops_observability import TelemetryConfigError
+from cloudops_observability.http import instrument_fastapi
+from cloudops_observability.process import start
 from cloudops_tenancy import Database
 from cloudops_tenancy.telemetry import TelemetryStore
 
@@ -64,7 +67,8 @@ def _availability(local: bool) -> TelemetryAvailability | None:
 def main() -> int:
     try:
         settings = load_settings(os.environ, require={Component.DATABASE_APP, Component.AUTH})
-    except ConfigurationError as exc:
+        telemetry = start("api", os.environ)
+    except (ConfigurationError, TelemetryConfigError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     auth = settings.auth
@@ -85,12 +89,18 @@ def main() -> int:
         signer=_signer(settings),
         availability=_availability(local),
     )
-    uvicorn.run(
-        app,
-        host="127.0.0.1" if local else "0.0.0.0",  # noqa: S104
-        port=8000,
-        timeout_keep_alive=KEEP_ALIVE_SECONDS,
-    )
+    try:
+        uvicorn.run(
+            # Server spans per route; inbound trace headers dropped (the API is the edge).
+            instrument_fastapi(app) if telemetry.enabled else app,
+            host="127.0.0.1" if local else "0.0.0.0",  # noqa: S104
+            port=8000,
+            timeout_keep_alive=KEEP_ALIVE_SECONDS,
+            # Logging is ours (JSON, scrubbed): uvicorn must not install its own.
+            log_config=None,
+        )
+    finally:
+        telemetry.shutdown()
     return 0
 
 

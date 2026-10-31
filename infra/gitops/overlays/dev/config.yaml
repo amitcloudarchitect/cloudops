@@ -12,6 +12,10 @@ data:
   # the same console, which calls the API on the staff host: cross-origin, so CORS
   # must admit it.
   CLOUDOPS_WEB_ORIGINS: https://cloudops-dev-dne7dpdpfrgfccej.z02.azurefd.net,https://cloudops-portal-dev-c7fcgehpf7h0ame4.z02.azurefd.net
+  # Step 19 (ADR 0022): JSON logs only until the collector runs in dev, which needs
+  # id-cloudops-observability-dev (stacks 02, 04b, 05). Then this line goes.
+  CLOUDOPS_TELEMETRY: "off"
+  CLOUDOPS_DEPLOYMENT: dev
 ---
 apiVersion: v1
 kind: ConfigMap

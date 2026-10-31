@@ -10,6 +10,7 @@ dependencies = [
     "cloudops-tenancy",
     "cloudops-gateway",
     "cloudops-domain",
+    "cloudops-observability[temporal]",
     "pydantic>=2.9",
     "temporalio>=1.34",
 ]
@@ -19,6 +20,7 @@ cloudops-config = { workspace = true }
 cloudops-tenancy = { workspace = true }
 cloudops-gateway = { workspace = true }
 cloudops-domain = { workspace = true }
+cloudops-observability = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

@@ -58,7 +58,10 @@ from cloudops_gateway.providers import MockProvider, Provider
 from cloudops_gateway.registry import ToolRegistry
 from cloudops_gateway.retrieval import KnowledgeIndex
 from cloudops_gateway.tools import TOOLS
+from cloudops_observability.process import start, temporal_options
 from cloudops_tenancy import Database
+
+SERVICE = "worker-triage"
 
 
 async def _gateway(settings: Settings, db: Database, stack: AsyncExitStack) -> Gateway:
@@ -106,8 +109,10 @@ async def _main() -> int:
         os.environ, require={Component.DATABASE_APP, Component.TEMPORAL, Component.LLM}
     )
     local = settings.environment is Environment.LOCAL
-    temporal = await connect(settings.temporal)
+    telemetry = start(SERVICE, os.environ)
+    temporal = await connect(settings.temporal, **temporal_options(telemetry))
     async with AsyncExitStack() as stack:
+        stack.callback(telemetry.shutdown)
         db = Database.create(settings.database_dsn(DbLogin.APP), pool_size=4)
         stack.push_async_callback(db.dispose)
         gateway = await _gateway(settings, db, stack)
