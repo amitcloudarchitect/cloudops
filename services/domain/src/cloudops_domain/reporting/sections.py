@@ -454,14 +454,17 @@ def _price_gap(why: str, q: str) -> Figure:
 
 
 async def customer_price(conn: ScopedConnection, scope: TenantScope, tenant: UUID,
-                         period: date, currency: str) -> Figure:
+                         period: date, currency: str, now: datetime) -> Figure:
     """The month's cloud consumption at the price Getronics charges the customer
     (ADR 0021), in ``currency``: each day's price converted at the average rate
     in force on that day, then summed, unrounded.
 
     The figure is whole or a named gap. A day without a price (no uplift on the
     SOW, no SOW, or two in force) or without a rate makes the month not
-    captured: never a partial total, and never the cost in its place."""
+    captured: never a partial total, and never the cost in its place.
+
+    Closed months only (ADR 0021, decision 9): a month-to-date price, regenerated
+    day after day, would isolate a day's price and from it the uplift."""
     start, end = month_bounds(period)
     # ``month_bounds`` is half-open; the price function takes inclusive dates.
     p = {"t": tenant, "s": start.date(), "e": end.date() - timedelta(days=1),
@@ -469,6 +472,8 @@ async def customer_price(conn: ScopedConnection, scope: TenantScope, tenant: UUI
     q = ref("customer_price", period=period, currency=currency)
     if scope.role not in PRICE_ROLES:
         return _price_gap("this role may not compute the customer's price", q)
+    if end > now:
+        return _price_gap("the month is not closed; the price is shown for closed months", q)
     rows, unpriced = tuple((await conn.execute(_PRICED_DAYS, p)).one())
     if unpriced:
         return _price_gap(f"no consumption uplift agreed for {unpriced} of {rows} billed days"
@@ -517,7 +522,7 @@ async def generate(conn: ScopedConnection, scope: TenantScope, *, tenant_id: UUI
         "revenue_mix": await financial.revenue_mix(conn, tenant_id, period, contract_currency),
     }
     spend = await consumption(conn, tenant_id, period, contract_currency)
-    price = await customer_price(conn, scope, tenant_id, period, contract_currency)
+    price = await customer_price(conn, scope, tenant_id, period, contract_currency, now)
     summary = executive_summary(built, spend, price)
     ordered = tuple(summary if k == "executive_summary" else built[k] for k in SECTION_ORDER)
     return PackContent(tenant_id, tenant_name, period, contract_currency, now, ordered)

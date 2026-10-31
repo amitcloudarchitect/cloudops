@@ -592,3 +592,19 @@ async def test_a_month_without_billing_rows_has_no_price_never_zero(
     price = _figure(got.json(), "executive_summary", "customer_price")
     assert (price["value"], price["kind"], price["note"]) == (
         "", "text", "not captured: no billing rows for this month")
+
+
+async def test_an_open_month_has_no_price_so_no_day_can_be_isolated(
+    step17: Step17, month: Month
+) -> None:
+    """ADR 0021, decision 9: a pack regenerated day by day through the current
+    month would show each day's price, and from it the uplift."""
+    got = await _generate(step17, step17.delivery_a, step17.seeded.a.id, f"{TODAY:%Y-%m}")
+    assert got.status_code == 201, got.text
+    pack = got.json()
+    price = _figure(pack, "executive_summary", "customer_price")
+    assert (price["value"], price["kind"], price["note"]) == (
+        "", "text", "not captured: the month is not closed; the price is shown for closed"
+        " months")
+    # Staff still see the month's cost to date.
+    assert _figure(pack, "executive_summary", "cloud_cost")["kind"] == "money"

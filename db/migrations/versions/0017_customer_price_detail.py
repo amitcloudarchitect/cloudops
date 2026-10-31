@@ -4,7 +4,7 @@ Revision ID: 0017
 Revises: 0016
 Create Date: 2026-10-31
 
-ADR 0021, decision 8. Review found that the uplift can be inferred. One uplift
+ADR 0021, decision 9. Review found that the uplift can be inferred. One uplift
 multiplies every cost line, and ``customer_price`` returned one row per
 account, day, charge class and currency. A customer who knows the provider's
 list price for a single line (a support plan, or a marketplace item on a day it

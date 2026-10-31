@@ -147,6 +147,10 @@ inferred.
    - The staff figure is labelled "Cloud cost (unblended)". The price is on an amortized
      basis, so in a month with a reservation purchase the two differ, and the label says
      why. A month with no billing rows has no price; it is never zero.
+   - Closed months only, as decision 9: a pack for the current month shows the price
+     as not captured. Otherwise regenerating it day after day would isolate one day's
+     price. A pack's price is one total for the month, no finer than what the customer
+     reads from `customer_monthly_price`.
 
 9. **The uplift must not be inferable: above 0, and no detail finer than a month**
    (user decision, 2026-10-31, after review; migration `0017_customer_price_detail`).
