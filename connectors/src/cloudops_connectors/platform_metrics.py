@@ -13,7 +13,7 @@ tenant from ``cloudops.finops_tenants()``: row-level security still applies, so
 there is no new way around it, only the reach the ingest role already has.
 
 **The platform's own cost** (LLD, Observability) runs through the customer FinOps
-code unchanged. The internal tenant (``cloudops.tenant.internal``, migration 0014)
+code unchanged. The internal tenant (``cloudops.tenant.internal``, migration 0019)
 is a tenant like any other: its cost lands through the Azure connector, the
 FinOps jobs reconcile it and look for anomalies with ``cloudops_commercial``, and
 this job reports what they found, plus allocation computed with the same

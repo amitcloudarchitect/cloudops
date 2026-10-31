@@ -5,7 +5,7 @@
 - **Implements:** step 19; LLD Observability (sampling, LLM tracing, SLO table, alerts
   that always page, P2 pages), Capacity and cost control; HLD Observability.
   `packages/observability`, `packages/tenancy` (statement spans, security events),
-  migration `0014_observability`, `connectors/.../platform_metrics.py`,
+  migration `0019_observability`, `connectors/.../platform_metrics.py`,
   `infra/gitops/base/observability` and `base/platform-metrics`, Terraform stacks 02
   (identity), 03 (workspace, Grafana, alerts), 03b (dashboards), 04b (roles), 05
   (managed Prometheus, federation).
@@ -61,7 +61,7 @@ live. The user decided those before the build.
 4. **LLM tracing is attributed under RLS, joined by trace id** (LLD; user, by 3). The
    per-request record the LLD asks for (prompt, retrieval set, tool calls, tokens,
    latency, cost, tenant, user) already lives in `cloudops.llm_call` and
-   `cloudops.agent_run`. Migration 0014 adds `trace_id` to both. The span
+   `cloudops.agent_run`. Migration 0019 adds `trace_id` to both. The span
    (`llm.complete`, `llm.embed`, `agent.run`, `agent.tool`) carries task, tier, model,
    tokens, cost as a decimal string, outcome, counts of retrieved items and tool calls,
    and the `llm_call` id: an engineer goes from a trace to the row, and the row's RLS
@@ -71,7 +71,7 @@ live. The user decided those before the build.
 5. **One trace per ticket.** A ticket's life spans days and many processes, so no
    request context can carry it. At first sighting the ServiceNow connector starts a
    root span `ticket` and stores its W3C traceparent in
-   `cloudops.work_item.trace_parent` (0014; random, never derived from the tenant or
+   `cloudops.work_item.trace_parent` (0019; random, never derived from the tenant or
    ticket number). Later pages open `ticket.updated` or `ticket.closed` under it; triage
    opens `ticket.triaged` (or starts the trace, for a ticket from before this). Each
    stage links to the batch or workflow trace that produced it. There is no webhook
@@ -141,7 +141,7 @@ live. The user decided those before the build.
     they happen.
 
 11. **The platform's own cost runs through the customer FinOps code** (user). Migration
-    0014 adds `cloudops.tenant.internal` (at most one). The internal tenant is a tenant
+    0019 adds `cloudops.tenant.internal` (at most one). The internal tenant is a tenant
     like any other: its cost arrives through the Azure cost connector, the FinOps jobs
     reconcile it and find anomalies with `cloudops_commercial`, and the metrics job
     reports month-to-date cost by charge class (integer millionths, never a float),

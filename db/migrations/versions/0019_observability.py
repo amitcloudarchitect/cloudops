@@ -1,7 +1,7 @@
 """Observability: the ticket's trace, LLM trace ids, the internal tenant (expand).
 
-Revision ID: 0014
-Revises: 0013
+Revision ID: 0019
+Revises: 0018
 Create Date: 2026-10-31
 
 Step 19, LLD Observability; ADR 0022.
@@ -28,8 +28,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0014"
-down_revision = "0013"
+revision = "0019"
+down_revision = "0018"
 branch_labels = None
 depends_on = None
 

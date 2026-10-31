@@ -1180,9 +1180,20 @@
       },
       "CostLine": {
         "additionalProperties": false,
+        "description": "What Getronics staff see: the provider's charge to Getronics.",
         "properties": {
           "amortized": {
             "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "converted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "currency": {
             "title": "Currency",
@@ -1196,7 +1207,8 @@
         "required": [
           "provider",
           "currency",
-          "amortized"
+          "amortized",
+          "converted"
         ],
         "title": "CostLine",
         "type": "object"
@@ -1220,11 +1232,23 @@
             "format": "date",
             "title": "Period Start",
             "type": "string"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
           }
         },
         "required": [
           "period_start",
           "period_end",
+          "reporting_currency",
           "lines"
         ],
         "title": "CostSummary",
@@ -1389,6 +1413,20 @@
               }
             ]
           },
+          "price_last_month": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/CustomerPrice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Last Month"
+          },
           "resources": {
             "anyOf": [
               {
@@ -1419,9 +1457,55 @@
           "open_incidents",
           "sla_breached_open",
           "critical_vulnerabilities",
-          "cost_30d"
+          "cost_30d",
+          "price_last_month"
         ],
         "title": "CustomerOverview",
+        "type": "object"
+      },
+      "CustomerPrice": {
+        "additionalProperties": false,
+        "description": "What a customer sees instead of cost (ADR 0021): its consumption at the\nprice Getronics charges, for one closed calendar month and nothing finer, so\nno single line's price can be isolated (decision 8). ``price`` is None, and\n``not_captured`` says why, when any line in the month has no uplift in force:\nnever the cost, never a zero.",
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "not_captured": {
+            "anyOf": [
+              {
+                "const": "no_uplift",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Captured"
+          },
+          "period": {
+            "format": "date",
+            "title": "Period",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "period",
+          "currency",
+          "price",
+          "not_captured"
+        ],
+        "title": "CustomerPrice",
         "type": "object"
       },
       "DecisionRequest": {
@@ -2088,6 +2172,18 @@
             "title": "From Currency",
             "type": "string"
           },
+          "moves": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moves"
+          },
           "rate": {
             "anyOf": [
               {
@@ -2391,6 +2487,17 @@
             ],
             "title": "Contract Currency"
           },
+          "cost_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Verified"
+          },
           "effort": {
             "anyOf": [
               {
@@ -2590,6 +2697,7 @@
           "band_basis",
           "target_margin",
           "gap_to_target",
+          "cost_verified",
           "effort",
           "unpriced_cis",
           "exceeds_slab",
@@ -3403,6 +3511,107 @@
           "open_total"
         ],
         "title": "Posture",
+        "type": "object"
+      },
+      "PriceLine": {
+        "additionalProperties": false,
+        "properties": {
+          "converted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "not_captured": {
+            "anyOf": [
+              {
+                "const": "no_uplift",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Captured"
+          },
+          "period": {
+            "format": "date",
+            "title": "Period",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "currency",
+          "price",
+          "not_captured",
+          "provider",
+          "converted"
+        ],
+        "title": "PriceLine",
+        "type": "object"
+      },
+      "PriceSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/PriceLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
+          }
+        },
+        "required": [
+          "period_start",
+          "period_end",
+          "reporting_currency",
+          "lines"
+        ],
+        "title": "PriceSummary",
         "type": "object"
       },
       "ProposalRequest": {
@@ -7059,6 +7268,7 @@
     },
     "/v1/cost/summary": {
       "get": {
+        "description": "Cloud consumption by provider and transaction currency. Staff see the\nprovider's charge to Getronics over the last ``days``. A customer sees the\nprice Getronics charges it (ADR 0021) for each of the last ``months``\nclosed calendar months, and nothing finer. Given ``currency``, each figure\nis also converted at the rate in force on each usage date; a figure with any\nday unconverted has none.",
         "operationId": "cost_summary_v1_cost_summary_get",
         "parameters": [
           {
@@ -7072,6 +7282,35 @@
               "title": "Days",
               "type": "integer"
             }
+          },
+          {
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 3,
+              "maximum": 12,
+              "minimum": 1,
+              "title": "Months",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
           }
         ],
         "responses": {
@@ -7079,7 +7318,15 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CostSummary"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/CostSummary"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PriceSummary"
+                    }
+                  ],
+                  "title": "Response Cost Summary V1 Cost Summary Get"
                 }
               }
             },
@@ -7219,7 +7466,7 @@
         "summary": "List Fx Corrections"
       },
       "post": {
-        "description": "Finance corrects a rate. The closed months it touches are restated by the\nnext month-end reprocessing, as new versions; nothing closed is overwritten.",
+        "description": "Finance corrects a rate. Its inverse and every pair with the moving\ncurrency are re-derived from the EUR rates on the same day, each with its own\nentry; the returned entry is the first that moved. The closed months it\ntouches are restated by the next month-end reprocessing, as new versions;\nnothing closed is overwritten.",
         "operationId": "correct_fx_rate_v1_finops_fx_corrections_post",
         "requestBody": {
           "content": {

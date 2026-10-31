@@ -411,7 +411,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Cost Summary */
+        /**
+         * Cost Summary
+         * @description Cloud consumption by provider and transaction currency. Staff see the
+         *     provider's charge to Getronics over the last ``days``. A customer sees the
+         *     price Getronics charges it (ADR 0021) for each of the last ``months``
+         *     closed calendar months, and nothing finer. Given ``currency``, each figure
+         *     is also converted at the rate in force on each usage date; a figure with any
+         *     day unconverted has none.
+         */
         get: operations["cost_summary_v1_cost_summary_get"];
         put?: never;
         post?: never;
@@ -474,8 +482,11 @@ export interface paths {
         put?: never;
         /**
          * Correct Fx Rate
-         * @description Finance corrects a rate. The closed months it touches are restated by the
-         *     next month-end reprocessing, as new versions; nothing closed is overwritten.
+         * @description Finance corrects a rate. Its inverse and every pair with the moving
+         *     currency are re-derived from the EUR rates on the same day, each with its own
+         *     entry; the returned entry is the first that moved. The closed months it
+         *     touches are restated by the next month-end reprocessing, as new versions;
+         *     nothing closed is overwritten.
          */
         post: operations["correct_fx_rate_v1_finops_fx_corrections_post"];
         delete?: never;
@@ -1530,9 +1541,13 @@ export interface components {
             /** Title */
             title: string;
         };
-        /** CostLine */
+        /**
+         * CostLine
+         * @description What Getronics staff see: the provider's charge to Getronics.
+         */
         CostLine: {
             amortized: components["schemas"]["Metric_Decimal_"];
+            converted: components["schemas"]["Metric_Decimal_"] | null;
             /** Currency */
             currency: string;
             /** Provider */
@@ -1552,6 +1567,8 @@ export interface components {
              * Format: date
              */
             period_start: string;
+            /** Reporting Currency */
+            reporting_currency: string | null;
         };
         /** CoverageView */
         CoverageView: {
@@ -1601,9 +1618,31 @@ export interface components {
             cost_30d: components["schemas"]["Metric_Decimal_"][] | null;
             critical_vulnerabilities: components["schemas"]["Metric_int_"] | null;
             open_incidents: components["schemas"]["Metric_int_"] | null;
+            /** Price Last Month */
+            price_last_month: components["schemas"]["CustomerPrice"][] | null;
             resources: components["schemas"]["Metric_int_"] | null;
             sla_breached_open: components["schemas"]["Metric_int_"] | null;
             tenant: components["schemas"]["TenantView"];
+        };
+        /**
+         * CustomerPrice
+         * @description What a customer sees instead of cost (ADR 0021): its consumption at the
+         *     price Getronics charges, for one closed calendar month and nothing finer, so
+         *     no single line's price can be isolated (decision 8). ``price`` is None, and
+         *     ``not_captured`` says why, when any line in the month has no uplift in force:
+         *     never the cost, never a zero.
+         */
+        CustomerPrice: {
+            /** Currency */
+            currency: string;
+            /** Not Captured */
+            not_captured: "no_uplift" | null;
+            /**
+             * Period
+             * Format: date
+             */
+            period: string;
+            price: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** DecisionRequest */
         DecisionRequest: {
@@ -1848,6 +1887,8 @@ export interface components {
             effective_date: string;
             /** From Currency */
             from_currency: string;
+            /** Moves */
+            moves?: string | null;
             /** Rate */
             rate: number | string;
             /**
@@ -1942,6 +1983,8 @@ export interface components {
             band_basis: ("actual" | "modelled") | null;
             /** Contract Currency */
             contract_currency: string | null;
+            /** Cost Verified */
+            cost_verified: boolean | null;
             effort: components["schemas"]["Effort"] | null;
             /** Exceeds Slab */
             exceeds_slab: boolean;
@@ -2188,6 +2231,39 @@ export interface components {
             /** Findings */
             findings: components["schemas"]["OpenFinding"][];
             open_total: components["schemas"]["Metric_int_"];
+        };
+        /** PriceLine */
+        PriceLine: {
+            converted: components["schemas"]["Metric_Decimal_"] | null;
+            /** Currency */
+            currency: string;
+            /** Not Captured */
+            not_captured: "no_uplift" | null;
+            /**
+             * Period
+             * Format: date
+             */
+            period: string;
+            price: components["schemas"]["Metric_Decimal_"] | null;
+            /** Provider */
+            provider: string;
+        };
+        /** PriceSummary */
+        PriceSummary: {
+            /** Lines */
+            lines: components["schemas"]["PriceLine"][];
+            /**
+             * Period End
+             * Format: date
+             */
+            period_end: string;
+            /**
+             * Period Start
+             * Format: date
+             */
+            period_start: string;
+            /** Reporting Currency */
+            reporting_currency: string | null;
         };
         /** ProposalRequest */
         ProposalRequest: {
@@ -3704,7 +3780,9 @@ export interface operations {
     cost_summary_v1_cost_summary_get: {
         parameters: {
             query?: {
+                currency?: string | null;
                 days?: number;
+                months?: number;
             };
             header?: never;
             path?: never;
@@ -3718,7 +3796,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CostSummary"];
+                    "application/json": components["schemas"]["CostSummary"] | components["schemas"]["PriceSummary"];
                 };
             };
             /** @description Validation Error */

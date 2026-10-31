@@ -159,29 +159,10 @@ resource "azurerm_cdn_frontdoor_route" "this" {
 }
 
 # The operations console (ADR 0017) shares this host with the API: route-all carries
-# its pages, and the gateway sends /v1 to the API and the rest to the console. Its
-# build assets are named by content hash and never change, so Front Door caches them
-# at the edge. Nothing else is cached: pages carry a per-request CSP nonce, and API
-# answers are per user.
-resource "azurerm_cdn_frontdoor_route" "console_static" {
-  count                         = local.public ? 1 : 0
-  name                          = "route-console-static"
-  cdn_frontdoor_endpoint_id     = azurerm_cdn_frontdoor_endpoint.this.id
-  cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.this.id
-  cdn_frontdoor_origin_ids      = [azurerm_cdn_frontdoor_origin.gateway[0].id]
-  enabled                       = true
-  patterns_to_match             = ["/_next/static/*"]
-  supported_protocols           = ["Http", "Https"]
-  https_redirect_enabled        = true
-  forwarding_protocol           = local.origin_protocol
-  link_to_default_domain        = true
-
-  cache {
-    query_string_caching_behavior = "IgnoreQueryString"
-    compression_enabled           = true
-    content_types_to_compress     = ["application/javascript", "text/css", "text/javascript"]
-  }
-}
+# its pages and its build assets, and the gateway sends /v1 to the API and the rest to
+# the console. Nothing is cached at the edge. A cached route for /_next/static/* with
+# compression on hung every request that accepted gzip (every browser), so the
+# console's scripts never loaded; it was removed (ADR 0017, decision 11).
 
 resource "azurerm_monitor_diagnostic_setting" "frontdoor" {
   name                       = "diag-${module.names.log_analytics}"

@@ -168,3 +168,12 @@ def test_role_assignments_live_only_in_the_rbac_stack() -> None:
     for tf in (REPO_ROOT / "infra/terraform").rglob("*.tf"):
         if "azurerm_role_assignment" in tf.read_text(encoding="utf-8"):
             assert tf.parent.name == "04b-rbac", tf
+
+
+def test_no_front_door_route_compresses_at_the_edge() -> None:
+    """ADR 0017, decision 11: a cached route with Front Door compression on hung every
+    request accepting gzip, so no browser loaded the console's scripts."""
+    for tf in (REPO_ROOT / "infra/terraform").rglob("*.tf"):
+        text = tf.read_text(encoding="utf-8")
+        assert not re.search(r"compression_enabled\s*=\s*true", text), tf
+
