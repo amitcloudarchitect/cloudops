@@ -9,6 +9,10 @@ the platform. The file says which framework and version it is, and how many
 controls it holds (``expected_count``), so a truncated file is refused rather
 than half-loaded.
 
+A loaded version's text is fixed: new text is loaded as a new version, which
+retires the framework's previous one. Assessments keep the version they opened
+with (ADR 0020).
+
 Evidence routing is declared per control: ``evidence_source`` names the system
 that can answer it, and an ``automated`` control names the registered query
 (``cloudops_domain.assurance.evidence.QUERIES``) that asks it. A query that

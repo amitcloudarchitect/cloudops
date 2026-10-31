@@ -211,17 +211,20 @@ async def _setup_control(db: Database, tenant: UUID, case: DraftingCase) -> UUID
             " created_by) VALUES (:t, 'eval_drafting', 'eval-1', :title, :by) RETURNING id"),
             {"t": tenant, "title": case.id, "by": uuid.uuid4()})
         response = await _one(conn, (
-            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_code,"
-            " draft_state) VALUES (:t, :a, :c, 'requested') RETURNING id"),
+            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_id,"
+            " control_code, draft_state) SELECT :t, :a, id, code, 'requested'"
+            " FROM cloudops.control WHERE framework = 'eval_drafting'"
+            " AND library_version = 'eval-1' AND code = :c RETURNING id"),
             {"t": tenant, "a": assessment, "c": control.code})
         for raw in control.evidence:
             await conn.execute(text(
-                "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_code,"
-                " source_system, query_name, query_ref, query_text, parameters, raw_value,"
-                " retrieved_at, retrieved_by, sha256) VALUES (:t, :a, :c, 'servicenow',"
-                " 'eval.query', 'eval.v1:0', 'SELECT ...', '{}', CAST(:raw AS jsonb), now(),"
-                " 'eval', repeat('e', 64))"),
-                {"t": tenant, "a": assessment, "c": control.code, "raw": json.dumps(raw)})
+                "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_id,"
+                " control_code, source_system, query_name, query_ref, query_text, parameters,"
+                " raw_value, retrieved_at, retrieved_by, sha256) SELECT :t, :a, control_id,"
+                " control_code, 'servicenow', 'eval.query', 'eval.v1:0', 'SELECT ...', '{}',"
+                " CAST(:raw AS jsonb), now(), 'eval', repeat('e', 64)"
+                " FROM cloudops.control_response WHERE id = :r"),
+                {"t": tenant, "a": assessment, "r": response, "raw": json.dumps(raw)})
     return UUID(str(response))
 
 

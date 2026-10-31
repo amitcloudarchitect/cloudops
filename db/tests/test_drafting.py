@@ -55,22 +55,27 @@ def _control_response(step17: Step17, tenant: UUID, code: str) -> tuple[UUID, UU
             "INSERT INTO cloudops.control (code, framework, domain, title, requirement,"
             " assessment, evidence_source, library_version) VALUES (%s, 'test_drafting',"
             " 'Governance', 'Change policy', 'A documented change policy is followed.',"
-            " 'narrative', 'policy_library', 'test-1') ON CONFLICT DO NOTHING", (code,))
+            " 'narrative', 'policy_library', 'test-1')"
+            " ON CONFLICT (framework, library_version, code) DO NOTHING", (code,))
         row = cx.execute(
             "INSERT INTO cloudops.assessment (tenant_id, framework, library_version, title,"
             " created_by) VALUES (%s, 'test_drafting', 'test-1', 'Drafting', %s) RETURNING id",
             (tenant, uuid4())).fetchone()
         assert row
         response = cx.execute(
-            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_code,"
-            " draft_state) VALUES (%s, %s, %s, 'requested') RETURNING id",
+            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_id,"
+            " control_code, draft_state) SELECT %s, %s, id, code, 'requested'"
+            " FROM cloudops.control WHERE framework = 'test_drafting'"
+            " AND library_version = 'test-1' AND code = %s RETURNING id",
             (tenant, row[0], code)).fetchone()
         evidence = cx.execute(
-            "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_code,"
-            " source_system, query_name, query_ref, query_text, parameters, raw_value,"
-            " retrieved_at, retrieved_by, sha256) VALUES (%s, %s, %s, 'servicenow', 'cab',"
-            " 'cab.v1:0', 'SELECT ...', '{}', '{\"changes_with_cab\": 12}', now(), 'test',"
-            " repeat('a', 64)) RETURNING id", (tenant, row[0], code)).fetchone()
+            "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_id,"
+            " control_code, source_system, query_name, query_ref, query_text, parameters,"
+            " raw_value, retrieved_at, retrieved_by, sha256) SELECT %s, %s, control_id,"
+            " control_code, 'servicenow', 'cab', 'cab.v1:0', 'SELECT ...', '{}',"
+            " '{\"changes_with_cab\": 12}', now(), 'test', repeat('a', 64)"
+            " FROM cloudops.control_response WHERE id = %s RETURNING id",
+            (tenant, row[0], response[0] if response else None)).fetchone()
     assert response
     assert evidence
     return response[0], evidence[0]
@@ -220,3 +225,27 @@ async def test_the_sweep_drafts_everything_requested(step17: Step17, drafter: An
     assert set(indexed) == {str(t.id) for t in step17.seeded.tenants}
     assert _state(step17, "report_narrative", narrative, "draft_state") == ("drafted",)
     assert datetime.now(UTC)  # the sweep ran to completion within the test server
+
+
+async def test_a_draft_held_by_a_dead_worker_is_reclaimed(step17: Step17, drafter: Any) -> None:
+    acts, provider = drafter
+    stale, evidence = _control_response(step17, step17.seeded.a.id, "TEST-DRF-STALE")
+    fresh, _ = _control_response(step17, step17.seeded.a.id, "TEST-DRF-FRESH")
+    with psycopg.connect(step17.seeded.admin_dsn, autocommit=True) as cx:
+        cx.execute("UPDATE cloudops.control_response SET draft_state = 'drafting',"
+                   " draft_claimed_at = now() - interval '2 hours' WHERE id = %s", (stale,))
+        cx.execute("UPDATE cloudops.control_response SET draft_state = 'drafting',"
+                   " draft_claimed_at = now() WHERE id = %s", (fresh,))
+    queued = {item.id for item in await acts.pending_drafts(500)}
+    assert str(stale) in queued  # its worker died: back in the queue
+    assert str(fresh) not in queued  # still being drafted
+    provider.queue("draft_control_response", _reply({
+        "narrative": "Twelve changes went through the CAB.",
+        "citations": [f"evidence:{evidence}"], "sufficiency": "partial", "gaps": [],
+        "confidence": 0.8}))
+    out = await acts.draft_control(drafting.DraftItem("control_response", str(stale),
+                                                      str(step17.seeded.a.id)))
+    assert out.state == "drafted"
+    skipped = await acts.draft_control(drafting.DraftItem("control_response", str(fresh),
+                                                          str(step17.seeded.a.id)))
+    assert skipped.state == "skipped"

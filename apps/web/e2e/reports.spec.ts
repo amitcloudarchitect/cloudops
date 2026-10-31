@@ -1,5 +1,5 @@
 // Monthly report packs (step 17): generated from live data in the contract
-// currency, with the step 16 sections shown as not captured, and nothing
+// currency, the financial sections from step 16's stored figures, and nothing
 // approved or published until a person has written every narrative.
 import type { ReportPackView } from "@cloudops/contracts";
 
@@ -35,7 +35,11 @@ test.describe("platform administrator", () => {
     await expect(page.getByRole("heading", { level: 1, name: `${customer.name} · ${lastMonth()}` })).toBeVisible();
 
     const financial = page.getByRole("region", { name: "Financial dashboard" });
-    await expect(financial).toContainText("Not captured: awaiting the commercial engine (step 16)");
+    // The month's margin snapshot when step 16 computed one, else the engine's reason.
+    await expect(financial).toContainText(/Revenue: [A-Z]{3} [\d,.-]+|Not captured: /);
+    await expect(page.getByRole("region", { name: "Revenue mix" })).toContainText(
+      /Monthly manage revenue: [A-Z]{3} [\d,.-]+|Not captured: /,
+    );
     await expect(page.getByRole("region", { name: "Customer satisfaction" })).toContainText("Not captured");
     await expect(page.getByRole("region", { name: "Volumetrics" })).toContainText("Incidents opened");
     const approve = page.getByRole("button", { name: "Approve" });

@@ -29,11 +29,8 @@ from sqlalchemy import text
 from cloudops_api.access import Access, NoScopeError, ScopeDefectError, ScopeResolver
 from cloudops_api.auth import TokenError, TokenValidator
 from cloudops_domain.assurance.pack import Signer, UnavailableSigner
-from cloudops_domain.reporting.sections import (
-    AvailabilitySource,
-    FinancialSections,
-    NotYetAvailable,
-)
+from cloudops_domain.reporting.financial import CommercialSections
+from cloudops_domain.reporting.sections import AvailabilitySource, FinancialSections
 from cloudops_tenancy import Database
 
 log = logging.getLogger("cloudops.api")
@@ -84,10 +81,10 @@ class Platform:
     resolver: ScopeResolver
     # Step 17. Evidence packs are signed by ``signer`` (refuses until a key is
     # decided, ADR 0020); availability comes from the telemetry store when it
-    # is connected; the financial sections wait for step 16.
+    # is connected; the financial sections come from the commercial engine (step 16).
     signer: Signer = field(default_factory=UnavailableSigner)
     availability: AvailabilitySource | None = None
-    financial: FinancialSections = field(default_factory=NotYetAvailable)
+    financial: FinancialSections = field(default_factory=CommercialSections)
 
 
 def platform(request: Request) -> Platform:

@@ -26,6 +26,10 @@ from .conftest import Step17
 
 pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
+GOV = "A policy exists, says the customer."
+IAM = "One account holds Global Administrator."
+VUL = "One severity 4 detection is older than a day."
+
 LIBRARY: dict[str, Any] = {
     "framework": "test_assurance", "version": "test-1", "expected_count": 4,
     "controls": [
@@ -172,38 +176,46 @@ async def test_only_an_approver_can_score_and_never_on_nothing(step17: Step17,
                                                                assessment: UUID) -> None:
     api, base = step17.api, f"/v1/assurance/assessments/{assessment}/responses"
     for oid in (step17.engineer_a, step17.auditor_all, step17.customer_a):
-        refused = await api.post(f"{base}/TEST-IAM-01/approve", oid, {"result": "compliant"})
+        refused = await api.post(f"{base}/TEST-IAM-01/approve", oid,
+                                 {"result": "compliant", "narrative_seen": None})
         assert refused.status_code == 403, oid
     # Compliant needs a narrative, and collected evidence or a citation behind it.
     bare = await api.post(f"{base}/TEST-IAM-01/approve", step17.secops_a,
-                          {"result": "compliant"})
+                          {"result": "compliant", "narrative_seen": None})
     assert (bare.status_code, bare.json()["error"]["code"]) == (
         422, "compliant_needs_narrative_and_evidence")
     no_evidence = await api.post(f"{base}/TEST-GOV-01/narrative", step17.secops_a,
-                                 {"narrative": "A policy exists, says the customer."})
+                                 {"narrative": GOV})
     assert no_evidence.status_code == 200
     assert (await api.post(f"{base}/TEST-GOV-01/approve", step17.secops_a,
-                           {"result": "compliant"})).status_code == 422
-    wrong = await api.post(f"{base}/TEST-IAM-01/approve", step17.secops_a, {"result": "manual"})
+                           {"result": "compliant", "narrative_seen": GOV})).status_code == 422
+    # Approving text the approver never saw is refused.
+    unseen = await api.post(f"{base}/TEST-GOV-01/approve", step17.secops_a,
+                            {"result": "non_compliant", "narrative_seen": None})
+    assert (unseen.status_code, unseen.json()["error"]["code"]) == (409, "response_changed")
+    wrong = await api.post(f"{base}/TEST-IAM-01/approve", step17.secops_a,
+                           {"result": "manual", "narrative_seen": None})
     assert wrong.json()["error"]["code"] == "result_not_allowed_for_control"
     manual_compliant = await api.post(f"{base}/TEST-PHY-01/approve", step17.secops_a,
-                                      {"result": "compliant"})
+                                      {"result": "compliant", "narrative_seen": None})
     assert manual_compliant.json()["error"]["code"] == "result_not_allowed_for_control"
 
     await api.post(f"{base}/TEST-IAM-01/narrative", step17.secops_a,
-                   {"narrative": "One account holds Global Administrator."})
+                   {"narrative": IAM})
     ok = await api.post(f"{base}/TEST-IAM-01/approve", step17.secops_a,
-                        {"result": "compliant", "note": "checked in Entra"})
+                        {"result": "compliant", "narrative_seen": IAM,
+                         "note": "checked in Entra"})
     assert ok.status_code == 200, ok.text
     assert ok.json()["approved_by"] == str(step17.secops_a)
     await api.post(f"{base}/TEST-VUL-01/narrative", step17.delivery_a,
-                   {"narrative": "One severity 4 detection is older than a day."})
+                   {"narrative": VUL})
     assert (await api.post(f"{base}/TEST-VUL-01/approve", step17.delivery_a,
-                           {"result": "partially_compliant"})).status_code == 200
+                           {"result": "partially_compliant", "narrative_seen": VUL}
+                           )).status_code == 200
     assert (await api.post(f"{base}/TEST-GOV-01/approve", step17.secops_a,
-                           {"result": "non_compliant"})).status_code == 200
+                           {"result": "non_compliant", "narrative_seen": GOV})).status_code == 200
     assert (await api.post(f"{base}/TEST-PHY-01/approve", step17.secops_a,
-                           {"result": "manual"})).status_code == 200
+                           {"result": "manual", "narrative_seen": None})).status_code == 200
     score = (await _detail(step17, assessment))["score"]
     assert score["percent"]["value"] == "50.00"  # (100 + 50 + 0) / 3; manual excluded
     assert (score["scorable"]["value"], score["excluded"]["value"],
@@ -215,7 +227,10 @@ async def test_only_an_approver_can_score_and_never_on_nothing(step17: Step17,
     assert edited.json()["result"] is None
     assert edited.json()["approved_at"] is None
     assert (await _detail(step17, assessment))["score"]["pending"]["value"] == 1
-    await api.post(f"{base}/TEST-GOV-01/approve", step17.secops_a, {"result": "non_compliant"})
+    again = await api.post(f"{base}/TEST-GOV-01/approve", step17.secops_a,
+                           {"result": "non_compliant",
+                            "narrative_seen": "Revised after the audit."})
+    assert again.status_code == 200, again.text
 
 
 @pytest.mark.parametrize("approver", ["unknown", "engineer", "customer"])
@@ -303,3 +318,70 @@ async def test_another_tenant_sees_none_of_it(step17: Step17, assessment: UUID) 
     listed = (await api.get("/v1/assurance/assessments", step17.secops_a)).json()
     assert {a["tenant"]["id"] for a in listed} == {str(s.a.id)}
     assert (await api.get("/v1/assurance/assessments", step17.customer_a)).status_code == 403
+
+
+# --- library versions -------------------------------------------------------------------
+
+
+def _one_control(framework: str, version: str, requirement: str) -> dict[str, Any]:
+    return {"framework": framework, "version": version, "expected_count": 1, "controls": [
+        {"code": "1.1", "domain": "Identity", "title": "Security defaults",
+         "requirement": requirement, "assessment": "narrative",
+         "evidence_source": "policy_library"}]}
+
+
+async def test_a_control_is_its_framework_version_and_code_and_its_text_is_fixed(
+    step17: Step17,
+) -> None:
+    """CIS Azure and CIS AWS both have a 1.1: loading one never moves the other's.
+    New text is a new version; an open assessment, and the evidence pack it
+    exports, keep the text they were assessed against."""
+    api, admin = step17.api, step17.admin
+    for framework, text in (("test_cis_azure", "Azure 1.1 text"),
+                            ("test_cis_aws", "AWS 1.1 text")):
+        got = await api.post("/v1/assurance/library", admin, _one_control(framework, "v1", text))
+        assert got.status_code == 201, got.text
+    opened = await api.post("/v1/assurance/assessments", step17.secops_a, {
+        "tenant_id": str(step17.seeded.a.id), "framework": "test_cis_azure",
+        "title": "Azure v1"})
+    assert opened.status_code == 201, opened.text
+    first = UUID(opened.json()["id"])
+
+    def requirement(detail: dict[str, Any]) -> tuple[str, str]:
+        control = _response(detail, "1.1")["control"]
+        return control["requirement"], control["library_version"]
+
+    assert requirement(await _detail(step17, first)) == ("Azure 1.1 text", "v1")
+
+    rewritten = await api.post("/v1/assurance/library", admin,
+                               _one_control("test_cis_azure", "v1", "Rewritten"))
+    assert (rewritten.status_code, rewritten.json()["error"]["code"]) == (
+        409, "library_version_differs")
+    again = await api.post("/v1/assurance/library", admin,
+                           _one_control("test_cis_azure", "v1", "Azure 1.1 text"))
+    assert (again.status_code, again.json()["loaded"]["value"]) == (201, 0)  # idempotent
+
+    v2 = await api.post("/v1/assurance/library", admin,
+                        _one_control("test_cis_azure", "v2", "Azure 1.1 text, revised"))
+    assert v2.status_code == 201, v2.text
+    assert requirement(await _detail(step17, first)) == ("Azure 1.1 text", "v1")
+    pack = await api.post(f"/v1/assurance/assessments/{first}/evidence-packs", step17.secops_a)
+    assert pack.status_code == 201, pack.text
+    manifest = pack.json()["manifest"]
+    assert manifest["assessment"]["library_version"] == "v1"
+    [signed] = manifest["responses"]
+    assert (signed["requirement"], signed["library_version"]) == ("Azure 1.1 text", "v1")
+    second = await api.post("/v1/assurance/assessments", step17.secops_a, {
+        "tenant_id": str(step17.seeded.a.id), "framework": "test_cis_azure",
+        "title": "Azure v2"})
+    assert requirement(await _detail(step17, UUID(second.json()["id"]))) == (
+        "Azure 1.1 text, revised", "v2")
+    frameworks = {f["framework"]: f for f in
+                  (await api.get("/v1/assurance/frameworks", step17.auditor_all)).json()}
+    assert frameworks["test_cis_azure"]["library_version"] == "v2"
+    assert frameworks["test_cis_azure"]["controls"]["value"] == 1
+    assert frameworks["test_cis_aws"]["library_version"] == "v1"  # untouched
+    with psycopg.connect(step17.seeded.admin_dsn) as cx, pytest.raises(
+            psycopg.errors.InsufficientPrivilege, match="fixed"):
+        cx.execute("UPDATE cloudops.control SET requirement = 'x'"
+                   " WHERE framework = 'test_cis_aws'")

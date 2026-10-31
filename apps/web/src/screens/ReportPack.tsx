@@ -43,11 +43,12 @@ function shown(value: string, kind: Kind, unit: string): string {
   if (kind === "money") return money(value, unit);
   if (kind === "percent") return `${decimal(value, 2)}%`;
   if (kind === "days") return `${decimal(value, 1)} days`;
+  if (kind === "hours") return `${decimal(value, 1)} hours`;
   if (kind === "count") return count(Number(value));
   return value;
 }
 
-function SectionView({ section }: { section: SectionSnapshot }) {
+function SectionView({ section, currency }: { section: SectionSnapshot; currency: string }) {
   if (!section.captured) return <p className="text-sm text-muted">Not captured: {section.gap}.</p>;
   return (
     <>
@@ -76,7 +77,7 @@ function SectionView({ section }: { section: SectionSnapshot }) {
               <tr key={i}>
                 {row.map((cell, j) => (
                   <td key={j} className="border-b border-line py-1 pr-3 tabular-nums">
-                    {cell ? shown(cell, t.kinds[j] ?? "text", "") : "-"}
+                    {cell ? shown(cell, t.kinds[j] ?? "text", currency) : "-"}
                   </td>
                 ))}
               </tr>
@@ -236,7 +237,7 @@ export function ReportPack({ id }: { id: string }) {
               <h2 id={`section-${s.key}`} className="mb-2 text-lg font-semibold text-ink">
                 {s.title}
               </h2>
-              <SectionView section={s} />
+              <SectionView section={s} currency={pack.contract_currency} />
               {n ? <Narrative pack={id} n={n} editable={editable} onChange={changed} /> : null}
             </section>
           );

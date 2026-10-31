@@ -25,7 +25,12 @@ visit (ids only, through the resolver's existing registry policy), as
 - ``control``: the control library. Reference data with no tenant, like
   ``fx_rate``. The application reads it; only ``access.load_controls`` writes
   it, for a principal holding ``assurance.library``. The library itself (the
-  98 controls) is supplied by Security; none is shipped here.
+  98 controls) is supplied by Security; none is shipped here. A control is
+  one row per framework, library version and code (CIS Azure and CIS AWS both
+  have a 1.1), and a row's text never changes: a new text is a new version,
+  and the old version is retired, not rewritten. Responses and evidence point
+  at the exact row (``control_id``), so an assessment and its signed packs
+  keep the text they were assessed against.
 - ``assessment`` and ``control_response``: tenant tables. A response's
   ``result`` exists only with an approval (``approved_by`` and
   ``approved_at``), and a trigger refuses an approval unless the approver is
@@ -45,6 +50,12 @@ visit (ids only, through the resolver's existing registry policy), as
   person wrote or accepted. A pack cannot be approved or published while any
   narrative lacks a person's text, and only an active staff principal holding
   ``reports.publish`` can approve or publish one: nothing is auto-published.
+- ``report_pack_commercial``: the two sections built from the commercial
+  engine (step 16), the financial dashboard and the revenue mix. They carry
+  margin, cost base and SOW revenue, so they are kept apart from the pack under
+  the same restrictive ``commercial_visibility`` policy as ``margin_snapshot``
+  (migration 0012): a customer, or staff without a commercial role, reads the
+  pack without them (HLD principle 6, enforced by the database).
 - A customer role sees published packs only (a restrictive policy), so the
   customer portal (step 18) cannot show a draft by mistake.
 
@@ -65,6 +76,11 @@ branch_labels = None
 depends_on = None
 
 CHANGE_KIND = "expand"
+
+# A draft a worker may take: requested, or claimed so long ago that the worker
+# holding it has died (well past the drafting activity's 10-minute deadline).
+CLAIMABLE = ("(draft_state = 'requested' OR (draft_state = 'drafting'"
+             " AND draft_claimed_at < now() - interval '30 minutes'))")
 
 PERMISSIONS = (
     ("reports.read", "Monthly report packs"),
@@ -107,7 +123,8 @@ ALTER TABLE cloudops.knowledge_chunk ADD COLUMN embedded_at timestamptz;
 
 -- The library: reference data, no tenant. Loaded through access.load_controls.
 CREATE TABLE cloudops.control (
-    code            text PRIMARY KEY CHECK (code ~ '^[A-Z0-9][A-Z0-9._-]{1,39}$'),
+    id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    code            text NOT NULL CHECK (code ~ '^[A-Z0-9][A-Z0-9._-]{1,39}$'),
     framework       text NOT NULL CHECK (framework ~ '^[a-z0-9_]{1,40}$'),
     domain          text NOT NULL CHECK (length(domain) BETWEEN 1 AND 120),
     title           text NOT NULL CHECK (length(title) BETWEEN 1 AND 300),
@@ -125,7 +142,9 @@ CREATE TABLE cloudops.control (
     -- a manual one is answered by a person and nothing else.
     CHECK ((assessment = 'automated') = (evidence_query IS NOT NULL)),
     CHECK (assessment <> 'manual' OR evidence_source = 'human'),
-    CHECK (jsonb_typeof(parameters) = 'object')
+    CHECK (jsonb_typeof(parameters) = 'object'),
+    UNIQUE (framework, library_version, code),
+    UNIQUE (id, code)  -- so a response's code always matches its control row
 );
 
 CREATE TABLE cloudops.assessment (
@@ -145,7 +164,8 @@ CREATE TABLE cloudops.control_response (
     id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id         uuid NOT NULL REFERENCES cloudops.tenant(id) ON DELETE CASCADE,
     assessment_id     uuid NOT NULL REFERENCES cloudops.assessment(id) ON DELETE CASCADE,
-    control_code      text NOT NULL REFERENCES cloudops.control(code),
+    control_id        uuid NOT NULL,
+    control_code      text NOT NULL,
     -- From an automated control's evidence, by a fixed rule: a proposal only.
     proposed_result   text CHECK (proposed_result IN
                           ('compliant', 'partially_compliant', 'non_compliant')),
@@ -157,6 +177,7 @@ CREATE TABLE cloudops.control_response (
     draft_citations   jsonb,
     draft_sufficiency text CHECK (draft_sufficiency IN ('sufficient', 'partial', 'insufficient')),
     draft_run_id      uuid,
+    draft_claimed_at  timestamptz,  -- when a worker took it; stale claims are reclaimed
     drafted_at        timestamptz,
     draft_note        text CHECK (length(draft_note) <= 200),  -- why a draft was declined
     -- What a person wrote or accepted, and the result they approved.
@@ -169,6 +190,7 @@ CREATE TABLE cloudops.control_response (
     approval_note     text CHECK (length(approval_note) <= 2000),
     updated_at        timestamptz NOT NULL DEFAULT now(),
     UNIQUE (assessment_id, control_code),
+    FOREIGN KEY (control_id, control_code) REFERENCES cloudops.control (id, code),
     -- No result without an approval, no approval without an approver.
     CHECK ((result IS NULL) = (approved_at IS NULL)),
     CHECK ((approved_by IS NULL) = (approved_at IS NULL)),
@@ -180,7 +202,8 @@ CREATE TABLE cloudops.evidence (
     id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id      uuid NOT NULL REFERENCES cloudops.tenant(id),
     assessment_id  uuid NOT NULL REFERENCES cloudops.assessment(id),
-    control_code   text NOT NULL REFERENCES cloudops.control(code),
+    control_id     uuid NOT NULL,
+    control_code   text NOT NULL,
     source_system  text NOT NULL,
     query_name     text NOT NULL,
     query_ref      text NOT NULL,
@@ -189,7 +212,8 @@ CREATE TABLE cloudops.evidence (
     raw_value      jsonb NOT NULL,
     retrieved_at   timestamptz NOT NULL,
     retrieved_by   text NOT NULL,
-    sha256         char(64) NOT NULL CHECK (sha256 ~ '^[0-9a-f]{64}$')
+    sha256         char(64) NOT NULL CHECK (sha256 ~ '^[0-9a-f]{64}$'),
+    FOREIGN KEY (control_id, control_code) REFERENCES cloudops.control (id, code)
 );
 
 CREATE TABLE cloudops.evidence_pack (
@@ -242,6 +266,7 @@ CREATE TABLE cloudops.report_narrative (
                      ('none', 'requested', 'drafting', 'drafted', 'declined', 'failed')),
     draft_text   text,
     draft_run_id uuid,
+    draft_claimed_at timestamptz,
     drafted_at   timestamptz,
     draft_note   text CHECK (length(draft_note) <= 200),
     text         text CHECK (length(text) <= 6000),
@@ -250,6 +275,14 @@ CREATE TABLE cloudops.report_narrative (
     UNIQUE (pack_id, section),
     CHECK ((text IS NULL) = (edited_by IS NULL)),
     CHECK ((edited_by IS NULL) = (edited_at IS NULL))
+);
+
+-- The pack's commercial sections (financial dashboard, revenue mix): one row per
+-- pack, written with it and never changed.
+CREATE TABLE cloudops.report_pack_commercial (
+    pack_id   uuid PRIMARY KEY REFERENCES cloudops.report_pack(id) ON DELETE CASCADE,
+    tenant_id uuid NOT NULL REFERENCES cloudops.tenant(id) ON DELETE CASCADE,
+    sections  jsonb NOT NULL CHECK (jsonb_typeof(sections) = 'object')
 );
 """
 
@@ -260,7 +293,11 @@ TENANT_TABLES = (
     "cloudops.evidence_pack",
     "cloudops.report_pack",
     "cloudops.report_narrative",
+    "cloudops.report_pack_commercial",
 )
+# As migration 0012: the roles that may read margin, cost base and SOW revenue.
+COMMERCIAL_ROLES = ("ceo", "cfo", "finops", "delivery_lead", "commercial", "auditor",
+                    "platform_admin")
 
 
 def _rls(table: str) -> str:
@@ -290,6 +327,11 @@ CREATE POLICY account_scope ON cloudops.report_pack AS RESTRICTIVE
   USING (cloudops.account_scope_is_all());
 CREATE POLICY account_scope ON cloudops.report_narrative AS RESTRICTIVE
   USING (cloudops.account_scope_is_all());
+CREATE POLICY account_scope ON cloudops.report_pack_commercial AS RESTRICTIVE
+  USING (cloudops.account_scope_is_all());
+CREATE POLICY commercial_visibility ON cloudops.report_pack_commercial AS RESTRICTIVE
+  USING (coalesce(current_setting('app.role', true), '') IN (""" + ",".join(
+    f"'{r}'" for r in COMMERCIAL_ROLES) + """));
 
 -- A customer sees a pack only once a person has published it, and never a
 -- narrative of an unpublished pack. Enforced here, not by serialisation. It
@@ -310,7 +352,8 @@ GRANT SELECT ON cloudops.control TO cloudops_app;
 GRANT SELECT, INSERT, UPDATE ON cloudops.assessment, cloudops.control_response,
     cloudops.report_pack, cloudops.report_narrative TO cloudops_app;
 -- Evidence and packs are append-only (the trigger below holds even for the owner).
-GRANT SELECT, INSERT ON cloudops.evidence, cloudops.evidence_pack TO cloudops_app;
+GRANT SELECT, INSERT ON cloudops.evidence, cloudops.evidence_pack,
+    cloudops.report_pack_commercial TO cloudops_app;
 """
 
 TRIGGERS = """
@@ -328,6 +371,20 @@ CREATE TRIGGER evidence_no_truncate BEFORE TRUNCATE ON cloudops.evidence
     FOR EACH STATEMENT EXECUTE FUNCTION cloudops.refuse_mutation();
 CREATE TRIGGER evidence_pack_no_truncate BEFORE TRUNCATE ON cloudops.evidence_pack
     FOR EACH STATEMENT EXECUTE FUNCTION cloudops.refuse_mutation();
+
+-- A control row's text is fixed once loaded: only its retirement changes, and it
+-- is never deleted (responses and signed packs point at it).
+CREATE FUNCTION cloudops.control_text_is_fixed() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'DELETE' OR (to_jsonb(NEW) - 'retired_at') <> (to_jsonb(OLD) - 'retired_at') THEN
+        RAISE EXCEPTION 'a control''s text is fixed: load a new library version'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    RETURN NEW;
+END $$;
+CREATE TRIGGER control_text_fixed BEFORE UPDATE OR DELETE ON cloudops.control
+    FOR EACH ROW EXECUTE FUNCTION cloudops.control_text_is_fixed();
 
 -- A result scores only with a person's approval: an active staff principal
 -- holding assurance.approve. Nothing a model or a service writes can pass.
@@ -375,6 +432,27 @@ BEGIN
 END $$;
 CREATE TRIGGER report_pack_release BEFORE INSERT OR UPDATE ON cloudops.report_pack
     FOR EACH ROW EXECUTE FUNCTION cloudops.check_pack_release();
+
+-- Once a pack leaves draft, the text people approved is what was released: its
+-- narratives' text is fixed and none is removed. (A model's draft columns may
+-- still settle; a draft is never printed.)
+CREATE FUNCTION cloudops.check_narrative_fixed() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM cloudops.report_pack p
+               WHERE p.id = OLD.pack_id AND p.status <> 'draft')
+       AND (TG_OP = 'DELETE'
+            OR (NEW.text, NEW.edited_by, NEW.edited_at, NEW.section, NEW.pack_id,
+                NEW.tenant_id)
+               IS DISTINCT FROM (OLD.text, OLD.edited_by, OLD.edited_at, OLD.section,
+                                 OLD.pack_id, OLD.tenant_id)) THEN
+        RAISE EXCEPTION 'a released pack''s narrative is fixed'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END $$;
+CREATE TRIGGER report_narrative_fixed BEFORE UPDATE OR DELETE ON cloudops.report_narrative
+    FOR EACH ROW EXECUTE FUNCTION cloudops.check_narrative_fixed();
 """
 
 PERMISSION_CHECK = """
@@ -412,23 +490,48 @@ BEGIN
         RAISE EXCEPTION 'controls must be a non-empty array'
             USING ERRCODE = 'invalid_parameter_value';
     END IF;
-    INSERT INTO cloudops.control (code, framework, domain, title, requirement, assessment,
-                                  evidence_source, evidence_query, parameters,
-                                  library_version)
-    SELECT c->>'code', p_framework, c->>'domain', c->>'title', c->>'requirement',
-           c->>'assessment', c->>'evidence_source', c->>'evidence_query',
-           coalesce(c->'parameters', '{}'::jsonb), p_version
-    FROM jsonb_array_elements(p_controls) c
-    ON CONFLICT (code) DO UPDATE SET
-        framework = EXCLUDED.framework, domain = EXCLUDED.domain, title = EXCLUDED.title,
-        requirement = EXCLUDED.requirement, assessment = EXCLUDED.assessment,
-        evidence_source = EXCLUDED.evidence_source, evidence_query = EXCLUDED.evidence_query,
-        parameters = EXCLUDED.parameters, library_version = EXCLUDED.library_version,
-        loaded_at = now(), retired_at = NULL;
-    GET DIAGNOSTICS v_count = ROW_COUNT;
+    -- A version's text is fixed: loading a version again must say the same thing.
+    IF EXISTS (SELECT 1 FROM cloudops.control
+                WHERE framework = p_framework AND library_version = p_version) THEN
+        IF EXISTS (
+            (SELECT code, domain, title, requirement, assessment, evidence_source,
+                    evidence_query, parameters FROM cloudops.control
+              WHERE framework = p_framework AND library_version = p_version
+             EXCEPT
+             SELECT c->>'code', c->>'domain', c->>'title', c->>'requirement',
+                    c->>'assessment', c->>'evidence_source', c->>'evidence_query',
+                    coalesce(c->'parameters', '{}'::jsonb)
+               FROM jsonb_array_elements(p_controls) c)
+            UNION ALL
+            (SELECT c->>'code', c->>'domain', c->>'title', c->>'requirement',
+                    c->>'assessment', c->>'evidence_source', c->>'evidence_query',
+                    coalesce(c->'parameters', '{}'::jsonb)
+               FROM jsonb_array_elements(p_controls) c
+             EXCEPT
+             SELECT code, domain, title, requirement, assessment, evidence_source,
+                    evidence_query, parameters FROM cloudops.control
+              WHERE framework = p_framework AND library_version = p_version)) THEN
+            RAISE EXCEPTION 'library version % of % is already loaded with other text;'
+                ' load the new text as a new version', p_version, p_framework
+                USING ERRCODE = 'unique_violation';
+        END IF;
+        UPDATE cloudops.control SET retired_at = NULL
+         WHERE framework = p_framework AND library_version = p_version;
+        v_count := 0;
+    ELSE
+        INSERT INTO cloudops.control (code, framework, domain, title, requirement,
+                                      assessment, evidence_source, evidence_query,
+                                      parameters, library_version)
+        SELECT c->>'code', p_framework, c->>'domain', c->>'title', c->>'requirement',
+               c->>'assessment', c->>'evidence_source', c->>'evidence_query',
+               coalesce(c->'parameters', '{}'::jsonb), p_version
+        FROM jsonb_array_elements(p_controls) c;
+        GET DIAGNOSTICS v_count = ROW_COUNT;
+    END IF;
+    -- One current version per framework; the others stay, retired, for the
+    -- assessments that used them. Another framework is never touched.
     UPDATE cloudops.control SET retired_at = now()
-     WHERE framework = p_framework AND retired_at IS NULL
-       AND code NOT IN (SELECT c->>'code' FROM jsonb_array_elements(p_controls) c);
+     WHERE framework = p_framework AND library_version <> p_version AND retired_at IS NULL;
     PERFORM access.log_change(p_actor::text, 'load_controls',
         jsonb_build_object('framework', p_framework, 'version', p_version,
                            'controls', v_count));
@@ -437,10 +540,10 @@ END $$;
 
 -- The drafting queue across tenants: requested drafts, id and tenant only.
 CREATE POLICY draft_queue_read ON cloudops.control_response FOR SELECT
-    TO cloudops_resolver USING (draft_state = 'requested');
+    TO cloudops_resolver USING (""" + CLAIMABLE + """);
 CREATE POLICY draft_queue_read ON cloudops.report_narrative FOR SELECT
-    TO cloudops_resolver USING (draft_state = 'requested');
-GRANT SELECT (id, tenant_id, draft_state) ON cloudops.control_response,
+    TO cloudops_resolver USING (""" + CLAIMABLE + """);
+GRANT SELECT (id, tenant_id, draft_state, draft_claimed_at) ON cloudops.control_response,
     cloudops.report_narrative TO cloudops_resolver;
 
 -- The tenants the knowledge indexer visits, one scope at a time. Ids only.
@@ -455,10 +558,10 @@ RETURNS TABLE (kind text, id uuid, tenant_id uuid)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
     SELECT q.kind, q.id, q.tenant_id FROM (
         SELECT 'control_response'::text AS kind, r.id, r.tenant_id
-        FROM cloudops.control_response r WHERE r.draft_state = 'requested'
+        FROM cloudops.control_response r WHERE """ + CLAIMABLE + """
         UNION ALL
         SELECT 'report_narrative'::text, n.id, n.tenant_id
-        FROM cloudops.report_narrative n WHERE n.draft_state = 'requested') q
+        FROM cloudops.report_narrative n WHERE """ + CLAIMABLE + """) q
     ORDER BY q.kind, q.id
     LIMIT least(greatest(p_limit, 1), 500)
 $$;

@@ -12,7 +12,8 @@ only.
 | `assurance.evidence` | The evidence queries controls route to, their proposal rules, and the append-only store |
 | `assurance.scoring` | Compliant 100, partial 50, non-compliant 0; manual excluded; approved results only |
 | `assurance.pack` | The signed evidence pack: canonical JSON, SHA-256, Ed25519 |
-| `reporting.sections` | The monthly pack's sections from live data; `FinancialSections` is the step 16 seam |
+| `reporting.sections` | The monthly pack's sections from live data |
+| `reporting.financial` | The financial dashboard and revenue mix from the commercial engine (step 16); stored apart, commercial roles only |
 | `reporting.money` | Money rounded once, in its currency |
 | `reporting.render`, `reporting.pdf` | The pack as lines, and as a PDF of exactly those lines |
 | `reporting.portfolio` | Consolidation in a reporting currency, from the same rows |

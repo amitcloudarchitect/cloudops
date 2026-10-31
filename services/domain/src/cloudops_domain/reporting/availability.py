@@ -17,13 +17,14 @@ from datetime import datetime
 from typing import Final
 from uuid import UUID
 
+from cloudops_domain.reporting.sections import AvailabilityGapError
 from cloudops_tenancy import TenantScope
 from cloudops_tenancy.telemetry import MAX_LIMIT, Aggregate, Grain, MetricQuery, TelemetryStore
 
 METRIC: Final = "availability"
 
 
-class AvailabilityTruncatedError(Exception):
+class AvailabilityTruncatedError(AvailabilityGapError):
     """More hourly points than one read returns: the figure would be wrong."""
 
 
@@ -36,7 +37,8 @@ class TelemetryAvailability:
         points = await self._store.query(scope, MetricQuery(
             METRIC, start, end, grain=Grain.HOUR, aggregate=Aggregate.AVG, limit=MAX_LIMIT))
         if len(points) >= MAX_LIMIT:
-            raise AvailabilityTruncatedError("too many hourly points for one month")
+            raise AvailabilityTruncatedError(
+                "more hourly measurements than one read returns; the figure would be partial")
         sums: dict[UUID, float] = defaultdict(float)
         counts: dict[UUID, int] = defaultdict(int)
         for p in points:

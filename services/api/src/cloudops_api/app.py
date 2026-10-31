@@ -28,11 +28,8 @@ from cloudops_api.auth import TokenValidator
 from cloudops_api.health import PROBES
 from cloudops_api.pipeline import AuditedRoute, Platform
 from cloudops_domain.assurance.pack import Signer, UnavailableSigner
-from cloudops_domain.reporting.sections import (
-    AvailabilitySource,
-    FinancialSections,
-    NotYetAvailable,
-)
+from cloudops_domain.reporting.financial import CommercialSections
+from cloudops_domain.reporting.sections import AvailabilitySource, FinancialSections
 from cloudops_tenancy import Database
 
 
@@ -57,7 +54,7 @@ def create_app(
     app.state.platform = Platform(
         db=db, validator=validator, resolver=ScopeResolver(db),
         signer=signer or UnavailableSigner(), availability=availability,
-        financial=financial or NotYetAvailable(),
+        financial=financial or CommercialSections(),
     )
     for router in ROUTERS:
         check_router(router)

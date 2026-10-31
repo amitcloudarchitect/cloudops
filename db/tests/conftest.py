@@ -367,16 +367,18 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
         ).fetchone()
         a_id = assessment[0] if assessment else None
         cx.execute(
-            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_code,"
-            " draft_narrative) VALUES (%s, %s, 'TEST-SEED-01', %s)",
+            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_id,"
+            " control_code, draft_narrative) SELECT %s, %s, id, code, %s FROM cloudops.control"
+            " WHERE framework = 'test' AND library_version = 'test-1' AND code = 'TEST-SEED-01'",
             (t.id, a_id, f"{t.name} draft"),
         )
         cx.execute(
-            "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_code,"
-            " source_system, query_name, query_ref, query_text, parameters, raw_value,"
-            " retrieved_at, retrieved_by, sha256) VALUES (%s, %s, 'TEST-SEED-01', 'human',"
-            " 'seed', 'seed.v1:0', 'seed', '{}', %s, now(), 'seed', repeat('0', 64))",
-            (t.id, a_id, f'{{"marker": "{t.name}-evidence"}}'),
+            "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_id,"
+            " control_code, source_system, query_name, query_ref, query_text, parameters,"
+            " raw_value, retrieved_at, retrieved_by, sha256) SELECT %s, %s, control_id,"
+            " control_code, 'human', 'seed', 'seed.v1:0', 'seed', '{}', %s, now(), 'seed',"
+            " repeat('0', 64) FROM cloudops.control_response WHERE assessment_id = %s",
+            (t.id, a_id, f'{{"marker": "{t.name}-evidence"}}', a_id),
         )
         cx.execute(
             "INSERT INTO cloudops.evidence_pack (tenant_id, assessment_id, framework, manifest,"
@@ -395,6 +397,11 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             "INSERT INTO cloudops.report_narrative (tenant_id, pack_id, section, draft_text)"
             " VALUES (%s, %s, 'executive_summary', %s)",
             (t.id, pack[0] if pack else None, f"{t.name} narrative"),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.report_pack_commercial (pack_id, tenant_id, sections)"
+            " VALUES (%s, %s, %s)",
+            (pack[0] if pack else None, t.id, f'{{"marker": "{t.name}-commercial"}}'),
         )
     cx.execute(
         "INSERT INTO cloudops.global_knowledge_chunk (source_kind, title, body, embedding)"

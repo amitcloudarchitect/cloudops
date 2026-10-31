@@ -32,6 +32,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Request
 from pydantic import Field
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 
 from cloudops_api.access import Access
 from cloudops_api.bff import TenantView
@@ -203,6 +204,9 @@ class ControlNarrativeEdit(ApiModel):
 
 class Approval(ApiModel):
     result: Result
+    # The narrative the approver read (null: none). If it has changed since, the
+    # approval is refused: nobody approves text they never saw.
+    narrative_seen: str | None = Field(max_length=8000)
     note: str | None = Field(default=None, max_length=2000)
 
 
@@ -231,7 +235,7 @@ _RESPONSES: Final = text(
     " r.citations, r.result, r.approved_by, r.approved_at, r.approval_note,"
     " c.code, c.framework, c.domain, c.title, c.requirement, c.assessment, c.evidence_source,"
     " c.evidence_query, c.library_version, r.draft_note"
-    " FROM cloudops.control_response r JOIN cloudops.control c ON c.code = r.control_code"
+    " FROM cloudops.control_response r JOIN cloudops.control c ON c.id = r.control_id"
     " WHERE r.assessment_id = :id ORDER BY c.domain, c.code"
 )
 _EVIDENCE: Final = text(
@@ -327,8 +331,14 @@ async def list_controls(request: Request, framework: str, access: AccessDep
 async def load_library(request: Request, body: ControlLibrary, access: AccessDep
                        ) -> LoadResult:
     _staff(access)
-    async with platform(request).db.transaction(access.scope) as conn:
-        loaded = await conn.scalar(LOAD, body.load_params(access.identity.oid))
+    try:
+        async with platform(request).db.transaction(access.scope) as conn:
+            loaded = await conn.scalar(LOAD, body.load_params(access.identity.oid))
+    except DBAPIError as exc:
+        # A version's text is fixed: other text under a loaded version is refused.
+        if str(getattr(exc.orig, "sqlstate", "")) == "23505":
+            raise ApiError(409, "library_version_differs") from None
+        raise
     return LoadResult(framework=body.framework, library_version=body.version,
                       loaded=_metric_int(int(loaded or 0), "controls", "assurance.loaded",
                                          datetime.now(UTC), f=body.framework))
@@ -352,6 +362,7 @@ async def open_assessment(request: Request, body: AssessmentRequest, access: Acc
     scope = _narrow(access, body.tenant_id)
     async with platform(request).db.transaction(scope) as conn:
         version = await conn.scalar(text(
+            # The framework's current version: load_controls keeps exactly one.
             "SELECT max(library_version) FROM cloudops.control"
             " WHERE framework = :f AND retired_at IS NULL"), {"f": body.framework})
         if version is None:
@@ -362,10 +373,10 @@ async def open_assessment(request: Request, body: AssessmentRequest, access: Acc
             {"t": body.tenant_id, "f": body.framework, "v": version, "title": body.title,
              "by": access.identity.oid})
         await conn.execute(text(
-            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_code)"
-            " SELECT :t, :a, code FROM cloudops.control"
-            " WHERE framework = :f AND retired_at IS NULL"),
-            {"t": body.tenant_id, "a": created, "f": body.framework})
+            "INSERT INTO cloudops.control_response (tenant_id, assessment_id, control_id,"
+            " control_code) SELECT :t, :a, id, code FROM cloudops.control"
+            " WHERE framework = :f AND library_version = :v"),
+            {"t": body.tenant_id, "a": created, "f": body.framework, "v": version})
         row = await _load_assessment(conn, created)
         s = await _score(conn, created)
     audit_only(request, [body.tenant_id])
@@ -435,7 +446,7 @@ async def collect_evidence(request: Request, assessment_id: UUID, access: Access
     async with platform(request).db.transaction(scope) as conn:
         controls = [tuple(r) for r in await conn.execute(text(
             "SELECT c.code, c.evidence_query, c.parameters FROM cloudops.control_response r"
-            " JOIN cloudops.control c ON c.code = r.control_code"
+            " JOIN cloudops.control c ON c.id = r.control_id"
             " WHERE r.assessment_id = :a AND c.assessment = 'automated' ORDER BY c.code"),
             {"a": assessment_id})]
         for code, query_name, parameters in controls:
@@ -452,7 +463,7 @@ async def collect_evidence(request: Request, assessment_id: UUID, access: Access
 
 _REQUEST_DRAFT: Final = text(
     "UPDATE cloudops.control_response r SET draft_state = 'requested'"
-    " FROM cloudops.control c WHERE c.code = r.control_code AND r.assessment_id = :a"
+    " FROM cloudops.control c WHERE c.id = r.control_id AND r.assessment_id = :a"
     " AND c.assessment = 'narrative' AND r.approved_at IS NULL"
     " AND r.draft_state IN ('none', 'drafted', 'declined', 'failed')"
     " AND (CAST(:code AS text) IS NULL OR r.control_code = :code)"
@@ -510,12 +521,14 @@ async def approve_response(request: Request, assessment_id: UUID, code: str, bod
             "SELECT c.assessment, r.narrative, jsonb_array_length(r.citations),"
             " (SELECT count(*) FROM cloudops.evidence e WHERE e.assessment_id = r.assessment_id"
             "   AND e.control_code = r.control_code)"
-            " FROM cloudops.control_response r JOIN cloudops.control c ON c.code = r.control_code"
-            " WHERE r.assessment_id = :a AND r.control_code = :c"),
+            " FROM cloudops.control_response r JOIN cloudops.control c ON c.id = r.control_id"
+            " WHERE r.assessment_id = :a AND r.control_code = :c FOR UPDATE OF r"),
             {"a": assessment_id, "c": code})).one_or_none()
         if found is None:
             raise ApiError(404, "not_found")
         kind, narrative, cited, collected = tuple(found)
+        if (narrative or "").strip() != (body.narrative_seen or "").strip():
+            raise ApiError(409, "response_changed")
         if body.result not in ALLOWED_RESULTS[kind]:
             raise ApiError(422, "result_not_allowed_for_control")
         if body.result == "compliant" and (not (narrative or "").strip()
@@ -564,7 +577,8 @@ async def export_pack(request: Request, assessment_id: UUID, access: AccessDep
                         "library_version": row[4], "title": row[5], "status": row[6],
                         "created_at": row[7].isoformat()},
             responses=[{
-                "control_code": r[0], "title": r[17], "assessment": r[19],
+                "control_code": r[0], "library_version": r[22], "title": r[17],
+                "requirement": r[18], "assessment": r[19],
                 "evidence_source": r[20], "result": r[10],
                 "approved_by": None if r[11] is None else str(r[11]),
                 "approved_at": None if r[12] is None else r[12].isoformat(),

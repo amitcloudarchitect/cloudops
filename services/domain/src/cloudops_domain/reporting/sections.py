@@ -9,15 +9,19 @@ Sections, in pack order:
 | --- | --- | --- |
 | Executive summary | the other sections' key figures, and billed cloud consumption | yes |
 | Volumetrics | ServiceNow work items | yes |
-| Financial dashboard | the commercial engine (step 16) | **behind ``FinancialSections``** |
+| Financial dashboard | the commercial engine's margin snapshot (step 16) | ``financial.py`` |
 | Vulnerabilities | Qualys detections | yes |
 | CSAT | no survey source is connected yet | a visible gap |
 | Availability | the telemetry store's ``availability`` metric | yes, when connected |
 | Automation progress | triage runs and their reviews | yes |
-| Revenue mix | the commercial engine (step 16) | **behind ``FinancialSections``** |
+| Revenue mix | the SOW in force (step 16's register) | ``financial.py`` |
 
 A section with no source says so (``captured=False`` and why), never zero
 (HLD design principle 7).
+
+The two ``COMMERCIAL_SECTIONS`` carry margin, cost base and SOW revenue. They
+are stored apart from the rest of the pack, where only a commercial role reads
+them (HLD principle 6), and nothing from them reaches another section.
 
 Everything runs under the caller's scope, narrowed to one tenant, with the
 tenant predicate inside each statement too. Counts are integers; money is
@@ -42,7 +46,7 @@ from sqlalchemy import text
 from cloudops_domain.reporting.money import check_currency
 from cloudops_tenancy import ScopedConnection, TenantScope
 
-Kind = Literal["count", "percent", "days", "money", "text"]
+Kind = Literal["count", "percent", "days", "hours", "money", "text"]
 
 SECTION_ORDER: Final = (
     "executive_summary", "volumetrics", "financial_dashboard", "vulnerabilities", "csat",
@@ -58,6 +62,8 @@ SECTION_TITLES: Final = {
     "automation_progress": "Automation progress",
     "revenue_mix": "Revenue mix",
 }
+# Margin, cost base and SOW revenue: stored apart, read by commercial roles only.
+COMMERCIAL_SECTIONS: Final = ("financial_dashboard", "revenue_mix")
 # The summary sections a model drafts narrative for, when they are captured.
 NARRATIVE_SECTIONS: Final = ("executive_summary", "volumetrics", "vulnerabilities",
                              "availability", "automation_progress")
@@ -72,7 +78,7 @@ class Figure:
     label: str
     value: str  # an int or an unrounded Decimal, as text; rounding is presentation's job
     kind: Kind
-    unit: str  # "incidents", "percent", "days", or the ISO currency of a money figure
+    unit: str  # "incidents", "percent", "days", "hours", or a money figure's ISO currency
     source_system: str
     query_ref: str
     note: str | None = None
@@ -139,6 +145,11 @@ class PackContent:
 # --- interfaces for what is built elsewhere -----------------------------------------
 
 
+class AvailabilityGapError(Exception):
+    """The source cannot give a correct figure for the month: the section says
+    why (its message) instead of failing the whole pack."""
+
+
 class AvailabilitySource(Protocol):
     """Mean availability (percent, 0 to 100) per resource over a window."""
 
@@ -147,28 +158,15 @@ class AvailabilitySource(Protocol):
 
 
 class FinancialSections(Protocol):
-    """**The step 16 seam.** The financial dashboard and revenue mix come from the
-    commercial engine (FinOps, pricing, margin), which is not on main yet.
-    Implementations return those two sections for a tenant and month in the
-    contract currency; until one is wired in, ``NotYetAvailable`` is."""
+    """The financial dashboard and revenue mix, from the commercial engine (step 16):
+    ``financial.CommercialSections``. Both sections for a tenant and month, in the
+    contract currency."""
 
     async def financial_dashboard(self, conn: ScopedConnection, tenant_id: UUID, period: date,
                                   contract_currency: str) -> Section: ...
 
     async def revenue_mix(self, conn: ScopedConnection, tenant_id: UUID, period: date,
                           contract_currency: str) -> Section: ...
-
-
-class NotYetAvailable:
-    GAP: Final = "awaiting the commercial engine (step 16): margin and revenue are not built"
-
-    async def financial_dashboard(self, conn: ScopedConnection, tenant_id: UUID, period: date,
-                                  contract_currency: str) -> Section:
-        return _gap("financial_dashboard", self.GAP)
-
-    async def revenue_mix(self, conn: ScopedConnection, tenant_id: UUID, period: date,
-                          contract_currency: str) -> Section:
-        return _gap("revenue_mix", self.GAP)
 
 
 def _gap(key: str, why: str) -> Section:
@@ -315,7 +313,10 @@ async def availability(conn: ScopedConnection, scope: TenantScope, tenant: UUID,
     start, end = month_bounds(period)
     narrowed = TenantScope([tenant], scope.role, scope.principal_id,
                            account_ids=scope.account_ids)
-    measured = await source.availability(narrowed, start, end)
+    try:
+        measured = await source.availability(narrowed, start, end)
+    except AvailabilityGapError as exc:
+        return _gap("availability", str(exc))
     if not measured:
         return _gap("availability", "no availability samples for this month")
     names = dict(await _rows(conn, (
@@ -422,11 +423,11 @@ def executive_summary(sections: Mapping[str, Section], spend: Figure) -> Section
     figures = [f for key, fig in picks if (s := sections.get(key)) is not None and s.captured
                and (f := s.figure(fig)) is not None]
     figures.append(spend)
-    gaps = [SECTION_TITLES[k] for k, s in sections.items() if not s.captured]
+    # The commercial sections' gaps stay with them: the summary is not commercial.
+    gaps = [(k, s) for k, s in sections.items()
+            if not s.captured and k not in COMMERCIAL_SECTIONS]
     table = Table("not_captured", "Not captured this month", ("Section", "Why"),
-                  ("text", "text"),
-                  tuple((SECTION_TITLES[k], s.gap or "") for k, s in sections.items()
-                        if not s.captured))
+                  ("text", "text"), tuple((SECTION_TITLES[k], s.gap or "") for k, s in gaps))
     return Section("executive_summary", SECTION_TITLES["executive_summary"], True, None,
                    tuple(figures), (table,) if gaps else ())
 

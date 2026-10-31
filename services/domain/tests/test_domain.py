@@ -11,7 +11,7 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -334,6 +334,19 @@ def test_render_prints_people_not_drafts_and_marks_unreleased_packs() -> None:
     assert DRAFT_BANNER not in released
 
 
+def test_table_money_prints_in_the_pack_currency_and_hours_round_once() -> None:
+    usd = PackContent(
+        uuid4(), "Charlie Inc", date(2026, 9, 1), "USD", datetime(2026, 10, 1, tzinfo=UTC),
+        (Section("financial_dashboard", "Financial dashboard", True, None, (
+            Figure("effort_hours", "Observed effort", "120.2500", "hours", "hours",
+                   "servicenow", "q"),), (
+            Table("effort_variance", "Effort by workgroup", ("Workgroup", "Hours", "Excess"),
+                  ("text", "hours", "money"), (("Cloud Ops", "90.25", "-1234.565"),)),)),))
+    lines = text_lines(render_lines(usd, {}, released=True, version=1))
+    assert "Observed effort: 120.3 hours" in lines
+    assert "Cloud Ops | 90.3 hours | USD -1,234.57" in lines
+
+
 def test_snapshot_round_trips() -> None:
     content = _content()
     again = PackContent.from_json(content.tenant_id, content.to_json())
@@ -377,3 +390,22 @@ def test_month_bounds() -> None:
     assert (start.date(), end.date()) == (date(2026, 12, 1), date(2027, 1, 1))
     with pytest.raises(ValueError, match="first day"):
         month_bounds(date(2026, 12, 2))
+
+
+async def test_a_truncated_availability_read_is_a_gap_not_a_failed_pack() -> None:
+    from typing import cast
+
+    from cloudops_domain.reporting import sections
+    from cloudops_domain.reporting.availability import AvailabilityTruncatedError
+    from cloudops_tenancy import Role, ScopedConnection, TenantScope
+
+    class Truncated:
+        async def availability(self, scope: TenantScope, start: datetime, end: datetime
+                               ) -> dict[UUID, float]:
+            raise AvailabilityTruncatedError("more hourly measurements than one read returns")
+
+    tenant = uuid4()
+    got = await sections.availability(
+        cast(ScopedConnection, None), TenantScope([tenant], Role.ENGINEER, "test"), tenant,
+        date(2026, 9, 1), Truncated())
+    assert (got.captured, got.gap) == (False, "more hourly measurements than one read returns")

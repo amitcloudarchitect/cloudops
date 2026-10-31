@@ -44,7 +44,8 @@ NON_TENANT = {
     "cloudops.control",
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
-COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance"}
+COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance",
+              "cloudops.report_pack_commercial"}
 PARTITIONED = {
     "cloudops.cost_fact",
     "cloudops.work_item",

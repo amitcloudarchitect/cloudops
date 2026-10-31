@@ -202,12 +202,16 @@ def _ctx(tenant: UUID, principal: str = PRINCIPAL) -> CallContext:
                                   PERMISSIONS)
 
 
+# As migration 0013: requested, or claimed by a worker that died long ago.
+CLAIMABLE: Final = ("(draft_state = 'requested' OR (draft_state = 'drafting'"
+                    " AND draft_claimed_at < now() - interval '30 minutes'))")
 _CLAIM_CONTROL: Final = text(
-    "UPDATE cloudops.control_response SET draft_state = 'drafting'"
-    " WHERE id = :id AND draft_state = 'requested' RETURNING assessment_id, control_code"
+    "UPDATE cloudops.control_response SET draft_state = 'drafting', draft_claimed_at = now()"  # noqa: S608 - module constant
+    " WHERE id = :id AND " + CLAIMABLE
+    + " RETURNING assessment_id, control_code, control_id"
 )
 _CONTROL: Final = text(
-    "SELECT code, framework, domain, title, requirement FROM cloudops.control WHERE code = :code"
+    "SELECT code, framework, domain, title, requirement FROM cloudops.control WHERE id = :id"
 )
 _EVIDENCE: Final = text(
     "SELECT id, source_system, query_name, query_text, raw_value, retrieved_at"
@@ -221,9 +225,10 @@ _STORE_CONTROL: Final = text(
     " WHERE id = :id AND draft_state = 'drafting'"
 )
 _CLAIM_NARRATIVE: Final = text(
-    "UPDATE cloudops.report_narrative n SET draft_state = 'drafting' FROM cloudops.report_pack p"
-    " WHERE n.id = :id AND n.draft_state = 'requested' AND p.id = n.pack_id"
-    " RETURNING n.section, p.sections, p.period"
+    "UPDATE cloudops.report_narrative n SET draft_state = 'drafting', draft_claimed_at = now()"  # noqa: S608 - module constant
+    " FROM cloudops.report_pack p WHERE n.id = :id AND p.id = n.pack_id AND p.status = 'draft'"
+    " AND " + CLAIMABLE.replace("draft_", "n.draft_")
+    + " RETURNING n.section, p.sections, p.period"
 )
 _STORE_NARRATIVE: Final = text(
     "UPDATE cloudops.report_narrative SET draft_state = :state, draft_text = :text,"
@@ -282,8 +287,8 @@ class DraftingActivities:
             claimed = (await conn.execute(_CLAIM_CONTROL, {"id": item.id})).one_or_none()
             if claimed is None:
                 return DraftOutcome(item.kind, item.id, "skipped", "not requested")
-            assessment, code = tuple(claimed)
-            control = dict((await conn.execute(_CONTROL, {"code": code})).mappings().one())
+            assessment, code, control_id = tuple(claimed)
+            control = dict((await conn.execute(_CONTROL, {"id": control_id})).mappings().one())
             evidence = [dict(r) for r in (await conn.execute(_EVIDENCE, {
                 "a": assessment, "code": code, "limit": MAX_EVIDENCE})).mappings()]
         try:
@@ -433,9 +438,15 @@ class DraftSweepWorkflow:
         return outcomes
 
 
+INDEX_FAILED: Final = -1  # a tenant's indexing failed this run
+
+
 @workflow.defn
 class KnowledgeIndexWorkflow:
-    """Index every tenant's pending knowledge, one tenant per activity."""
+    """Index every tenant's pending knowledge, one tenant per activity. A tenant
+    whose indexing fails after its retries (its LLM budget spent, a chunk the
+    gateway refuses) is reported as -1 and tried again next run; it never stops
+    the tenants after it."""
 
     @workflow.run
     async def run(self) -> dict[str, int]:
@@ -444,9 +455,12 @@ class KnowledgeIndexWorkflow:
             retry_policy=DB_RETRY)
         done: dict[str, int] = {}
         for tenant in tenants:
-            done[tenant] = await workflow.execute_activity_method(
-                DraftingActivities.index_tenant, tenant, start_to_close_timeout=INDEX_TIMEOUT,
-                retry_policy=AGENT_RETRY)
+            try:
+                done[tenant] = await workflow.execute_activity_method(
+                    DraftingActivities.index_tenant, tenant,
+                    start_to_close_timeout=INDEX_TIMEOUT, retry_policy=AGENT_RETRY)
+            except ActivityError:
+                done[tenant] = INDEX_FAILED
         return done
 
 

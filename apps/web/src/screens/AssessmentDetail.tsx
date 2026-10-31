@@ -44,6 +44,7 @@ const DECLINED: Record<string, string> = {
   ungrounded_numbers: "the draft used a number not in its data",
 };
 const ERRORS: Record<string, string> = {
+  response_changed: "The narrative changed since this page loaded. Reload and read it before approving.",
   compliant_needs_narrative_and_evidence: "A compliant result needs a narrative, and collected evidence or a citation behind it.",
   result_not_allowed_for_control: "That result is not allowed for this kind of control.",
   assessment_closed: "This assessment is closed.",
@@ -225,7 +226,7 @@ function Response({ assessment, r, onChange }: { assessment: string; r: Response
             onSubmit={(e) => {
               e.preventDefault();
               void act(
-                (t) => apiPost(t, "/v1/assurance/assessments/{assessment_id}/responses/{code}/approve", base, { result, note: note.trim() || null }),
+                (t) => apiPost(t, "/v1/assurance/assessments/{assessment_id}/responses/{code}/approve", base, { result, narrative_seen: r.narrative ?? null, note: note.trim() || null }),
                 `${r.control.code} approved as ${RESULT[result].label.toLowerCase()}.`,
                 "The approval was not saved.",
               );

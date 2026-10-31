@@ -45,6 +45,7 @@ ACCOUNT_SCOPED = (
     "cloudops.evidence_pack",
     "cloudops.report_pack",
     "cloudops.report_narrative",
+    "cloudops.report_pack_commercial",
 )
 GROUP_ROLES = ("cloudops_app", "cloudops_ingest")
 

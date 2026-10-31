@@ -110,7 +110,7 @@ class ReportPackSummary(ApiModel):
     published_at: datetime | None
 
 
-FigureKind = Literal["count", "percent", "days", "money", "text"]
+FigureKind = Literal["count", "percent", "days", "hours", "money", "text"]
 
 
 class FigureSnapshot(ApiModel):
@@ -177,7 +177,11 @@ class PortfolioView(ApiModel):
 
 _PACK_COLS: Final = (
     "p.id, p.tenant_id, t.canonical_name, p.period, p.version, p.status, p.contract_currency,"
-    " p.generated_at, p.approved_at, p.published_at, p.data_as_of, p.sections"
+    " p.generated_at, p.approved_at, p.published_at, p.data_as_of,"
+    # The commercial sections join in only where commercial_visibility lets the
+    # scope read them (migration 0013); anyone else gets the pack without them.
+    " p.sections || coalesce((SELECT c.sections FROM cloudops.report_pack_commercial c"
+    "  WHERE c.pack_id = p.id AND c.tenant_id = p.tenant_id), '{}'::jsonb)"
 )
 _PACK: Final = text(
     f"SELECT {_PACK_COLS} FROM cloudops.report_pack p"  # noqa: S608 - module constant
@@ -268,8 +272,15 @@ async def generate_pack(request: Request, body: GenerateRequest, access: AccessD
             " sections, data_as_of, generated_by) VALUES (:t, :p, :v, :c, CAST(:s AS jsonb),"
             " :at, :by) RETURNING id"),
             {"t": body.tenant_id, "p": period, "v": version, "c": content.contract_currency,
-             "s": json.dumps(content.to_json()["sections"]), "at": now,
+             "s": json.dumps({k: v for k, v in content.to_json()["sections"].items()
+                              if k not in sections.COMMERCIAL_SECTIONS}), "at": now,
              "by": access.identity.oid})
+        await conn.execute(text(
+            "INSERT INTO cloudops.report_pack_commercial (pack_id, tenant_id, sections)"
+            " VALUES (:p, :t, CAST(:s AS jsonb))"),
+            {"p": pack, "t": body.tenant_id,
+             "s": json.dumps({k: v for k, v in content.to_json()["sections"].items()
+                              if k in sections.COMMERCIAL_SECTIONS})})
         wanted = sections.narrative_sections(content)
         if wanted:
             await conn.execute(text(

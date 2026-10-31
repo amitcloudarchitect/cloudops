@@ -227,10 +227,12 @@ class Collected:
 
 
 _INSERT_EVIDENCE: Final = text(
-    "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_code, source_system,"
-    " query_name, query_ref, query_text, parameters, raw_value, retrieved_at, retrieved_by,"
-    " sha256) VALUES (:tenant, :assessment, :code, :source, :name, :ref, :text,"
-    " CAST(:params AS jsonb), CAST(:raw AS jsonb), :at, :by, :sha) RETURNING id"
+    "INSERT INTO cloudops.evidence (tenant_id, assessment_id, control_id, control_code,"
+    " source_system, query_name, query_ref, query_text, parameters, raw_value, retrieved_at,"
+    " retrieved_by, sha256) SELECT :tenant, :assessment, r.control_id, :code, :source, :name,"
+    " :ref, :text, CAST(:params AS jsonb), CAST(:raw AS jsonb), :at, :by, :sha"
+    " FROM cloudops.control_response r"
+    " WHERE r.assessment_id = :assessment AND r.control_code = :code RETURNING id"
 )
 _PROPOSE: Final = text(
     "UPDATE cloudops.control_response SET proposed_result = :proposed, proposed_basis = :basis"

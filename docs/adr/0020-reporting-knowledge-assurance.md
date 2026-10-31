@@ -23,7 +23,7 @@ them:
   and tested; the acceptance itself is pending until a real pack is supplied
   (`services/domain/acceptance/README.md`).
 
-Step 16 (FinOps, pricing, margin) was being built in parallel and was not on main.
+Step 16 (FinOps, pricing, margin) was built in parallel and merged first (ADR 0019).
 
 ## Decisions
 
@@ -64,7 +64,16 @@ Step 16 (FinOps, pricing, margin) was being built in parallel and was not on mai
      `assurance.library`, after `ControlLibrary` validates the file: the declared
      count must match (a truncated file is refused whole), each automated control
      names a registered query that asks the system it declares, and manual controls
-     are answered by a person. A reload retires missing controls; it never deletes.
+     are answered by a person.
+   - **A control is its framework, library version and code** (CIS Azure and CIS AWS
+     both have a 1.1), and its text is fixed by trigger. New text is a new version:
+     loading other text under a loaded version is refused (409
+     `library_version_differs`), reloading the same text is a no-op, and a new
+     version retires the framework's previous one without touching other
+     frameworks. Responses and evidence point at the exact control row
+     (`control_id`, with a composite key to its code), so an open assessment and
+     every evidence pack it exports keep the text they were assessed against. The
+     pack records each response's requirement and library version.
    - **Evidence routing:** `cloudops_domain.assurance.evidence.QUERIES` holds six
      fixed queries (Qualys, Entra, Azure and AWS tags, ServiceNow SLA, SharePoint
      documents, CoreStack). Their thresholds come from the library's parameters,
@@ -78,7 +87,9 @@ Step 16 (FinOps, pricing, margin) was being built in parallel and was not on mai
      exists only with an approval (a check constraint), and a trigger refuses any
      approver who is not an active staff principal holding `assurance.approve`.
      "Compliant" also needs a narrative and either collected evidence or a citation.
-     Editing an approved narrative withdraws the approval.
+     Editing an approved narrative withdraws the approval, and an approval names
+     the narrative the approver read (`narrative_seen`): if it changed since, the
+     approval is refused (409 `response_changed`).
    - **The signed evidence pack** is canonical JSON (the assessment, every response
      and approval, every evidence row, the score), signed over its SHA-256 with
      Ed25519, and recorded append-only in `cloudops.evidence_pack`.
@@ -87,8 +98,13 @@ Step 16 (FinOps, pricing, margin) was being built in parallel and was not on mai
    - **Generation** runs in the API from live rows, under the caller's scope narrowed
      to one tenant, and stores the snapshot (`report_pack.sections`), versioned per
      month. Sections follow the step's list. The **financial dashboard and revenue
-     mix** come through `FinancialSections`, the step 16 seam; until it is wired,
-     `NotYetAvailable` returns them as "not captured". **CSAT** is not captured:
+     mix** come from step 16 through `FinancialSections`
+     (`reporting.financial.CommercialSections`): the dashboard is the month's
+     latest `margin_snapshot` as the commercial engine stored it (revenue, cost and
+     margin on its band basis, margin percentage and band, target and gap, FX
+     impact, effort by workgroup), never recomputed; the revenue mix is the SOW in
+     force split into hosting, manage and professional services. A snapshot that is
+     not captured, or missing, is a gap with the engine's reason. **CSAT** is not captured:
      there is no survey source. **Availability** comes from the telemetry store
      locally, and is not captured in Azure while LLD L1 is open.
    - **Currency:** a pack is in the contract currency of the SOW in force for the
@@ -98,10 +114,21 @@ Step 16 (FinOps, pricing, margin) was being built in parallel and was not on mai
      date. The **portfolio** is in a reporting currency the viewer picks, converted
      from the same rows, never from pack totals. Money is rounded once, at
      presentation (`reporting.money.present`, `EUR 1,234.56`).
+   - **Commercial sections are stored apart.** They carry margin, cost base and SOW
+     revenue, which customers never see (HLD principle 6) and which staff without a
+     commercial role cannot read in `margin_snapshot` or `sow`. Copying them into
+     `report_pack.sections` would let any `reports.read` holder read them there, so
+     they go to `cloudops.report_pack_commercial` under the same restrictive
+     `commercial_visibility` policy as migration 0012. The API joins them in where
+     that policy lets the scope read them; everyone else, customers included, gets
+     the pack without them. The executive summary carries nothing from them, not
+     even their gaps.
    - **Never auto-published.** The narrator drafts the captured summary sections from
      figures and tables only (no ticket or document text). A draft is never printed.
      Approval and publication need staff holding `reports.publish`, and every
      narrative needs a person's text. Both are enforced by the API and by a trigger.
+     Once a pack leaves draft, its narratives' text is fixed and none can be
+     deleted (a trigger, for the owner too).
      Customers see published packs only: a restrictive policy bound to the
      application login and to `cloudops_customer` (ADR 0018). That role is granted
      nothing here, so customer scopes fail closed. The portal decides which report
@@ -114,7 +141,10 @@ Step 16 (FinOps, pricing, margin) was being built in parallel and was not on mai
    'requested'`). `DraftSweepWorkflow`, every minute, lists requests through
    `cloudops.pending_drafts()` (id and tenant only, owned by `cloudops_resolver`) and
    drafts each one as an activity under that one tenant's scope. A failed draft is
-   released back to the queue and never blocks the others. Deterministic checks run
+   released back to the queue and never blocks the others; one tenant's failed
+   indexing never stops the next tenant's. A claim records when it was taken
+   (`draft_claimed_at`); one held for 30 minutes, three times the activity's
+   deadline, belongs to a dead worker and is claimable again. Deterministic checks run
    before and after the model:
    - instruction-like material is not drafted at all;
    - citations must be refs the drafter was given;
@@ -153,12 +183,16 @@ Step 16 (FinOps, pricing, margin) was being built in parallel and was not on mai
 
   Added to the LLD as open item L13.
 - **The control library and the manual pack** (see Context).
-- **Wiring step 16** into `FinancialSections` once it is on main.
+- **Revenue mix content.** The SOW records hosting and manage as annual contract
+  values and professional services as one value with no period; the mix shows them as
+  recorded, with shares of their sum. Whether the pack should show a monthly split
+  instead is a proposal to confirm.
 
 ## Consequences
 
-- Six new tenant tables, each FORCE RLS with `tenant_isolation`, an all-accounts
-  restriction (assessments and packs are tenant-wide), and isolation tests. One
+- Seven new tenant tables, each FORCE RLS with `tenant_isolation`, an all-accounts
+  restriction (assessments and packs are tenant-wide), and isolation tests;
+  `report_pack_commercial` also carries `commercial_visibility`. One
   non-tenant reference table, `cloudops.control`, readable by the application and
   writable by no application role.
 - `knowledge_chunk` gains citation and embedding-state columns, and `document` gains

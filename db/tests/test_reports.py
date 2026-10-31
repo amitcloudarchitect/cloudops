@@ -86,6 +86,33 @@ def month(step17: Step17) -> Month:
             " (%s, 1002, 'vm-alpha-01', 'os', 'Fixed', 3, %s, %s)",
             (a.id, t0 - timedelta(days=100), a.id, t0 + timedelta(days=1),
              t0 + timedelta(days=4)))
+        # Step 16's stored figures: a closed EUR margin (version 2 restates 1) with
+        # its variance for alpha, a USD one for charlie, none for bravo.
+        for t, ccy, version, revenue, cost, prior in (
+            (a, "EUR", 1, "40000.000000", "39000.000000", "900.000000"),
+            (a, "EUR", 2, "41250.500000", "31000.000000", "10200.000000"),
+            (c, "USD", 1, "41250.500000", "45000.000000", "-3500.000000"),
+        ):
+            margin = Decimal(revenue) - Decimal(cost)
+            sid = cx.execute(
+                "INSERT INTO cloudops.margin_snapshot (tenant_id, period, through, version,"
+                " status, rate_card_version, contract_currency, revenue, modelled_cost,"
+                " actual_cost, modelled_margin, actual_margin, margin_at_prior_rates,"
+                " margin_pct, band, band_basis, target_margin, gap_to_target, effort_hours,"
+                " effort_items, effort_items_without_hours, effort_complete) VALUES"
+                " (%s, %s, %s, %s, 'closed', '2026-v2.14', %s, %s, 30000, %s, %s, %s, %s,"
+                " %s, 'watch', 'actual', 0.3, %s, 120.25, 4, 1, false) RETURNING id",
+                (t.id, PERIOD, D2, version, ccy, revenue, cost, Decimal(revenue) - 30000,
+                 margin, prior, margin / Decimal(revenue),
+                 margin / Decimal(revenue) - Decimal("0.3"))).fetchone()
+            if t is a and version == 2 and sid:
+                cx.execute(
+                    "INSERT INTO cloudops.margin_variance (tenant_id, snapshot_id, workgroup,"
+                    " activity, hours, items, items_without_hours, share, excess_hours,"
+                    " excess_cost, currency) VALUES (%s, %s, 'Cloud Ops', 'incident', 90.25,"
+                    " 3, 1, 0.75, 10, 1234.567800, 'EUR')", (a.id, sid[0]))
+        cx.execute("UPDATE cloudops.sow SET hosting_acv = 120000, manage_acv = 495006,"
+                   " professional_services = 0 WHERE tenant_id = %s", (a.id,))
     eur = Decimal("100") + Decimal("200") * Decimal("1.05") + Decimal("50") * Decimal("1.10")
     gbp = Decimal("100") * Decimal("0.85") + Decimal("250") * Decimal("0.90")
     return Month(eur, gbp)
@@ -125,13 +152,88 @@ async def test_a_pack_is_generated_from_live_rows_in_the_contract_currency(
         "availability", "automation_progress", "revenue_mix"]
     assert _section(pack, "csat")["captured"] is False
     assert _section(pack, "availability")["captured"] is False  # no telemetry source here
-    for deferred in ("financial_dashboard", "revenue_mix"):
-        assert _section(pack, deferred)["captured"] is False
-        assert "step 16" in _section(pack, deferred)["gap"]
+    # From step 16's latest snapshot, never recomputed: version 2, unrounded.
+    assert _section(pack, "financial_dashboard")["captured"] is True
+    revenue = _figure(pack, "financial_dashboard", "revenue")
+    assert (revenue["value"], revenue["unit"]) == ("41250.500000", "EUR")
+    assert "version 2" in revenue["note"]
+    assert Decimal(_figure(pack, "financial_dashboard", "margin")["value"]) == Decimal("10250.5")
+    assert Decimal(_figure(pack, "financial_dashboard", "fx_impact")["value"]) == Decimal("50.5")
+    pct = _figure(pack, "financial_dashboard", "margin_pct")
+    assert Decimal(pct["value"]).quantize(Decimal("0.01")) == Decimal("24.85")
+    assert pct["note"] == "health band: watch"
+    hours = _figure(pack, "financial_dashboard", "effort_hours")
+    assert (hours["kind"], hours["note"]) == ("hours", "partial: 1 work items without hours")
+    [variance] = _section(pack, "financial_dashboard")["tables"]
+    assert variance["rows"] == [["Cloud Ops", "incident", "90.2500", "75.00000000",
+                                 "1234.567800"]]
+    mix = _section(pack, "revenue_mix")
+    assert _figure(pack, "revenue_mix", "monthly_manage_revenue")["value"] == "41250.500000"
+    shares = {r[0]: r[2] for r in mix["tables"][0]["rows"]}
+    assert Decimal(shares["Hosting (annual contract value)"]).quantize(Decimal("0.01")) == (
+        Decimal("19.51"))
+    assert len(mix["tables"]) == 1  # every component recorded
+    # The summary carries nothing commercial, not even a commercial gap.
+    summary = _section(pack, "executive_summary")
+    assert not any(f["source_system"] in ("commercial_engine", "sow_register")
+                   for f in summary["figures"])
     assert {n["section"] for n in pack["narratives"]} == {
         "executive_summary", "volumetrics", "vulnerabilities", "automation_progress"}
     assert all(n["draft_state"] == "requested" and n["text"] is None for n in pack["narratives"])
     assert pack["releasable"] is False
+
+
+async def test_commercial_sections_follow_their_own_currency_and_gaps(
+    step17: Step17, month: Month
+) -> None:
+    # Charlie's margin is in USD, as its pack; Bravo has no snapshot and a JPY SOW
+    # with no component values recorded.
+    c_pack = (await _generate(step17, step17.admin, step17.seeded.c.id)).json()
+    margin = _figure(c_pack, "financial_dashboard", "margin")
+    assert (Decimal(margin["value"]), margin["unit"]) == (Decimal("-3749.5"), "USD")
+    from cloudops_domain.reporting.render import value_text
+    assert value_text(margin["value"], "money", "USD") == "USD -3,749.50"
+    b_pack = (await _generate(step17, step17.admin, step17.seeded.b.id)).json()
+    dash = _section(b_pack, "financial_dashboard")
+    assert (dash["captured"], dash["gap"]) == (
+        False, "the commercial engine has not computed margin for the month")
+    mix = _section(b_pack, "revenue_mix")
+    assert [t["key"] for t in mix["tables"]] == ["revenue_mix", "not_recorded"]
+    assert all(r[2] == "" for r in mix["tables"][0]["rows"][:2])  # no share of nothing
+    gaps = _section(b_pack, "executive_summary")["tables"][0]["rows"]
+    assert "Financial dashboard" not in {r[0] for r in gaps}
+
+
+async def test_commercial_sections_are_stored_apart_for_commercial_roles(
+    step17: Step17, month: Month
+) -> None:
+    """Margin and SOW revenue never sit in report_pack.sections, where every
+    reports.read holder could read them; report_pack_commercial carries
+    commercial_visibility, so a customer or engineer scope reads no row."""
+    s = step17.seeded
+    pid = (await _generate(step17, step17.delivery_a, s.a.id)).json()["id"]
+    with psycopg.connect(s.admin_dsn) as cx:
+        public = cx.execute("SELECT sections FROM cloudops.report_pack WHERE id = %s",
+                            (pid,)).fetchone()
+    assert public
+    assert {"financial_dashboard", "revenue_mix"}.isdisjoint(public[0])
+    with psycopg.connect(s.app_dsn) as cx:
+        for role, seen in (("delivery_lead", 1), ("engineer", 0), ("customer", 0),
+                           ("secops", 0)):
+            _as_role(cx, s.a.id, role)
+            got = cx.execute("SELECT count(*) FROM cloudops.report_pack_commercial"
+                             " WHERE pack_id = %s", (pid,)).fetchone()
+            assert got == (seen,), role
+            cx.rollback()
+        _as_role(cx, s.a.id, "engineer")
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            cx.execute("INSERT INTO cloudops.report_pack_commercial (pack_id, tenant_id,"
+                       " sections) VALUES (gen_random_uuid(), %s, '{}')", (s.a.id,))
+        cx.rollback()
+        _as_role(cx, s.a.id, "delivery_lead")
+        with pytest.raises(psycopg.errors.InsufficientPrivilege):
+            cx.execute("UPDATE cloudops.report_pack_commercial SET sections = '{}'"
+                       " WHERE pack_id = %s", (pid,))
 
 
 async def test_a_missing_rate_is_a_gap_never_zero(step17: Step17, month: Month) -> None:
@@ -214,6 +316,14 @@ async def test_nothing_is_released_without_a_person(step17: Step17, month: Month
         seen = cx.execute("SELECT count(*) FROM cloudops.report_pack WHERE id = %s",
                           (pid,)).fetchone()
     assert seen == (1,)
+    # What was released stays what was approved, for the table owner too.
+    with psycopg.connect(s.admin_dsn) as cx:
+        for sql in ("UPDATE cloudops.report_narrative SET text = 'Rewritten.'"
+                    " WHERE pack_id = %s",
+                    "DELETE FROM cloudops.report_narrative WHERE pack_id = %s"):
+            with pytest.raises(psycopg.errors.InsufficientPrivilege, match="fixed"):
+                cx.execute(sql, (pid,))
+            cx.rollback()
     pdf = (await api.get(f"/v1/reports/packs/{pid}/pdf", step17.delivery_a)).content
     # The text endpoint is the PDF's own lines: what the acceptance diff compares.
     lines = (await api.get(f"/v1/reports/packs/{pid}/text", step17.delivery_a)).text.splitlines()

@@ -1244,6 +1244,8 @@ export interface components {
         };
         /** Approval */
         Approval: {
+            /** Narrative Seen */
+            narrative_seen: string | null;
             /** Note */
             note?: string | null;
             /**
@@ -1791,7 +1793,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "count" | "percent" | "days" | "money" | "text";
+            kind: "count" | "percent" | "days" | "hours" | "money" | "text";
             /** Label */
             label: string;
             /** Note */
@@ -2728,7 +2730,7 @@ export interface components {
             /** Key */
             key: string;
             /** Kinds */
-            kinds: ("count" | "percent" | "days" | "money" | "text")[];
+            kinds: ("count" | "percent" | "days" | "hours" | "money" | "text")[];
             /** Rows */
             rows: string[][];
             /** Title */

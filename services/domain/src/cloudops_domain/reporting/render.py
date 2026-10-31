@@ -40,6 +40,8 @@ def value_text(value: str, kind: Kind, unit: str) -> str:
         return f"{Decimal(value).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}%"
     if kind == "days":
         return f"{Decimal(value).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)} days"
+    if kind == "hours":
+        return f"{Decimal(value).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)} hours"
     if kind == "count":
         return f"{int(value):,}"
     return value
@@ -75,7 +77,7 @@ def render_lines(content: PackContent, narratives: Mapping[str, str], *, release
             lines.append(Line("subheading", table.title))
             lines.append(Line("row", " | ".join(table.columns), table.columns))
             for row in table.rows:
-                cells = tuple(value_text(c, k, "") if c else "-"
+                cells = tuple(value_text(c, k, content.contract_currency) if c else "-"
                               for c, k in zip(row, table.kinds, strict=True))
                 lines.append(Line("row", " | ".join(cells), cells))
     return lines
