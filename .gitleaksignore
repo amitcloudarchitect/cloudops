@@ -1,0 +1,8 @@
+# Reviewed gitleaks findings, by fingerprint (commit:file:rule:line). Each one is
+# pinned to one commit, so the same value anywhere else still fails the scan.
+
+# Fake fixture in the step 19 scrub test, an invented storage key (AccountKey=abc123def456==).
+# The branch is pushed and can't be rewritten. Reviewed 2026-10-31.
+a959f56d2f0881d3f2ab4d01b4d0f10a1d44edea:packages/observability/tests/test_observability_scrub.py:generic-api-key:16
+# Fake fixture in the step 19 scrub test, an invented JWT. Reviewed 2026-10-31.
+a959f56d2f0881d3f2ab4d01b4d0f10a1d44edea:packages/observability/tests/test_observability_scrub.py:jwt:18
