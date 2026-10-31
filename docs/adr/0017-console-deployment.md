@@ -144,6 +144,17 @@ user's token. Dev already has a signed image pipeline, Argo CD, a Gateway API in
     `tools/ci/tests/test_terraform.py` refuses compression on a Front Door route.
     Edge caching can come back only with a test against the live endpoint that
     sends a browser's `Accept-Encoding`.
+12. **An all-tenant administrator with no tenant yet gets an empty scope** (added
+    2026-10-31). Before this, the resolver refused every staff principal with no
+    tenant ("no tenants assigned", 403), the all-tenant platform administrator
+    included. So on a new environment the first administrator could never reach
+    Customer mapping to onboard the first customer. Dev hit exactly this.
+    - Now a staff principal assigned all tenants (D3) resolves to an empty
+      `TenantScope`. It reads no row, so it exposes nothing, and its permissions
+      (onboarding included) still apply.
+    - The first onboarded tenant joins its scope on the next request (D9).
+    - A staff principal assigned named tenants, none granted, is still refused.
+    - Tested in `services/api/tests/test_access_resolver.py`.
 
 ## Manual steps (Key Vault, before the administrator job's first run)
 

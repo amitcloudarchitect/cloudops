@@ -99,7 +99,10 @@ class ScopeResolver:
         elif kind == "staff":
             if role not in STAFF_ROLES:
                 raise ScopeDefectError("staff principal holds a non-staff role")
-            if not tenant_ids:
+            # All tenants with none onboarded yet is a valid, empty scope: it reads
+            # nothing, and it is how the first administrator onboards the first
+            # customer (ADR 0017, decision 12). Named tenants, none granted: refused.
+            if not tenant_ids and not all_tenants:
                 raise NoScopeError("no tenants assigned")
         else:
             raise ScopeDefectError("unknown principal kind")
