@@ -21,15 +21,15 @@ resources:
 images:
   - name: api
     newName: crcloudopsdevweu.azurecr.io/api
-    newTag: e3933b8
+    newTag: 981de55
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
-    newTag: e3933b8
+    newTag: 981de55
   # The console (ADR 0017): listed before it is deployed, so that the first release
   # from main sets a tag that exists. base/web joins the resources after that.
   - name: web
     newName: crcloudopsdevweu.azurecr.io/web
-    newTag: "none-yet"
+    newTag: 981de55
   - name: pause
     newName: crcloudopsdevweu.azurecr.io/pause
     newTag: 3.10.1
