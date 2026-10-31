@@ -23,13 +23,13 @@ resources:
 images:
   - name: api
     newName: crcloudopsdevweu.azurecr.io/api
-    newTag: 19890f7
+    newTag: af470df
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
-    newTag: 19890f7
+    newTag: af470df
   - name: web
     newName: crcloudopsdevweu.azurecr.io/web
-    newTag: 19890f7
+    newTag: af470df
   - name: pause
     newName: crcloudopsdevweu.azurecr.io/pause
     newTag: 3.10.1
