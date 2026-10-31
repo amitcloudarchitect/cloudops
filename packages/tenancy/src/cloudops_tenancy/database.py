@@ -16,7 +16,9 @@ Defence in depth, in order of strength:
    connection is checked; superuser, BYPASSRLS, or membership of a role that
    owns tables is refused (``UnsafeDatabaseRoleError``). With RLS ``FORCE``d
    and an empty scope matching nothing, an unscoped connection sees zero rows.
-2. Scope is applied inside the transaction, transaction-locally.
+2. Scope is applied inside the transaction, transaction-locally. A customer
+   scope also switches to the ``cloudops_customer`` database role, whose
+   column grants are the customer data boundary (ADR 0018).
 3. Application statements cannot change scope or end the transaction
    (``_guard.check_statement``), and scope is re-verified before commit.
 4. CI rejects any data access path outside this package.
@@ -43,7 +45,7 @@ from cloudops_tenancy.errors import (
     TenancyError,
     UnsafeDatabaseRoleError,
 )
-from cloudops_tenancy.scope import TenantScope
+from cloudops_tenancy.scope import Role, TenantScope
 
 # Marks the package's own statements so the guard lets them through. Only this
 # module sets it; ScopedConnection offers no way to pass execution options.
@@ -76,8 +78,19 @@ _APPLY_SCOPE: Final = text(
 
 _READ_SCOPE: Final = text(
     "SELECT current_setting('app.tenant_ids', true), current_setting('app.role', true),"
-    "       current_setting('app.account_ids', true)"
+    "       current_setting('app.account_ids', true),"
+    "       CASE WHEN current_user = session_user THEN '' ELSE current_user::text END"
 )
+
+# A customer scope also runs as its own database role (ADR 0018). Row-level
+# security decides which rows a scope sees but cannot hide a column, so the
+# columns a customer may read are column-level grants to this role, and a table
+# without a grant is refused outright. The login is a member WITH INHERIT FALSE
+# (db/bootstrap/roles.sql): it can switch, and never otherwise holds the role's
+# rights. Transaction-local for the same reason as the settings below: a
+# session-level SET ROLE would hand the next pooled request a customer's role.
+CUSTOMER_DB_ROLE: Final = "cloudops_customer"
+_AS_CUSTOMER: Final = text(f"SET LOCAL ROLE {CUSTOMER_DB_ROLE}")
 
 # One row: can this login reach a role that bypasses RLS, either directly or by
 # SET ROLE, or that owns a table (owners can ALTER TABLE ... NO FORCE)?
@@ -199,6 +212,8 @@ class Database:
                 },
                 execution_options={_INTERNAL: True},
             )
+            if scope.role is Role.CUSTOMER:
+                await conn.execute(_AS_CUSTOMER, execution_options={_INTERNAL: True})
             scoped = ScopedConnection(conn, scope)
             try:
                 yield scoped
@@ -232,9 +247,18 @@ def _psycopg_url(dsn: str) -> URL:
 
 
 async def _assert_scope_intact(conn: AsyncConnection, scope: TenantScope) -> None:
-    row = (await conn.execute(_READ_SCOPE, execution_options={_INTERNAL: True})).one()
-    expected = (scope.tenant_ids_setting, scope.role.value, scope.account_ids_setting)
-    if (row[0], row[1], row[2]) != expected:
+    row = (
+        await conn.execute(
+            _READ_SCOPE, execution_options={_INTERNAL: True}
+        )
+    ).one()
+    expected = (
+        scope.tenant_ids_setting,
+        scope.role.value,
+        scope.account_ids_setting,
+        CUSTOMER_DB_ROLE if scope.role is Role.CUSTOMER else "",
+    )
+    if (row[0], row[1], row[2], row[3]) != expected:
         raise ScopeTamperingError("scope changed during the transaction; rolled back")
 
 

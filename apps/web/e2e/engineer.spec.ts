@@ -7,7 +7,7 @@ test.use({ role: "engineer" });
 test("sees the operations modules and connectors, and not customer mapping", async ({ signedIn: page }) => {
   await page.goto("/");
   await expect(page).toHaveURL(/\/work$/);
-  expect(await navLabels(page)).toEqual(["Work queue", "Resources", "Customers", "Connectors"]);
+  expect(await navLabels(page)).toEqual(["Work queue", "Performance", "Security posture", "Resources", "Customers", "Connectors"]);
   await expect(page.getByTestId("role")).toHaveText("Engineer");
 });
 

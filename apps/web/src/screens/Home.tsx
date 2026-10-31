@@ -4,14 +4,15 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
-import { visibleModules } from "@/lib/nav";
+import { landing, visibleModules } from "@/lib/nav";
 import { can, useMe } from "@/lib/session";
 
-// Home is the first module the role can use.
+// Home is the role's landing view (a customer role names one, ADR 0018), or the
+// first module the role can use.
 export function Home() {
   const me = useMe();
   const router = useRouter();
-  const first = visibleModules((p) => can(me, p))[0];
+  const first = landing(visibleModules((p) => can(me, p)), me.landing);
   useEffect(() => {
     if (first) router.replace(first.href);
   }, [first, router]);

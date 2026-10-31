@@ -12,3 +12,8 @@ output "gateway_public_ip" {
   description = "The Gateway API ingress's address (ADR 0011); Front Door's second origin."
   value       = local.public ? azurerm_public_ip.gateway[0].ip_address : null
 }
+
+output "portal_hostname" {
+  description = "The customer portal's address (step 18), for its Entra redirect URI."
+  value       = azurerm_cdn_frontdoor_endpoint.portal.host_name
+}

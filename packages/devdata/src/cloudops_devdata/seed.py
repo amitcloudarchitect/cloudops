@@ -158,6 +158,33 @@ DEMO_PRINCIPALS: Final[tuple[tuple[str, str, str, tuple[str, ...], bool, bool], 
 )
 
 
+# Step 18 (HLD M2): the customer portal is onboarded for these tenants by the
+# dev admin, through the same functions the console uses. Each gets a first
+# customer administrator, who then adds one user per default customer role.
+# (tenant short code, first administrator label, its role, users label -> role)
+PORTAL_AGREED_ROLES: Final = (
+    "Customer viewer", "CXO", "VP or director", "Architect", "Customer engineer",
+    "Security officer", "Approver",
+)
+PORTAL_TENANTS: Final[tuple[tuple[str, str, str, tuple[tuple[str, str], ...]], ...]] = (
+    ("NWL", "customer-nwl-admin", "CXO", (
+        ("customer-nwl-vp", "VP or director"),
+        ("customer-nwl-architect", "Architect"),
+        ("customer-nwl-engineer", "Customer engineer"),
+        ("customer-nwl-security", "Security officer"),
+        ("customer-nwl-approver", "Approver"),
+    )),
+    ("FAB", "customer-fab-admin", "CXO", ()),
+)
+
+
+def demo_labels() -> frozenset[str]:
+    """Every seeded principal a dev token can be minted for by label."""
+    portal = {admin for _, admin, _, _ in PORTAL_TENANTS} | {
+        label for *_, users in PORTAL_TENANTS for label, _ in users}
+    return frozenset({p[0] for p in DEMO_PRINCIPALS} | portal)
+
+
 def demo_oid(label: str) -> UUID:
     return uuid5(NAMESPACE, f"principal:{label}")
 
@@ -190,6 +217,27 @@ async def principals(app: Database, ds: Dataset, admin: UUID) -> list[tuple[str,
                     {"a": admin, "o": oid, "t": tenant, "ids": [first_account[tenant]]},
                 )
             created.append((label, oid))
+        for code, first, first_role, users in PORTAL_TENANTS:
+            tenant = by_code[code]
+            await conn.execute(text(
+                "SELECT access.portal_record_federation(:a, :t, 'entra', :ref, :domains)"),
+                {"a": admin, "t": tenant, "ref": str(uuid5(NAMESPACE, f"directory:{code}")),
+                 "domains": [f"{code.lower()}.example.com"]})
+            await conn.execute(text(
+                "SELECT access.portal_agree_roles(:a, :t, :roles, 'LOCAL-DEV')"),
+                {"a": admin, "t": tenant, "roles": list(PORTAL_AGREED_ROLES)})
+            await conn.execute(text(
+                "SELECT access.portal_assign_first_admin(:a, :t, :o, :n, :r)"),
+                {"a": admin, "t": tenant, "o": demo_oid(first), "n": first, "r": first_role})
+            await conn.execute(text("SELECT access.portal_set_live(:a, :t, true)"),
+                               {"a": admin, "t": tenant})
+            created.append((first, demo_oid(first)))
+            # The customer's own administrator adds its users (ADR 0018, D2).
+            for label, role in users:
+                await conn.execute(text(
+                    "SELECT access.tenant_set_user(:a, :o, :n, :r, false)"),
+                    {"a": demo_oid(first), "o": demo_oid(label), "n": label, "r": role})
+                created.append((label, demo_oid(label)))
     return created
 
 

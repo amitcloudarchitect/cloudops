@@ -299,7 +299,7 @@ def test_case6_unknown_and_customer_roles_see_no_commercial_rows(seeded: Seeded,
     assert tenant_rows == (1,), "the role, not the scope, is what hides the row"
 
 
-@pytest.mark.parametrize("role", list(Role))
+@pytest.mark.parametrize("role", [r for r in Role if r is not Role.CUSTOMER])
 async def test_case6_commercial_visibility_matches_the_role_list(
     app_db: Database, seeded: Seeded, role: Role
 ) -> None:
@@ -307,19 +307,49 @@ async def test_case6_commercial_visibility_matches_the_role_list(
     assert len(rows) == (1 if role.value in COMMERCIAL_ROLES else 0)
 
 
+@pytest.mark.parametrize(
+    "column",
+    ["id", "monthly_manage_revenue", "hosting_acv", "manage_acv", "professional_services"],
+)
+async def test_case6_customer_scope_is_refused_every_commercial_field(
+    app_db: Database, seeded: Seeded, column: str
+) -> None:
+    """The first lock (ADR 0018): a customer scope runs as cloudops_customer,
+    which holds no grant on the SOW, so the database refuses the field."""
+    with pytest.raises(Exception, match="permission denied for table sow"):
+        await _rows(app_db, scope(seeded.a, role=Role.CUSTOMER),
+                    f"SELECT {column} FROM cloudops.sow")
+
+
+async def test_case6_restrictive_policy_holds_if_a_grant_is_ever_made(
+    app_db: Database, seeded: Seeded
+) -> None:
+    """The second lock: grant the customer role the SOW by mistake and
+    commercial_visibility still returns no row."""
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+        cx.execute("GRANT SELECT ON cloudops.sow TO cloudops_customer")
+    try:
+        rows = await _rows(app_db, scope(seeded.a, role=Role.CUSTOMER),
+                           "SELECT monthly_manage_revenue FROM cloudops.sow")
+    finally:
+        with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+            cx.execute("REVOKE SELECT ON cloudops.sow FROM cloudops_customer")
+    assert rows == []
+
+
 async def test_case6_customer_principal(
     api: Api, principals: Principals, seeded: Seeded, app_db: Database
 ) -> None:
-    """Absent by RLS, not by serialisation: the customer role class sees no SOW
-    row even with the query run directly, and the matrix cannot be widened to
-    grant it (D10)."""
+    """Absent by the database, not by serialisation: the customer scope is
+    refused the SOW even with the query run directly, and the matrix cannot be
+    widened to grant it (D10)."""
     assert (await api.get("/v1/commercial/sows", principals.customer_a)).status_code == 403
-    rows = await _rows(
-        app_db,
-        scope(seeded.a, role=Role.CUSTOMER),
-        "SELECT monthly_manage_revenue FROM cloudops.sow",
-    )
-    assert rows == []
+    with pytest.raises(Exception, match="permission denied"):
+        await _rows(
+            app_db,
+            scope(seeded.a, role=Role.CUSTOMER),
+            "SELECT monthly_manage_revenue FROM cloudops.sow",
+        )
     with pytest.raises(Exception, match="commercial permission"):
         await _rows(
             app_db, TenantScope.for_resolution("test"),

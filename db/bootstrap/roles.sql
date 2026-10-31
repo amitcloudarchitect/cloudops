@@ -13,8 +13,13 @@
 --                                     to; login identities are made members of them
 --   cloudops_resolver,                own the access-control functions
 --   cloudops_access_admin             (migration 0004); reachable only through them
+--   cloudops_customer                 what a customer scope runs as (migration 0011,
+--                                     ADR 0018): packages/tenancy switches to it with
+--                                     SET LOCAL ROLE. cloudops_app is a member
+--                                     WITH INHERIT FALSE, so it may switch but never
+--                                     holds the role's rights otherwise.
 --
--- All four are NOLOGIN, NOSUPERUSER, NOBYPASSRLS. The migration role becomes a
+-- All five are NOLOGIN, NOSUPERUSER, NOBYPASSRLS. The migration role becomes a
 -- member of the two function owners WITH INHERIT FALSE: it may hand ownership to
 -- them, but never acts with their rights.
 
@@ -37,7 +42,8 @@ BEGIN
         RAISE EXCEPTION 'migration role "%" does not exist; create it first', migrator;
     END IF;
     FOREACH r IN ARRAY ARRAY['cloudops_app', 'cloudops_ingest',
-                             'cloudops_resolver', 'cloudops_access_admin'] LOOP
+                             'cloudops_resolver', 'cloudops_access_admin',
+                             'cloudops_customer'] LOOP
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
             EXECUTE format('CREATE ROLE %I NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT', r);
             RAISE NOTICE 'created %', r;
@@ -49,6 +55,7 @@ BEGIN
     END LOOP;
     EXECUTE format(
         'GRANT cloudops_resolver, cloudops_access_admin TO %I WITH INHERIT FALSE', migrator);
+    GRANT cloudops_customer TO cloudops_app WITH INHERIT FALSE, SET TRUE;
 END $$;
 
 COMMIT;

@@ -164,7 +164,9 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     each one must be known and confined to a role no login can use. Onboarding
     (0009) inserts a tenant no scope holds yet: insert only, function owner only.
     The re-process queue (0009) is claimed before its tenant is known: waiting
-    requests only, moved to running only, function owner only."""
+    requests only, moved to running only, function owner only. Portal
+    onboarding (0011) is read by the resolver before any scope exists and
+    written by the access functions' owner only."""
     with psycopg.connect(seeded.admin_dsn) as cx:
         extra = cx.execute(
             "SELECT c.relname, p.polname, array(SELECT rolname FROM pg_roles"
@@ -176,6 +178,10 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
         ("alias_reprocess", "reprocess_queue_claim", ["cloudops_access_admin"]),
         ("alias_reprocess", "reprocess_queue_read", ["cloudops_access_admin"]),
         ("llm_call", "spend_registry_read", ["cloudops_resolver"]),
+        ("portal_onboarding", "access_admin_all", ["cloudops_access_admin"]),
+        ("portal_onboarding", "resolver_read", ["cloudops_resolver"]),
+        ("portal_role_agreement", "access_admin_all", ["cloudops_access_admin"]),
+        ("portal_role_agreement", "resolver_read", ["cloudops_resolver"]),
         ("tenant", "tenant_onboarding", ["cloudops_access_admin"]),
         ("tenant", "tenant_registry_read", ["cloudops_resolver"]),
         ("tenant_alias", "alias_registry_read", ["cloudops_resolver"]),

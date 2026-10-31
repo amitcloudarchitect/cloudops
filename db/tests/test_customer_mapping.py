@@ -21,6 +21,10 @@ from .support import raw_scope
 
 pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
+# The function refuses staff without the permission; the database refuses a
+# customer scope before the function runs (migration 0011).
+REFUSED = "not permitted|permission denied for schema access"
+
 
 @dataclass(frozen=True)
 class Mappers:
@@ -180,7 +184,9 @@ async def test_only_mapping_holders_see_the_quarantine_and_never_its_payload_ref
     for refused, role in ((principals.engineer_a, Role.ENGINEER),
                           (principals.finops_all, Role.FINOPS),
                           (principals.customer_a, Role.CUSTOMER)):
-        with pytest.raises(Exception, match="not permitted") as caught:
+        # A customer scope runs as cloudops_customer, which cannot even reach the
+        # access schema (ADR 0018): refused one step earlier, same SQLSTATE.
+        with pytest.raises(Exception, match=REFUSED) as caught:
             await _call(app_db, _scope(*every, role=role),
                         "SELECT * FROM access.alias_quarantine(:a)", a=refused)
         assert _sqlstate(caught.value) == "42501"
@@ -390,7 +396,7 @@ async def test_a_customer_can_reach_none_of_it(
         "SELECT access.propose_alias(:c, 'servicenow', 'Mine', :t, NULL)",
         "SELECT access.decide_alias(:c, :p, 'approve', NULL)",
     ):
-        with pytest.raises(Exception, match=r"not permitted|proposal not found"):
+        with pytest.raises(Exception, match=rf"{REFUSED}|proposal not found"):
             await _call(app_db, customer, sql, c=principals.customer_a, t=a, p=pending)
     with psycopg.connect(seeded.admin_dsn) as cx:
         assert cx.execute("SELECT count(*) FROM cloudops.alias_decision WHERE proposal_id = %s",
@@ -465,7 +471,7 @@ async def test_a_reprocess_never_reaches_outside_scope_or_a_customer(
         await _request(app_db, mappers.only_a, proposal, seeded.a.id)
     with pytest.raises(Exception, match="tenant not found"):
         await _request(app_db, mappers.only_a, proposal, seeded.a.id, b)
-    with pytest.raises(Exception, match="not permitted"):
+    with pytest.raises(Exception, match=REFUSED):
         await _call(app_db, _scope(b, role=Role.CUSTOMER),
                     "SELECT access.request_reprocess(:c, :p)",
                     c=principals.customer_a, p=proposal)

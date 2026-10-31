@@ -8,6 +8,23 @@
  */
 
 export interface paths {
+    "/v1/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Approvals */
+        get: operations["approvals_v1_approvals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/sows": {
         parameters: {
             query?: never;
@@ -250,6 +267,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Onboarding */
+        get: operations["list_onboarding_v1_onboarding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/onboarding/{tenant_id}/federation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Record Federation */
+        post: operations["record_federation_v1_onboarding__tenant_id__federation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/onboarding/{tenant_id}/first-admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Assign First Admin */
+        post: operations["assign_first_admin_v1_onboarding__tenant_id__first_admin_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/onboarding/{tenant_id}/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Live */
+        post: operations["set_live_v1_onboarding__tenant_id__live_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/onboarding/{tenant_id}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Agree Roles */
+        post: operations["agree_roles_v1_onboarding__tenant_id__roles_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/onboarding/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Role Catalogue */
+        get: operations["role_catalogue_v1_onboarding_roles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance */
+        get: operations["performance_v1_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/posture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Posture */
+        get: operations["posture_v1_posture_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/resources": {
         parameters: {
             query?: never;
@@ -295,6 +448,58 @@ export interface paths {
         get: operations["resource_context_v1_resources__resource_id__context_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tenant Roles */
+        get: operations["tenant_roles_v1_tenant_roles_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tenant Users */
+        get: operations["tenant_users_v1_tenant_users_get"];
+        put?: never;
+        /** Set Tenant User */
+        post: operations["set_tenant_user_v1_tenant_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenant/users/{oid}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Disable Tenant User */
+        post: operations["disable_tenant_user_v1_tenant_users__oid__disable_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -365,6 +570,15 @@ export interface components {
             /** Source */
             source: string;
         };
+        /** AgeBand */
+        AgeBand: {
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "0-30" | "31-90" | "91+";
+            open: components["schemas"]["Metric_int_"];
+        };
         /** AliasView */
         AliasView: {
             /** Alias */
@@ -373,6 +587,18 @@ export interface components {
             confirmed_at: string | null;
             /** Source System */
             source_system: string;
+        };
+        /** Approvals */
+        Approvals: {
+            /**
+             * Can Act
+             * @default false
+             * @constant
+             */
+            can_act: false;
+            count: components["schemas"]["Metric_int_"];
+            /** Items */
+            items: components["schemas"]["PendingChange"][];
         };
         /**
          * BandRules
@@ -383,6 +609,17 @@ export interface components {
             failing_run_rate: components["schemas"]["Metric_Decimal_"];
             late_after_intervals: components["schemas"]["Metric_int_"];
             outage_after_intervals: components["schemas"]["Metric_int_"];
+        };
+        /** CatalogueRole */
+        CatalogueRole: {
+            /** Description */
+            description: string | null;
+            /** Landing */
+            landing: string | null;
+            /** Name */
+            name: string;
+            /** Permissions */
+            permissions: string[];
         };
         /** ConnectorHealth */
         ConnectorHealth: {
@@ -530,10 +767,39 @@ export interface components {
             /** Source System */
             source_system: string;
         };
+        /** FederationRequest */
+        FederationRequest: {
+            /** Domains */
+            domains: string[];
+            /**
+             * Idp Kind
+             * @enum {string}
+             */
+            idp_kind: "entra" | "saml" | "wsfed";
+            /** Idp Reference */
+            idp_reference: string;
+        };
+        /** FirstAdminRequest */
+        FirstAdminRequest: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Oid
+             * Format: uuid
+             */
+            oid: string;
+            /** Role */
+            role: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** LiveRequest */
+        LiveRequest: {
+            /** Live */
+            live: boolean;
         };
         /** Metric[Decimal] */
         Metric_Decimal_: {
@@ -575,6 +841,8 @@ export interface components {
         MeView: {
             /** Kind */
             kind: string;
+            /** Landing */
+            landing: string | null;
             /**
              * Oid
              * Format: uuid
@@ -586,13 +854,59 @@ export interface components {
             role: string;
             /** Subscription Limited */
             subscription_limited: boolean;
+            /** Tenant Admin */
+            tenant_admin: boolean;
             /** Tenants */
             tenants: components["schemas"]["TenantView"][];
+        };
+        /** MonthPerformance */
+        MonthPerformance: {
+            changes: components["schemas"]["Metric_int_"];
+            incidents_opened: components["schemas"]["Metric_int_"];
+            incidents_resolved: components["schemas"]["Metric_int_"];
+            /**
+             * Month
+             * Format: date
+             */
+            month: string;
+            service_requests: components["schemas"]["Metric_int_"];
+            sla_attainment: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** OnboardedTenant */
         OnboardedTenant: {
             /** Short Code */
             short_code: string;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** Onboarding */
+        Onboarding: {
+            /** Agreed Roles */
+            agreed_roles: string[];
+            /** Domains */
+            domains: string[];
+            /** Federation Recorded At */
+            federation_recorded_at: string | null;
+            /** First Admin At */
+            first_admin_at: string | null;
+            /** First Admin Oid */
+            first_admin_oid: string | null;
+            /** Idp Kind */
+            idp_kind: ("entra" | "saml" | "wsfed") | null;
+            /** Idp Reference */
+            idp_reference: string | null;
+            /** Live At */
+            live_at: string | null;
+            /** Roles Agreed At */
+            roles_agreed_at: string | null;
+            /** Roles Agreement Ref */
+            roles_agreement_ref: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_started" | "setup" | "live" | "suspended";
+            /** Suspended At */
+            suspended_at: string | null;
             tenant: components["schemas"]["TenantView"];
         };
         /** OnboardRequest */
@@ -601,6 +915,68 @@ export interface components {
             canonical_name: string;
             /** Short Code */
             short_code: string;
+        };
+        /** OpenFinding */
+        OpenFinding: {
+            age: components["schemas"]["Metric_int_"];
+            /** Asset Name */
+            asset_name: string | null;
+            /**
+             * First Detected
+             * Format: date-time
+             */
+            first_detected: string;
+            /** Qid */
+            qid: string;
+            /** Resource Id */
+            resource_id: string | null;
+            /**
+             * Severity
+             * @enum {integer}
+             */
+            severity: 1 | 2 | 3 | 4 | 5;
+            /** Title */
+            title: string;
+        };
+        /** PendingChange */
+        PendingChange: {
+            /** Change Request */
+            change_request: string | null;
+            /** Configuration Item */
+            configuration_item: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /** Priority */
+            priority: string | null;
+            /** Resource Id */
+            resource_id: string | null;
+            /** Short Description */
+            short_description: string | null;
+            /** State */
+            state: string | null;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** Performance */
+        Performance: {
+            /** Months */
+            months: components["schemas"]["MonthPerformance"][];
+            open_incidents: components["schemas"]["Metric_int_"];
+            sla_breached_open: components["schemas"]["Metric_int_"];
+        };
+        /** Posture */
+        Posture: {
+            /** By Age */
+            by_age: components["schemas"]["AgeBand"][];
+            /** By Severity */
+            by_severity: components["schemas"]["SeverityCount"][];
+            /** Findings */
+            findings: components["schemas"]["OpenFinding"][];
+            open_total: components["schemas"]["Metric_int_"];
         };
         /** ProposalRequest */
         ProposalRequest: {
@@ -846,6 +1222,31 @@ export interface components {
              */
             reviewer_oid: string;
         };
+        /** RoleAgreementRequest */
+        RoleAgreementRequest: {
+            /** Agreement Ref */
+            agreement_ref: string;
+            /** Roles */
+            roles: string[];
+        };
+        /** RoleOption */
+        RoleOption: {
+            /** Description */
+            description: string | null;
+            /** Landing */
+            landing: string | null;
+            /** Name */
+            name: string;
+        };
+        /** SeverityCount */
+        SeverityCount: {
+            open: components["schemas"]["Metric_int_"];
+            /**
+             * Severity
+             * @enum {integer}
+             */
+            severity: 1 | 2 | 3 | 4 | 5;
+        };
         /** SowView */
         SowView: {
             /** Currency */
@@ -877,6 +1278,46 @@ export interface components {
             /** Status */
             status: string;
             tenant: components["schemas"]["TenantView"];
+        };
+        /** TenantUser */
+        TenantUser: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Disabled At */
+            disabled_at: string | null;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Oid
+             * Format: uuid
+             */
+            oid: string;
+            /** Role */
+            role: string;
+            /** Subscription Limited */
+            subscription_limited: boolean;
+            /** Tenant Admin */
+            tenant_admin: boolean;
+        };
+        /** TenantUserRequest */
+        TenantUserRequest: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Oid
+             * Format: uuid
+             */
+            oid: string;
+            /** Role */
+            role: string;
+            /**
+             * Tenant Admin
+             * @default false
+             */
+            tenant_admin: boolean;
         };
         /** TenantView */
         TenantView: {
@@ -1067,6 +1508,26 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    approvals_v1_approvals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Approvals"];
+                };
+            };
+        };
+    };
     list_sows_v1_commercial_sows_get: {
         parameters: {
             query?: never;
@@ -1470,6 +1931,226 @@ export interface operations {
             };
         };
     };
+    list_onboarding_v1_onboarding_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Onboarding"][];
+                };
+            };
+        };
+    };
+    record_federation_v1_onboarding__tenant_id__federation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FederationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Onboarding"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_first_admin_v1_onboarding__tenant_id__first_admin_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FirstAdminRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Onboarding"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_live_v1_onboarding__tenant_id__live_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LiveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Onboarding"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agree_roles_v1_onboarding__tenant_id__roles_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoleAgreementRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Onboarding"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    role_catalogue_v1_onboarding_roles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogueRole"][];
+                };
+            };
+        };
+    };
+    performance_v1_performance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Performance"];
+                };
+            };
+        };
+    };
+    posture_v1_posture_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Posture"];
+                };
+            };
+        };
+    };
     list_resources_v1_resources_get: {
         parameters: {
             query?: never;
@@ -1539,6 +2220,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResourceContext"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tenant_roles_v1_tenant_roles_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoleOption"][];
+                };
+            };
+        };
+    };
+    tenant_users_v1_tenant_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantUser"][];
+                };
+            };
+        };
+    };
+    set_tenant_user_v1_tenant_users_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantUser"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_tenant_user_v1_tenant_users__oid__disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                oid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantUser"][];
                 };
             };
             /** @description Validation Error */

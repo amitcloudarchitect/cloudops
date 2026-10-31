@@ -38,6 +38,10 @@ const PRESETS: Record<string, View[]> = {
     { name: "Needs a person", query: "", facets: { triage: ROUTE_LABEL.human ?? "" }, sort: null },
   ],
   "Customer viewer": [{ name: "Incidents", query: "", facets: { kind: "Incident" }, sort: { key: "opened", dir: "desc" } }],
+  "Customer engineer": [
+    { name: "Incidents", query: "", facets: { kind: "Incident" }, sort: { key: "opened", dir: "desc" } },
+    { name: "SLA breached", query: "", facets: { sla: "Breached" }, sort: { key: "opened", dir: "asc" } },
+  ],
 };
 
 type Status = "open" | "closed" | "all";
@@ -69,7 +73,8 @@ export function WorkQueue() {
     },
     { key: "summary", header: "Summary", value: (w) => w.short_description, className: "min-w-64" },
     ...(me.tenants.length > 1 ? [{ key: "customer", header: "Customer", value: (w: WorkItemSummary) => w.tenant.name }] : []),
-    { key: "workgroup", header: "Workgroup", value: (w) => w.workgroup },
+    // Getronics workgroups are staff-only: the database refuses them to a customer (ADR 0018).
+    ...(staff ? [{ key: "workgroup", header: "Workgroup", value: (w: WorkItemSummary) => w.workgroup }] : []),
     { key: "ci", header: "Configuration item", value: (w) => w.configuration_item },
     { key: "opened", header: "Opened", value: (w) => w.opened_at, render: (w) => date(w.opened_at) },
     {
@@ -92,7 +97,7 @@ export function WorkQueue() {
 
   const facets: Facet<WorkItemSummary>[] = [
     { key: "kind", label: "Kind", value: (w) => KIND_LABEL[w.kind] ?? w.kind },
-    { key: "workgroup", label: "Workgroup", value: (w) => w.workgroup },
+    ...(staff ? [{ key: "workgroup", label: "Workgroup", value: (w: WorkItemSummary) => w.workgroup }] : []),
     ...(me.tenants.length > 1 ? [{ key: "customer", label: "Customer", value: (w: WorkItemSummary) => w.tenant.name }] : []),
     { key: "sla", label: "SLA", value: (w) => (w.sla_breached ? "Breached" : null) },
     ...(staff

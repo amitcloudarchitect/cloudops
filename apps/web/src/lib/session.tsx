@@ -10,6 +10,7 @@ import type { Me } from "@cloudops/contracts";
 
 import { ApiError, apiGet } from "./api";
 import { useAuth } from "./auth";
+import { TENANT_ADMIN } from "./nav";
 
 type SessionState =
   | { status: "loading" }
@@ -62,5 +63,6 @@ export function useMe(): Me {
 }
 
 export function can(me: Me, permission: string): boolean {
+  if (permission === TENANT_ADMIN) return me.tenant_admin;
   return permission === "authenticated" || me.permissions.includes(permission);
 }

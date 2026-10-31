@@ -23,11 +23,14 @@ type GetOk<P extends Get> = paths[P] extends {
 }
   ? R
   : never;
+// 201 for a POST that creates, 200 for one that changes and answers with the result.
 type PostOk<P extends Post> = paths[P] extends {
   post: { responses: { 201: { content: { "application/json": infer R } } } };
 }
   ? R
-  : never;
+  : paths[P] extends { post: { responses: { 200: { content: { "application/json": infer R } } } } }
+    ? R
+    : never;
 // Endpoints that answer 204 No Content.
 type PostEmpty = { [P in Post]: paths[P] extends { post: { responses: { 204: unknown } } } ? P : never }[Post];
 // An endpoint that takes no body takes `undefined`, and nothing is sent.

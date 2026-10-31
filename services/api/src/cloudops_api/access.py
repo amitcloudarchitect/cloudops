@@ -4,10 +4,13 @@
     async with db.transaction(access.scope) as conn: ...
 
 The only input is the authenticated ``oid``. Role, tenants and subscriptions
-come from ``access.resolve_principal()`` in the database, on every request,
+come from ``access.resolve_principal_v2()`` in the database, on every request,
 so a revoked assignment stops working on the next request (D4). Nothing here
 reads a token claim, a header or a query parameter, because nothing is passed
 one.
+
+A customer resolves only while its tenant's portal is live and its role is in
+the set agreed with the customer (migration 0011); otherwise it is unknown here.
 
 Two kinds of failure, deliberately different:
 
@@ -32,8 +35,8 @@ from cloudops_api.auth import Identity
 from cloudops_tenancy import Database, Role, TenantScope
 
 _RESOLVE: Final = text(
-    "SELECT kind, role_name, role_class, permissions, all_tenants, tenant_ids, account_ids"
-    " FROM access.resolve_principal(:oid)"
+    "SELECT kind, role_name, role_class, permissions, all_tenants, tenant_ids, account_ids,"
+    " is_tenant_admin, landing FROM access.resolve_principal_v2(:oid)"
 )
 
 STAFF_ROLES: Final = frozenset(Role) - {Role.CUSTOMER, Role.UNRESOLVED, Role.INGEST}
@@ -54,6 +57,10 @@ class Access:
     role_name: str
     permissions: frozenset[str]
     scope: TenantScope
+    # A customer administrator of its own tenant (ADR 0018, D2). Never staff.
+    is_tenant_admin: bool = False
+    # Where the role opens in the console; None: its first module.
+    landing: str | None = None
 
     def allows(self, permission: str) -> bool:
         return permission in self.permissions
@@ -72,7 +79,8 @@ class ScopeResolver:
         if len(rows) > 1:
             raise ScopeDefectError("principal resolved to more than one record")
         row: tuple[Any, ...] = tuple(rows[0])
-        kind, role_name, role_class, permissions, all_tenants, tenants, accounts = row
+        (kind, role_name, role_class, permissions, all_tenants, tenants, accounts,
+         tenant_admin, landing) = row
         try:
             role = Role(role_class)
         except ValueError:
@@ -104,5 +112,11 @@ class ScopeResolver:
             if not account_ids:
                 raise NoScopeError("no subscriptions assigned")
 
+        if tenant_admin and kind != "customer":
+            raise ScopeDefectError("staff principal marked tenant administrator")
+
         scope = TenantScope(tenant_ids, role, identity.principal_id, account_ids=account_ids)
-        return Access(identity, kind, str(role_name), frozenset(permissions), scope)
+        return Access(
+            identity, kind, str(role_name), frozenset(permissions), scope,
+            is_tenant_admin=bool(tenant_admin), landing=None if landing is None else str(landing),
+        )

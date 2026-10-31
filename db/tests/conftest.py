@@ -127,6 +127,16 @@ def _provision_access_roles(cx: psycopg.Connection[Any], migrator: str) -> None:
                 sql.Identifier(role), sql.Identifier(migrator)
             )
         )
+    # What a customer scope runs as (migration 0011): cloudops_app may switch to
+    # it, never inherit it. Created here if the server's bootstrap predates it.
+    for role in ("cloudops_app", "cloudops_ingest", "cloudops_customer"):
+        if cx.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (role,)).fetchone() is None:
+            cx.execute(
+                sql.SQL("CREATE ROLE {} NOLOGIN NOSUPERUSER NOBYPASSRLS NOINHERIT").format(
+                    sql.Identifier(role)
+                )
+            )
+    cx.execute("GRANT cloudops_customer TO cloudops_app WITH INHERIT FALSE, SET TRUE")
 
 
 def _provision_extensions(cx: psycopg.Connection[Any], migrator: str) -> bool:
@@ -441,6 +451,36 @@ class Principals:
     disabled: UUID  # customer of a, disabled -> 403
     customer_two_tenants: UUID  # defect -> 500
     customer_no_tenant: UUID  # defect -> 500
+    # Step 18: each tenant's portal is onboarded and live, with a first
+    # administrator (a CXO) assigned through the onboarding functions.
+    tenant_admin_a: UUID
+    tenant_admin_b: UUID
+    tenant_admin_c: UUID
+
+
+# The role set the suite's tenants agree: every default customer role (0011)
+# and the original viewer.
+AGREED_ROLES = (
+    "Customer viewer", "CXO", "VP or director", "Architect", "Customer engineer",
+    "Security officer", "Approver",
+)
+
+
+async def onboard_portal(conn: Any, actor: UUID, tenant: UUID, first_admin: UUID) -> None:
+    """HLD M2, as a platform administrator performs it."""
+    await _access(
+        conn, "SELECT access.portal_record_federation(:a, :t, 'entra', :ref, :domains)",
+        a=actor, t=tenant, ref=str(uuid4()), domains=[f"t{tenant.hex[:8]}.example.test"],
+    )
+    await _access(
+        conn, "SELECT access.portal_agree_roles(:a, :t, :roles, 'TEST-AGREEMENT')",
+        a=actor, t=tenant, roles=list(AGREED_ROLES),
+    )
+    await _access(
+        conn, "SELECT access.portal_assign_first_admin(:a, :t, :o, 'First admin', 'CXO')",
+        a=actor, t=tenant, o=first_admin,
+    )
+    await _access(conn, "SELECT access.portal_set_live(:a, :t, true)", a=actor, t=tenant)
 
 
 async def _access(conn: Any, sql_text: str, **params: Any) -> None:
@@ -453,7 +493,7 @@ async def _access(conn: Any, sql_text: str, **params: Any) -> None:
 async def principals(seeded: Seeded) -> Principals:
     from cloudops_tenancy import TenantScope
 
-    p = Principals(*(uuid4() for _ in range(11)))
+    p = Principals(*(uuid4() for _ in range(14)))
     db = Database.create(seeded.app_dsn, pool_size=1, max_overflow=0)
     a, b, c = seeded.a.id, seeded.b.id, seeded.c.id
     try:
@@ -497,6 +537,9 @@ async def principals(seeded: Seeded) -> Principals:
             # Defects: the functions allow building them; the resolver must refuse.
             await principal(p.customer_two_tenants, "customer", "Customer viewer", a, b)
             await principal(p.customer_no_tenant, "customer", "Customer viewer")
+            for tenant, first_admin in ((a, p.tenant_admin_a), (b, p.tenant_admin_b),
+                                        (c, p.tenant_admin_c)):
+                await onboard_portal(conn, act, tenant, first_admin)
     finally:
         await db.dispose()
     return p
