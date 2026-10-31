@@ -18,7 +18,7 @@ from sqlalchemy import text
 
 from cloudops_tenancy import Database, Role, TenantScope
 
-from .conftest import Api, Principals, Seeded
+from .conftest import AGREED_ROLES, Api, Principals, Seeded
 
 pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
@@ -95,6 +95,10 @@ async def customer_with_permission(seeded: Seeded, principals: Principals) -> UU
                 {**act, "o": oid, "r": role})
             await conn.execute(text("SELECT access.grant_tenant(:a, :o, :t)"),
                                {**act, "o": oid, "t": seeded.a.id})
+            # In tenant a's agreed role set, so it resolves (migration 0011).
+            await conn.execute(
+                text("SELECT access.portal_agree_roles(:a, :t, :roles, 'TEST-AGREEMENT')"),
+                {**act, "t": seeded.a.id, "roles": [*AGREED_ROLES, role]})
     finally:
         await db.dispose()
     return oid

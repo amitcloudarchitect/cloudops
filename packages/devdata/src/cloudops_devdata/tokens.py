@@ -96,9 +96,9 @@ def main(argv: list[str] | None = None) -> int:
     elif args.principal == "platform-admin":
         oid = UUID(settings.secrets.get("platform-admin-oid"))
     else:
-        from cloudops_devdata.seed import DEMO_PRINCIPALS, demo_oid
+        from cloudops_devdata.seed import demo_labels, demo_oid
 
-        if args.principal not in {p[0] for p in DEMO_PRINCIPALS}:
+        if args.principal not in demo_labels():
             print(f"error: no seeded principal '{args.principal}'", file=sys.stderr)
             return 2
         oid = demo_oid(args.principal)

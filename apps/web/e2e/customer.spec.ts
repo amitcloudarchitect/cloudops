@@ -6,7 +6,10 @@ test.use({ role: "customer" });
 
 test("sees its own services, without staff-only detail", async ({ signedIn: page }) => {
   await page.goto("/");
-  expect(await navLabels(page)).toEqual(["Work queue", "Resources", "Customers"]);
+  // The viewer role opens on its overview (its landing, migration 0011).
+  await expect(page).toHaveURL(/\/customers$/);
+  expect(await navLabels(page)).toEqual(["Work queue", "Performance", "Security posture", "Resources", "Customers"]);
+  await page.goto("/work");
   await expect(page.getByText("Customer viewer · Customer")).toBeVisible();
   const table = page.getByRole("table", { name: "Work items" });
   await expect(table).toBeVisible();

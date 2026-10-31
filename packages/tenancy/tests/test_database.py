@@ -323,6 +323,48 @@ async def test_account_scope_is_set_and_widening_it_is_caught_at_commit(
         await widen()
 
 
+async def test_customer_scope_runs_as_the_customer_database_role(
+    db: Database, provisioned: Provisioned
+) -> None:
+    """ADR 0018: a customer scope switches role for its transaction only, so the
+    next transaction on the same pooled connection is back to the login."""
+    who = text("SELECT current_user::text, session_user::text")
+    customer = scope(provisioned.tenant_a, role=Role.CUSTOMER)
+    async with db.transaction(customer) as conn:
+        current, session = tuple((await conn.execute(who)).one())
+        assert current == "cloudops_customer" != session
+        rows = (await conn.execute(text("SELECT label FROM cloudops.tenancy_probe"))).all()
+        assert len(rows) == provisioned.rows_per_tenant[provisioned.tenant_a]
+    async with db.transaction(scope(provisioned.tenant_a)) as conn:
+        current, session = tuple((await conn.execute(who)).one())
+        assert current == session
+
+
+async def test_customer_role_is_refused_what_it_was_not_granted(
+    db: Database, provisioned: Provisioned
+) -> None:
+    """No grant, no read: the restrictive policy is the second lock, not the first."""
+    with pytest.raises(Exception, match="permission denied"):
+        async with db.transaction(scope(provisioned.tenant_a, role=Role.CUSTOMER)) as conn:
+            await conn.execute(text("SELECT margin FROM cloudops.tenancy_commercial_probe"))
+
+
+async def test_leaving_the_customer_role_is_caught_at_commit(
+    db: Database, provisioned: Provisioned
+) -> None:
+    from cloudops_tenancy.database import _INTERNAL
+
+    async def escape() -> None:
+        async with db.transaction(scope(provisioned.tenant_a, role=Role.CUSTOMER)) as conn:
+            await conn._conn.execute(text("RESET ROLE"), execution_options={_INTERNAL: True})
+
+    with pytest.raises(ScopeTamperingError):
+        await escape()
+    with pytest.raises(ScopeTamperingError):
+        async with db.transaction(scope(provisioned.tenant_a, role=Role.CUSTOMER)) as conn:
+            await conn.execute(text("RESET ROLE"))
+
+
 async def test_connection_is_dead_after_its_transaction(
     db: Database, provisioned: Provisioned
 ) -> None:

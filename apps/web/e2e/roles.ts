@@ -5,6 +5,14 @@ export const ROLES = {
   finops: "finops-all",
   admin: "platform-admin",
   customerMaster: "customer-master",
+  // Step 18: one Northwind user per default customer role (seed.py, PORTAL_TENANTS).
+  // The CXO is also Northwind's first administrator.
+  cxo: "customer-nwl-admin",
+  vp: "customer-nwl-vp",
+  architect: "customer-nwl-architect",
+  customerEngineer: "customer-nwl-engineer",
+  security: "customer-nwl-security",
+  approver: "customer-nwl-approver",
 } as const;
 
 export type RoleName = keyof typeof ROLES;

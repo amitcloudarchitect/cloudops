@@ -21,7 +21,9 @@ export const LOCAL_TOKEN_KEY = "cloudops.dev-token";
 type AuthState =
   | { status: "loading" }
   | { status: "signed-out" }
-  | { status: "signed-in"; name: string };
+  // objectId is shown, never sent: a user with no access gives it to whoever
+  // assigns their role. Scope is always the API's, from the verified token.
+  | { status: "signed-in"; name: string; objectId: string | null };
 
 interface Auth {
   state: AuthState;
@@ -66,17 +68,23 @@ function localToken(): string | null {
   }
 }
 
-function claimName(token: string): string {
+function claims(token: string): Record<string, unknown> {
   try {
     const part = token.split(".")[1] ?? "";
-    const body = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/"))) as Record<
-      string,
-      unknown
-    >;
-    return typeof body.name === "string" ? body.name : "Local user";
+    return JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/"))) as Record<string, unknown>;
   } catch {
-    return "Local user";
+    return {};
   }
+}
+
+function claimName(token: string): string {
+  const name = claims(token).name;
+  return typeof name === "string" ? name : "Local user";
+}
+
+function claimOid(token: string): string | null {
+  const oid = claims(token).oid;
+  return typeof oid === "string" ? oid : null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -89,14 +97,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mode === "local") {
         const token = localToken();
         if (!cancelled) {
-          setState(token ? { status: "signed-in", name: claimName(token) } : { status: "signed-out" });
+          setState(token ? { status: "signed-in", name: claimName(token), objectId: claimOid(token) } : { status: "signed-out" });
         }
         return;
       }
       const client = await entraClient();
       const account = activeAccount(client);
       if (!cancelled) {
-        setState(account ? { status: "signed-in", name: account.name ?? account.username } : { status: "signed-out" });
+        setState(
+          account
+            ? { status: "signed-in", name: account.name ?? account.username, objectId: account.localAccountId || null }
+            : { status: "signed-out" },
+        );
       }
     })().catch(() => {
       if (!cancelled) setState({ status: "signed-out" });

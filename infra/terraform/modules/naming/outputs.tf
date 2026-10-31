@@ -104,6 +104,11 @@ output "frontdoor" {
     origin     = "aks-ingress"
     # The Gateway API ingress (ADR 0011), side by side with origin until cutover.
     gateway_origin = "aks-gateway"
+    # The customer portal's own hostname (step 18; LLD, Egress and edge: separate
+    # hostnames so WAF policy, rate limits and certificates are tuned independently).
+    portal_endpoint     = "cloudops-portal-${local.e}"
+    portal_origin_group = "og-portal-aks-gateway"
+    portal_waf_policy   = "wafcloudopsportal${local.e}"
   }
 }
 

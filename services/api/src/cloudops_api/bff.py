@@ -53,6 +53,8 @@ class MeView(ApiModel):
     permissions: list[str]
     tenants: list[TenantView]
     subscription_limited: bool
+    tenant_admin: bool
+    landing: str | None
 
 
 class ResourceView(ApiModel):
@@ -150,6 +152,8 @@ async def me(request: Request, access: AccessDep) -> MeView:
         permissions=sorted(access.permissions),
         tenants=[TenantView(id=r[0], name=r[1]) for r in rows],
         subscription_limited=access.scope.account_ids is not None,
+        tenant_admin=access.is_tenant_admin,
+        landing=access.landing,
     )
 
 

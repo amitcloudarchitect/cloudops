@@ -41,7 +41,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       content = (
         <EmptyState
           title="Your account has no access yet"
-          next="A platform administrator assigns your role and customers. Ask them, then sign in again."
+          next={
+            <>
+              Getronics staff: a platform administrator assigns your role and customers. Customers: your organisation’s
+              portal administrator adds you. Ask them, then sign in again.
+              {state.status === "signed-in" && state.objectId ? (
+                <span className="mt-2 block">
+                  Give them your object id: <code className="font-mono text-ink">{state.objectId}</code>
+                </span>
+              ) : null}
+            </>
+          }
         />
       );
       break;

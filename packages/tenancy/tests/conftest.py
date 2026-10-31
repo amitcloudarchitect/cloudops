@@ -139,6 +139,16 @@ def provisioned() -> Iterator[Provisioned]:
             cx.execute(
                 sql.SQL("GRANT {} TO {}").format(sql.Identifier(owner), sql.Identifier(member))
             )
+            # The customer database role is cluster-wide and fixed by name (ADR 0018).
+            if cx.execute(
+                "SELECT 1 FROM pg_roles WHERE rolname = 'cloudops_customer'"
+            ).fetchone() is None:
+                cx.execute("CREATE ROLE cloudops_customer NOLOGIN NOSUPERUSER NOBYPASSRLS")
+            cx.execute(
+                sql.SQL("GRANT cloudops_customer TO {} WITH INHERIT FALSE, SET TRUE").format(
+                    sql.Identifier(app)
+                )
+            )
 
         test_admin = _with(admin, drivername="postgresql", database=dbname)
         try:
@@ -155,6 +165,9 @@ def provisioned() -> Iterator[Provisioned]:
                     "GRANT USAGE ON ALL SEQUENCES IN SCHEMA cloudops TO {}",
                 ):
                     cx.execute(sql.SQL(grant).format(ap))
+                # The customer role reads the probe table, never the commercial one.
+                cx.execute("GRANT USAGE ON SCHEMA cloudops TO cloudops_customer")
+                cx.execute("GRANT SELECT ON cloudops.tenancy_probe TO cloudops_customer")
                 cx.execute("RESET ROLE")
                 # Seeded as superuser, which bypasses RLS; nothing under test does.
                 for tenant, n in rows.items():

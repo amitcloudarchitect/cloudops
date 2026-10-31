@@ -29,6 +29,29 @@
         "title": "AcknowledgeRequest",
         "type": "object"
       },
+      "AgeBand": {
+        "additionalProperties": false,
+        "properties": {
+          "band": {
+            "enum": [
+              "0-30",
+              "31-90",
+              "91+"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "band",
+          "open"
+        ],
+        "title": "AgeBand",
+        "type": "object"
+      },
       "AliasView": {
         "additionalProperties": false,
         "properties": {
@@ -61,6 +84,33 @@
         "title": "AliasView",
         "type": "object"
       },
+      "Approvals": {
+        "additionalProperties": false,
+        "properties": {
+          "can_act": {
+            "const": false,
+            "default": false,
+            "title": "Can Act",
+            "type": "boolean"
+          },
+          "count": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PendingChange"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "count"
+        ],
+        "title": "Approvals",
+        "type": "object"
+      },
       "BandRules": {
         "additionalProperties": false,
         "description": "The thresholds the bands were computed with, so a screen explains them\nwithout restating them.",
@@ -81,6 +131,52 @@
           "failing_run_rate"
         ],
         "title": "BandRules",
+        "type": "object"
+      },
+      "CatalogueRole": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "landing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landing"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "landing",
+          "permissions"
+        ],
+        "title": "CatalogueRole",
         "type": "object"
       },
       "ConnectorHealth": {
@@ -631,6 +727,73 @@
         "title": "DriftView",
         "type": "object"
       },
+      "FederationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "domains": {
+            "items": {
+              "maxLength": 253,
+              "minLength": 3,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Domains",
+            "type": "array"
+          },
+          "idp_kind": {
+            "enum": [
+              "entra",
+              "saml",
+              "wsfed"
+            ],
+            "title": "Idp Kind",
+            "type": "string"
+          },
+          "idp_reference": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Idp Reference",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idp_kind",
+          "idp_reference",
+          "domains"
+        ],
+        "title": "FederationRequest",
+        "type": "object"
+      },
+      "FirstAdminRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "oid": {
+            "format": "uuid",
+            "title": "Oid",
+            "type": "string"
+          },
+          "role": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "oid",
+          "display_name",
+          "role"
+        ],
+        "title": "FirstAdminRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -644,12 +807,37 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "LiveRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "live": {
+            "title": "Live",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "live"
+        ],
+        "title": "LiveRequest",
+        "type": "object"
+      },
       "MeView": {
         "additionalProperties": false,
         "properties": {
           "kind": {
             "title": "Kind",
             "type": "string"
+          },
+          "landing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landing"
           },
           "oid": {
             "format": "uuid",
@@ -671,6 +859,10 @@
             "title": "Subscription Limited",
             "type": "boolean"
           },
+          "tenant_admin": {
+            "title": "Tenant Admin",
+            "type": "boolean"
+          },
           "tenants": {
             "items": {
               "$ref": "#/components/schemas/TenantView"
@@ -685,7 +877,9 @@
           "role",
           "permissions",
           "tenants",
-          "subscription_limited"
+          "subscription_limited",
+          "tenant_admin",
+          "landing"
         ],
         "title": "MeView",
         "type": "object"
@@ -770,6 +964,48 @@
         "title": "Metric[int]",
         "type": "object"
       },
+      "MonthPerformance": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "incidents_opened": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "incidents_resolved": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "month": {
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          },
+          "service_requests": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "sla_attainment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "month",
+          "incidents_opened",
+          "incidents_resolved",
+          "sla_attainment",
+          "changes",
+          "service_requests"
+        ],
+        "title": "MonthPerformance",
+        "type": "object"
+      },
       "OnboardRequest": {
         "additionalProperties": false,
         "properties": {
@@ -808,6 +1044,390 @@
           "short_code"
         ],
         "title": "OnboardedTenant",
+        "type": "object"
+      },
+      "Onboarding": {
+        "additionalProperties": false,
+        "properties": {
+          "agreed_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agreed Roles",
+            "type": "array"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "federation_recorded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Federation Recorded At"
+          },
+          "first_admin_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Admin At"
+          },
+          "first_admin_oid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Admin Oid"
+          },
+          "idp_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "entra",
+                  "saml",
+                  "wsfed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idp Kind"
+          },
+          "idp_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idp Reference"
+          },
+          "live_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Live At"
+          },
+          "roles_agreed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roles Agreed At"
+          },
+          "roles_agreement_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roles Agreement Ref"
+          },
+          "status": {
+            "enum": [
+              "not_started",
+              "setup",
+              "live",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "suspended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspended At"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "status",
+          "idp_kind",
+          "idp_reference",
+          "domains",
+          "federation_recorded_at",
+          "agreed_roles",
+          "roles_agreement_ref",
+          "roles_agreed_at",
+          "first_admin_oid",
+          "first_admin_at",
+          "live_at",
+          "suspended_at"
+        ],
+        "title": "Onboarding",
+        "type": "object"
+      },
+      "OpenFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "age": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "asset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Name"
+          },
+          "first_detected": {
+            "format": "date-time",
+            "title": "First Detected",
+            "type": "string"
+          },
+          "qid": {
+            "title": "Qid",
+            "type": "string"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "severity": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "title": "Severity",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "qid",
+          "title",
+          "severity",
+          "asset_name",
+          "resource_id",
+          "first_detected",
+          "age"
+        ],
+        "title": "OpenFinding",
+        "type": "object"
+      },
+      "PendingChange": {
+        "additionalProperties": false,
+        "properties": {
+          "change_request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Request"
+          },
+          "configuration_item": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Item"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "number",
+          "tenant",
+          "change_request",
+          "short_description",
+          "state",
+          "priority",
+          "configuration_item",
+          "resource_id",
+          "opened_at"
+        ],
+        "title": "PendingChange",
+        "type": "object"
+      },
+      "Performance": {
+        "additionalProperties": false,
+        "properties": {
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/MonthPerformance"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "open_incidents": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "sla_breached_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "months",
+          "open_incidents",
+          "sla_breached_open"
+        ],
+        "title": "Performance",
+        "type": "object"
+      },
+      "Posture": {
+        "additionalProperties": false,
+        "properties": {
+          "by_age": {
+            "items": {
+              "$ref": "#/components/schemas/AgeBand"
+            },
+            "title": "By Age",
+            "type": "array"
+          },
+          "by_severity": {
+            "items": {
+              "$ref": "#/components/schemas/SeverityCount"
+            },
+            "title": "By Severity",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/OpenFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "open_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "by_severity",
+          "by_age",
+          "findings",
+          "open_total"
+        ],
+        "title": "Posture",
         "type": "object"
       },
       "ProposalRequest": {
@@ -1537,6 +2157,97 @@
         "title": "ReviewView",
         "type": "object"
       },
+      "RoleAgreementRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "agreement_ref": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Agreement Ref",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "roles",
+          "agreement_ref"
+        ],
+        "title": "RoleAgreementRequest",
+        "type": "object"
+      },
+      "RoleOption": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "landing": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Landing"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "landing"
+        ],
+        "title": "RoleOption",
+        "type": "object"
+      },
+      "SeverityCount": {
+        "additionalProperties": false,
+        "properties": {
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "severity": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "title": "Severity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "severity",
+          "open"
+        ],
+        "title": "SeverityCount",
+        "type": "object"
+      },
       "SowView": {
         "additionalProperties": false,
         "properties": {
@@ -1627,6 +2338,94 @@
           "aliases"
         ],
         "title": "TenantAliases",
+        "type": "object"
+      },
+      "TenantUser": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "disabled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled At"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "oid": {
+            "format": "uuid",
+            "title": "Oid",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "subscription_limited": {
+            "title": "Subscription Limited",
+            "type": "boolean"
+          },
+          "tenant_admin": {
+            "title": "Tenant Admin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "oid",
+          "display_name",
+          "role",
+          "tenant_admin",
+          "subscription_limited",
+          "disabled_at",
+          "created_at"
+        ],
+        "title": "TenantUser",
+        "type": "object"
+      },
+      "TenantUserRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "oid": {
+            "format": "uuid",
+            "title": "Oid",
+            "type": "string"
+          },
+          "role": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Role",
+            "type": "string"
+          },
+          "tenant_admin": {
+            "default": false,
+            "title": "Tenant Admin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "oid",
+          "display_name",
+          "role"
+        ],
+        "title": "TenantUserRequest",
         "type": "object"
       },
       "TenantView": {
@@ -2335,6 +3134,24 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/approvals": {
+      "get": {
+        "operationId": "approvals_v1_approvals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Approvals"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Approvals"
+      }
+    },
     "/v1/commercial/sows": {
       "get": {
         "operationId": "list_sows_v1_commercial_sows_get",
@@ -2807,6 +3624,286 @@
         "summary": "Me"
       }
     },
+    "/v1/onboarding": {
+      "get": {
+        "operationId": "list_onboarding_v1_onboarding_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Onboarding"
+                  },
+                  "title": "Response List Onboarding V1 Onboarding Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Onboarding"
+      }
+    },
+    "/v1/onboarding/roles": {
+      "get": {
+        "operationId": "role_catalogue_v1_onboarding_roles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogueRole"
+                  },
+                  "title": "Response Role Catalogue V1 Onboarding Roles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Role Catalogue"
+      }
+    },
+    "/v1/onboarding/{tenant_id}/federation": {
+      "post": {
+        "operationId": "record_federation_v1_onboarding__tenant_id__federation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FederationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Federation"
+      }
+    },
+    "/v1/onboarding/{tenant_id}/first-admin": {
+      "post": {
+        "operationId": "assign_first_admin_v1_onboarding__tenant_id__first_admin_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirstAdminRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Assign First Admin"
+      }
+    },
+    "/v1/onboarding/{tenant_id}/live": {
+      "post": {
+        "operationId": "set_live_v1_onboarding__tenant_id__live_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Live"
+      }
+    },
+    "/v1/onboarding/{tenant_id}/roles": {
+      "post": {
+        "operationId": "agree_roles_v1_onboarding__tenant_id__roles_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAgreementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Onboarding"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Agree Roles"
+      }
+    },
+    "/v1/performance": {
+      "get": {
+        "operationId": "performance_v1_performance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Performance"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Performance"
+      }
+    },
+    "/v1/posture": {
+      "get": {
+        "operationId": "posture_v1_posture_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Posture"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Posture"
+      }
+    },
     "/v1/resources": {
       "get": {
         "operationId": "list_resources_v1_resources_get",
@@ -2911,6 +4008,134 @@
           }
         },
         "summary": "Resource Context"
+      }
+    },
+    "/v1/tenant/roles": {
+      "get": {
+        "operationId": "tenant_roles_v1_tenant_roles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleOption"
+                  },
+                  "title": "Response Tenant Roles V1 Tenant Roles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Tenant Roles"
+      }
+    },
+    "/v1/tenant/users": {
+      "get": {
+        "operationId": "tenant_users_v1_tenant_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenantUser"
+                  },
+                  "title": "Response Tenant Users V1 Tenant Users Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Tenant Users"
+      },
+      "post": {
+        "operationId": "set_tenant_user_v1_tenant_users_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenantUser"
+                  },
+                  "title": "Response Set Tenant User V1 Tenant Users Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Tenant User"
+      }
+    },
+    "/v1/tenant/users/{oid}/disable": {
+      "post": {
+        "operationId": "disable_tenant_user_v1_tenant_users__oid__disable_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Oid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenantUser"
+                  },
+                  "title": "Response Disable Tenant User V1 Tenant Users  Oid  Disable Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Disable Tenant User"
       }
     },
     "/v1/work-items": {

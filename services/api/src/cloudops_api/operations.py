@@ -214,6 +214,13 @@ _ITEM_COLUMNS: Final = (
     " w.short_description, w.configuration_item, w.resource_id, w.opened_at, w.closed_at,"
     " w.sla_breached"
 )
+# A customer scope runs as cloudops_customer, which is refused the Getronics
+# workgroup and assignee (migration 0011): naming them would fail, not hide.
+_CUSTOMER_ITEM_COLUMNS: Final = _ITEM_COLUMNS.replace("w.assignment_workgroup", "NULL::text")
+
+
+def _item_columns(staff: bool) -> str:
+    return _ITEM_COLUMNS if staff else _CUSTOMER_ITEM_COLUMNS
 _LATEST_ROUTE: Final = (
     "(SELECT tr.route FROM cloudops.triage_result tr WHERE tr.tenant_id = w.tenant_id"
     " AND tr.number = w.number ORDER BY tr.created_at DESC LIMIT 1)"
@@ -248,7 +255,7 @@ async def list_work_items(
     if kind:
         where.append("w.kind = :kind")
         params["kind"] = kind
-    if workgroup:
+    if workgroup and staff:
         where.append("w.assignment_workgroup = :wg")
         params["wg"] = workgroup
     if status == "open":
@@ -262,7 +269,7 @@ async def list_work_items(
     route = f", {_LATEST_ROUTE}" if staff else ", NULL"
     async with platform(request).db.transaction(access.scope) as conn:
         rows: list[tuple[Any, ...]] = [tuple(r) for r in await conn.execute(text(
-            f"SELECT {_ITEM_COLUMNS}{route} FROM cloudops.work_item w"  # noqa: S608
+            f"SELECT {_item_columns(staff)}{route} FROM cloudops.work_item w"  # noqa: S608
             " JOIN cloudops.tenant t ON t.id = w.tenant_id"
             f" WHERE {clause} ORDER BY w.opened_at DESC, w.number LIMIT :limit"), params)]
         total = await conn.scalar(text(
@@ -270,7 +277,7 @@ async def list_work_items(
             {k: v for k, v in params.items() if k != "limit"})
         groups = [str(r[0]) for r in await conn.execute(text(
             "SELECT DISTINCT assignment_workgroup FROM cloudops.work_item"
-            " WHERE assignment_workgroup IS NOT NULL ORDER BY 1"))]
+            " WHERE assignment_workgroup IS NOT NULL ORDER BY 1"))] if staff else []
     return WorkItemList(
         items=[_summary(r, staff, r[13]) for r in rows],
         count=_count(int(total or 0), "work items", TICKET_SOURCE, "tickets.work_item_count",
@@ -311,7 +318,8 @@ async def get_work_item(request: Request, number: str, access: AccessDep) -> Wor
     staff = access.kind == "staff"
     async with platform(request).db.transaction(access.scope) as conn:
         found = (await conn.execute(text(
-            f"SELECT {_ITEM_COLUMNS}, w.change_request, w.assigned_to, w.closure_code,"  # noqa: S608
+            f"SELECT {_item_columns(staff)}, w.change_request,"  # noqa: S608
+            f" {'w.assigned_to' if staff else 'NULL::text'}, w.closure_code,"
             " w.close_notes, w.resolve_time_seconds FROM cloudops.work_item w"
             " JOIN cloudops.tenant t ON t.id = w.tenant_id WHERE w.number = :n"
             " ORDER BY w.opened_at DESC LIMIT 1"), {"n": number})).one_or_none()
@@ -399,7 +407,7 @@ async def resource_context(
                                 resource=str(resource_id))
         if access.allows("tickets.read"):
             linked: list[tuple[Any, ...]] = [tuple(r) for r in await conn.execute(text(
-                f"SELECT {_ITEM_COLUMNS}, NULL FROM cloudops.work_item w"  # noqa: S608
+                f"SELECT {_item_columns(staff)}, NULL FROM cloudops.work_item w"  # noqa: S608
                 " JOIN cloudops.tenant t ON t.id = w.tenant_id WHERE w.resource_id = :id"
                 " AND (w.kind = 'change_task' AND w.opened_at >= :since"
                 "      OR w.kind = 'incident' AND w.closed_at IS NULL)"

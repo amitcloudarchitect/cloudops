@@ -33,6 +33,19 @@ export type ConnectorHealth = Schemas["ConnectorHealth"];
 export type DriftList = Schemas["DriftList"];
 export type DriftView = Schemas["DriftView"];
 export type AcknowledgeRequest = Schemas["AcknowledgeRequest"];
+// Step 18: the customer portal's views, the tenant's own users, and onboarding.
+export type Performance = Schemas["Performance"];
+export type MonthPerformance = Schemas["MonthPerformance"];
+export type Posture = Schemas["Posture"];
+export type OpenFinding = Schemas["OpenFinding"];
+export type Approvals = Schemas["Approvals"];
+export type PendingChange = Schemas["PendingChange"];
+export type TenantUser = Schemas["TenantUser"];
+export type RoleOption = Schemas["RoleOption"];
+export type TenantUserRequest = Schemas["TenantUserRequest"];
+export type Onboarding = Schemas["Onboarding"];
+export type CatalogueRole = Schemas["CatalogueRole"];
+export type FederationRequest = Schemas["FederationRequest"];
 
 // The values a reviewer may choose, read from the schema itself rather than
 // copied, so a new intent in the API reaches the console by regeneration.

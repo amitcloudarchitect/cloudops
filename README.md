@@ -254,6 +254,15 @@ it; try sending `X-Tenant-Id`. The OpenAPI schema is at
 sign in with a dev token (`apps/web/README.md`). `make e2e` runs every role's journeys
 in a browser. Decisions: ADR 0014.
 
+## The customer portal
+
+The same console, through a customer role (ADR 0018). `make seed` onboards Northwind
+and Fabrikam and creates one Northwind user per customer role: `make token
+PRINCIPAL=customer-nwl-admin` (CXO and Northwind's administrator), `customer-nwl-vp`,
+`-architect`, `-engineer`, `-security`, `-approver`. A customer scope runs as the
+`cloudops_customer` database role, whose column grants are the data boundary. The
+Entra federation and go-live steps are manual: `docs/customer-portal-federation.md`.
+
 ## Azure database bootstrap
 
 Before the first migration on a new server, its administrator creates the server-level
