@@ -316,13 +316,24 @@ def demo_internal(ds: Dataset) -> UUID:
     account = replace(source, id=uuid5(NAMESPACE, "account:internal"), tenant_id=tenant.id,
                       native_id=str(uuid5(NAMESPACE, "subscription:internal")),
                       display_name="sub-cloudops-dev", billing_currency="EUR")
+    # No resources of its own, so rows that differed only by resource become one per
+    # day, service and charge class (cost_fact's unique key treats NULLs as equal).
     quarter = Decimal("0.25")
-    costs = [replace(c, tenant_id=tenant.id, account_id=account.id, resource_id=None,
-                     unblended_cost=(c.unblended_cost * quarter).quantize(Decimal("0.000001")),
-                     amortized_cost=(c.amortized_cost * quarter).quantize(Decimal("0.000001")),
-                     currency="EUR",
-                     tags_snapshot={"application": "cloudops", "costcentre": "CC-PLATFORM"})
-             for c in ds.costs if c.account_id == source.id]
+    grouped: dict[tuple[Any, ...], CostRow] = {}
+    for c in ds.costs:
+        if c.account_id != source.id:
+            continue
+        key = (c.usage_date, c.service_native, c.charge_class)
+        prior = grouped.get(key)
+        grouped[key] = replace(
+            c, tenant_id=tenant.id, account_id=account.id, resource_id=None, currency="EUR",
+            tags_snapshot={"application": "cloudops", "costcentre": "CC-PLATFORM"},
+            unblended_cost=(prior.unblended_cost if prior else Decimal(0)) + c.unblended_cost,
+            amortized_cost=(prior.amortized_cost if prior else Decimal(0)) + c.amortized_cost)
+    six = Decimal("0.000001")
+    costs = [replace(c, unblended_cost=(c.unblended_cost * quarter).quantize(six),
+                     amortized_cost=(c.amortized_cost * quarter).quantize(six))
+             for c in grouped.values()]
     ds.tenants.append(tenant)
     ds.accounts.append(account)
     ds.costs.extend(costs)

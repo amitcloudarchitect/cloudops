@@ -136,3 +136,36 @@ async def test_without_an_internal_tenant_there_is_no_own_cost(
 def test_only_one_tenant_can_be_internal(data: Synthetic, internal: str) -> None:
     with psycopg.connect(data.admin_dsn) as cx, pytest.raises(psycopg.errors.UniqueViolation):
         cx.execute("UPDATE cloudops.tenant SET internal = true WHERE id <> %s", (internal,))
+
+
+async def test_the_dev_seed_loads_the_internal_tenant(admin_server: str) -> None:
+    """`make seed`'s path: the dataset with the internal tenant loads, passes the
+    isolation check, and leaves exactly one internal tenant with cost."""
+    from dataclasses import replace as dc_replace
+
+    from cloudops_devdata.seed import demo_internal, demo_spike, load, mark_internal, verify
+    from cloudops_devdata.synthetic import generate
+
+    from .conftest import _database
+
+    ds = dc_replace(generate(TODAY, 7), work_items=[], alias_quarantine=[],
+                    resource_quarantine=[])
+    demo_spike(ds)
+    internal = demo_internal(ds)
+    with _database(admin_server, "seed") as d:
+        ingest = Database.create(d.ingest_dsn, pool_size=1, max_overflow=0)
+        app = Database.create(d.app_dsn, pool_size=1, max_overflow=0)
+        try:
+            await load(ingest, ds)
+            await mark_internal(ingest, internal)
+            await verify(app, ds)
+        finally:
+            await ingest.dispose()
+            await app.dispose()
+        with psycopg.connect(d.admin_dsn) as cx:
+            rows = cx.execute("SELECT t.id, count(c.*) FROM cloudops.tenant t"
+                              " JOIN cloudops.cost_fact c ON c.tenant_id = t.id"
+                              " WHERE t.internal GROUP BY t.id").fetchall()
+    assert len(rows) == 1
+    assert rows[0][0] == internal
+    assert rows[0][1] > 0

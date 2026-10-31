@@ -276,6 +276,9 @@ def test_the_internal_tenant_is_a_tenant_like_any_other() -> None:
     assert all(c.tags_snapshot == {"application": "cloudops", "costcentre": "CC-PLATFORM"}
                for c in costs)
     assert all(isinstance(c.amortized_cost, Decimal) for c in costs)
+    # cost_fact's unique key, NULLs equal: no two rows may collide.
+    keys = [(c.usage_date, c.resource_id, c.service_native, c.charge_class) for c in costs]
+    assert len(keys) == len(set(keys))
     for b in rows["cloudops.billing_total"]:
         if b.kind == "provider_total":
             assert b.amount == sum((c.unblended_cost for c in costs
