@@ -16,7 +16,7 @@ manage revenue, professional services (one-time), hosting ACV and manage ACV.
   cost (effort incomplete) contributes its modelled cost, and the figure is then
   marked modelled. Margin is revenue minus that cost, per month, in the contract
   currency, and the percentage is the range's margin over its revenue.
-- *Professional services, hosting ACV, manage ACV*: the SOW version in force at
+- *Hosting ACV, manage ACV*: the SOW version in force at
   the end of the range (else the latest one that overlaps it). An ACV entered on
   the SOW is used as entered. One not entered is **derived, and marked
   modelled**:
@@ -26,8 +26,21 @@ manage revenue, professional services (one-time), hosting ACV and manage ACV.
                   uplift), for a CSP customer only; a customer whose cloud
                   Getronics does not resell has no hosting ACV.
 
-  Until ServiceNow project tasks are ingested, professional services is the
-  SOW's figure.
+- *Professional services*: the project price delivered in the range, from
+  ServiceNow project tasks closed in it (``cloudops.project_services``), where
+  there are any; it is modelled while that source is provisional. Otherwise the
+  SOW's one-time figure, with the gap ``ps_from_sow``.
+- *Total revenue* (the user's definition: hosting + managed services + new
+  projects), monthly:
+
+    hosting (CSP)      = hosting ACV / 12 where entered, else average monthly
+                         consumption x (1 + uplift); 0 for a customer that is not CSP
+    manage revenue     = as above
+    services           = delivered project price / months in the range, or the
+                         SOW's figure / months in its term (12 if open-ended)
+
+  Marked modelled where any part is modelled or missing; a missing part is
+  named in the gaps. Without manage revenue there is no total.
 
 **Currency** (CLAUDE.md rule 5). A row's currency is its contract currency. Each
 figure is computed in it, at the rate in force on its transaction date:
@@ -35,7 +48,8 @@ figure is computed in it, at the rate in force on its transaction date:
 - consumption at the daily average rate in force on each usage date;
 - revenue, cost and margin at each month's average rate (flows, as margin does),
   after margin was computed in the contract currency;
-- an SOW figure at the rate in force on the day the version took effect.
+- an SOW figure at the rate in force on the day the version took effect;
+- delivered project price at the rate in force on the day it was delivered.
 
 The same rules convert into a reporting currency. A conversion with no rate is
 absent, with its gap named, never a 1 or a 0. Nothing here rounds.
@@ -55,7 +69,8 @@ ZERO: Final = Decimal(0)
 ONE: Final = Decimal(1)
 MONTHS_A_YEAR: Final = Decimal(12)  # not money: months in a year
 
-Source = Literal["billing_exports", "margin_engine", "sow_register", "revenue_model"]
+Source = Literal["billing_exports", "margin_engine", "sow_register", "revenue_model",
+                 "servicenow_project_tasks"]
 Gap = Literal[
     "no_sow",                 # no SOW overlaps the range
     "no_margin",              # no month in the range has a computed margin
@@ -66,9 +81,13 @@ Gap = Literal[
     "csp_not_recorded",       # the SOW does not say whether Getronics resells the cloud
     "not_csp",                # not a CSP customer: no hosting ACV
     "no_uplift",              # CSP, but no consumption uplift to price hosting with
+    "ps_from_sow",            # no delivered project tasks: professional services is the SOW's
 ]
 FIGURES: Final = ("cloud_consumption", "manage_revenue", "manage_cost", "gross_margin",
-                  "gross_margin_pct", "professional_services", "hosting_acv", "manage_acv")
+                  "gross_margin_pct", "professional_services", "hosting_acv", "manage_acv",
+                  "total_revenue")
+# An open-ended SOW spreads its professional services over a year.
+OPEN_TERM_MONTHS: Final = 12
 
 
 # --- rates -------------------------------------------------------------------------------------
@@ -126,6 +145,17 @@ class Consumption:
 
 
 @dataclass(frozen=True, slots=True)
+class Delivery:
+    """Project price delivered (ServiceNow project tasks closed) on one day."""
+
+    delivered_on: date
+    currency: str
+    amount: Decimal
+    as_of: datetime
+    provisional: bool  # the source is not yet authoritative (PPM not active)
+
+
+@dataclass(frozen=True, slots=True)
 class MarginMonth:
     """The latest margin snapshot of one month, as the engine stored it."""
 
@@ -152,6 +182,17 @@ class Sow:
     professional_services: Decimal
     consumption_uplift: Decimal | None
     entered_at: datetime
+    term_start: date | None = None
+    term_end: date | None = None
+
+    @property
+    def term_months(self) -> int:
+        """Months the SOW's one-time professional services are spread over."""
+        if self.term_start is None or self.term_end is None:
+            return OPEN_TERM_MONTHS
+        months = ((self.term_end.year - self.term_start.year) * 12
+                  + self.term_end.month - self.term_start.month + 1)
+        return max(months, 1)
 
 
 # --- outputs -----------------------------------------------------------------------------------
@@ -178,6 +219,8 @@ class Figures:
     professional_services: Value | None = None
     hosting_acv: Value | None = None
     manage_acv: Value | None = None
+    # Monthly: hosting (CSP) + manage revenue + professional services apportioned.
+    total_revenue: Value | None = None
 
     def get(self, name: str) -> Value | None:
         value: Value | None = getattr(self, name)
@@ -251,8 +294,8 @@ def _margin(months: Sequence[MarginMonth], to: str, rates: RateBook,
 
 
 def _figures(currency: str, months: Sequence[MarginMonth], consumption: Sequence[Consumption],
-             sow: Sow | None, rates: RateBook, months_in_range: int,
-             gaps: dict[str, Gap]) -> Figures:
+             deliveries: Sequence[Delivery], sow: Sow | None, rates: RateBook,
+             months_in_range: int, gaps: dict[str, Gap]) -> Figures:
     used, gap = _consumption(consumption, currency, rates, months_in_range)
     if gap:
         gaps.setdefault("cloud_consumption", gap)
@@ -272,41 +315,98 @@ def _figures(currency: str, months: Sequence[MarginMonth], consumption: Sequence
     else:
         for name in ("manage_revenue", "manage_cost", "gross_margin", "gross_margin_pct"):
             gaps.setdefault(name, "no_margin" if sow is not None else "no_sow")
+    ps, ps_monthly = _services(currency, deliveries, sow, rates, months_in_range, gaps)
+    f = replace(f, professional_services=ps)
     if sow is None:
-        for name in ("professional_services", "hosting_acv", "manage_acv"):
+        for name in ("hosting_acv", "manage_acv"):
             gaps.setdefault(name, "no_sow")
-        return f
+        return replace(f, total_revenue=_total(f.manage_revenue, None, "no_sow", ps_monthly,
+                                               gaps))
     rate = rates.on(sow.currency, currency, sow.effective_from)
     if rate is None:
-        for name in ("professional_services", "hosting_acv", "manage_acv"):
+        for name in ("hosting_acv", "manage_acv"):
             gaps.setdefault(name, "no_fx_rate")
     entered = Value(ZERO, False, "sow_register", sow.entered_at)
-    ps = replace(entered, amount=sow.professional_services * rate) if rate else None
     if sow.manage_acv is not None:
         manage = _scaled(replace(entered, amount=sow.manage_acv), rate)
     else:
         manage = _scaled(Value(MONTHS_A_YEAR * sow.monthly_manage_revenue, True,
                                "revenue_model", sow.entered_at), rate)
     hosting: Value | None = None
+    hosting_monthly: Value | None = None
+    hosting_gap: Gap | None = None
     if sow.hosting_acv is not None:
         hosting = _scaled(replace(entered, amount=sow.hosting_acv), rate)
+        hosting_monthly = _scaled(hosting, ONE / MONTHS_A_YEAR)
+        hosting_gap = None if rate else "no_fx_rate"
     elif sow.csp is None:
-        gaps["hosting_acv"] = "csp_not_recorded"
+        hosting_gap = gaps["hosting_acv"] = "csp_not_recorded"
     elif not sow.csp:
         gaps["hosting_acv"] = "not_csp"
+        hosting_monthly = Value(ZERO, False, "sow_register", sow.entered_at)
     elif sow.consumption_uplift is None:
-        gaps["hosting_acv"] = "no_uplift"
+        hosting_gap = gaps["hosting_acv"] = "no_uplift"
     elif used is not None:
-        hosting = Value(MONTHS_A_YEAR * used.amount * (ONE + sow.consumption_uplift), True,
-                        "revenue_model", max(used.as_of, sow.entered_at))
+        hosting_monthly = Value(used.amount * (ONE + sow.consumption_uplift), True,
+                                "revenue_model", max(used.as_of, sow.entered_at))
+        hosting = _scaled(hosting_monthly, MONTHS_A_YEAR)
     else:
-        gaps.setdefault("hosting_acv", gaps.get("cloud_consumption", "no_cost_data"))
-    return replace(f, professional_services=ps, hosting_acv=hosting, manage_acv=manage)
+        hosting_gap = gaps.get("cloud_consumption", "no_cost_data")
+        gaps.setdefault("hosting_acv", hosting_gap)
+    total = _total(f.manage_revenue, hosting_monthly, hosting_gap, ps_monthly, gaps)
+    return replace(f, hosting_acv=hosting, manage_acv=manage, total_revenue=total)
+
+
+def _services(currency: str, deliveries: Sequence[Delivery], sow: Sow | None, rates: RateBook,
+              months_in_range: int, gaps: dict[str, Gap]) -> tuple[Value | None, Value | None]:
+    """Professional services, and its monthly share of total revenue. Delivered project
+    tasks in the range when there are any, at the rate on each delivery day; else the
+    SOW's one-time figure, spread over the SOW's term (modelled)."""
+    if deliveries:
+        total = ZERO
+        for d in deliveries:
+            rate = rates.on(d.currency, currency, d.delivered_on)
+            if rate is None:
+                gaps.setdefault("professional_services", "no_fx_rate")
+                return None, None
+            total += d.amount * rate
+        ps = Value(total, any(d.provisional for d in deliveries), "servicenow_project_tasks",
+                   max(d.as_of for d in deliveries))
+        return ps, replace(ps, amount=total / months_in_range)
+    if sow is None:
+        gaps.setdefault("professional_services", "no_sow")
+        return None, None
+    gaps.setdefault("professional_services", "ps_from_sow")
+    rate = rates.on(sow.currency, currency, sow.effective_from)
+    if rate is None:
+        gaps["professional_services"] = "no_fx_rate"
+        return None, None
+    ps = Value(sow.professional_services * rate, False, "sow_register", sow.entered_at)
+    return ps, Value(ps.amount / sow.term_months, True, "revenue_model", sow.entered_at)
+
+
+def _total(manage: Value | None, hosting: Value | None, hosting_gap: Gap | None,
+           services: Value | None, gaps: dict[str, Gap]) -> Value | None:
+    """Monthly total revenue: hosting (CSP) + manage revenue + professional services
+    apportioned. Without manage revenue there is none. A part that is missing leaves it
+    partial, named in the gaps and marked modelled; so does a modelled part."""
+    if manage is None:
+        gaps.setdefault("total_revenue", gaps.get("manage_revenue", "no_margin"))
+        return None
+    parts = [manage, hosting, services]
+    if hosting is None:
+        gaps.setdefault("total_revenue", hosting_gap or "no_cost_data")
+    if services is None:
+        gaps.setdefault("total_revenue", gaps.get("professional_services", "no_sow"))
+    present = [p for p in parts if p is not None]
+    modelled = len(present) < len(parts) or any(p.modelled for p in present)
+    return Value(sum((p.amount for p in present), ZERO), modelled, "revenue_model",
+                 max(p.as_of for p in present))
 
 
 def customer(months_in_range: int, months: Sequence[MarginMonth],
              consumption: Sequence[Consumption], sow: Sow | None, rates: RateBook,
-             reporting: str | None) -> Row:
+             reporting: str | None, deliveries: Sequence[Delivery] = ()) -> Row:
     """One customer's row: its figures in its contract currency and, given one, in
     the reporting currency. ``months`` are the range's computed months, one each;
     a month the engine marked not captured is left out by the caller."""
@@ -319,12 +419,12 @@ def customer(months_in_range: int, months: Sequence[MarginMonth],
         gaps["row"] = "mixed_currency" if consumption else "no_sow"
         contract = Figures(currency=None)
     else:
-        contract = _figures(currency, contract_months, consumption, sow, rates,
+        contract = _figures(currency, contract_months, consumption, deliveries, sow, rates,
                             months_in_range, gaps)
     reported = None
     if reporting is not None:
         reported_gaps: dict[str, Gap] = {}
-        reported = _figures(reporting, contract_months, consumption, sow, rates,
+        reported = _figures(reporting, contract_months, consumption, deliveries, sow, rates,
                             months_in_range, reported_gaps)
         if currency is None:  # consumption and nothing else can still be converted
             reported = Figures(currency=reporting, cloud_consumption=reported.cloud_consumption)
@@ -340,7 +440,7 @@ def customer(months_in_range: int, months: Sequence[MarginMonth],
 
 
 MONEY: Final = ("cloud_consumption", "manage_revenue", "manage_cost", "gross_margin",
-                "professional_services", "hosting_acv", "manage_acv")
+                "professional_services", "hosting_acv", "manage_acv", "total_revenue")
 
 
 @dataclass(frozen=True, slots=True)

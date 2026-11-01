@@ -35,6 +35,7 @@ test.describe("finops", () => {
       "Professional services (one-time)",
       "Hosting ACV",
       "Manage ACV",
+      "Total revenue (monthly)",
     ]);
     const woodgrove = row(page, "Woodgrove Financial plc");
     await expect(woodgrove).toContainText("Not captured — no SOW for the range");
@@ -64,7 +65,7 @@ test.describe("finops", () => {
     expect(download.suggestedFilename()).toMatch(/^revenue-margin-\d{4}-\d{2}-\d{4}-\d{2}\.csv$/);
     const lines = (await readFile((await download.path()) ?? "", "utf8")).trim().split("\r\n");
     expect(lines[0]).toBe(
-      "Sl No,Customer name,CSP,Currency,Average monthly cloud consumption,Monthly manage revenue,Manage cost (actual),Gross margin on manage revenue (%),Professional services (one-time),Hosting ACV,Manage ACV,Notes",
+      "Sl No,Customer name,CSP,Currency,Average monthly cloud consumption,Monthly manage revenue,Manage cost (actual),Gross margin on manage revenue (%),Professional services (one-time),Hosting ACV,Manage ACV,Total revenue (monthly),Notes",
     );
     expect(lines.at(-1)).toMatch(/^,Total \(EUR\),,EUR,/);
   });

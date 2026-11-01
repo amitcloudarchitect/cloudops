@@ -312,7 +312,8 @@ async def test_csv_is_the_sheet_rounded_once_with_totals(
     assert row[5] == "11750.00"  # manage revenue
     assert row[7] == "35.0"      # margin %
     assert row[10] == "141600.00"  # manage ACV
-    assert "manage_acv modelled" in row[11]
+    assert "manage_acv modelled" in row[12]
+    assert "professional_services: ps_from_sow" in row[12]
     assert total[1] == "Total (EUR)"
     assert total[5] == "11750.00"
 
@@ -326,3 +327,55 @@ async def test_csv_neutralises_a_formula_in_a_customer_name(
     assert row[1].startswith("'=Revenue test EUR")
     assert row[3] == "EUR"
     assert row[7] == "22.5"
+
+
+# --- total revenue and delivered project price ---------------------------------------------
+
+
+async def test_total_revenue_is_hosting_plus_manage_plus_services(
+    api: Api, principals: Principals, recorded: Customers
+) -> None:
+    body = (await _get(api, principals.finops_all)).json()
+    g, e = _row(body, recorded.gbp), _row(body, recorded.eur)
+    gc, ec = g["current"]["contract"], e["current"]["contract"]
+    # CSP: consumption priced with the uplift; services spread over a year (open term).
+    hosting = _v(gc["cloud_consumption"]) * Decimal("1.1")
+    assert _v(gc["total_revenue"]) == Decimal(10000) + hosting + Decimal(2500) / 12
+    assert gc["total_revenue"]["is_modelled"] is True
+    # Not CSP: no hosting revenue.
+    assert _v(ec["total_revenue"]) == Decimal(20000) + Decimal(2500) / 12
+
+
+@pytest.fixture
+def delivered(seeded: Seeded, recorded: Customers) -> Iterator[None]:
+    """Stands in for the project-tasks ingest's ``cloudops.project_services`` (its
+    agreed signature), for the length of one test."""
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+        cx.execute(f"""
+            CREATE FUNCTION cloudops.project_services(p_first date, p_last date)
+            RETURNS TABLE(tenant_id uuid, delivered_on date, currency char(3),
+                          delivered numeric(18,6), tasks integer, as_of timestamptz,
+                          provisional boolean)
+            LANGUAGE sql STABLE AS $$
+                SELECT '{recorded.gbp}'::uuid, d, 'USD'::char(3), 1000::numeric(18,6), 1,
+                       now(), true
+                FROM (VALUES ('2025-03-20'::date), ('2025-04-20'::date)) v(d)
+                WHERE d BETWEEN p_first AND p_last
+            $$;
+            GRANT EXECUTE ON FUNCTION cloudops.project_services(date, date) TO cloudops_app;
+        """)
+    yield
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+        cx.execute("DROP FUNCTION cloudops.project_services(date, date)")
+
+
+async def test_delivered_project_tasks_replace_the_sow_figure(
+    api: Api, principals: Principals, recorded: Customers, delivered: None
+) -> None:
+    g = _row((await _get(api, principals.finops_all)).json(), recorded.gbp)
+    ps = g["current"]["contract"]["professional_services"]
+    # Each delivery at the USD->GBP rate in force on its day.
+    assert _v(ps) == Decimal(1000) * Decimal("0.80") + Decimal(1000) * Decimal("0.75")
+    assert ps["source_system"] == "servicenow_project_tasks"
+    assert ps["is_modelled"] is True  # provisional source
+    assert {"figure": "professional_services", "reason": "ps_from_sow"} not in g["current"]["gaps"]

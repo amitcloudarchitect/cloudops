@@ -7625,6 +7625,16 @@
                 "type": "null"
               }
             ]
+          },
+          "total_revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -7636,7 +7646,8 @@
           "gross_margin_pct",
           "professional_services",
           "hosting_acv",
-          "manage_acv"
+          "manage_acv",
+          "total_revenue"
         ],
         "title": "RevenueFigures",
         "type": "object"

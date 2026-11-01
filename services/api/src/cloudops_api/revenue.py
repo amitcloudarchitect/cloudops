@@ -11,7 +11,11 @@ Amounts are monthly averages over the range (consumption, manage revenue, cost
 and margin) or contract values (professional services, ACVs), unrounded, each
 in the row's contract currency and, given ``currency``, also converted at the
 rate in force on its transaction date. A derived ACV is ``is_modelled``. A figure
-that cannot be computed is absent with its gap named, never zero.
+that cannot be computed is absent with its gap named, never zero. ``total_revenue``
+(hosting, manage revenue and professional services, monthly) is what the Home
+dashboard ranks customers by. Professional services is the price delivered by
+ServiceNow project tasks in the range when ``cloudops.project_services`` exists and
+has any, else the SOW's figure (gap ``ps_from_sow``).
 
 ``/v1/commercial/revenue.csv`` is the same view as printed: the reporting
 currency where one is asked, else each contract's own, rounded once (money to
@@ -100,6 +104,9 @@ class RevenueFigures(ApiModel):
     professional_services: Metric[Decimal] | None
     hosting_acv: Metric[Decimal] | None  # is_modelled: derived, not entered on the SOW
     manage_acv: Metric[Decimal] | None
+    # Monthly: hosting (CSP) + manage revenue + professional services apportioned
+    # (ADR 0038). What the Home dashboard ranks customers by.
+    total_revenue: Metric[Decimal] | None
 
 
 class FigureGap(ApiModel):
@@ -176,7 +183,7 @@ _TENANTS: Final = text("SELECT id, canonical_name FROM cloudops.tenant ORDER BY 
 _SOWS: Final = text(
     "SELECT DISTINCT ON (tenant_id) tenant_id, reference, currency, effective_from, csp,"
     "   monthly_manage_revenue, hosting_acv, manage_acv, professional_services,"
-    "   consumption_uplift, created_at"
+    "   consumption_uplift, created_at, term_start, term_end"
     " FROM cloudops.sow WHERE effective_from <= :last"
     "   AND (effective_to IS NULL OR effective_to >= :first)"
     " ORDER BY tenant_id, effective_from DESC, created_at DESC"
@@ -195,6 +202,12 @@ _CONSUMPTION: Final = text(
     "SELECT tenant_id, usage_date, currency, sum(amortized_cost) FROM cloudops.cost_fact"
     " WHERE charge_class = 'consumption' AND usage_date BETWEEN :first AND :last"
     " GROUP BY tenant_id, usage_date, currency"
+)
+# Delivered project price from ServiceNow project tasks, once that ingest provides it.
+_HAS_SERVICES: Final = text("SELECT to_regprocedure('cloudops.project_services(date, date)')")
+_SERVICES: Final = text(
+    "SELECT tenant_id, delivered_on, currency, delivered, as_of, provisional"
+    " FROM cloudops.project_services(:first, :last)"
 )
 _RATES: Final = text(
     "SELECT from_currency, to_currency, effective_date, rate FROM cloudops.fx_rate"
@@ -218,21 +231,23 @@ class _Inputs:
         self.sows: dict[UUID, revenue.Sow] = {}
         self.months: dict[UUID, list[revenue.MarginMonth]] = defaultdict(list)
         self.consumption: dict[UUID, list[revenue.Consumption]] = defaultdict(list)
+        self.deliveries: dict[UUID, list[revenue.Delivery]] = defaultdict(list)
 
 
 async def _read(conn: ScopedConnection, scope: TenantScope, first: date,
                 last: date) -> _Inputs:
     out = _Inputs()
     bounds = {"first": first, "last": last, "last_month": last.replace(day=1)}
-    for (t, ref, ccy, eff, csp, monthly, hosting, manage, ps, uplift,
-         at) in _rows(await conn.execute(_SOWS, bounds)):
+    for (t, ref, ccy, eff, csp, monthly, hosting, manage, ps, uplift, at, term_start,
+         term_end) in _rows(await conn.execute(_SOWS, bounds)):
         out.sows[UUID(str(t))] = revenue.Sow(
             reference=str(ref), currency=_ccy(ccy), effective_from=eff, csp=csp,
             monthly_manage_revenue=Decimal(monthly),
             hosting_acv=None if hosting is None else Decimal(hosting),
             manage_acv=None if manage is None else Decimal(manage),
             professional_services=Decimal(ps),
-            consumption_uplift=None if uplift is None else Decimal(uplift), entered_at=at)
+            consumption_uplift=None if uplift is None else Decimal(uplift), entered_at=at,
+            term_start=term_start, term_end=term_end)
     for (t, period, through, ccy, rev, actual, modelled, basis,
          at) in _rows(await conn.execute(_MARGIN, bounds)):
         cost = actual if basis == "actual" else modelled
@@ -247,6 +262,10 @@ async def _read(conn: ScopedConnection, scope: TenantScope, first: date,
         for t, day, ccy, amount in _rows(await conn.execute(_CONSUMPTION, bounds)):
             out.consumption[UUID(str(t))].append(
                 revenue.Consumption(day, _ccy(ccy), Decimal(amount)))
+    if await conn.scalar(_HAS_SERVICES) is not None:
+        for t, day, ccy, amount, at, provisional in _rows(await conn.execute(_SERVICES, bounds)):
+            out.deliveries[UUID(str(t))].append(revenue.Delivery(
+                day, _ccy(ccy), Decimal(amount), at, bool(provisional)))
     return out
 
 
@@ -260,6 +279,7 @@ async def _rates(conn: ScopedConnection, inputs: list[_Inputs], first: date, las
             earliest = min(earliest, s.effective_from)
         currencies |= {m.currency for ms in i.months.values() for m in ms}
         currencies |= {c.currency for cs in i.consumption.values() for c in cs}
+        currencies |= {d.currency for ds in i.deliveries.values() for d in ds}
     if len(currencies) < 2:
         return revenue.RateBook([])
     rows = await conn.execute(_RATES, {"c": sorted(currencies), "lo": earliest - RATE_LOOKBACK,
@@ -286,7 +306,7 @@ def _figures(f: revenue.Figures, ref: str) -> RevenueFigures:
         manage_revenue=m("manage_revenue"), manage_cost=m("manage_cost"),
         gross_margin=m("gross_margin"), gross_margin_pct=m("gross_margin_pct", RATIO),
         professional_services=m("professional_services"), hosting_acv=m("hosting_acv"),
-        manage_acv=m("manage_acv"))
+        manage_acv=m("manage_acv"), total_revenue=m("total_revenue"))
 
 
 def _count(n: int, unit: str, ref: str, as_of: datetime) -> Metric[int]:
@@ -317,7 +337,8 @@ async def _compute(conn: ScopedConnection, scope: TenantScope, ranges: list[tupl
     for (first, last), i in zip(ranges, inputs, strict=True):
         n = _months(first, last)
         rows = {t: revenue.customer(n, i.months.get(t, []), i.consumption.get(t, []),
-                                    i.sows.get(t), rates, reporting) for t in names}
+                                    i.sows.get(t), rates, reporting, i.deliveries.get(t, []))
+                for t in names}
         out.append(_Computed(first, last, rows, i.sows, query_ref(
             "commercial.revenue", 1, first=first.isoformat(), last=last.isoformat(),
             rep=reporting)))
@@ -441,7 +462,8 @@ async def revenue_overview(
 CSV_HEADER: Final = (
     "Sl No", "Customer name", "CSP", "Currency", "Average monthly cloud consumption",
     "Monthly manage revenue", "Manage cost (actual)", "Gross margin on manage revenue (%)",
-    "Professional services (one-time)", "Hosting ACV", "Manage ACV", "Notes",
+    "Professional services (one-time)", "Hosting ACV", "Manage ACV",
+    "Total revenue (monthly)", "Notes",
 )
 CENTS: Final = Decimal("0.01")
 TENTH: Final = Decimal("0.1")
@@ -466,7 +488,8 @@ def _pct(m: Metric[Decimal] | None) -> str:
 
 
 def _notes(f: RevenueFigures, gaps: list[FigureGap]) -> str:
-    modelled = [k for k in ("manage_cost", "hosting_acv", "manage_acv")
+    modelled = [k for k in ("manage_cost", "professional_services", "hosting_acv",
+                            "manage_acv", "total_revenue")
                 if (m := getattr(f, k)) is not None and m.is_modelled]
     parts = [f"{k} modelled" for k in modelled]
     parts += [f"{g.figure}: {g.reason}" for g in gaps]
@@ -478,7 +501,7 @@ def _csv_line(n: str, name: str, csp: bool | None, f: RevenueFigures,
     return [n, _cell(name), "" if csp is None else ("Yes" if csp else "No"), f.currency or "",
             _amount(f.cloud_consumption), _amount(f.manage_revenue), _amount(f.manage_cost),
             _pct(f.gross_margin_pct), _amount(f.professional_services), _amount(f.hosting_acv),
-            _amount(f.manage_acv), notes]
+            _amount(f.manage_acv), _amount(f.total_revenue), notes]
 
 
 def render_csv(view: RevenueOverview) -> str:

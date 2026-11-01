@@ -79,6 +79,9 @@ what was entered above. With these example values, for a month the worker has co
 - professional services **EUR 0.00** and manage ACV **EUR 120,000.00**, as entered;
 - hosting ACV: `0` as entered. Leave it empty instead to see it derived, marked
   **Modelled**: 12 × the average monthly consumption × 1.05.
+- total revenue (monthly): EUR 10,000.00 manage revenue, plus hosting (0 as entered), plus
+  professional services spread over the SOW's term. It is marked **Modelled**, because the
+  services figure is the SOW's until ServiceNow project tasks are delivered in the range.
 
 Choose a range of months, a reporting currency and **Compare with another range** to see a
 month against the one before. **Export CSV** downloads the sheet with its totals.

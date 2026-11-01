@@ -4110,6 +4110,7 @@ export interface components {
             manage_cost: components["schemas"]["Metric_Decimal_"] | null;
             manage_revenue: components["schemas"]["Metric_Decimal_"] | null;
             professional_services: components["schemas"]["Metric_Decimal_"] | null;
+            total_revenue: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** RevenueOverview */
         RevenueOverview: {

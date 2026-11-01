@@ -9,7 +9,15 @@ from decimal import Decimal
 import pytest
 
 from cloudops_commercial import revenue
-from cloudops_commercial.revenue import Consumption, Figures, MarginMonth, RateBook, Sow, Value
+from cloudops_commercial.revenue import (
+    Consumption,
+    Delivery,
+    Figures,
+    MarginMonth,
+    RateBook,
+    Sow,
+    Value,
+)
 
 AT = datetime(2026, 10, 5, tzinfo=UTC)
 RATE_ROWS = [
@@ -169,3 +177,50 @@ def test_change_is_current_minus_compare_in_one_currency() -> None:
     assert amt(delta.gross_margin_pct) == Decimal("-0.1")
     eur = revenue.customer(1, [AUG], [], _sow(currency="EUR"), RATES, None).contract
     assert revenue.change(sep, eur) is None
+
+
+# --- total revenue and delivered project price ------------------------------------------------
+
+
+def test_total_revenue_is_hosting_plus_manage_plus_services_monthly() -> None:
+    row = revenue.customer(2, [AUG, SEP], USAGE, _sow(), RATES, None)
+    c = row.contract
+    hosting = amt(c.cloud_consumption) * Decimal("1.08")
+    services = Decimal("5000") / 12  # open-ended SOW: a year
+    assert amt(c.total_revenue) == Decimal("10000") + hosting + services
+    assert got(c.total_revenue).modelled
+    assert row.gaps["professional_services"] == "ps_from_sow"
+
+
+def test_total_revenue_without_csp_has_no_hosting_and_spreads_services_over_the_term() -> None:
+    sow = _sow(csp=False, term_start=date(2026, 1, 1), term_end=date(2027, 12, 31))
+    c = revenue.customer(2, [AUG, SEP], USAGE, sow, RATES, None).contract
+    assert amt(c.total_revenue) == Decimal("10000") + Decimal("5000") / 24
+
+
+def test_total_revenue_with_csp_unknown_is_partial_and_says_why() -> None:
+    row = revenue.customer(2, [AUG, SEP], USAGE, _sow(csp=None), RATES, None)
+    assert amt(row.contract.total_revenue) == Decimal("10000") + Decimal("5000") / 12
+    assert got(row.contract.total_revenue).modelled
+    assert row.gaps["total_revenue"] == "csp_not_recorded"
+
+
+def test_delivered_project_tasks_replace_the_sow_figure_at_the_delivery_days_rate() -> None:
+    delivered = [Delivery(date(2026, 8, 20), "USD", Decimal("4000"), AT, False),
+                 Delivery(date(2026, 9, 20), "USD", Decimal("2000"), AT, True)]
+    row = revenue.customer(2, [AUG, SEP], USAGE, _sow(csp=False), RATES, "EUR", delivered)
+    c = row.contract
+    ps = Decimal("4000") * Decimal("0.80") + Decimal("2000") * Decimal("0.75")
+    assert amt(c.professional_services) == ps
+    assert got(c.professional_services).source == "servicenow_project_tasks"
+    assert got(c.professional_services).modelled  # one delivery is provisional
+    assert "professional_services" not in row.gaps
+    assert amt(c.total_revenue) == Decimal("10000") + ps / 2
+    assert amt(rep(row.reported).professional_services) == (
+        Decimal("4000") * Decimal("0.90") + Decimal("2000") * Decimal("0.85"))
+
+
+def test_total_revenue_needs_manage_revenue() -> None:
+    row = revenue.customer(1, [], USAGE, _sow(), RATES, None)
+    assert row.contract.total_revenue is None
+    assert row.gaps["total_revenue"] == "no_margin"

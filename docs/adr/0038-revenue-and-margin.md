@@ -53,25 +53,46 @@ consumption. Only whether Getronics resells the customer's cloud was missing.
    - A non-CSP customer, one whose CSP flag is not recorded, or one without an uplift gets
      no hosting ACV, with the reason named. The value is never guessed.
 
-4. **Professional services is the SOW's figure for now.** The user decided that project
-   prices come from ServiceNow project tasks. When the `project-tasks` ingest lands, this
-   column reads it instead, and the screen's note changes. Until then the column shows what
-   commercial entered on the SOW.
+4. **Professional services comes from delivered project tasks, else the SOW.** The user
+   decided that project prices come from ServiceNow project tasks.
+   - The `project-tasks` ingest exposes `cloudops.project_services(first, last)`, with
+     the price of closed tasks per tenant, currency and close date, and whether the source
+     is still provisional. The interface was agreed between the two sessions. The function
+     is SECURITY INVOKER under that table's commercial policies.
+   - Where it exists and has deliveries for the customer in the range, professional
+     services is their total, each converted at the rate on its delivery day. It is
+     marked modelled while the source is provisional (PPM is not yet active on the dev
+     instance).
+   - Otherwise the column shows the SOW's figure, with the gap `ps_from_sow`. Neither
+     change waits for the other to merge.
 
-5. **Currency** (CLAUDE.md rule 5).
+5. **Total revenue** (the user's definition: hosting + managed services + new projects) is
+   a monthly figure and the one the Home dashboard ranks customers by:
+   - **hosting:** hosting ACV / 12 where entered. Otherwise average monthly consumption ×
+     (1 + uplift) for a CSP customer, and 0 for one that is not CSP;
+   - **plus** monthly manage revenue;
+   - **plus professional services spread over time:**
+     - the delivered price divided by the months in the range; or
+     - the SOW's figure divided by the months in the SOW's term (12 if the term is
+       open-ended).
+   - It is marked modelled where any part is modelled or missing. A missing part (CSP not
+     recorded, no uplift) is named in the gaps. Without manage revenue there is no total.
+
+6. **Currency** (CLAUDE.md rule 5).
    - A row is in its contract currency. Each figure is converted at the rate in force on its
      transaction date:
      - consumption at the daily average rate in force on each usage date;
      - revenue, cost and margin at their month's average rate (as margin converts),
        after margin was computed in the contract currency;
-     - SOW figures at the rate in force when the version took effect.
+     - SOW figures at the rate in force when the version took effect;
+     - delivered project price at the rate in force on its delivery day.
    - The same rules convert into a reporting currency.
    - The margin percentage is the contract currency's, in every view.
    - A missing rate leaves the figure absent with `no_fx_rate`, never a 1 or a 0.
    - Nothing is rounded in the API. The console rounds once. The CSV is presentation, so it
      rounds money to two places and percentages to one.
 
-6. **Ranges and comparison.**
+7. **Ranges and comparison.**
    - `from`/`to` (at most 24 months; the default is the latest closed month).
    - Optionally `compare_from`/`compare_to`.
    - The API returns each block, and the change (current minus compare; the percentage in
@@ -79,11 +100,11 @@ consumption. Only whether Getronics resells the customer's cloud was missing.
    - Totals are per contract currency and, given a reporting currency, in it. Each says how
      many customers each figure leaves out.
 
-7. **The endpoint is shared.** The Home dashboard's revenue section and top-10 revenue
+8. **The endpoint is shared.** The Home dashboard's revenue section and top-10 revenue
    (`dashboards-v2`) read `/v1/commercial/revenue` and sort rows by
-   `current.reported.manage_revenue`. They do not build a second revenue query.
+   `current.reported.total_revenue` (`current.contract` when no reporting currency is asked). They do not build a second revenue query.
 
-8. **Who sees it:** `commercial.read`, staff only. The matrix refuses customer roles and
+9. **Who sees it:** `commercial.read`, staff only. The matrix refuses customer roles and
    engineers. Were it wrong, `commercial_visibility` returns no SOW or margin row, and a
    customer scope is refused the tables outright (ADR 0002 D10, ADR 0018). A
    subscription-limited scope reads no consumption here, as it reads no margin (D16).
@@ -97,5 +118,5 @@ consumption. Only whether Getronics resells the customer's cloud was missing.
   `docs/commercial-setup.md` and is entered through the page.
 - Size bands (spend plus resource count) are the dashboards' concern and are not computed
   here.
-- Follow-up: read professional services from ServiceNow project tasks once they are
-  ingested.
+- Until `cloudops.project_services` is merged, professional services is the SOW's figure
+  everywhere, and says so.

@@ -23,6 +23,7 @@ const SOURCE_LABEL: Record<string, string> = {
   margin_engine: "Margin engine",
   sow_register: "SOW register",
   revenue_model: "Derived from the SOW (ADR 0038)",
+  servicenow_project_tasks: "ServiceNow project tasks",
   ecb: "ECB reference rates",
   triage_classifier: "Triage classifier",
   customer_price: "Price charged",

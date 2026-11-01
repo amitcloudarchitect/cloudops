@@ -42,6 +42,7 @@ const FIGURES: { key: Figure; header: string; ratio?: boolean }[] = [
   { key: "professional_services", header: "Professional services (one-time)" },
   { key: "hosting_acv", header: "Hosting ACV" },
   { key: "manage_acv", header: "Manage ACV" },
+  { key: "total_revenue", header: "Total revenue (monthly)" },
 ];
 
 const GAP: Record<string, string> = {
@@ -54,6 +55,7 @@ const GAP: Record<string, string> = {
   csp_not_recorded: "the SOW does not say whether Getronics resells the cloud",
   not_csp: "not a CSP customer",
   no_uplift: "no consumption uplift on the SOW",
+  ps_from_sow: "no project tasks delivered in the range",
 };
 
 interface Choice {
@@ -158,6 +160,9 @@ function Cell({ row, f, reporting }: { row: RevenueRow; f: (typeof FIGURES)[numb
   return (
     <span className="tabular-nums">
       {now ? <Value metric={now} ratio={ratio} /> : <span className="text-sm text-muted">{gapText(row, f.key, reporting)}</span>}
+      {now && f.key === "professional_services" ? (
+        <span className="block text-xs text-muted">{now.source_system === "servicenow_project_tasks" ? "delivered project tasks" : "from the SOW"}</span>
+      ) : null}
       {row.compare ? (
         <span className="block text-xs text-muted">
           was {before ? shown(before, ratio) : "not captured"}
@@ -379,8 +384,9 @@ export function Revenue() {
         <p className="text-sm text-muted">
           Consumption, revenue, cost and margin are monthly averages over the range; cost falls back to modelled where effort was incomplete. Hosting and
           manage ACV come from the SOW where it states them; otherwise manage ACV is 12 × the SOW’s monthly manage revenue and hosting ACV, for CSP customers
-          only, is 12 × average consumption × (1 + the SOW’s uplift). Both are then marked Modelled. Professional services is the SOW’s figure until
-          ServiceNow project tasks are ingested.
+          only, is 12 × average consumption × (1 + the SOW’s uplift). Both are then marked Modelled. Professional services is the price of ServiceNow project tasks delivered in the range,
+          or the SOW’s figure where none were. Total revenue is monthly: hosting (CSP only) + manage revenue + professional services spread over the range
+          (or over the SOW’s term), marked Modelled where any part is modelled or missing.
         </p>
         {exportError ? (
           <p role="alert" className="text-sm text-band-critical">
