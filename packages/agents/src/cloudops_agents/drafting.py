@@ -229,7 +229,7 @@ _RELEASE: Final = {
 }
 _PENDING: Final = text("SELECT kind, id, tenant_id FROM cloudops.pending_drafts(:limit)")
 _TENANTS: Final = text("SELECT tenant_id FROM cloudops.knowledge_tenants()")
-_INTERNAL: Final = text("SELECT cloudops.internal_tenant()")
+_PLATFORM: Final = text("SELECT cloudops.platform_tenant()")
 _PURGE: Final = text("SELECT cloudops.assistant_purge()")
 RETENTION_PRINCIPAL: Final = "service:assistant-retention"
 
@@ -393,12 +393,12 @@ class DraftingActivities:
     @activity.defn
     async def index_help(self) -> int:
         """The assistant's help pages (global knowledge, ADR 0029), embedded under
-        and billed to the internal tenant. No internal tenant yet: nothing to do."""
+        and billed to the platform host tenant (ADR 0031). No host yet: nothing to do."""
         async with self._db.transaction(TenantScope.for_resolution(INDEXER_PRINCIPAL)) as conn:
-            internal = await conn.scalar(_INTERNAL)
-        if internal is None:
+            host = await conn.scalar(_PLATFORM)
+        if host is None:
             return 0
-        return await self._indexer.embed_global_pending(_ctx(internal, INDEXER_PRINCIPAL))
+        return await self._indexer.embed_global_pending(_ctx(host, INDEXER_PRINCIPAL))
 
 
     @activity.defn

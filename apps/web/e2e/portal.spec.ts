@@ -238,6 +238,7 @@ test.describe("Portal onboarding", () => {
     const created = await post<{ tenant: { id: string; name: string } }>("customerMaster", "/v1/mapping/tenants", {
       canonical_name: `Portal Pilot ${code}`,
       short_code: code,
+      internal: false,
     });
     const name = created.tenant.name;
 

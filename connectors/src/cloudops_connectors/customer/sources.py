@@ -57,6 +57,20 @@ CADENCE: Final[Mapping[str, Mapping[str, timedelta]]] = {
 }
 
 
+COST: Final[Mapping[str, frozenset[str]]] = {
+    AZURE: frozenset({azure_mapping.COST_DAILY, azure_mapping.COST_TOTAL}),
+    AWS: frozenset({aws_mapping.COST_TOTAL}),
+}
+
+
+def entities(credential: StoredCredential) -> dict[str, timedelta]:
+    """What the credential's worker runs, and how often. No cost entity when the
+    platform's own feed reads the cost of every account it is bound to (ADR 0031:
+    one cost feed per subscription)."""
+    skip = COST[credential.provider] if credential.cost_binding is None else frozenset()
+    return {e: every for e, every in CADENCE[credential.provider].items() if e not in skip}
+
+
 def queue(credential: StoredCredential) -> str:
     return f"connectors-{credential.provider}-customer-{credential.code}"
 
@@ -81,7 +95,8 @@ def azure_source(store: SecretStore, credential: StoredCredential, stack: AsyncE
         token = stored
     client = azure_client(credential, token, base_url=base_url, transport=transport)
     stack.push_async_callback(client.aclose)
-    return AzureSource(client, entities=frozenset(CADENCE[AZURE]), binding=credential.binding,
+    return AzureSource(client, entities=frozenset(entities(credential)),
+                       binding=credential.binding, cost_binding=credential.cost_binding,
                        credential=str(credential.id), today=today)
 
 

@@ -6,6 +6,10 @@
 // production); the database enforces it either way. A mapping applies to what is
 // ingested from then on; records held before it move only when someone asks for a
 // re-process, which the connector worker runs (the console starts nothing itself).
+//
+// A tenant is internal to Getronics or a customer, chosen when it is onboarded and
+// changeable later; one internal tenant may host the platform (ADR 0031). Both are a
+// platform administrator's (access.manage). Internal tenants are reported like customers.
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
@@ -22,7 +26,7 @@ import { Provenance } from "@/components/Provenance";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { count, date, dateTime } from "@/lib/format";
-import { useMe } from "@/lib/session";
+import { can, useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
 const control = "w-full field";
@@ -35,6 +39,9 @@ type Message = { kind: "ok" | "error"; text: string } | null;
 function failure(error: unknown, what: string): string {
   if (error instanceof ApiError) {
     if (error.code === "second_approver_required") return `${what} was not saved: a second person must approve a mapping you proposed.`;
+    if (error.code === "platform_host_rule")
+      return `${what} was not saved: the tenant hosting the platform must be internal. Move the platform host first, or choose an internal tenant.`;
+    if (error.status === 403) return `${what} was not saved: only a platform administrator can mark a tenant internal or move the platform host.`;
     if (error.status === 409) return `${what} was not saved: that name or customer already exists, is already mapped, or was already decided.`;
     if (error.status === 404) return `${what} was not saved: the customer or proposal is not in your scope.`;
     if (error.status === 422) return `${what} was not saved: check the values.`;
@@ -108,6 +115,8 @@ function MapForm({
   // Names a source sent that no customer matched and nobody has proposed yet, most sighted first.
   const unmappedFrom = (from: string) =>
     held.filter((q) => q.source_system === from && !q.pending_proposal_id).sort((a, b) => b.occurrences.value - a.occurrences.value);
+  const admin = can(useMe(), "access.manage");
+  const [kind, setKind] = useState<"" | "customer" | "internal">("");
   const [source, setSource] = useState(target.source);
   const [alias, setAlias] = useState(target.fromQuarantine ? target.alias : (unmappedFrom(target.source)[0]?.alias ?? ""));
   const [typing, setTyping] = useState(!target.fromQuarantine && unmappedFrom(target.source).length === 0);
@@ -147,12 +156,16 @@ function MapForm({
       setMessage({ kind: "error", text: "A new customer needs a name and a short code of 2 to 10 capitals or digits." });
       return;
     }
+    if (mode === "new" && kind === "") {
+      setMessage({ kind: "error", text: "Choose whether the new tenant is a customer or internal to Getronics." });
+      return;
+    }
     setBusy(true);
     let onboarded: string | null = null;
     try {
       let tenant = tenantId;
       if (mode === "new") {
-        const created = await apiPost(await token(), "/v1/mapping/tenants", {}, { canonical_name: name.trim(), short_code: code });
+        const created = await apiPost(await token(), "/v1/mapping/tenants", {}, { canonical_name: name.trim(), short_code: code, internal: kind === "internal" });
         tenant = created.tenant.id;
         onboarded = created.tenant.name;
       }
@@ -252,6 +265,24 @@ function MapForm({
               Short code
               <input className={control} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={10} placeholder="e.g. NWL" />
             </label>
+            <fieldset className="sm:col-span-3">
+              <legend className="text-xs font-semibold text-muted">Kind of tenant</legend>
+              <div className="mt-1 flex flex-wrap gap-4 text-sm text-ink">
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="kind" checked={kind === "customer"} onChange={() => setKind("customer")} />
+                  A customer
+                </label>
+                <label className="flex items-center gap-2">
+                  <input type="radio" name="kind" checked={kind === "internal"} onChange={() => setKind("internal")} disabled={!admin} />
+                  Internal to Getronics
+                </label>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {admin
+                  ? "Internal tenants are reported on exactly like customers. Their subscriptions are theirs alone, never shared with another tenant."
+                  : "Only a platform administrator can onboard an internal tenant."}
+              </p>
+            </fieldset>
           </div>
         )}
       </fieldset>
@@ -269,6 +300,64 @@ function MapForm({
         </button>
       </div>
     </form>
+  );
+}
+
+// --- internal or customer, and the platform host (ADR 0031) -----------------------
+
+function KindControl({ tenant, onDone }: { tenant: TenantAliases; onDone: (message: Message) => void }) {
+  const { token } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const name = tenant.tenant.name;
+
+  async function run(what: string, action: () => Promise<unknown>, ok: string) {
+    setBusy(true);
+    try {
+      await action();
+      onDone({ kind: "ok", text: ok });
+    } catch (error) {
+      onDone({ kind: "error", text: failure(error, what) });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const params = { tenant_id: tenant.tenant.id };
+  return (
+    <div className="flex flex-wrap gap-3">
+      <button
+        type="button"
+        className="link font-medium"
+        disabled={busy || tenant.hosts_platform}
+        aria-label={tenant.internal ? `Make ${name} a customer` : `Make ${name} internal`}
+        onClick={() =>
+          run(
+            "The change",
+            async () => apiPost(await token(), "/v1/mapping/tenants/{tenant_id}/kind", params, { internal: !tenant.internal }),
+            tenant.internal ? `${name} is now a customer.` : `${name} is now internal.`,
+          )
+        }
+      >
+        {tenant.internal ? "Make customer" : "Make internal"}
+      </button>
+      {tenant.internal ? (
+        <button
+          type="button"
+          className="link font-medium"
+          disabled={busy}
+          aria-label={tenant.hosts_platform ? `${name} no longer hosts the platform` : `${name} hosts the platform`}
+          onClick={() =>
+            run(
+              "The platform host",
+              async () => apiPost(await token(), "/v1/mapping/platform-host", {}, { tenant_id: tenant.hosts_platform ? null : tenant.tenant.id }),
+              tenant.hosts_platform ? "No tenant hosts the platform now." : `${name} now hosts the platform.`,
+            )
+          }
+        >
+          {tenant.hosts_platform ? "Clear platform host" : "Hosts the platform"}
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -543,6 +632,30 @@ export function CustomerMapping() {
     { key: "code", header: "Short code", value: (t) => t.short_code, sortable: true },
     { key: "status", header: "Status", value: (t) => t.status, sortable: true },
     {
+      key: "kind",
+      header: "Kind",
+      value: (t) => (t.hosts_platform ? "Internal, hosts the platform" : t.internal ? "Internal" : "Customer"),
+      sortable: true,
+    },
+    ...(can(me, "access.manage")
+      ? [
+          {
+            key: "kind_change",
+            header: "Change",
+            value: () => null,
+            render: (t: TenantAliases) => (
+              <KindControl
+                tenant={t}
+                onDone={(m) => {
+                  setMessage(m);
+                  if (m?.kind === "ok") loaded.reload();
+                }}
+              />
+            ),
+          } satisfies Column<TenantAliases>,
+        ]
+      : []),
+    {
       key: "aliases",
       header: "Names per source",
       value: (t) => t.aliases.map((a) => `${a.source_system}: ${a.alias}`).join("; "),
@@ -572,7 +685,7 @@ export function CustomerMapping() {
         }
       >
         <button type="button" className={secondary} onClick={() => setTarget({ source: "servicenow", alias: "", suggested: null, fromQuarantine: false })}>
-          Map a name or onboard a customer…
+          Map a name or onboard a tenant…
         </button>
       </PageHeader>
 

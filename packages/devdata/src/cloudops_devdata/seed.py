@@ -346,9 +346,11 @@ def demo_internal(ds: Dataset) -> UUID:
 
 
 async def mark_internal(ingest: Database, tenant: UUID) -> None:
+    """Internal, and the platform's host (ADR 0031). Its cost lines carry no
+    resource, so the platform's own part shows as not captured, as in dev."""
     async with ingest.transaction(_scope([tenant], Role.INGEST)) as conn:
-        await conn.execute(text("UPDATE cloudops.tenant SET internal = true WHERE id = :t"),
-                           {"t": tenant})
+        await conn.execute(text("UPDATE cloudops.tenant SET internal = true,"
+                                " hosts_platform = true WHERE id = :t"), {"t": tenant})
 
 
 async def finops(ingest: Database, anchor: date) -> str:

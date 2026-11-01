@@ -843,6 +843,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/mapping/platform-host": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Platform Host
+         * @description The internal tenant whose subscription the platform runs in: its platform
+         *     resources are the platform's own cost, and help-only assistant history is kept
+         *     under it (ADR 0031). At most one; naming another moves it.
+         */
+        post: operations["set_platform_host_v1_mapping_platform_host_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/mapping/proposals": {
         parameters: {
             query?: never;
@@ -942,10 +964,32 @@ export interface paths {
         put?: never;
         /**
          * Onboard Tenant
-         * @description A new customer. Every all-tenant principal can see it from its next request
-         *     (ADR 0002, D9); a principal assigned named tenants needs it granted.
+         * @description A new tenant, internal or a customer. Every all-tenant principal can see it
+         *     from its next request (ADR 0002, D9); a principal assigned named tenants needs
+         *     it granted. Internal needs a platform administrator (ADR 0031).
          */
         post: operations["onboard_tenant_v1_mapping_tenants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/mapping/tenants/{tenant_id}/kind": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Kind
+         * @description Internal to Getronics, or a customer (ADR 0031). The platform's host must
+         *     stay internal: move the host first.
+         */
+        post: operations["set_kind_v1_mapping_tenants__tenant_id__kind_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1452,8 +1496,6 @@ export interface components {
             /** Reason */
             reason: string | null;
             reference: components["schemas"]["Metric_Decimal_"] | null;
-            /** Shared With Platform */
-            shared_with_platform: boolean;
             /**
              * Status
              * @enum {string}
@@ -2073,6 +2115,7 @@ export interface components {
             customers: components["schemas"]["CustomerCostHome"][];
             /** Months */
             months: string[];
+            platform: components["schemas"]["PlatformCostHome"] | null;
         };
         /**
          * CostLine
@@ -2085,7 +2128,6 @@ export interface components {
             currency: string;
             /** Provider */
             provider: string;
-            shared_with_platform?: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** CostPoint */
         CostPoint: {
@@ -2176,8 +2218,6 @@ export interface components {
              * Format: date-time
              */
             secret_set_at: string;
-            /** Shared With Platform */
-            shared_with_platform: string[];
             /**
              * Status
              * @enum {string}
@@ -2217,6 +2257,8 @@ export interface components {
             anomalies_30d: components["schemas"]["Metric_int_"];
             /** Currencies */
             currencies: components["schemas"]["CurrencyTrend"][];
+            /** Hosts Platform */
+            hosts_platform: boolean;
             /** Internal */
             internal: boolean;
             /** Last Anomaly On */
@@ -2769,6 +2811,8 @@ export interface components {
         };
         /** OnboardedTenant */
         OnboardedTenant: {
+            /** Internal */
+            internal: boolean;
             /** Short Code */
             short_code: string;
             tenant: components["schemas"]["TenantView"];
@@ -2810,6 +2854,8 @@ export interface components {
         OnboardRequest: {
             /** Canonical Name */
             canonical_name: string;
+            /** Internal */
+            internal: boolean;
             /** Short Code */
             short_code: string;
         };
@@ -2887,6 +2933,22 @@ export interface components {
             months: components["schemas"]["MonthPerformance"][];
             open_incidents: components["schemas"]["Metric_int_"];
             sla_breached_open: components["schemas"]["Metric_int_"];
+        };
+        /**
+         * PlatformCostHome
+         * @description The platform's own resources' cost in its host tenant (ADR 0031).
+         */
+        PlatformCostHome: {
+            /** Captured */
+            captured: boolean;
+            /** Currencies */
+            currencies: components["schemas"]["CurrencyTrend"][];
+            host: components["schemas"]["TenantView"];
+        };
+        /** PlatformHostRequest */
+        PlatformHostRequest: {
+            /** Tenant Id */
+            tenant_id: string | null;
         };
         /** PortfolioLine */
         PortfolioLine: {
@@ -3558,6 +3620,10 @@ export interface components {
         TenantAliases: {
             /** Aliases */
             aliases: components["schemas"]["AliasView"][];
+            /** Hosts Platform */
+            hosts_platform: boolean;
+            /** Internal */
+            internal: boolean;
             /** Short Code */
             short_code: string;
             /** Status */
@@ -3572,6 +3638,19 @@ export interface components {
             open_items: components["schemas"]["Metric_int_"];
             resolved_30d: components["schemas"]["Metric_int_"];
             tenant: components["schemas"]["TenantView"];
+        };
+        /** TenantKind */
+        TenantKind: {
+            /** Hosts Platform */
+            hosts_platform: boolean;
+            /** Internal */
+            internal: boolean;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** TenantKindRequest */
+        TenantKindRequest: {
+            /** Internal */
+            internal: boolean;
         };
         /** TenantOption */
         TenantOption: {
@@ -5266,6 +5345,39 @@ export interface operations {
             };
         };
     };
+    set_platform_host_v1_mapping_platform_host_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlatformHostRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantKind"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_proposals_v1_mapping_proposals_get: {
         parameters: {
             query?: {
@@ -5487,6 +5599,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OnboardedTenant"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_kind_v1_mapping_tenants__tenant_id__kind_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantKindRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantKind"];
                 };
             };
             /** @description Validation Error */

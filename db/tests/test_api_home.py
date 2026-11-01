@@ -123,13 +123,29 @@ def _populate(s: Seeded, internal: UUID, internal_account: UUID) -> None:
                 " VALUES (%s, %s, %s, %s, now()::date, 1, 'EUR', 1, 'EUR', 0, %s, %s)",
                 (tenant, account, _month(previous), kind, status, reason),
             )
-        # The platform's own cost, under the internal tenant.
+        # The host's subscription: a subscription-level line, one platform resource
+        # and one lab VM (ADR 0031: the platform's cost is its own resources' only).
         cx.execute(
             "INSERT INTO cloudops.cost_fact (tenant_id, account_id, usage_date,"
             " invoice_period, service_native, unblended_cost, amortized_cost, currency)"
             " VALUES (%s, %s, %s, %s, 'Kubernetes', 420.000000, 410.500000, 'EUR')",
             (internal, internal_account, now.date(), _month(now)),
         )
+        for name, group, amount in (("aks-cloudops-dev-weu", "MC_rg-cloudops-aks-dev-weu_x",
+                                     "100.250000"),
+                                    ("vm-lab-01", "rg-lab", "50.000000")):
+            (resource,) = cx.execute(
+                "INSERT INTO cloudops.resource (tenant_id, account_id, native_id, name,"
+                " type_native, type_canonical) VALUES (%s, %s, %s, %s, 'x', 'x') RETURNING id",
+                (internal, internal_account,
+                 f"/subscriptions/s/resourceGroups/{group}/providers/x/{name}", name),
+            ).fetchone() or (None,)
+            cx.execute(
+                "INSERT INTO cloudops.cost_fact (tenant_id, account_id, resource_id, usage_date,"
+                " invoice_period, service_native, unblended_cost, amortized_cost, currency)"
+                " VALUES (%s, %s, %s, %s, %s, 'Compute', %s, %s, 'EUR')",
+                (internal, internal_account, resource, now.date(), _month(now), amount, amount),
+            )
         # Gateway calls this month.
         for tenant, tokens_in, tokens_out, cost, outcome in (
             (a.id, 1000, 500, "0.012500", "succeeded"),
@@ -160,8 +176,9 @@ async def home(admin_server: str) -> AsyncIterator[Home]:
         seeded = _seeded(provisioned)
         internal, internal_account = uuid4(), uuid4()
         with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
-            cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal)"
-                       " VALUES (%s, 'Getronics platform', 'GTNPLAT', true)", (internal,))
+            cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal,"
+                       " hosts_platform) VALUES (%s, 'Getronics platform', 'GTNPLAT', true,"
+                       " true)", (internal,))
             cx.execute("INSERT INTO cloudops.cloud_account (id, tenant_id, provider, native_id,"
                        " display_name) VALUES (%s, %s, 'azure', %s, 'platform')",
                        (internal_account, internal, f"sub-platform-{provisioned.suffix}"))
@@ -359,10 +376,19 @@ async def test_cost_trend_keeps_currencies_apart_and_marks_reconciliation(home: 
     assert states[(b_id, home.previous)] == "unchecked"
     assert states[(c_id, home.previous)] == "unverified"
     assert a["anomalies_30d"]["value"] == 1
+    # An internal tenant is reported like a customer: its whole subscription.
     internal = by[str(home.internal)]
-    assert internal["internal"] is True
-    assert not a["internal"]
-    assert internal["currencies"][0]["points"][-1]["amortized"]["value"] == "410.500000"
+    assert (internal["internal"], internal["hosts_platform"]) == (True, True)
+    assert (a["internal"], a["hosts_platform"]) == (False, False)
+    assert internal["currencies"][0]["points"][-1]["amortized"]["value"] == "560.750000"
+    # The platform's own cost: its resources' lines in the host, nothing else.
+    platform = body["platform"]
+    assert platform["host"]["id"] == str(home.internal)
+    assert platform["captured"] is True
+    own = platform["currencies"][0]
+    assert own["currency"] == "EUR"
+    assert own["points"][-1]["amortized"]["value"] == "100.250000"
+    assert own["points"][-2]["amortized"] is None
 
 
 async def test_cost_is_staff_cost_read_only(home: Home) -> None:

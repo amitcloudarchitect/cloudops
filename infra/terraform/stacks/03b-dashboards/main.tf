@@ -158,12 +158,14 @@ locals {
       title = "Platform cost"
       panels = [
         { title = "How these figures are made", unit = "none", type = "text",
-        text = "The platform's own Azure cost runs through the customer FinOps code unchanged: an internal tenant, reconciled and checked for anomalies by the FinOps jobs, allocated with cloudops_commercial (ADR 0022). Amounts are month to date, amortized, in their own currency, rounded here for display." },
+        text = "The platform's own Azure cost runs through the customer FinOps code unchanged. The platform runs in one tenant's subscription (the host, ADR 0031); its cost here is the lines of its own resources (rg-cloudops-*), not the whole subscription. Reconciliation and anomalies are the host tenant's. Amounts are month to date, amortized, in their own currency, rounded here for display. When the host's feed has no resource-level lines, the platform's part is not captured." },
         { title = "Month to date by charge class", unit = "none", type = "stat",
         expr = "sum by (charge_class, currency) (cloudops_platform_cost_micros) / 1e6" },
-        { title = "Reconciles with the provider this month", unit = "bool_yes_no", type = "stat",
+        { title = "Platform's part captured (resource-level lines)", unit = "bool_yes_no", type = "stat",
+        expr = "cloudops_platform_cost_resource_lines" },
+        { title = "Host tenant reconciles with the provider this month", unit = "bool_yes_no", type = "stat",
         expr = "cloudops_platform_cost_verified" },
-        { title = "Anomalies, 30 days", unit = "short", type = "stat",
+        { title = "Host tenant anomalies, 30 days", unit = "short", type = "stat",
         expr = "cloudops_platform_cost_anomalies" },
         { title = "Unallocated share by dimension", unit = "percentunit", type = "stat",
         expr = "cloudops_platform_cost_unallocated_share" },

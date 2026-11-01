@@ -1,6 +1,6 @@
 """Platform gauges from the database (step 19; ADR 0022): connector health,
-quarantine depth, reconciliation and the platform's own cost, with no tenant
-anywhere in a label."""
+quarantine depth, reconciliation and the platform's own cost (its resources' lines
+in the host tenant, ADR 0031), with no tenant anywhere in a label."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from decimal import Decimal
 import psycopg
 import pytest
 
-from cloudops_connectors.platform_metrics import GAUGES, collect
+from cloudops_connectors.platform_metrics import GAUGES, PLATFORM_GROUP, collect
 from cloudops_devdata.servicenow_fixtures import FIXTURE_ANCHOR
 from cloudops_observability import micros
 from cloudops_observability.gauges import Snapshot
@@ -32,14 +32,27 @@ async def data(admin_server: str) -> AsyncIterator[Synthetic]:
 
 @pytest.fixture(scope="module")
 def internal(data: Synthetic) -> str:
-    """The tenant with the most cost this month plays Getronics itself."""
+    """The tenant with the most resource-linked cost this month hosts the platform,
+    and the resources of one of its accounts sit in a platform resource group; a
+    second tenant is internal too, and hosts nothing."""
     with psycopg.connect(data.admin_dsn) as cx:
         (tenant,) = cx.execute(
             "SELECT tenant_id FROM cloudops.cost_fact WHERE invoice_period = %s"
-            " GROUP BY tenant_id ORDER BY count(*) DESC LIMIT 1",
+            " AND resource_id IS NOT NULL GROUP BY tenant_id ORDER BY count(*) DESC LIMIT 1",
             (TODAY.strftime("%Y-%m"),)).fetchone() or (None,)
         assert tenant is not None, "the synthetic dataset has cost this month"
-        cx.execute("UPDATE cloudops.tenant SET internal = true WHERE id = %s", (tenant,))
+        cx.execute("UPDATE cloudops.tenant SET internal = true, hosts_platform = true"
+                   " WHERE id = %s", (tenant,))
+        cx.execute("UPDATE cloudops.tenant SET internal = true WHERE id = (SELECT id FROM"
+                   " cloudops.tenant WHERE id <> %s ORDER BY id LIMIT 1)", (tenant,))
+        # Half the host's resources move into the platform's groups; the rest are
+        # the subscription's other workloads (in dev, the lab VMs).
+        cx.execute(
+            "UPDATE cloudops.resource r SET native_id = '/subscriptions/x/resourceGroups/'"
+            " || CASE WHEN n %% 3 = 0 THEN 'MC_rg-cloudops-aks-dev-weu_aks/'"
+            "         ELSE 'rg-cloudops-app-dev-weu/' END || r.id"
+            " FROM (SELECT id, row_number() OVER (ORDER BY id) AS n FROM cloudops.resource"
+            "       WHERE tenant_id = %s) k WHERE k.id = r.id AND k.n %% 2 = 0", (tenant,))
         cx.execute(
             "INSERT INTO staging.tenant_alias_quarantine (source_system, alias, occurrence_count)"
             " VALUES ('servicenow', 'Unmatched Holdings Ltd', 3)"
@@ -97,15 +110,23 @@ async def test_quarantine_depth_is_counted_per_source(snapshot: Snapshot) -> Non
                 source="servicenow") >= 3
 
 
-async def test_own_cost_is_the_internal_tenants_in_exact_micros(
+async def test_own_cost_is_the_platform_resources_in_exact_micros(
     data: Synthetic, internal: str, snapshot: Snapshot
 ) -> None:
     with psycopg.connect(data.admin_dsn) as cx:
         expected = cx.execute(
-            "SELECT charge_class::text, currency, sum(amortized_cost) FROM cloudops.cost_fact"
-            " WHERE tenant_id = %s AND invoice_period = %s GROUP BY 1, 2",
-            (internal, TODAY.strftime("%Y-%m"))).fetchall()
+            "SELECT c.charge_class::text, c.currency, sum(c.amortized_cost)"
+            " FROM cloudops.cost_fact c JOIN cloudops.resource r ON r.id = c.resource_id"
+            " WHERE c.tenant_id = %s AND c.invoice_period = %s"
+            "   AND lower(r.native_id) ~ %s GROUP BY 1, 2",
+            (internal, TODAY.strftime("%Y-%m"), PLATFORM_GROUP)).fetchall()
+        (whole,) = cx.execute(
+            "SELECT sum(amortized_cost) FROM cloudops.cost_fact WHERE tenant_id = %s"
+            " AND invoice_period = %s", (internal, TODAY.strftime("%Y-%m"))).fetchone() or (0,)
     assert expected
+    # The platform's part, never the whole subscription.
+    assert sum(Decimal(a) for _, _, a in expected) < Decimal(whole)
+    assert _one(snapshot, "cloudops.platform.cost_resource_lines") == 1
     reported = {(lab["charge_class"], lab["currency"]): v
                 for lab, v in snapshot.values["cloudops.platform.cost_micros"]}
     assert reported == {(c, ccy): micros(Decimal(a)) for c, ccy, a in expected}
@@ -117,30 +138,38 @@ async def test_own_cost_is_the_internal_tenants_in_exact_micros(
     assert all(0 <= v <= 1 for _, v in shares)
 
 
-async def test_without_an_internal_tenant_there_is_no_own_cost(
+async def test_without_a_platform_host_there_is_no_own_cost(
     data: Synthetic, internal: str
 ) -> None:
+    """Internal tenants alone say nothing about the platform's cost."""
     with psycopg.connect(data.admin_dsn) as cx:
-        cx.execute("UPDATE cloudops.tenant SET internal = false WHERE id = %s", (internal,))
+        cx.execute("UPDATE cloudops.tenant SET hosts_platform = false WHERE id = %s", (internal,))
     db = Database.create(data.ingest_dsn, pool_size=1, max_overflow=0)
     try:
         snap = await collect(db, TODAY)
     finally:
         await db.dispose()
         with psycopg.connect(data.admin_dsn) as cx:
-            cx.execute("UPDATE cloudops.tenant SET internal = true WHERE id = %s", (internal,))
+            cx.execute("UPDATE cloudops.tenant SET hosts_platform = true WHERE id = %s",
+                       (internal,))
     assert "cloudops.platform.cost_micros" not in snap.values
+    assert "cloudops.platform.cost_resource_lines" not in snap.values
     assert "cloudops.connector.expected_interval" in snap.values
 
 
-def test_only_one_tenant_can_be_internal(data: Synthetic, internal: str) -> None:
-    with psycopg.connect(data.admin_dsn) as cx, pytest.raises(psycopg.errors.UniqueViolation):
-        cx.execute("UPDATE cloudops.tenant SET internal = true WHERE id <> %s", (internal,))
+def test_many_tenants_may_be_internal_but_one_hosts(data: Synthetic, internal: str) -> None:
+    with psycopg.connect(data.admin_dsn) as cx:
+        (count,) = cx.execute("SELECT count(*) FROM cloudops.tenant WHERE internal"
+                              ).fetchone() or (0,)
+        assert count >= 2
+        with pytest.raises(psycopg.errors.UniqueViolation):
+            cx.execute("UPDATE cloudops.tenant SET hosts_platform = true WHERE internal")
 
 
 async def test_the_dev_seed_loads_the_internal_tenant(admin_server: str) -> None:
     """`make seed`'s path: the dataset with the internal tenant loads, passes the
-    isolation check, and leaves exactly one internal tenant with cost."""
+    isolation check, and leaves it the platform's host, with cost but no
+    resource-level line (so the platform's part reads as not captured)."""
     from dataclasses import replace as dc_replace
 
     from cloudops_devdata.seed import demo_internal, demo_spike, load, mark_internal, verify
@@ -163,9 +192,11 @@ async def test_the_dev_seed_loads_the_internal_tenant(admin_server: str) -> None
             await ingest.dispose()
             await app.dispose()
         with psycopg.connect(d.admin_dsn) as cx:
-            rows = cx.execute("SELECT t.id, count(c.*) FROM cloudops.tenant t"
+            rows = cx.execute("SELECT t.id, count(c.*), count(c.resource_id)"
+                              " FROM cloudops.tenant t"
                               " JOIN cloudops.cost_fact c ON c.tenant_id = t.id"
-                              " WHERE t.internal GROUP BY t.id").fetchall()
+                              " WHERE t.hosts_platform AND t.internal GROUP BY t.id").fetchall()
     assert len(rows) == 1
     assert rows[0][0] == internal
     assert rows[0][1] > 0
+    assert rows[0][2] == 0

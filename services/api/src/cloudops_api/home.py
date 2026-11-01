@@ -12,8 +12,11 @@ These four answer what no endpoint did, each in one call with aggregate queries
   columns ``cloudops_customer`` is granted (migration 0011): never a workgroup.
 - ``/v1/home/triage`` (``triage.review``, staff): triage awaiting a person's review.
 - ``/v1/home/cost`` (``cost.read``, staff): Getronics' cost by customer and month,
-  anomalies, and reconciliation with provisional months marked. Includes the
-  internal tenant: the platform's own cost (ADR 0023).
+  anomalies, and reconciliation with provisional months marked. Internal tenants
+  are listed like customers (ADR 0031). The platform's own cost is separate: the
+  lines of its own resources (``rg-cloudops-*``) in the tenant that hosts it, and
+  whether the host's feed has resource-level lines at all (when not, the
+  platform's part is not captured).
 - ``/v1/home/ai-usage`` (``cost.read``, staff): AI gateway tokens against the
   tenant's monthly quota, and spend. Spend is Getronics' cost, so it follows
   ``cost.read``; no customer role reads it (and ``staff_only`` hides the rows).
@@ -45,6 +48,7 @@ from cloudops_api.access import Access
 from cloudops_api.bff import TenantView
 from cloudops_api.pipeline import ApiError, AuditedRoute, current_access, platform, requires
 from cloudops_api.provenance import ApiModel, Metric, query_ref
+from cloudops_commercial.finops import PLATFORM_GROUP
 
 router = APIRouter(prefix="/v1/home", route_class=AuditedRoute)
 
@@ -500,16 +504,26 @@ class MonthReconciliation(ApiModel):
 
 class CustomerCostHome(ApiModel):
     tenant: TenantView
-    internal: bool  # the platform's own cost (ADR 0023), not a customer's
+    internal: bool  # internal to Getronics; reported like a customer (ADR 0031)
+    hosts_platform: bool  # the platform runs in its subscription
     currencies: list[CurrencyTrend]
     anomalies_30d: Metric[int]
     last_anomaly_on: date | None
     reconciliation: list[MonthReconciliation]
 
 
+class PlatformCostHome(ApiModel):
+    """The platform's own resources' cost in its host tenant (ADR 0031)."""
+
+    host: TenantView
+    captured: bool  # this month's host cost has resource-level lines to tell it apart
+    currencies: list[CurrencyTrend]
+
+
 class CostHome(ApiModel):
     months: list[str]
     customers: list[CustomerCostHome]
+    platform: PlatformCostHome | None  # None: no tenant hosts the platform
 
 
 _COST_TREND: Final = text(
@@ -530,6 +544,17 @@ _ACCOUNTS_WITH_COST: Final = text(
 _ANOMALIES: Final = text(
     "SELECT tenant_id, count(*), max(observed_on) FROM cloudops.cost_anomaly"
     " WHERE observed_on >= :since GROUP BY 1"
+)
+# As platform_metrics counts it: lines of resources in a platform resource group.
+_PLATFORM_TREND: Final = text(
+    "SELECT c.invoice_period, c.currency, sum(c.amortized_cost), max(c.usage_date)"
+    " FROM cloudops.cost_fact c JOIN cloudops.resource r ON r.id = c.resource_id"
+    " WHERE c.tenant_id = :tenant AND c.invoice_period = ANY(CAST(:periods AS text[]))"
+    "   AND lower(r.native_id) ~ :group GROUP BY 1, 2"
+)
+_RESOURCE_LINES: Final = text(
+    "SELECT EXISTS (SELECT 1 FROM cloudops.cost_fact c WHERE c.tenant_id = :tenant"
+    " AND c.invoice_period = :period AND c.resource_id IS NOT NULL)"
 )
 
 
@@ -564,14 +589,23 @@ async def cost(request: Request, access: AccessDep) -> CostHome:
     periods = _periods(now.date(), TREND_MONTHS)
     checked = periods[-RECONCILED_MONTHS:]
     async with platform(request).db.transaction(access.scope) as conn:
-        tenants = [(UUID(str(r[0])), str(r[1]), bool(r[2])) for r in _rows(await conn.execute(
-            text("SELECT id, canonical_name, internal FROM cloudops.tenant"
-                 " ORDER BY internal, canonical_name")))]
+        tenants = [(UUID(str(r[0])), str(r[1]), bool(r[2]), bool(r[3]))
+                   for r in _rows(await conn.execute(text(
+                       "SELECT id, canonical_name, internal, hosts_platform FROM cloudops.tenant"
+                       " ORDER BY canonical_name")))]
         trend = _rows(await conn.execute(_COST_TREND, {"periods": periods}))
         checks = _rows(await conn.execute(_RECON_CHECKS, {"periods": checked}))
         with_cost = _rows(await conn.execute(_ACCOUNTS_WITH_COST, {"periods": checked}))
         anomalies = {UUID(str(r[0])): (int(r[1]), r[2]) for r in _rows(await conn.execute(
             _ANOMALIES, {"since": now.date() - timedelta(days=RECENT_DAYS)}))}
+        host = next(((t, name) for t, name, _, hosts in tenants if hosts), None)
+        platform_rows: list[tuple[Any, ...]] = []
+        captured = False
+        if host is not None:
+            params = {"tenant": host[0], "periods": periods, "group": PLATFORM_GROUP}
+            platform_rows = _rows(await conn.execute(_PLATFORM_TREND, params))
+            captured = bool(await conn.scalar(_RESOURCE_LINES,
+                                              {"tenant": host[0], "period": periods[-1]}))
 
     amounts: dict[UUID, dict[str, dict[str, tuple[Any, date]]]] = defaultdict(
         lambda: defaultdict(dict))
@@ -607,17 +641,36 @@ async def cost(request: Request, access: AccessDep) -> CostHome:
                             "home.verified_accounts", **params))
 
     customers: list[CustomerCostHome] = []
-    for tid, name, internal in tenants:
+    for tid, name, internal, hosts in tenants:
         count, last_on = anomalies.get(tid, (0, None))
         customers.append(CustomerCostHome(
-            tenant=TenantView(id=tid, name=name), internal=internal,
+            tenant=TenantView(id=tid, name=name), internal=internal, hosts_platform=hosts,
             currencies=[CurrencyTrend(currency=ccy, points=[point(tid, ccy, p) for p in periods])
                         for ccy in sorted(amounts.get(tid, {}))],
             anomalies_30d=_count(count, "anomalies", COST_SOURCE, now, "home.anomalies_30d",
                                  tenant=str(tid)),
             last_anomaly_on=last_on,
             reconciliation=[month(tid, p) for p in checked]))
-    return CostHome(months=periods, customers=customers)
+    platform_cost = None
+    if host is not None:
+        own: dict[str, dict[str, tuple[Any, date]]] = defaultdict(dict)
+        for period, ccy, total, last in platform_rows:
+            own[str(ccy).strip()][str(period)] = (total, last)
+
+        def own_point(ccy: str, period: str) -> CostPoint:
+            found = own[ccy].get(period)
+            as_of = (datetime.combine(found[1] + timedelta(days=1), time.min, UTC)
+                     if found else now)
+            return CostPoint(period=period, month_to_date=period == current,
+                             amortized=None if found is None else _decimal(
+                                 found[0], ccy, COST_SOURCE, as_of, "home.platform_cost_month",
+                                 period=period))
+
+        platform_cost = PlatformCostHome(
+            host=TenantView(id=host[0], name=host[1]), captured=captured,
+            currencies=[CurrencyTrend(currency=ccy, points=[own_point(ccy, p) for p in periods])
+                        for ccy in sorted(own)])
+    return CostHome(months=periods, customers=customers, platform=platform_cost)
 
 
 # --- AI gateway usage ----------------------------------------------------------------

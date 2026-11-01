@@ -1,6 +1,8 @@
 # ADR 0022: Observability instrumentation
 
 - **Status:** Accepted, 2026-10-31
+- **Amended by:** ADR 0031 (decision 11): many tenants may be internal; the platform's
+  own cost is the platform host tenant's platform resources.
 - **Decided by:** Amit Kumar
 - **Implements:** step 19; LLD Observability (sampling, LLM tracing, SLO table, alerts
   that always page, P2 pages), Capacity and cost control; HLD Observability.

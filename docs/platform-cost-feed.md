@@ -42,20 +42,30 @@ kubectl -n platform-ingest get pods,jobs -l 'app.kubernetes.io/name in (connecto
 kubectl -n platform-ingest logs job/connector-azure-schedule
 ```
 
-## 3. The internal tenant and its subscription
+## 3. The owning tenant and its subscription
+
+Each platform subscription has one owner (ADR 0031), and this feed writes its cost
+there. In dev that is Azure Sponsorship (`AZSPONSOR`), which owns
+`cd12743c-f76e-4284-aa62-eb8bd576ac91` and hosts the platform.
 
 1. **The tenant.** On the console's Customer mapping screen (`/mapping`), choose
-   **Onboard a new customer**:
-   - Name: *Getronics CloudOps platform*
-   - Short code: `GTX`
+   **Onboard a new customer**, as a platform administrator:
+   - Name: *Azure Sponsorship*
+   - Short code: `AZSPONSOR`
+   - Kind: **Internal to Getronics**
    - Source: `azure`
    - Alias: the subscription id `cd12743c-f76e-4284-aa62-eb8bd576ac91`
 
    Then **Onboard and propose**, and approve the mapping. In dev, one person may approve.
-2. **Mark it internal.** Nothing in the product does this yet; only the dev seed does,
-   with `cloudops_devdata.seed.mark_internal`. That is one
-   `UPDATE cloudops.tenant SET internal = true` through `packages/tenancy`, with an
-   ingest scope over the tenant. At most one tenant can be internal (migration 0019).
+   If the tenant exists already, map the alias to it, and use **Make internal** in its
+   row.
+2. **Mark it the platform's host.** In the same table, **Hosts the platform**. At most
+   one tenant does; naming another moves it. The Grafana platform-cost dashboard and the
+   home page's Platform cost card then read its platform resources (`rg-cloudops-*`).
+   Dev's query feed has no resource-level lines, so they say "not captured".
+
+If the tenant also has a stored credential for the subscription (ADR 0027), the
+credential reads its resources only: the cost is this feed's, once.
 
 If the mapping is not there at the first run, the subscription's rows go to the alias
 quarantine with their count, and nothing is written until it is approved.
@@ -64,8 +74,8 @@ quarantine with their count, and nothing is written until it is approved.
 
 - After the first `azure-cost_daily` run, the console's connector health shows `azure` /
   `cost_daily` and `cost_total`.
-- `cost_fact` holds the internal tenant's month by day, service and charge class, in the
-  subscription's billing currency (INR in dev). Reconciliation compares it with
+- `cost_fact` holds the owning tenant's month by day, service and charge class, in the
+  subscription's billing currency. Reconciliation compares it with
   `cost_total`.
 - The Grafana platform-cost dashboard needs the collector running in dev
   (docs/observability.md).

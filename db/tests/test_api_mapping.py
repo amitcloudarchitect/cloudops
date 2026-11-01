@@ -22,7 +22,10 @@ ENDPOINTS = (
     ("GET", "/v1/mapping/quarantine", None),
     ("GET", "/v1/mapping/tenants", None),
     ("GET", "/v1/mapping/proposals", None),
-    ("POST", "/v1/mapping/tenants", {"canonical_name": "Probe Co", "short_code": "PROBE"}),
+    ("POST", "/v1/mapping/tenants",
+     {"canonical_name": "Probe Co", "short_code": "PROBE", "internal": False}),
+    ("POST", f"/v1/mapping/tenants/{uuid4()}/kind", {"internal": True}),
+    ("POST", "/v1/mapping/platform-host", {"tenant_id": None}),
     ("POST", "/v1/mapping/proposals",
      {"source_system": "servicenow", "alias": "Probe", "tenant_id": str(uuid4())}),
     ("POST", f"/v1/mapping/proposals/{uuid4()}/decision", {"decision": "approve"}),
@@ -101,12 +104,13 @@ async def test_onboard_then_map_then_approve_by_a_second_person(
 
     code = f"N{uuid4().hex[:6].upper()}"
     onboarded = await _send(api, "POST", "/v1/mapping/tenants", principals.admin,
-                            {"canonical_name": f"New Customer {code}", "short_code": code})
+                            {"canonical_name": f"New Customer {code}", "short_code": code,
+                             "internal": False})
     assert onboarded.status_code == 201, onboarded.text
     tenants = (await _send(api, "GET", "/v1/mapping/tenants", principals.admin)).json()
     assert onboarded.json()["tenant"]["id"] in {t["tenant"]["id"] for t in tenants}
     again = await _send(api, "POST", "/v1/mapping/tenants", principals.admin,
-                        {"canonical_name": "Other", "short_code": code})
+                        {"canonical_name": "Other", "short_code": code, "internal": False})
     assert again.status_code == 409
 
     proposed = await _send(api, "POST", "/v1/mapping/proposals", principals.admin,
@@ -261,3 +265,56 @@ async def test_reprocess_needs_something_held_and_a_proposal_in_scope(
         hidden = await _send(api, method, f"/v1/mapping/proposals/{theirs['id']}/reprocess",
                              mapper_a)
         assert hidden.status_code == 404, method
+
+
+# --- internal tenants and the platform host (ADR 0031) ------------------------------
+
+
+async def test_a_platform_administrator_chooses_internal_at_onboarding_and_later(
+    api: Api, principals: Principals, seeded: Seeded, mapper_a: UUID
+) -> None:
+    code = f"I{uuid4().hex[:6].upper()}"
+    body = {"canonical_name": f"Getronics Unit {code}", "short_code": code}
+    # No default: the choice is made, never assumed.
+    assert (await _send(api, "POST", "/v1/mapping/tenants", principals.admin,
+                        body)).status_code == 422
+    # A customer master may onboard customers, not internal tenants.
+    refused = await _send(api, "POST", "/v1/mapping/tenants", mapper_a,
+                          {**body, "internal": True})
+    assert refused.status_code == 403
+    made = await _send(api, "POST", "/v1/mapping/tenants", principals.admin,
+                       {**body, "internal": True})
+    assert made.status_code == 201, made.text
+    tid = made.json()["tenant"]["id"]
+    listed = {t["tenant"]["id"]: t for t in
+              (await _send(api, "GET", "/v1/mapping/tenants", principals.admin)).json()}
+    assert (listed[tid]["internal"], listed[tid]["hosts_platform"]) == (True, False)
+    assert listed[str(seeded.a.id)]["internal"] is False
+
+    # It hosts the platform; a customer cannot; the host cannot stop being internal.
+    hosted = await _send(api, "POST", "/v1/mapping/platform-host", principals.admin,
+                         {"tenant_id": tid})
+    assert hosted.status_code == 200, hosted.text
+    assert hosted.json()["hosts_platform"] is True
+    for path, change in ((f"/v1/mapping/tenants/{tid}/kind", {"internal": False}),
+                         ("/v1/mapping/platform-host", {"tenant_id": str(seeded.a.id)})):
+        conflict = await _send(api, "POST", path, principals.admin, change)
+        assert conflict.status_code == 409
+        assert conflict.json()["error"]["code"] == "platform_host_rule"
+        assert str(seeded.a.id) not in conflict.text
+    cleared = await _send(api, "POST", "/v1/mapping/platform-host", principals.admin,
+                          {"tenant_id": None})
+    assert cleared.status_code == 200
+    changed = await _send(api, "POST", f"/v1/mapping/tenants/{tid}/kind", principals.admin,
+                          {"internal": False})
+    assert changed.status_code == 200
+    assert (changed.json()["internal"], changed.json()["hosts_platform"]) == (False, False)
+    # A customer master does not change a tenant's kind, even in its scope.
+    assert (await _send(api, "POST", f"/v1/mapping/tenants/{seeded.a.id}/kind", mapper_a,
+                        {"internal": True})).status_code == 403
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        logged = [r[0] for r in cx.execute(
+            "SELECT action FROM access.change_log WHERE detail->>'tenant_id' = %s"
+            " ORDER BY id", (tid,)).fetchall()]
+    assert logged == ["onboard_tenant", "set_tenant_internal", "set_platform_host",
+                      "set_tenant_internal"]

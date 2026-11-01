@@ -58,10 +58,15 @@ def intent(kind: str = "account", other: bool = False) -> Completion:
 
 @pytest.fixture(scope="module")
 async def assisted(seeded: Seeded, principals: Principals, api: Api) -> AsyncIterator[Assisted]:
-    internal = uuid4()
+    internal, other_internal = uuid4(), uuid4()
     with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
-        cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal)"
-                   " VALUES (%s, 'Getronics platform (suite)', 'GTXSUITE', true)", (internal,))
+        # Two internal tenants (ADR 0031); help-only history is the platform host's.
+        cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal,"
+                   " hosts_platform) VALUES (%s, 'Getronics other (suite)', 'GTXOTHER', true,"
+                   " false)", (other_internal,))
+        cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal,"
+                   " hosts_platform) VALUES (%s, 'Getronics platform (suite)', 'GTXSUITE',"
+                   " true, true)", (internal,))
         for tenant, number, text in ((seeded.a, TICKET_A, "alpha disk alert"),
                                      (seeded.b, TICKET_B, SECRET_B)):
             cx.execute(
@@ -84,7 +89,8 @@ async def assisted(seeded: Seeded, principals: Principals, api: Api) -> AsyncIte
     await db.dispose()
     with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
         cx.execute("DELETE FROM cloudops.work_item WHERE number IN (%s, %s)", (TICKET_A, TICKET_B))
-        cx.execute("DELETE FROM cloudops.tenant WHERE id = %s", (internal,))
+        cx.execute("DELETE FROM cloudops.tenant WHERE id IN (%s, %s)",
+                   (internal, other_internal))
 
 
 async def _ask(s: Assisted, oid: UUID, body: dict[str, Any]) -> dict[str, Any]:
@@ -229,8 +235,8 @@ async def test_staff_cannot_bind_a_conversation_to_a_tenant_outside_scope(
     assert r.status_code == 404
 
 
-async def test_help_only_conversation_uses_the_internal_tenant_and_no_tools(
-    assisted: Assisted, principals: Principals,
+async def test_help_only_conversation_uses_the_platform_host_and_no_tools(
+    assisted: Assisted, principals: Principals, seeded: Seeded,
 ) -> None:
     s = assisted
     session = (await s.api.get("/v1/assistant/session", principals.engineer_a)).json()
@@ -246,6 +252,9 @@ async def test_help_only_conversation_uses_the_internal_tenant_and_no_tools(
     mine = next(c for c in conversations if c["id"] == turn["conversation_id"])
     assert mine["mode"] == "help"
     assert mine["tenant"] is None
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        assert cx.execute("SELECT tenant_id FROM cloudops.assistant_conversation WHERE id = %s",
+                          (turn["conversation_id"],)).fetchone() == (s.internal,)
     # An account question in a help-only conversation is told to choose a customer.
     s.model.queue("assistant.classify", intent("account"))
     follow = await _ask(s, principals.engineer_a, {

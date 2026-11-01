@@ -13,12 +13,23 @@ tenant from ``cloudops.finops_tenants()``: row-level security still applies, so
 there is no new way around it, only the reach the ingest role already has.
 
 **The platform's own cost** (LLD, Observability) runs through the customer FinOps
-code unchanged. The internal tenant (``cloudops.tenant.internal``, migration 0019)
-is a tenant like any other: its cost lands through the Azure connector, the
-FinOps jobs reconcile it and look for anomalies with ``cloudops_commercial``, and
-this job reports what they found, plus allocation computed with the same
-``cloudops_commercial.finops`` functions the console's FinOps view uses. A defect
-in the FinOps engine shows up on our own bill first.
+code unchanged. The platform runs in one tenant's subscription, the host
+(``cloudops.tenant.hosts_platform``, ADR 0031), a tenant like any other: its cost
+lands through the Azure connector, the FinOps jobs reconcile it and look for
+anomalies with ``cloudops_commercial``, and this job reports what they found, plus
+allocation computed with the same ``cloudops_commercial.finops`` functions the
+console's FinOps view uses. A defect in the FinOps engine shows up on our own bill
+first.
+
+The host's subscription holds more than the platform (in dev, Azure Sponsorship's
+lab VMs), so **the platform's cost is its resources' lines only** (user, ADR 0031):
+cost lines linked to a resource in a platform resource group (``rg-cloudops-*``, and
+AKS's node group ``MC_rg-cloudops-*``; LLD naming). Lines with no resource
+(subscription-level charges, or a feed grouped by service, as the Sponsorship
+offer's query feed is) cannot be told apart and are left out:
+``cloudops.platform.cost_resource_lines`` says whether there were any to count, so
+the dashboard shows "not captured" rather than a zero. Reconciliation and
+anomalies stay the host tenant's, per account, as the FinOps jobs compute them.
 
 Money is reported in millionths of its currency (integers, never floats).
 """
@@ -73,9 +84,13 @@ GAUGES: Final = (
     _g("finops.reconciliation_drift_max", "1",
        "Largest absolute drift among the latest checks (LLD target: under 0.005)"),
     _g("platform.cost_micros", "{micro}",
-       "The platform's own cost this month, amortized, in millionths of its currency"),
-    _g("platform.cost_verified", "1", "1 when the platform's own cost reconciles this month"),
-    _g("platform.cost_anomalies", "{anomaly}", "Anomalies on the platform's own cost, 30 days"),
+       "The platform's own resources' cost this month, amortized, in millionths of its"
+       " currency"),
+    _g("platform.cost_resource_lines", "1",
+       "1 when the host's cost this month has resource-level lines, so the platform's"
+       " part can be told apart"),
+    _g("platform.cost_verified", "1", "1 when the host tenant's cost reconciles this month"),
+    _g("platform.cost_anomalies", "{anomaly}", "Anomalies on the host tenant's cost, 30 days"),
     _g("platform.cost_unallocated_share", "1",
        "Share of the platform's own cost with no owner tag, by dimension"),
 )
@@ -121,20 +136,26 @@ FROM cloudops.cost_reconciliation
 WHERE invoice_period = ANY(CAST(:periods AS text[]))
 ORDER BY account_id, invoice_period, kind, checked_on DESC
 """)
-_INTERNAL: Final = text("SELECT id FROM cloudops.tenant WHERE internal")
-_OWN_COST: Final = text("""
+_HOST: Final = text("SELECT cloudops.platform_tenant()")
+PLATFORM_GROUP: Final = finops.PLATFORM_GROUP
+_PLATFORM_LINE: Final = "lower(r.native_id) ~ :group"
+_OWN_COST: Final = text(f"""
 SELECT c.charge_class::text, c.currency, sum(c.amortized_cost)
-FROM cloudops.cost_fact c
-WHERE c.tenant_id = :tenant AND c.invoice_period = :period
+FROM cloudops.cost_fact c JOIN cloudops.resource r ON r.id = c.resource_id
+WHERE c.tenant_id = :tenant AND c.invoice_period = :period AND {_PLATFORM_LINE}
 GROUP BY c.charge_class, c.currency
-""")
-# As the console's FinOps view reads it (cloudops_api.commercial._ALLOCATION).
-_OWN_ALLOCATION: Final = text("""
-SELECT c.resource_id IS NOT NULL, c.tags_snapshot, r.tags, c.currency, sum(c.amortized_cost)
-FROM cloudops.cost_fact c LEFT JOIN cloudops.resource r ON r.id = c.resource_id
-WHERE c.tenant_id = :tenant AND c.invoice_period = :period
-GROUP BY c.resource_id IS NOT NULL, c.tags_snapshot, r.tags, c.currency
-""")
+""")  # noqa: S608 - constants
+_RESOURCE_LINES: Final = text(
+    "SELECT EXISTS (SELECT 1 FROM cloudops.cost_fact c WHERE c.tenant_id = :tenant"
+    " AND c.invoice_period = :period AND c.resource_id IS NOT NULL)")
+# As the console's FinOps view reads it (cloudops_api.commercial._ALLOCATION), for
+# the platform's lines.
+_OWN_ALLOCATION: Final = text(f"""
+SELECT true, c.tags_snapshot, r.tags, c.currency, sum(c.amortized_cost)
+FROM cloudops.cost_fact c JOIN cloudops.resource r ON r.id = c.resource_id
+WHERE c.tenant_id = :tenant AND c.invoice_period = :period AND {_PLATFORM_LINE}
+GROUP BY c.tags_snapshot, r.tags, c.currency
+""")  # noqa: S608 - constants
 _OWN_ANOMALIES: Final = text(
     "SELECT count(*) FROM cloudops.cost_anomaly"
     " WHERE tenant_id = :tenant AND observed_on > CAST(:today AS date) - 30")
@@ -179,7 +200,7 @@ async def _connectors(conn: ScopedConnection, snap: Snapshot) -> None:
 
 
 async def _finops(conn: ScopedConnection, snap: Snapshot, today: date,
-                  internal: UUID | None) -> None:
+                  host: UUID | None) -> None:
     periods = _periods(today)
     unverified: dict[tuple[str, str], int] = defaultdict(int)
     worst = Decimal(0)
@@ -190,21 +211,23 @@ async def _finops(conn: ScopedConnection, snap: Snapshot, today: date,
             unverified[(str(kind), str(reason))] += 1
         if drift is not None:
             worst = max(worst, abs(Decimal(drift)))
-        if internal is not None and tenant == internal:
+        if host is not None and tenant == host:
             own_checks.append(str(status))
     for (kind, reason), n in sorted(unverified.items()):
         snap.add("cloudops.finops.reconciliation_unverified", n, {"kind": kind, "reason": reason})
     snap.add("cloudops.finops.reconciliation_drift_max", float(worst), {})
-    if internal is None:
+    if host is None:
         return
-    params = {"tenant": internal, "period": periods[0]}
+    params = {"tenant": host, "period": periods[0], "group": PLATFORM_GROUP}
+    snap.add("cloudops.platform.cost_resource_lines",
+             int(bool(await conn.scalar(_RESOURCE_LINES, params))), {})
     for charge_class, currency, amount in _rows(await conn.execute(_OWN_COST, params)):
         snap.add("cloudops.platform.cost_micros", micros(Decimal(amount)),
                  {"charge_class": str(charge_class), "currency": str(currency)})
     snap.add("cloudops.platform.cost_verified",
              int(bool(own_checks) and all(s == "verified" for s in own_checks)), {})
     snap.add("cloudops.platform.cost_anomalies",
-             int(await conn.scalar(_OWN_ANOMALIES, {"tenant": internal, "today": today}) or 0),
+             int(await conn.scalar(_OWN_ANOMALIES, {"tenant": host, "today": today}) or 0),
              {})
     # Allocation exactly as the customer FinOps view computes it: per currency,
     # the cost row's tag snapshot first, then the resource's tags.
@@ -229,10 +252,10 @@ async def collect(db: Database, today: date | None = None) -> Snapshot:
     every = TenantScope(tenants, Role.INGEST, PRINCIPAL)
     async with db.transaction(every) as conn:
         await _connectors(conn, snap)
-        internal_ids = [UUID(str(r[0])) for r in await conn.execute(_INTERNAL)]
+        host = await conn.scalar(_HOST)
     async with db.transaction(TenantScope(tenants, Role.FINOPS, PRINCIPAL)) as conn:
         await _finops(conn, snap, today or datetime.now(UTC).date(),
-                      internal_ids[0] if internal_ids else None)
+                      None if host is None else UUID(str(host)))
     return snap
 
 

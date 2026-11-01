@@ -3,8 +3,8 @@ the credential inventory and its checks are tenant data no other tenant and no
 customer can read; only a platform administrator records one, through the
 functions; the 90-day expiry and one-credential-one-tenant hold in the table; the
 worker claims a check before it knows the tenant and finishes it under that
-tenant's scope; and a provider id is shared only between the internal tenant and
-one customer."""
+tenant's scope; a provider id has one owner, internal or not (ADR 0031); and only
+a platform administrator marks a tenant internal or the platform's host."""
 
 from __future__ import annotations
 
@@ -72,7 +72,8 @@ async def fresh(seeded: Seeded) -> AsyncIterator[list[UUID]]:
                        " credential_check_no_delete")
             try:
                 cx.execute("DELETE FROM cloudops.cloud_account WHERE tenant_id = %s", (t,))
-                cx.execute("UPDATE cloudops.tenant SET internal = false WHERE id = %s", (t,))
+                cx.execute("UPDATE cloudops.tenant SET hosts_platform = false, internal = false"
+                           " WHERE id = %s", (t,))
                 cx.execute("DELETE FROM cloudops.tenant WHERE id = %s", (t,))
             finally:
                 cx.execute("ALTER TABLE cloudops.customer_credential ENABLE TRIGGER"
@@ -364,49 +365,128 @@ async def test_a_finished_check_is_never_rewritten(
                        " WHERE id = :c", c=credential) == [("refused",)]
 
 
-# --- shared accounts (ADR 0023, amended) ----------------------------------------
+# --- one owner per account (ADR 0031) -------------------------------------------
 
 
 _ACCOUNT = ("INSERT INTO cloudops.cloud_account (tenant_id, provider, native_id, display_name)"
-            " VALUES (:t, 'azure', :n, 'x') RETURNING shared_with_platform")
+            " VALUES (:t, 'azure', :n, 'x') RETURNING id")
 
 
 async def test_two_customers_never_hold_the_same_account(
     ingest_db: Database, seeded: Seeded,
 ) -> None:
     a, b = seeded.a, seeded.b
-    with pytest.raises(Exception, match="held by another tenant") as caught:
+    with pytest.raises(Exception, match="cloud_account_provider_native_key") as caught:
         await _call(ingest_db, _ingest(b.id), _ACCOUNT, t=b.id, n=a.account_native_id)
-    assert _sqlstate(caught.value) == "CAOWN"
+    assert _sqlstate(caught.value) == "23505"
     assert "alpha" not in str(caught.value)
     assert str(a.id) not in str(caught.value)
 
 
-async def test_the_internal_tenant_and_one_customer_may_share_an_account(
-    ingest_db: Database, seeded: Seeded, fresh: list[UUID],
+@pytest.mark.parametrize("first_internal", [True, False])
+async def test_an_internal_tenant_shares_an_account_with_nobody(
+    ingest_db: Database, seeded: Seeded, fresh: list[UUID], first_internal: bool,
 ) -> None:
-    internal = _tenant(seeded, fresh, "GTX", internal=True)
-    customer, other = _tenant(seeded, fresh, "SHARE"), _tenant(seeded, fresh, "SHARE2")
-    sub = _sub()
-    assert await _call(ingest_db, _ingest(internal), _ACCOUNT, t=internal, n=sub) == [(False,)]
-    assert await _call(ingest_db, _ingest(customer), _ACCOUNT, t=customer, n=sub) == [(True,)]
-    # Both copies say so, each read in its own tenant only.
-    for t in (internal, customer):
-        assert await _call(ingest_db, _ingest(t), "SELECT tenant_id, shared_with_platform FROM"
-                           " cloudops.cloud_account WHERE native_id = :n", n=sub) == [(t, True)]
-    # A second customer is refused, as is the internal tenant giving up being internal.
-    with pytest.raises(Exception, match="held by another tenant"):
-        await _call(ingest_db, _ingest(other), _ACCOUNT, t=other, n=sub)
-    with pytest.raises(Exception, match="shares an account"):
-        await _call(ingest_db, _ingest(internal),
-                    "UPDATE cloudops.tenant SET internal = false WHERE id = :t", t=internal)
-
-
-async def test_with_no_internal_tenant_nothing_is_shared(
-    ingest_db: Database, seeded: Seeded, fresh: list[UUID],
-) -> None:
-    first, second = _tenant(seeded, fresh, "NOINT1"), _tenant(seeded, fresh, "NOINT2")
+    """PR 62 let the internal tenant and one customer hold one subscription. ADR 0031
+    withdrew that: internal or not, an account has one owner."""
+    first = _tenant(seeded, fresh, "OWN1", internal=first_internal)
+    second = _tenant(seeded, fresh, "OWN2", internal=True)
     sub = _sub()
     await _call(ingest_db, _ingest(first), _ACCOUNT, t=first, n=sub)
-    with pytest.raises(Exception, match="held by another tenant"):
+    with pytest.raises(Exception, match="cloud_account_provider_native_key"):
         await _call(ingest_db, _ingest(second), _ACCOUNT, t=second, n=sub)
+    # Its own row again is an upsert, not a second owner.
+    assert len(await _call(ingest_db, _ingest(first),
+                "INSERT INTO cloudops.cloud_account (tenant_id, provider, native_id, display_name)"
+                " VALUES (:t, 'azure', :n, 'x') ON CONFLICT (tenant_id, provider, native_id)"
+                " DO UPDATE SET display_name = 'y' RETURNING id", t=first, n=sub)) == 1
+
+
+def test_the_sharing_machinery_is_gone(seeded: Seeded) -> None:
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        assert cx.execute("SELECT tgname FROM pg_trigger WHERE tgname IN"
+                          " ('cloud_account_sharing', 'tenant_internal_sharing')").fetchall() == []
+        assert cx.execute("SELECT indexname FROM pg_indexes"
+                          " WHERE indexname = 'tenant_one_internal_idx'").fetchall() == []
+        assert cx.execute("SELECT polname FROM pg_policy WHERE polname IN"
+                          " ('account_sharing_read', 'account_sharing_mark',"
+                          "  'internal_tenant_read')").fetchall() == []
+
+
+# --- internal tenants and the platform host (ADR 0031) ------------------------------
+
+
+KIND = "SELECT access.set_tenant_internal(:a, :t, :i)"
+HOST = "SELECT access.set_platform_host(:a, :t)"
+
+
+def _kinds(seeded: Seeded, *tenants: UUID) -> list[tuple[UUID, bool, bool]]:
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        return [(r[0], r[1], r[2]) for r in cx.execute(
+            "SELECT id, internal, hosts_platform FROM cloudops.tenant WHERE id = ANY(%s)"
+            " ORDER BY short_code", (list(tenants),)).fetchall()]
+
+
+async def test_many_tenants_may_be_internal(
+    app_db: Database, seeded: Seeded, principals: Principals, fresh: list[UUID],
+) -> None:
+    one, two = _tenant(seeded, fresh, "INTA"), _tenant(seeded, fresh, "INTB")
+    for t in (one, two):
+        await _call(app_db, _admin(t), KIND, a=principals.admin, t=t, i=True)
+    assert _kinds(seeded, one, two) == [(one, True, False), (two, True, False)]
+    await _call(app_db, _admin(two), KIND, a=principals.admin, t=two, i=False)
+    assert _kinds(seeded, one, two) == [(one, True, False), (two, False, False)]
+
+
+async def test_one_internal_tenant_hosts_the_platform(
+    app_db: Database, seeded: Seeded, principals: Principals, fresh: list[UUID],
+) -> None:
+    first = _tenant(seeded, fresh, "HOSTA", internal=True)
+    second = _tenant(seeded, fresh, "HOSTB", internal=True)
+    customer = _tenant(seeded, fresh, "HOSTC")
+    both = _admin(first, second, customer)
+    await _call(app_db, both, HOST, a=principals.admin, t=first)
+    assert await _call(app_db, both, "SELECT cloudops.platform_tenant()") == [(first,)]
+    # Moving the host takes the flag from the old one.
+    await _call(app_db, both, HOST, a=principals.admin, t=second)
+    assert _kinds(seeded, first, second) == [(first, True, False), (second, True, True)]
+    assert await _call(app_db, both, "SELECT cloudops.internal_tenant()") == [(second,)]
+    # A customer cannot host; the host cannot become a customer while it hosts.
+    with pytest.raises(Exception, match="only an internal tenant") as caught:
+        await _call(app_db, both, HOST, a=principals.admin, t=customer)
+    assert _sqlstate(caught.value) == "TKHST"
+    with pytest.raises(Exception, match="move the host first"):
+        await _call(app_db, both, KIND, a=principals.admin, t=second, i=False)
+    # And the table holds it without the functions.
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx, \
+            pytest.raises(psycopg.errors.UniqueViolation):
+        cx.execute("UPDATE cloudops.tenant SET hosts_platform = true WHERE id = %s", (first,))
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx, \
+            pytest.raises(psycopg.errors.CheckViolation):
+        cx.execute("UPDATE cloudops.tenant SET internal = false WHERE id = %s", (second,))
+    await _call(app_db, both, HOST, a=principals.admin, t=None)
+    assert await _call(app_db, both, "SELECT cloudops.platform_tenant()") == [(None,)]
+
+
+async def test_only_a_platform_administrator_sets_a_tenants_kind_in_its_scope(
+    app_db: Database, seeded: Seeded, principals: Principals, fresh: list[UUID],
+) -> None:
+    t = _tenant(seeded, fresh, "KINDX")
+    for sql in (KIND, HOST):
+        params: dict[str, Any] = {"a": principals.finops_all, "t": t, "i": True}
+        with pytest.raises(Exception, match="not permitted") as caught:
+            await _call(app_db, _admin(t), sql, **params)
+        assert _sqlstate(caught.value) == "42501"
+        # A tenant outside the caller's scope reads as not found.
+        params["a"] = principals.admin
+        with pytest.raises(Exception, match="not found"):
+            await _call(app_db, _admin(seeded.a.id), sql, **params)
+    assert _kinds(seeded, t) == [(t, False, False)]
+
+
+def test_the_application_cannot_change_a_tenants_kind_directly(seeded: Seeded) -> None:
+    for column in ("internal", "hosts_platform"):
+        with raw_scope(seeded.app_dsn, str(seeded.a.id), "platform_admin") as cx, \
+                pytest.raises(psycopg.errors.InsufficientPrivilege):
+            cx.execute(f"UPDATE cloudops.tenant SET {column} = true")
+

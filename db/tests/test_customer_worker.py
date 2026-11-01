@@ -19,7 +19,7 @@ from sqlalchemy import text
 
 from cloudops_config import EnvFileSecretStore
 from cloudops_connectors.core.raw import MemoryRawStore
-from cloudops_connectors.customer import check
+from cloudops_connectors.customer import check, credentials, sources
 from cloudops_connectors.customer.credentials import StoredCredential
 from cloudops_connectors.customer.worker import CustomerWorker
 from cloudops_tenancy import Database, Role, TenantScope
@@ -32,8 +32,6 @@ pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 def _tenant(seeded: Seeded, code: str, *, internal: bool = False) -> UUID:
     t = uuid4()
     with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
-        if internal:
-            cx.execute("UPDATE cloudops.tenant SET internal = false WHERE internal")
         cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal)"
                    " VALUES (%s, %s, %s, %s)", (t, f"Worker {code} {t}", code, internal))
     return t
@@ -89,7 +87,7 @@ async def test_a_passed_check_binds_the_accounts_to_the_tenant(
                             providers=("azure",), checker=_passes)
     report = await _run_until(worker, credential)
     assert (report.status, report.outcome) == ("passed", "read_only")
-    assert report.detail["shared_with_platform"] == []
+    assert report.detail["cost_read_by_platform"] == []
     assert _status(seeded, credential)[:3] == ("active", "passed", "read_only")
     with psycopg.connect(seeded.admin_dsn) as cx:
         assert cx.execute("SELECT tenant_id FROM cloudops.cloud_account WHERE native_id = %s",
@@ -150,10 +148,11 @@ async def test_another_customers_account_refuses_the_credential(
                           (t,)).fetchone() == (0,)
 
 
-async def test_the_platforms_own_subscription_is_bound_and_marked_shared(
+async def test_an_internal_tenants_subscription_is_not_shared_with_a_customer(
     app_db: Database, ingest_db: Database, seeded: Seeded, principals: Principals,
     tmp_path: Path,
 ) -> None:
+    """PR 62 shared it; ADR 0031 refuses it like any other tenant's."""
     internal, customer, sub = _tenant(seeded, "WKGTX", internal=True), _tenant(
         seeded, "WKSHARE"), str(uuid4())
     async with ingest_db.transaction(TenantScope([internal], Role.INGEST, "test")) as conn:
@@ -166,8 +165,36 @@ async def test_the_platforms_own_subscription_is_bound_and_marked_shared(
                                 _store(tmp_path, "wkshare"), providers=("azure",),
                                 checker=_passes)
         report = await _run_until(worker, credential)
-        assert (report.status, report.detail["shared_with_platform"]) == ("passed", [sub])
+        assert (report.status, report.outcome) == ("refused", "account_held_by_another_tenant")
     finally:
         with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
             cx.execute("DELETE FROM cloudops.cloud_account WHERE native_id = %s", (sub,))
-            cx.execute("UPDATE cloudops.tenant SET internal = false WHERE id = %s", (internal,))
+
+
+async def test_the_platforms_feed_keeps_the_cost_of_its_owners_subscription(
+    app_db: Database, ingest_db: Database, seeded: Seeded, principals: Principals,
+    tmp_path: Path,
+) -> None:
+    """The host's subscription is read by the platform's own feed (an alias in the
+    same tenant, ADR 0023): its credential reads resources only (ADR 0031)."""
+    host, sub = _tenant(seeded, "WKHOST", internal=True), str(uuid4())
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+        cx.execute("INSERT INTO cloudops.tenant_alias (tenant_id, source_system, alias)"
+                   " VALUES (%s, 'azure', %s)", (host, sub))
+    try:
+        credential = await _onboard(app_db, principals.admin, host, sub)
+        worker = CustomerWorker(ingest_db, MemoryRawStore(), None,
+                                _store(tmp_path, "wkhost"), providers=("azure",),
+                                checker=_passes)
+        report = await _run_until(worker, credential)
+        assert (report.status, report.detail["cost_read_by_platform"]) == ("passed", [sub])
+        async with ingest_db.transaction(TenantScope([host], Role.INGEST, "test")) as conn:
+            found = await credentials.one(conn, credential)
+        assert found is not None
+        fed = await worker._fed(found)
+        assert fed.cost_binding is None
+        assert set(sources.entities(fed)) == {"resource"}
+    finally:
+        with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+            cx.execute("DELETE FROM cloudops.cloud_account WHERE native_id = %s", (sub,))
+            cx.execute("DELETE FROM cloudops.tenant_alias WHERE alias = %s", (sub,))

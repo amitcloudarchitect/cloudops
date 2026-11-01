@@ -13,7 +13,7 @@ belongs to exactly one tenant, chosen once, when it starts:
 
 - a customer: its one tenant, and only once that tenant's assistant is switched on;
 - staff: the tenant of the screen, if it is in their scope (otherwise "not found",
-  as for any other id), or none: a help-only conversation stored under the internal
+  as for any other id), or none: a help-only conversation stored under the platform host
   (Getronics) tenant, which reads only the platform help and calls no tool.
 
 What the client says about its screen (a screen name, a ticket number, a resource
@@ -307,17 +307,17 @@ async def _run_turn(db: Database, engine: Assistant, job: _Job) -> None:
 
 # --- scope -----------------------------------------------------------------------------
 
-_INTERNAL: Final = text("SELECT cloudops.internal_tenant()")
+_PLATFORM: Final = text("SELECT cloudops.platform_tenant()")
 
 
-async def _internal_tenant(db: Database, access: Access) -> UUID | None:
+async def _platform_tenant(db: Database, access: Access) -> UUID | None:
     async with db.transaction(TenantScope.for_resolution(access.scope.principal_id)) as conn:
-        value = await conn.scalar(_INTERNAL)
+        value = await conn.scalar(_PLATFORM)
     return None if value is None else UUID(str(value))
 
 
 def _with(scope: TenantScope, tenant: UUID | None) -> TenantScope:
-    """The caller's scope, plus the internal tenant for its own help-only
+    """The caller's scope, plus the platform host tenant (ADR 0031) for its own help-only
     conversations. Only ever used on the assistant's tables, under owner_only."""
     if tenant is None or tenant in scope.tenant_ids:
         return scope
@@ -328,7 +328,7 @@ def _with(scope: TenantScope, tenant: UUID | None) -> TenantScope:
 async def _history_scope(request: Request, access: Access) -> TenantScope:
     if access.kind == "customer":
         return access.scope
-    return _with(access.scope, await _internal_tenant(platform(request).db, access))
+    return _with(access.scope, await _platform_tenant(platform(request).db, access))
 
 
 async def _tenant_names(conn: ScopedConnection) -> dict[UUID, tuple[str, bool]]:
@@ -344,7 +344,7 @@ async def _tenant_names(conn: ScopedConnection) -> dict[UUID, tuple[str, bool]]:
 @dataclass(frozen=True)
 class _Binding:
     mode: Literal["account", "help"]
-    tenant: UUID | None  # None: help-only, under the internal tenant
+    tenant: UUID | None  # None: help-only, under the platform host tenant
     name: str | None
     available: bool
     reason: Literal["not_enabled", "not_configured"] | None
@@ -425,8 +425,8 @@ async def ask(request: Request, body: AskRequest, access: AccessDep) -> TurnView
     background; poll the turn."""
     runtime = _runtime(request)
     db = platform(request).db
-    internal = None if access.kind == "customer" else await _internal_tenant(db, access)
-    history_scope = _with(access.scope, internal)
+    host = None if access.kind == "customer" else await _platform_tenant(db, access)
+    history_scope = _with(access.scope, host)
     if body.conversation_id is not None:
         async with db.transaction(history_scope) as conn:
             found = (await conn.execute(_CONVERSATION, {
@@ -452,9 +452,9 @@ async def ask(request: Request, body: AskRequest, access: AccessDep) -> TurnView
         cid, seq = None, 1
     if runtime is None:
         raise ApiError(503, "assistant_unavailable")
-    tenant = bound.tenant if bound.tenant is not None else internal
+    tenant = bound.tenant if bound.tenant is not None else host
     if tenant is None:
-        raise ApiError(503, "assistant_unavailable")  # no internal tenant for help mode
+        raise ApiError(503, "assistant_unavailable")  # no platform host for help mode
 
     async with db.transaction(history_scope) as conn:
         if cid is None:

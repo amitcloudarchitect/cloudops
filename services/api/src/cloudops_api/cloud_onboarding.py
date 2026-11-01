@@ -150,9 +150,6 @@ class CredentialView(ApiModel):
     status: CredentialStatus
     validated_at: datetime | None
     revoked_at: datetime | None
-    # Accounts also held by the internal tenant: the platform's own subscription,
-    # whose cost appears under both tenants (ADR 0023, amended by ADR 0027).
-    shared_with_platform: list[str]
     latest_check: CheckView | None
 
 
@@ -160,10 +157,6 @@ _CREDENTIALS: Final = """
 SELECT k.id, k.tenant_id, t.canonical_name, k.provider, k.directory_id, k.client_id,
        k.access_key_id, k.account_ids, k.secret_names, k.owner_oid, k.created_at,
        k.secret_set_at, k.expires_at, k.status, k.validated_at, k.revoked_at,
-       ARRAY(SELECT a.native_id FROM cloudops.cloud_account a
-             WHERE a.tenant_id = k.tenant_id AND a.provider = k.provider
-               AND a.native_id = ANY(k.account_ids) AND a.shared_with_platform
-             ORDER BY a.native_id),
        c.id, c.reason, c.status, c.requested_at, c.finished_at, c.outcome, c.detail
 FROM cloudops.customer_credential k
 JOIN cloudops.tenant t ON t.id = k.tenant_id
@@ -176,9 +169,9 @@ LEFT JOIN LATERAL (
 def _view(r: tuple[Any, ...], access: Access) -> CredentialView:
     now = datetime.now(UTC)
     expires: datetime = r[12]
-    check = None if r[17] is None else CheckView(
-        id=r[17], reason=r[18], status=r[19], requested_at=r[20], finished_at=r[21],
-        outcome=r[22], detail=r[23])
+    check = None if r[16] is None else CheckView(
+        id=r[16], reason=r[17], status=r[18], requested_at=r[19], finished_at=r[20],
+        outcome=r[21], detail=r[22])
     return CredentialView(
         id=r[0], tenant=TenantView(id=r[1], name=r[2]), provider=r[3],
         credential_source="stored_key", directory_id=r[4], client_id=r[5],
@@ -189,8 +182,7 @@ def _view(r: tuple[Any, ...], access: Access) -> CredentialView:
             value=max((expires - now).days, 0), unit="days", source_system="platform",
             as_of=now, query_ref=query_ref("cloud_onboarding.expiry", 1, credential=str(r[0])),
             is_modelled=False),
-        status=r[13], validated_at=r[14], revoked_at=r[15], shared_with_platform=list(r[16]),
-        latest_check=check)
+        status=r[13], validated_at=r[14], revoked_at=r[15], latest_check=check)
 
 
 async def _one(conn: ScopedConnection, credential: UUID, access: Access) -> CredentialView:

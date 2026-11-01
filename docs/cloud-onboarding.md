@@ -16,10 +16,11 @@ The first customer is "Azure Sponsorship", short code `AZSPONSOR`, subscription
 
 ## 0. Before you start
 
-- **The internal tenant is marked internal** (`docs/platform-cost-feed.md`, step 3.2).
-  The dev subscription is also the platform's own; the database lets the internal
-  tenant and one customer share it, and refuses the customer's check
-  (`account_held_by_another_tenant`) if the platform's copy is not the internal tenant's.
+- **One owner per subscription** (ADR 0031). A subscription belongs to one tenant,
+  internal or a customer; a credential for an account another tenant holds is refused
+  (`account_held_by_another_tenant`). The dev subscription is Azure Sponsorship's, an
+  internal tenant that hosts the platform: the platform's own cost feed (ADR 0023)
+  reads its cost into it, and this credential reads its resources only.
 - **Key Vault access.** `kv-cloudops-app-dev-weu` has no public network access: set the
   secret from wherever you set `platform-admin-oid` (ADR 0017), as a member of
   `dev_secret_writer_ids` (Key Vault Secrets Officer).
@@ -108,9 +109,10 @@ and the pod's egress (NAT gateway, `443`) reaches ARM, Entra and AWS.
 
 **Cloud onboarding** (`/cloud-onboarding`, platform administrators only):
 
-1. Choose the customer, or **A new customer…** (name *Azure Sponsorship*, short code
-   `AZSPONSOR`). The short code names the secrets. If the simulation dataset (ADR
-   0025) was loaded, *Azure Sponsorship* already exists: choose it.
+1. Choose the tenant, or **A new tenant…** (name *Azure Sponsorship*, short code
+   `AZSPONSOR`, **Internal to Getronics**), and say whether it is a customer or internal.
+   The short code names the secrets. If the simulation dataset (ADR 0025) was loaded,
+   *Azure Sponsorship* already exists: choose it.
 2. Choose **Azure** and give the directory id, the client id and the subscription ids;
    or **AWS** and the account id and the access key id. **No secret.**
 3. Give the date the secret expires (or the key will be rotated by): at most 90 days.
@@ -125,13 +127,13 @@ Within a minute of the secret being mounted, the connector worker checks it:
 | `secret_not_in_key_vault` | Not mounted yet. | Create it (step 1 or 2), sync, then **Check again**. |
 | `role_not_allowed`, `policy_not_allowed`, `inline_policy` | Something beyond read. The role or policy is named. | Remove it, then **Check again**. |
 | `scope_wider_than_tenant` | It can see other subscriptions. | Remove those role assignments. |
-| `account_held_by_another_tenant` | Another customer holds the account. | Stop: a wrong mapping. Ask. |
+| `account_held_by_another_tenant` | Another tenant, internal or not, holds the account. | Stop: a wrong mapping. Ask. |
 | `credential_rejected`, `*_mismatch` | Wrong secret, key or ids. | Fix the secret or record the right ids. |
 
-The check finds the platform's own subscription shared: the credential shows
-**Shared with the platform**, and FinOps marks the account. Its cost appears under
-`azsponsor` and under the internal tenant, each reconciled on its own figures; never
-add the two (ADR 0023, amended).
+Where the platform's own feed reads an account's cost (an approved `azure` alias in the
+same tenant: the dev subscription), the check's detail lists it under
+`cost_read_by_platform`, and the credential runs no cost schedule for it. Its cost
+appears once, under its owner (ADR 0031).
 
 ## 5. Rotate, revoke, exit
 

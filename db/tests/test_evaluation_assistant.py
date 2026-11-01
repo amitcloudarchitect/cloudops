@@ -59,8 +59,9 @@ async def test_the_assistant_golden_set_does_not_regress(seeded: Seeded) -> None
     assert len(cases) >= 19
     internal = uuid4()
     with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
-        cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal)"
-                   " VALUES (%s, 'Getronics platform (eval)', 'GTXEVAL', true)", (internal,))
+        cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal,"
+                   " hosts_platform) VALUES (%s, 'Getronics platform (eval)', 'GTXEVAL',"
+                   " true, true)", (internal,))
     try:
         outcomes = await run_assistant_cases(
             cases, app_dsn=seeded.app_dsn, plant=_planter(seeded.admin_dsn),

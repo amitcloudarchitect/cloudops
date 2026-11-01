@@ -37,7 +37,7 @@ test.describe("customer master", () => {
   test("maps a name to an existing customer and approves it", async ({ signedIn: page }) => {
     const alias = unique("E2E Northwind Trading");
     await page.goto("/mapping");
-    await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
+    await page.getByRole("button", { name: "Map a name or onboard a tenant…" }).click();
     const form = page.getByRole("form", { name: "Map a name to a customer" });
     await form.getByLabel("Name the source sent").selectOption("");
     await form.getByLabel("Name, exactly as the source sends it").fill(alias);
@@ -87,13 +87,18 @@ test.describe("customer master", () => {
     const alias = unique("E2E Prospect Ltd");
     const code = `E${Date.now().toString(36).slice(-6).toUpperCase()}`;
     await page.goto("/mapping");
-    await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
+    await page.getByRole("button", { name: "Map a name or onboard a tenant…" }).click();
     const form = page.getByRole("form", { name: "Map a name to a customer" });
     await form.getByLabel("Name the source sent").selectOption("");
     await form.getByLabel("Name, exactly as the source sends it").fill(alias);
     await form.getByLabel("Onboard a new customer").check();
     await form.getByLabel("Canonical name").fill(`E2E Prospect ${code}`);
     await form.getByLabel("Short code").fill(code);
+    // Only a platform administrator may onboard an internal tenant (ADR 0031).
+    await expect(form.getByLabel("Internal to Getronics")).toBeDisabled();
+    await form.getByRole("button", { name: "Onboard and propose" }).click();
+    await expect(form.getByRole("alert")).toContainText("customer or internal");
+    await form.getByLabel("A customer", { exact: true }).check();
     await form.getByRole("button", { name: "Onboard and propose" }).click();
     await expect(page.getByRole("status").filter({ hasText: "onboarded, and the mapping proposed" })).toBeVisible();
     await expect(page.getByRole("table", { name: "Customers and their names" }).getByRole("row").filter({ hasText: code })).toBeVisible();
@@ -111,7 +116,7 @@ test.describe("customer master", () => {
     const alias = unique("E2E Listed Ltd");
     holdName(alias, 3);
     await page.goto("/mapping");
-    await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
+    await page.getByRole("button", { name: "Map a name or onboard a tenant…" }).click();
     const form = page.getByRole("form", { name: "Map a name to a customer" });
     const source = form.getByLabel("Source system");
     for (const name of ["ServiceNow", "SharePoint", "Qualys", "CoreStack"]) {
@@ -141,7 +146,7 @@ test.describe("customer master", () => {
 
   test("a short code that is not 2 to 10 capitals is caught before sending", async ({ signedIn: page }) => {
     await page.goto("/mapping");
-    await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
+    await page.getByRole("button", { name: "Map a name or onboard a tenant…" }).click();
     const form = page.getByRole("form", { name: "Map a name to a customer" });
     await form.getByLabel("Name the source sent").selectOption("");
     await form.getByLabel("Name, exactly as the source sends it").fill(unique("E2E Bad Code"));
@@ -150,6 +155,30 @@ test.describe("customer master", () => {
     await form.getByLabel("Short code").fill("X");
     await form.getByRole("button", { name: "Onboard and propose" }).click();
     await expect(form.getByRole("alert")).toContainText("short code of 2 to 10");
+  });
+});
+
+test.describe("platform administrator", () => {
+  test.use({ role: "admin" });
+
+  test("onboards an internal tenant, listed like a customer, and turns it into a customer", async ({ signedIn: page }) => {
+    const code = `I${Date.now().toString(36).slice(-6).toUpperCase()}`;
+    await page.goto("/mapping");
+    await page.getByRole("button", { name: "Map a name or onboard a tenant…" }).click();
+    const form = page.getByRole("form", { name: "Map a name to a customer" });
+    await form.getByLabel("Name the source sent").selectOption("");
+    await form.getByLabel("Name, exactly as the source sends it").fill(unique("E2E Getronics Unit"));
+    await form.getByLabel("Onboard a new customer").check();
+    await form.getByLabel("Canonical name").fill(`E2E Getronics Unit ${code}`);
+    await form.getByLabel("Short code").fill(code);
+    await form.getByLabel("Internal to Getronics").check();
+    await form.getByRole("button", { name: "Onboard and propose" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "onboarded, and the mapping proposed" })).toBeVisible();
+    const row = page.getByRole("table", { name: "Customers and their names" }).getByRole("row").filter({ hasText: code });
+    await expect(row).toContainText("Internal");
+    await row.getByRole("button", { name: `Make E2E Getronics Unit ${code} a customer` }).click();
+    await expect(page.getByRole("status").filter({ hasText: "is now a customer" })).toBeVisible();
+    await expect(row).toContainText("Customer");
   });
 });
 

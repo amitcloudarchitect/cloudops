@@ -9,6 +9,12 @@ assignment and scope, and the two-person rule again, so this module is a thin
 door, not the guard. Their refusals map to structured codes here; nothing from
 the database reaches the client.
 
+A tenant is internal to Getronics or a customer, chosen when it is onboarded and
+changeable later, and at most one internal tenant hosts the platform (ADR 0031).
+Both are a platform administrator's (``access.manage``): onboarding an internal
+tenant needs it as well as ``mapping.manage``, and the database checks it again.
+An internal tenant is reported on exactly like a customer.
+
 A mapping changes only what is ingested from now on. Records already held in
 quarantine move only when someone asks, here, after approval: the preview says
 how many sightings were held (an upper bound: overlap and replays count again),
@@ -48,6 +54,7 @@ router = APIRouter(prefix="/v1/mapping", route_class=AuditedRoute)
 AccessDep = Annotated[Access, Depends(current_access)]
 
 PERMISSION: Final = "mapping.manage"
+KIND_PERMISSION: Final = "access.manage"
 SourceSystem = Annotated[str, Field(pattern=r"^[a-z0-9_]{1,40}$")]
 MAX_PROPOSALS: Final = 500
 
@@ -62,6 +69,7 @@ _REFUSALS: Final = {
     "CMNIL": (409, "nothing_held"),
     "CMSTL": (409, "mapping_changed"),
     "23514": (422, "invalid_request"),
+    "TKHST": (409, "platform_host_rule"),  # the host is internal; only internal hosts
 }
 
 
@@ -115,17 +123,36 @@ class TenantAliases(ApiModel):
     tenant: TenantView
     short_code: str
     status: str
+    internal: bool  # internal to Getronics; reported like a customer (ADR 0031)
+    hosts_platform: bool  # the platform runs in its subscription
     aliases: list[AliasView]
 
 
 class OnboardRequest(ApiModel):
     canonical_name: str = Field(min_length=1, max_length=200)
     short_code: str = Field(pattern=r"^[A-Z0-9]{2,10}$")
+    # Required: a platform administrator chooses, never a default (ADR 0031).
+    internal: bool
 
 
 class OnboardedTenant(ApiModel):
     tenant: TenantView
     short_code: str
+    internal: bool
+
+
+class TenantKindRequest(ApiModel):
+    internal: bool
+
+
+class PlatformHostRequest(ApiModel):
+    tenant_id: UUID | None  # None: no tenant hosts the platform
+
+
+class TenantKind(ApiModel):
+    tenant: TenantView
+    internal: bool
+    hosts_platform: bool
 
 
 class ProposalRequest(ApiModel):
@@ -248,8 +275,8 @@ async def list_tenants(request: Request, access: AccessDep) -> list[TenantAliase
     _staff(access)
     async with _guarded(request, access) as conn:
         tenants = [tuple(r) for r in await conn.execute(text(
-            "SELECT id, canonical_name, short_code, status FROM cloudops.tenant"
-            " ORDER BY canonical_name"))]
+            "SELECT id, canonical_name, short_code, status, internal, hosts_platform"
+            " FROM cloudops.tenant ORDER BY canonical_name"))]
         aliases = [tuple(r) for r in await conn.execute(text(
             "SELECT tenant_id, source_system, alias, confirmed_at FROM cloudops.tenant_alias"
             " ORDER BY source_system, alias"))]
@@ -258,6 +285,7 @@ async def list_tenants(request: Request, access: AccessDep) -> list[TenantAliase
         by_tenant.setdefault(tid, []).append(
             AliasView(source_system=source, alias=alias, confirmed_at=confirmed))
     return [TenantAliases(tenant=TenantView(id=t[0], name=t[1]), short_code=t[2], status=t[3],
+                          internal=t[4], hosts_platform=t[5],
                           aliases=by_tenant.get(t[0], [])) for t in tenants]
 
 
@@ -334,17 +362,61 @@ async def list_proposals(
 async def onboard_tenant(
     request: Request, body: OnboardRequest, access: AccessDep,
 ) -> OnboardedTenant:
-    """A new customer. Every all-tenant principal can see it from its next request
-    (ADR 0002, D9); a principal assigned named tenants needs it granted."""
+    """A new tenant, internal or a customer. Every all-tenant principal can see it
+    from its next request (ADR 0002, D9); a principal assigned named tenants needs
+    it granted. Internal needs a platform administrator (ADR 0031)."""
     _staff(access)
+    if body.internal and not access.allows(KIND_PERMISSION):
+        raise ApiError(403, "forbidden")
     name = body.canonical_name.strip()
     if not name:
         raise ApiError(422, "invalid_request")
     async with _guarded(request, access) as conn:
-        created = await conn.scalar(text("SELECT access.onboard_tenant(:actor, :name, :code)"),
-                                    {"actor": access.identity.oid, "name": name,
-                                     "code": body.short_code})
-    return OnboardedTenant(tenant=TenantView(id=created, name=name), short_code=body.short_code)
+        created = await conn.scalar(
+            text("SELECT access.onboard_tenant(:actor, :name, :code, :internal)"),
+            {"actor": access.identity.oid, "name": name, "code": body.short_code,
+             "internal": body.internal})
+    return OnboardedTenant(tenant=TenantView(id=created, name=name), short_code=body.short_code,
+                           internal=body.internal)
+
+
+_KIND: Final = text("SELECT id, canonical_name, internal, hosts_platform FROM cloudops.tenant"
+                    " WHERE id = :id")
+
+
+async def _kind(conn: ScopedConnection, tenant: UUID) -> TenantKind:
+    found = (await conn.execute(_KIND, {"id": tenant})).one_or_none()
+    if found is None:
+        raise ApiError(404, "not_found")
+    r = tuple(found)
+    return TenantKind(tenant=TenantView(id=r[0], name=r[1]), internal=r[2], hosts_platform=r[3])
+
+
+@router.post("/tenants/{tenant_id}/kind", response_model=TenantKind)
+@requires(KIND_PERMISSION)
+async def set_kind(request: Request, tenant_id: UUID, body: TenantKindRequest,
+                   access: AccessDep) -> TenantKind:
+    """Internal to Getronics, or a customer (ADR 0031). The platform's host must
+    stay internal: move the host first."""
+    _staff(access)
+    async with _guarded(request, access) as conn:
+        await conn.execute(text("SELECT access.set_tenant_internal(:actor, :t, :i)"),
+                           {"actor": access.identity.oid, "t": tenant_id, "i": body.internal})
+        return await _kind(conn, tenant_id)
+
+
+@router.post("/platform-host", response_model=TenantKind | None)
+@requires(KIND_PERMISSION)
+async def set_platform_host(request: Request, body: PlatformHostRequest,
+                            access: AccessDep) -> TenantKind | None:
+    """The internal tenant whose subscription the platform runs in: its platform
+    resources are the platform's own cost, and help-only assistant history is kept
+    under it (ADR 0031). At most one; naming another moves it."""
+    _staff(access)
+    async with _guarded(request, access) as conn:
+        await conn.execute(text("SELECT access.set_platform_host(:actor, :t)"),
+                           {"actor": access.identity.oid, "t": body.tenant_id})
+        return None if body.tenant_id is None else await _kind(conn, body.tenant_id)
 
 
 async def _one(conn: ScopedConnection, proposal: UUID, access: Access) -> ProposalView:
