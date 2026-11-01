@@ -1,8 +1,8 @@
 # ADR 0026: The execution plane in the dev lab
 
-- **Status:** **Proposed**, 2026-10-31. Not accepted. Nothing in it may be built until
-  the user accepts it and the security review is signed.
-- **Decided by:** *(pending: the user)*
+- **Status:** **Accepted**, 2026-11-01, for dev phases 0–2. A Getronics security
+  reviewer other than the lab owner signs before UAT or any real customer.
+- **Decided by:** Amit Kumar (lab owner), 2026-11-01
 - **Review pack:** held privately by the owner. It is not in this repository, because
   the repository is public.
 - **Implements, once accepted:** HLD M5 (credential broker and execution plane) and M6
@@ -90,7 +90,7 @@ The security review sign-off below is a separate act and is still to be complete
 
 | Role | Name | Date | Scope signed |
 | --- | --- | --- | --- |
-| Lab owner | | | Dev, phases 0–2 |
+| Lab owner | Amit Kumar | 2026-11-01 | Dev, phases 0–2 |
 | Security reviewer (before UAT or any real customer) | | | |
 
 ## Consequences
