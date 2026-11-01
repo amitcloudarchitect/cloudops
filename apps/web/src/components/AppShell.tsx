@@ -16,10 +16,11 @@ import { BrandPhoto } from "./BrandPhoto";
 import { CustomerSelect } from "./CustomerSelect";
 import { EmptyState } from "./EmptyState";
 import { Loading } from "./Loading";
+import { SideNav } from "./SideNav";
 import { ThemeToggle } from "./ThemeToggle";
 
 // The frame every screen sits in. Navigation lists only the modules the user's
-// role can use (lib/nav.ts); the sign-in page renders without it.
+// role can use (lib/nav.ts, SideNav.tsx); the sign-in page renders without it.
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const session = useSession();
@@ -115,45 +116,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       const areas = visibleAreas((p) => can(me, p), me.kind === "staff");
       content = children;
       nav = (
-        <nav aria-label="Modules">
-          <div className="flex flex-wrap gap-x-4 gap-y-2 lg:flex-col lg:gap-4">
-            {areas.map(({ area, modules }) => {
-              const id = `nav-${area.toLowerCase().replace(/[^a-z]+/g, "-")}`;
-              return (
-                <div key={area}>
-                  <p id={id} className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted">
-                    {area}
-                  </p>
-                  <ul aria-labelledby={id} className="flex flex-wrap gap-1 lg:flex-col lg:gap-0.5">
-                    {modules.map((m) => {
-                      const current = m.href === "/" ? pathname === "/" : pathname === m.href || pathname.startsWith(`${m.href}/`);
-                      return (
-                        <li key={m.href}>
-                          <Link
-                            href={m.href}
-                            aria-current={current ? "page" : undefined}
-                            className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm ${
-                              current
-                                ? "bg-selected font-semibold text-ink"
-                                : "text-muted hover:bg-surface-raised hover:text-ink"
-                            }`}
-                          >
-                            {/* The brand's one shape, the circle: lit for the current module. */}
-                            <span
-                              aria-hidden="true"
-                              className={`size-2 shrink-0 rounded-full ${current ? "bg-brand" : "border border-line"}`}
-                            />
-                            {m.label}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </nav>
+        <SideNav
+          areas={areas}
+          pathname={pathname}
+          user={(state.status === "signed-in" && state.objectId) || me.role}
+        />
       );
       who = (
         <p className="flex flex-wrap items-center gap-2 text-sm text-chrome-muted">
@@ -213,12 +180,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
         </div>
       </header>
-      <div className="flex flex-1 flex-col lg:flex-row">
-        {nav ? (
-          <aside className="border-b border-line-subtle bg-surface px-3 py-2 lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:w-60 lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0 lg:px-3 lg:py-5">
-            {nav}
-          </aside>
-        ) : null}
+      <div className="flex flex-1">
+        {nav}
         <main id="main" tabIndex={-1} className="min-w-0 flex-1 px-4 py-5 lg:px-8 lg:py-7">
           <div className="mx-auto max-w-screen-2xl">{content}</div>
         </main>
