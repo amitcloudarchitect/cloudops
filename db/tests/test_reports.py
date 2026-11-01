@@ -14,20 +14,22 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import psycopg
 import pytest
 
 from cloudops_domain.reporting.render import DRAFT_BANNER
 
-from .conftest import Step17, Tenant
+from .conftest import AGREED_ROLES, Step17, Tenant, onboard_portal
 
 pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
 TODAY = datetime.now(UTC).date()
 _FIRST = TODAY.replace(day=1)
-PERIOD: date = (_FIRST - timedelta(days=1)).replace(day=1)  # last month: its partitions exist
+# Two months back: closed, its partitions exist (partman premakes four back), and no
+# row the shared seed writes "a few days ago" can land in it, even on the 1st.
+PERIOD: date = ((_FIRST - timedelta(days=1)).replace(day=1) - timedelta(days=1)).replace(day=1)
 LABEL = f"{PERIOD:%Y-%m}"
 D1, D2 = PERIOD + timedelta(days=2), PERIOD + timedelta(days=15)
 UPLIFT_A = Decimal("0.08")  # alpha's SOW; bravo's and charlie's have none (ADR 0021)
@@ -509,9 +511,13 @@ async def test_the_portfolio_consolidates_the_same_rows_in_the_reporting_currenc
                           params={"period": LABEL, "currency": "EUR"})).status_code == 404
 
 
-async def test_a_customer_scope_reads_no_report_yet(step17: Step17, month: Month) -> None:
-    """Customer scopes run as cloudops_customer (migration 0011), which this step
-    grants nothing: reading a pack fails closed until the portal grants it."""
+async def test_a_customer_scope_reads_the_granted_report_columns_only(
+    step17: Step17, month: Month
+) -> None:
+    """Customer scopes run as cloudops_customer (migration 0011). Migration 0025
+    grants it a pack's snapshot, its price and a section's published text, and
+    nothing else: naming who generated or edited a pack, an AI draft or the
+    commercial sections is refused, not hidden. Assurance stays ungranted."""
     from sqlalchemy import text
 
     from cloudops_tenancy import Database, Role, TenantScope
@@ -519,17 +525,40 @@ async def test_a_customer_scope_reads_no_report_yet(step17: Step17, month: Month
     db = Database.create(step17.seeded.app_dsn, pool_size=1, max_overflow=0)
     try:
         scope = TenantScope([step17.seeded.a.id], Role.CUSTOMER, "test:customer")
-        for table in ("report_pack", "report_narrative", "assessment", "evidence"):
+        async with db.transaction(scope) as conn:
+            for sql in (
+                "SELECT id, period, status, sections, published_at FROM cloudops.report_pack",
+                "SELECT pack_id, sections FROM cloudops.report_pack_price",
+                "SELECT pack_id, section, text, edited_at FROM cloudops.report_narrative",
+            ):
+                await conn.execute(text(sql))
+        for sql in (
+            "SELECT generated_by FROM cloudops.report_pack",
+            "SELECT approved_by FROM cloudops.report_pack",
+            "SELECT published_by FROM cloudops.report_pack",
+            "SELECT draft_text FROM cloudops.report_narrative",
+            "SELECT draft_state FROM cloudops.report_narrative",
+            "SELECT edited_by FROM cloudops.report_narrative",
+            "SELECT sections FROM cloudops.report_pack_commercial",
+            "SELECT count(*) FROM cloudops.assessment",
+            "SELECT count(*) FROM cloudops.evidence",
+        ):
             with pytest.raises(Exception, match="permission denied"):
                 async with db.transaction(scope) as conn:
-                    await conn.execute(text(f"SELECT count(*) FROM cloudops.{table}"))
+                    await conn.execute(text(sql))
     finally:
         await db.dispose()
     with psycopg.connect(step17.seeded.admin_dsn) as cx:
         roles = cx.execute(
             "SELECT DISTINCT unnest(array(SELECT rolname FROM pg_roles WHERE oid = ANY(polroles)))"
             " FROM pg_policy WHERE polname = 'published_only_for_customers' ORDER BY 1").fetchall()
+        # The default roles that read packs (0025), and only those.
+        holders = cx.execute(
+            "SELECT r.name FROM access.role_definition r JOIN access.role_permission p"
+            " ON p.role_id = r.id WHERE r.role_class = 'customer'"
+            " AND p.permission = 'reports.read' ORDER BY 1").fetchall()
     assert roles == [("cloudops_app",), ("cloudops_customer",)]
+    assert holders == [("CXO",), ("VP or director",)]
 
 
 async def test_a_non_commercial_role_with_reports_and_cost_never_reads_the_price(
@@ -608,3 +637,108 @@ async def test_an_open_month_has_no_price_so_no_day_can_be_isolated(
         " months")
     # Staff still see the month's cost to date.
     assert _figure(pack, "executive_summary", "cloud_cost")["kind"] == "money"
+
+
+# --- the portal: customers read their published packs (migration 0025, ADR 0030) ---
+
+
+@dataclass(frozen=True)
+class Portal:
+    cxo_a: UUID  # tenant a's first administrator, a CXO
+    vp_a: UUID  # added by a's administrator
+    cxo_b: UUID
+
+
+@pytest.fixture(scope="module")
+async def portal(step17: Step17) -> Portal:
+    """Tenants a and b onboarded to the portal, as a platform administrator does."""
+    from cloudops_tenancy import Database, TenantScope
+
+    s = step17.seeded
+    users = Portal(uuid4(), uuid4(), uuid4())
+    db = Database.create(s.app_dsn, pool_size=1, max_overflow=0)
+    try:
+        async with db.transaction(TenantScope.for_resolution("test:portal-packs")) as conn:
+            for tenant, admin in ((s.a.id, users.cxo_a), (s.b.id, users.cxo_b)):
+                await onboard_portal(conn, step17.admin, tenant, admin)
+    finally:
+        await db.dispose()
+    assert "VP or director" in AGREED_ROLES
+    added = await step17.api.post("/v1/tenant/users", users.cxo_a, {
+        "oid": str(users.vp_a), "display_name": "VP", "role": "VP or director"})
+    assert added.status_code == 200, added.text
+    return users
+
+
+async def _published(step17: Step17, oid: UUID, tenant: UUID) -> dict[str, Any]:
+    api = step17.api
+    pack = await _generate(step17, oid, tenant)
+    assert pack.status_code == 201, pack.text
+    pid = pack.json()["id"]
+    for n in pack.json()["narratives"]:
+        await api.post(f"/v1/reports/packs/{pid}/narratives/{n['section']}", oid,
+                       {"text": f"Published {n['section']}."})
+    assert (await api.post(f"/v1/reports/packs/{pid}/approve", oid)).status_code == 200
+    got = await api.post(f"/v1/reports/packs/{pid}/publish", oid)
+    assert got.status_code == 200, got.text
+    return dict(got.json())
+
+
+async def test_a_customer_reads_its_published_packs_and_nothing_else(
+    step17: Step17, month: Month, portal: Portal
+) -> None:
+    s, api = step17.seeded, step17.api
+    mine = await _published(step17, step17.delivery_a, s.a.id)
+    theirs = await _published(step17, step17.admin, s.b.id)
+    draft = (await _generate(step17, step17.delivery_a, s.a.id)).json()
+
+    me = (await api.get("/v1/me", portal.cxo_a)).json()
+    assert me["kind"] == "customer"
+    assert "reports.read" in me["permissions"]
+    for oid in (portal.cxo_a, portal.vp_a):
+        listed = (await api.get("/v1/reports/packs", oid)).json()
+        assert mine["id"] in {p["id"] for p in listed}
+        assert {p["tenant"]["id"] for p in listed} == {str(s.a.id)}
+        assert {p["status"] for p in listed} <= {"published", "superseded"}
+        assert draft["id"] not in {p["id"] for p in listed}
+        # Another tenant's published pack, and the customer's own draft, do not exist.
+        for pid in (theirs["id"], draft["id"]):
+            for suffix in ("", "/pdf", "/text"):
+                got = await api.get(f"/v1/reports/packs/{pid}{suffix}", oid)
+                assert got.status_code == 404, (pid, suffix)
+
+    pack = (await api.get(f"/v1/reports/packs/{mine['id']}", portal.cxo_a)).json()
+    keys = {sec["key"] for sec in pack["sections"]}
+    assert {"financial_dashboard", "revenue_mix"}.isdisjoint(keys)
+    summary = {f["key"] for f in _section(pack, "executive_summary")["figures"]}
+    assert "customer_price" in summary
+    assert "cloud_cost" not in summary
+    price = _figure(pack, "executive_summary", "customer_price")
+    assert Decimal(price["value"]) == month.expected_price_eur
+    money = [f for sec in pack["sections"] for f in sec["figures"] if f["kind"] == "money"]
+    assert [f["key"] for f in money] == ["customer_price"]
+    assert pack["narratives"]
+    for n in pack["narratives"]:
+        assert n["text"] == f"Published {n['section']}."
+        assert (n["draft_state"], n["draft_text"], n["drafted_at"], n["draft_note"],
+                n["edited_by"]) == (None, None, None, None, None)
+
+    lines = (await api.get(f"/v1/reports/packs/{mine['id']}/text", portal.cxo_a)).text
+    assert "Cloud consumption: EUR" in lines
+    assert "Cloud cost" not in lines
+    pdf = await api.get(f"/v1/reports/packs/{mine['id']}/pdf", portal.vp_a)
+    assert pdf.content.startswith(b"%PDF")
+    assert DRAFT_BANNER.encode() not in pdf.content
+
+    # Staff work stays staff work, whoever holds reports.read.
+    period = {"period": LABEL, "currency": "EUR"}
+    assert (await api.get("/v1/reports/portfolio", portal.cxo_a, params=period)
+            ).status_code == 403
+    assert (await _generate(step17, portal.cxo_a, s.a.id)).status_code == 403
+    for action in ("approve", "publish"):
+        assert (await api.post(f"/v1/reports/packs/{draft['id']}/{action}", portal.cxo_a)
+                ).status_code == 403
+    assert (await api.post(f"/v1/reports/packs/{draft['id']}/narratives/volumetrics",
+                           portal.cxo_a, {"text": "x"})).status_code == 403
+    # A customer role without the permission still reads none.
+    assert (await api.get("/v1/reports/packs", step17.customer_a)).status_code == 403

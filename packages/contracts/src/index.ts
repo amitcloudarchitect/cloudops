@@ -110,3 +110,14 @@ export const TRIAGE_CHOICES = {
   action_class: enumOf<NonNullable<TriageOverrides["action_class"]>>("TriageOverrides", "action_class"),
   risk: enumOf<NonNullable<TriageOverrides["risk"]>>("TriageOverrides", "risk"),
 } as const;
+// The home dashboards (ADR 0030).
+export type OperationsHome = Schemas["OperationsHome"];
+export type PriorityLine = Schemas["PriorityLine"];
+export type ClosestItem = Schemas["ClosestItem"];
+export type TenantBacklog = Schemas["TenantBacklog"];
+export type WorkgroupBacklog = Schemas["WorkgroupBacklog"];
+export type TriageHome = Schemas["TriageHome"];
+export type CostHome = Schemas["CostHome"];
+export type CustomerCostHome = Schemas["CustomerCostHome"];
+export type AiUsageHome = Schemas["AiUsageHome"];
+export type PriceSummary = Schemas["PriceSummary"];

@@ -517,6 +517,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/home/ai-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ai Usage */
+        get: operations["ai_usage_v1_home_ai_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cost
+         * @description Getronics' cost per customer: staff only. A customer reads the price it is
+         *     charged through ``/v1/cost/summary`` (ADR 0021), never this.
+         */
+        get: operations["cost_v1_home_cost_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations */
+        get: operations["operations_v1_home_operations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Triage */
+        get: operations["triage_v1_home_triage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/knowledge/chunks/{chunk_id}/citation": {
         parameters: {
             query?: never;
@@ -1201,6 +1273,31 @@ export interface components {
             band: "0-30" | "31-90" | "91+";
             open: components["schemas"]["Metric_int_"];
         };
+        /** AiSpend */
+        AiSpend: {
+            /** Currency */
+            currency: string;
+            spend: components["schemas"]["Metric_Decimal_"];
+        };
+        /** AiTenantUsage */
+        AiTenantUsage: {
+            calls: components["schemas"]["Metric_int_"];
+            quota: components["schemas"]["Metric_int_"];
+            refused: components["schemas"]["Metric_int_"];
+            /** Spend */
+            spend: components["schemas"]["AiSpend"][];
+            tenant: components["schemas"]["TenantView"];
+            tokens: components["schemas"]["Metric_int_"];
+            used_share: components["schemas"]["Metric_Decimal_"];
+        };
+        /** AiUsageHome */
+        AiUsageHome: {
+            alert_share: components["schemas"]["Metric_Decimal_"];
+            /** Month */
+            month: string;
+            /** Tenants */
+            tenants: components["schemas"]["AiTenantUsage"][];
+        };
         /** AliasView */
         AliasView: {
             /** Alias */
@@ -1364,6 +1461,33 @@ export interface components {
             /** Permissions */
             permissions: string[];
         };
+        /** ChangeRef */
+        ChangeRef: {
+            /** Closed At */
+            closed_at: string | null;
+            /** Configuration Item */
+            configuration_item: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /** Short Description */
+            short_description: string | null;
+            /** State */
+            state: string | null;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** ChangeWeek */
+        ChangeWeek: {
+            closed: components["schemas"]["Metric_int_"];
+            open_now: components["schemas"]["Metric_int_"];
+            opened: components["schemas"]["Metric_int_"];
+            /** Recent */
+            recent: components["schemas"]["ChangeRef"][];
+        };
         /** ChargeLine */
         ChargeLine: {
             amortized: components["schemas"]["Metric_Decimal_"];
@@ -1397,6 +1521,28 @@ export interface components {
             source_ref: string | null;
             /** Web Url */
             web_url: string | null;
+        };
+        /** ClosestItem */
+        ClosestItem: {
+            elapsed_hours: components["schemas"]["Metric_Decimal_"];
+            /** Number */
+            number: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /** Priority */
+            priority: string | null;
+            /**
+             * Risk
+             * @enum {string}
+             */
+            risk: "breached" | "at_risk" | "within" | "no_target";
+            /** Short Description */
+            short_description: string | null;
+            target_hours: components["schemas"]["Metric_int_"] | null;
+            tenant: components["schemas"]["TenantView"];
         };
         /** CollectedView */
         CollectedView: {
@@ -1541,6 +1687,13 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** CostHome */
+        CostHome: {
+            /** Customers */
+            customers: components["schemas"]["CustomerCostHome"][];
+            /** Months */
+            months: string[];
+        };
         /**
          * CostLine
          * @description What Getronics staff see: the provider's charge to Getronics.
@@ -1552,6 +1705,14 @@ export interface components {
             currency: string;
             /** Provider */
             provider: string;
+        };
+        /** CostPoint */
+        CostPoint: {
+            amortized: components["schemas"]["Metric_Decimal_"] | null;
+            /** Month To Date */
+            month_to_date: boolean;
+            /** Period */
+            period: string;
         };
         /** CostSummary */
         CostSummary: {
@@ -1586,6 +1747,13 @@ export interface components {
             has_gap: boolean;
             tenant: components["schemas"]["TenantView"];
         };
+        /** CurrencyTrend */
+        CurrencyTrend: {
+            /** Currency */
+            currency: string;
+            /** Points */
+            points: components["schemas"]["CostPoint"][];
+        };
         /** CustomerCost */
         CustomerCost: {
             anomalies: components["schemas"]["Metric_int_"];
@@ -1603,6 +1771,19 @@ export interface components {
              * @enum {string}
              */
             verification: "verified" | "unverified";
+        };
+        /** CustomerCostHome */
+        CustomerCostHome: {
+            anomalies_30d: components["schemas"]["Metric_int_"];
+            /** Currencies */
+            currencies: components["schemas"]["CurrencyTrend"][];
+            /** Internal */
+            internal: boolean;
+            /** Last Anomaly On */
+            last_anomaly_on: string | null;
+            /** Reconciliation */
+            reconciliation: components["schemas"]["MonthReconciliation"][];
+            tenant: components["schemas"]["TenantView"];
         };
         /** CustomerFinOps */
         CustomerFinOps: {
@@ -2064,6 +2245,8 @@ export interface components {
             permissions: string[];
             /** Role */
             role: string;
+            /** Role Class */
+            role_class: string;
             /** Subscription Limited */
             subscription_limited: boolean;
             /** Tenant Admin */
@@ -2084,6 +2267,23 @@ export interface components {
             service_requests: components["schemas"]["Metric_int_"];
             sla_attainment: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /**
+         * MonthReconciliation
+         * @description ``final``: every account with cost checked against its invoice and verified.
+         *     ``provisional``: verified against the provider's running total, no invoice yet.
+         *     ``unverified``: a check failed. ``unchecked``: an account with cost has no check.
+         */
+        MonthReconciliation: {
+            accounts: components["schemas"]["Metric_int_"];
+            /** Period */
+            period: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "final" | "provisional" | "unverified" | "unchecked" | "no_cost";
+            verified: components["schemas"]["Metric_int_"];
+        };
         /** NarrativeView */
         NarrativeView: {
             /** Draft Note */
@@ -2102,6 +2302,15 @@ export interface components {
             section: string;
             /** Text */
             text: string | null;
+        };
+        /** NoisyCi */
+        NoisyCi: {
+            /** Configuration Item */
+            configuration_item: string;
+            incidents: components["schemas"]["Metric_int_"];
+            /** Resource Id */
+            resource_id: string | null;
+            tenant: components["schemas"]["TenantView"];
         };
         /** OnboardedTenant */
         OnboardedTenant: {
@@ -2168,6 +2377,29 @@ export interface components {
             severity: 1 | 2 | 3 | 4 | 5;
             /** Title */
             title: string;
+        };
+        /** OperationsHome */
+        OperationsHome: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            at_risk: components["schemas"]["Metric_int_"];
+            at_risk_fraction: components["schemas"]["Metric_Decimal_"];
+            breached_open: components["schemas"]["Metric_int_"];
+            /** By Customer */
+            by_customer: components["schemas"]["TenantBacklog"][];
+            /** By Priority */
+            by_priority: components["schemas"]["PriorityLine"][];
+            /** By Workgroup */
+            by_workgroup: components["schemas"]["WorkgroupBacklog"][] | null;
+            changes: components["schemas"]["ChangeWeek"];
+            /** Closest */
+            closest: components["schemas"]["ClosestItem"][];
+            /** Noisy Cis */
+            noisy_cis: components["schemas"]["NoisyCi"][];
+            open_incidents: components["schemas"]["Metric_int_"];
         };
         /** PendingChange */
         PendingChange: {
@@ -2264,6 +2496,15 @@ export interface components {
             period_start: string;
             /** Reporting Currency */
             reporting_currency: string | null;
+        };
+        /** PriorityLine */
+        PriorityLine: {
+            at_risk: components["schemas"]["Metric_int_"] | null;
+            breached: components["schemas"]["Metric_int_"];
+            open: components["schemas"]["Metric_int_"];
+            /** Priority */
+            priority: string;
+            target_hours: components["schemas"]["Metric_int_"] | null;
         };
         /** ProposalRequest */
         ProposalRequest: {
@@ -2835,6 +3076,15 @@ export interface components {
             status: string;
             tenant: components["schemas"]["TenantView"];
         };
+        /** TenantBacklog */
+        TenantBacklog: {
+            breached_open: components["schemas"]["Metric_int_"];
+            mttr_hours: components["schemas"]["Metric_Decimal_"] | null;
+            open_incidents: components["schemas"]["Metric_int_"];
+            open_items: components["schemas"]["Metric_int_"];
+            resolved_30d: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+        };
         /** TenantUser */
         TenantUser: {
             /**
@@ -2898,6 +3148,15 @@ export interface components {
              */
             status: "provisional" | "closed";
         };
+        /** TriageHome */
+        TriageHome: {
+            awaiting: components["schemas"]["Metric_int_"];
+            /** Items */
+            items: components["schemas"]["TriageQueueItem"][];
+            low_confidence: components["schemas"]["Metric_int_"];
+            needs_person: components["schemas"]["Metric_int_"];
+            threshold: components["schemas"]["Metric_Decimal_"];
+        };
         /**
          * TriageOverrides
          * @description What a reviewer may change: the classification's fields, each to a value its
@@ -2914,6 +3173,31 @@ export interface components {
             intent?: ("service_down" | "performance" | "disk_space" | "backup_failure" | "certificate_expiry" | "patching" | "capacity_change" | "access_request" | "connectivity" | "security_alert" | "decommission" | "information_request" | "other") | null;
             /** Risk */
             risk?: ("low" | "medium" | "high") | null;
+        };
+        /** TriageQueueItem */
+        TriageQueueItem: {
+            /** Below Threshold */
+            below_threshold: boolean;
+            confidence: components["schemas"]["Metric_Decimal_"] | null;
+            /** Intent */
+            intent: string | null;
+            /** Number */
+            number: string;
+            /** Priority */
+            priority: string | null;
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "ready_for_planning" | "human";
+            /** Short Description */
+            short_description: string | null;
+            tenant: components["schemas"]["TenantView"];
+            /**
+             * Triaged At
+             * Format: date-time
+             */
+            triaged_at: string;
         };
         /** TriageView */
         TriageView: {
@@ -3029,6 +3313,16 @@ export interface components {
             solution: string | null;
             /** Title */
             title: string;
+        };
+        /** WorkgroupBacklog */
+        WorkgroupBacklog: {
+            breached_open: components["schemas"]["Metric_int_"];
+            mttr_hours: components["schemas"]["Metric_Decimal_"] | null;
+            open_incidents: components["schemas"]["Metric_int_"];
+            open_items: components["schemas"]["Metric_int_"];
+            resolved_30d: components["schemas"]["Metric_int_"];
+            /** Workgroup */
+            workgroup: string | null;
         };
         /** WorkItemDetail */
         WorkItemDetail: {
@@ -3945,6 +4239,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_usage_v1_home_ai_usage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiUsageHome"];
+                };
+            };
+        };
+    };
+    cost_v1_home_cost_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostHome"];
+                };
+            };
+        };
+    };
+    operations_v1_home_operations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsHome"];
+                };
+            };
+        };
+    };
+    triage_v1_home_triage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageHome"];
                 };
             };
         };

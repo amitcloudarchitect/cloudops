@@ -134,6 +134,91 @@
         "title": "AgeBand",
         "type": "object"
       },
+      "AiSpend": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "spend": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "currency",
+          "spend"
+        ],
+        "title": "AiSpend",
+        "type": "object"
+      },
+      "AiTenantUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "calls": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "refused": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "spend": {
+            "items": {
+              "$ref": "#/components/schemas/AiSpend"
+            },
+            "title": "Spend",
+            "type": "array"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "used_share": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "tenant",
+          "tokens",
+          "quota",
+          "used_share",
+          "calls",
+          "refused",
+          "spend"
+        ],
+        "title": "AiTenantUsage",
+        "type": "object"
+      },
+      "AiUsageHome": {
+        "additionalProperties": false,
+        "properties": {
+          "alert_share": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "tenants": {
+            "items": {
+              "$ref": "#/components/schemas/AiTenantUsage"
+            },
+            "title": "Tenants",
+            "type": "array"
+          }
+        },
+        "required": [
+          "month",
+          "alert_share",
+          "tenants"
+        ],
+        "title": "AiUsageHome",
+        "type": "object"
+      },
       "AliasView": {
         "additionalProperties": false,
         "properties": {
@@ -556,6 +641,108 @@
         "title": "CatalogueRole",
         "type": "object"
       },
+      "ChangeRef": {
+        "additionalProperties": false,
+        "properties": {
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "configuration_item": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configuration Item"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "number",
+          "tenant",
+          "short_description",
+          "state",
+          "configuration_item",
+          "opened_at",
+          "closed_at"
+        ],
+        "title": "ChangeRef",
+        "type": "object"
+      },
+      "ChangeWeek": {
+        "additionalProperties": false,
+        "properties": {
+          "closed": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_now": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "opened": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/ChangeRef"
+            },
+            "title": "Recent",
+            "type": "array"
+          }
+        },
+        "required": [
+          "opened",
+          "closed",
+          "open_now",
+          "recent"
+        ],
+        "title": "ChangeWeek",
+        "type": "object"
+      },
       "ChargeLine": {
         "additionalProperties": false,
         "properties": {
@@ -683,6 +870,80 @@
           "page"
         ],
         "title": "CitationView",
+        "type": "object"
+      },
+      "ClosestItem": {
+        "additionalProperties": false,
+        "properties": {
+          "elapsed_hours": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "risk": {
+            "enum": [
+              "breached",
+              "at_risk",
+              "within",
+              "no_target"
+            ],
+            "title": "Risk",
+            "type": "string"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "target_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "number",
+          "tenant",
+          "priority",
+          "short_description",
+          "opened_at",
+          "risk",
+          "elapsed_hours",
+          "target_hours"
+        ],
+        "title": "ClosestItem",
         "type": "object"
       },
       "CollectedView": {
@@ -1178,6 +1439,31 @@
         "title": "ControlView",
         "type": "object"
       },
+      "CostHome": {
+        "additionalProperties": false,
+        "properties": {
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerCostHome"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "months": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Months",
+            "type": "array"
+          }
+        },
+        "required": [
+          "months",
+          "customers"
+        ],
+        "title": "CostHome",
+        "type": "object"
+      },
       "CostLine": {
         "additionalProperties": false,
         "description": "What Getronics staff see: the provider's charge to Getronics.",
@@ -1211,6 +1497,36 @@
           "converted"
         ],
         "title": "CostLine",
+        "type": "object"
+      },
+      "CostPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "amortized": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "month_to_date": {
+            "title": "Month To Date",
+            "type": "boolean"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "month_to_date",
+          "amortized"
+        ],
+        "title": "CostPoint",
         "type": "object"
       },
       "CostSummary": {
@@ -1292,6 +1608,28 @@
         "title": "CoverageView",
         "type": "object"
       },
+      "CurrencyTrend": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/CostPoint"
+            },
+            "title": "Points",
+            "type": "array"
+          }
+        },
+        "required": [
+          "currency",
+          "points"
+        ],
+        "title": "CurrencyTrend",
+        "type": "object"
+      },
       "CustomerCost": {
         "additionalProperties": false,
         "properties": {
@@ -1345,6 +1683,57 @@
           "anomalies"
         ],
         "title": "CustomerCost",
+        "type": "object"
+      },
+      "CustomerCostHome": {
+        "additionalProperties": false,
+        "properties": {
+          "anomalies_30d": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "currencies": {
+            "items": {
+              "$ref": "#/components/schemas/CurrencyTrend"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          },
+          "last_anomaly_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Anomaly On"
+          },
+          "reconciliation": {
+            "items": {
+              "$ref": "#/components/schemas/MonthReconciliation"
+            },
+            "title": "Reconciliation",
+            "type": "array"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "internal",
+          "currencies",
+          "anomalies_30d",
+          "last_anomaly_on",
+          "reconciliation"
+        ],
+        "title": "CustomerCostHome",
         "type": "object"
       },
       "CustomerFinOps": {
@@ -2741,6 +3130,10 @@
             "title": "Role",
             "type": "string"
           },
+          "role_class": {
+            "title": "Role Class",
+            "type": "string"
+          },
           "subscription_limited": {
             "title": "Subscription Limited",
             "type": "boolean"
@@ -2761,6 +3154,7 @@
           "oid",
           "kind",
           "role",
+          "role_class",
           "permissions",
           "tenants",
           "subscription_limited",
@@ -2892,6 +3286,41 @@
         "title": "MonthPerformance",
         "type": "object"
       },
+      "MonthReconciliation": {
+        "additionalProperties": false,
+        "description": "``final``: every account with cost checked against its invoice and verified.\n``provisional``: verified against the provider's running total, no invoice yet.\n``unverified``: a check failed. ``unchecked``: an account with cost has no check.",
+        "properties": {
+          "accounts": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "period": {
+            "title": "Period",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "final",
+              "provisional",
+              "unverified",
+              "unchecked",
+              "no_cost"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "verified": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "period",
+          "state",
+          "accounts",
+          "verified"
+        ],
+        "title": "MonthReconciliation",
+        "type": "object"
+      },
       "NarrativeView": {
         "additionalProperties": false,
         "properties": {
@@ -2999,6 +3428,41 @@
           "edited_at"
         ],
         "title": "NarrativeView",
+        "type": "object"
+      },
+      "NoisyCi": {
+        "additionalProperties": false,
+        "properties": {
+          "configuration_item": {
+            "title": "Configuration Item",
+            "type": "string"
+          },
+          "incidents": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "configuration_item",
+          "tenant",
+          "resource_id",
+          "incidents"
+        ],
+        "title": "NoisyCi",
         "type": "object"
       },
       "OnboardRequest": {
@@ -3264,6 +3728,88 @@
           "age"
         ],
         "title": "OpenFinding",
+        "type": "object"
+      },
+      "OperationsHome": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "at_risk": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "at_risk_fraction": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "breached_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "by_customer": {
+            "items": {
+              "$ref": "#/components/schemas/TenantBacklog"
+            },
+            "title": "By Customer",
+            "type": "array"
+          },
+          "by_priority": {
+            "items": {
+              "$ref": "#/components/schemas/PriorityLine"
+            },
+            "title": "By Priority",
+            "type": "array"
+          },
+          "by_workgroup": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkgroupBacklog"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "By Workgroup"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/ChangeWeek"
+          },
+          "closest": {
+            "items": {
+              "$ref": "#/components/schemas/ClosestItem"
+            },
+            "title": "Closest",
+            "type": "array"
+          },
+          "noisy_cis": {
+            "items": {
+              "$ref": "#/components/schemas/NoisyCi"
+            },
+            "title": "Noisy Cis",
+            "type": "array"
+          },
+          "open_incidents": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "as_of",
+          "open_incidents",
+          "breached_open",
+          "at_risk",
+          "at_risk_fraction",
+          "by_priority",
+          "closest",
+          "changes",
+          "noisy_cis",
+          "by_customer",
+          "by_workgroup"
+        ],
+        "title": "OperationsHome",
         "type": "object"
       },
       "PendingChange": {
@@ -3612,6 +4158,50 @@
           "lines"
         ],
         "title": "PriceSummary",
+        "type": "object"
+      },
+      "PriorityLine": {
+        "additionalProperties": false,
+        "properties": {
+          "at_risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "breached": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "string"
+          },
+          "target_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "priority",
+          "open",
+          "breached",
+          "at_risk",
+          "target_hours"
+        ],
+        "title": "PriorityLine",
         "type": "object"
       },
       "ProposalRequest": {
@@ -5409,6 +5999,46 @@
         "title": "TenantAliases",
         "type": "object"
       },
+      "TenantBacklog": {
+        "additionalProperties": false,
+        "properties": {
+          "breached_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "mttr_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_incidents": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_items": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "resolved_30d": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "open_items",
+          "open_incidents",
+          "breached_open",
+          "resolved_30d",
+          "mttr_hours",
+          "tenant"
+        ],
+        "title": "TenantBacklog",
+        "type": "object"
+      },
       "TenantUser": {
         "additionalProperties": false,
         "properties": {
@@ -5563,6 +6193,39 @@
         "title": "TrendPoint",
         "type": "object"
       },
+      "TriageHome": {
+        "additionalProperties": false,
+        "properties": {
+          "awaiting": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TriageQueueItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "low_confidence": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "needs_person": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "threshold": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "awaiting",
+          "needs_person",
+          "low_confidence",
+          "threshold",
+          "items"
+        ],
+        "title": "TriageHome",
+        "type": "object"
+      },
       "TriageOverrides": {
         "additionalProperties": false,
         "description": "What a reviewer may change: the classification's fields, each to a value its\nschema allows. Typed here so the console's choices come from the contract.",
@@ -5655,6 +6318,91 @@
           }
         },
         "title": "TriageOverrides",
+        "type": "object"
+      },
+      "TriageQueueItem": {
+        "additionalProperties": false,
+        "properties": {
+          "below_threshold": {
+            "title": "Below Threshold",
+            "type": "boolean"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "route": {
+            "enum": [
+              "ready_for_planning",
+              "human"
+            ],
+            "title": "Route",
+            "type": "string"
+          },
+          "short_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Short Description"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "triaged_at": {
+            "format": "date-time",
+            "title": "Triaged At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "tenant",
+          "route",
+          "intent",
+          "short_description",
+          "priority",
+          "confidence",
+          "below_threshold",
+          "triaged_at"
+        ],
+        "title": "TriageQueueItem",
         "type": "object"
       },
       "TriageView": {
@@ -6374,6 +7122,54 @@
           "sla_breached"
         ],
         "title": "WorkItemSummary",
+        "type": "object"
+      },
+      "WorkgroupBacklog": {
+        "additionalProperties": false,
+        "properties": {
+          "breached_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "mttr_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_incidents": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_items": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "resolved_30d": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "workgroup": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workgroup"
+          }
+        },
+        "required": [
+          "open_items",
+          "open_incidents",
+          "breached_open",
+          "resolved_30d",
+          "mttr_hours",
+          "workgroup"
+        ],
+        "title": "WorkgroupBacklog",
         "type": "object"
       }
     }
@@ -7566,6 +8362,79 @@
           }
         },
         "summary": "Finops Overview"
+      }
+    },
+    "/v1/home/ai-usage": {
+      "get": {
+        "operationId": "ai_usage_v1_home_ai_usage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiUsageHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Usage"
+      }
+    },
+    "/v1/home/cost": {
+      "get": {
+        "description": "Getronics' cost per customer: staff only. A customer reads the price it is\ncharged through ``/v1/cost/summary`` (ADR 0021), never this.",
+        "operationId": "cost_v1_home_cost_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CostHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Cost"
+      }
+    },
+    "/v1/home/operations": {
+      "get": {
+        "operationId": "operations_v1_home_operations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Operations"
+      }
+    },
+    "/v1/home/triage": {
+      "get": {
+        "operationId": "triage_v1_home_triage_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Triage"
       }
     },
     "/v1/knowledge/chunks/{chunk_id}/citation": {

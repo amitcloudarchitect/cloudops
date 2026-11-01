@@ -155,6 +155,18 @@ async def test_a_tampered_admin_claim_does_not_make_an_administrator(
     "SELECT actor FROM audit.action_log",
     "SELECT name FROM staging.resource_quarantine",
     "SELECT * FROM access.principal",
+    # Report packs (migration 0025, ADR 0030): the snapshot, price and published
+    # text only. Never who generated, approved, published or edited a pack, the AI
+    # drafts, or the commercial sections.
+    "SELECT generated_by FROM cloudops.report_pack",
+    "SELECT approved_by FROM cloudops.report_pack",
+    "SELECT published_by FROM cloudops.report_pack",
+    "SELECT * FROM cloudops.report_pack",
+    "SELECT draft_text FROM cloudops.report_narrative",
+    "SELECT draft_state FROM cloudops.report_narrative",
+    "SELECT draft_note FROM cloudops.report_narrative",
+    "SELECT edited_by FROM cloudops.report_narrative",
+    "SELECT sections FROM cloudops.report_pack_commercial",
 ])
 async def test_customer_scope_is_refused_what_it_may_not_see(
     app_db: Database, seeded: Seeded, sql: str,

@@ -17,6 +17,7 @@ from cloudops_api import (
     bff,
     commercial,
     connectors,
+    home,
     knowledge,
     mapping,
     operations,
@@ -79,7 +80,7 @@ def create_app(
 # Every router the API serves. Endpoints are added to these, never to the app.
 ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
-    commercial.router, knowledge.router, assurance.router, reports.router,
+    commercial.router, knowledge.router, assurance.router, reports.router, home.router,
 )
 
 

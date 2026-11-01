@@ -52,6 +52,9 @@ class MeView(ApiModel):
     oid: UUID
     kind: str
     role: str
+    # The role's class (stable when an administrator renames the role): the console
+    # picks the home dashboard's default layout from it (ADR 0030).
+    role_class: str
     permissions: list[str]
     tenants: list[TenantView]
     subscription_limited: bool
@@ -180,6 +183,7 @@ async def me(request: Request, access: AccessDep) -> MeView:
         oid=access.identity.oid,
         kind=access.kind,
         role=access.role_name,
+        role_class=access.scope.role.value,
         permissions=sorted(access.permissions),
         tenants=[TenantView(id=r[0], name=r[1]) for r in rows],
         subscription_limited=access.scope.account_ids is not None,
