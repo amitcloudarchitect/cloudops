@@ -39,6 +39,7 @@ test.describe("customer master", () => {
     await page.goto("/mapping");
     await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
     const form = page.getByRole("form", { name: "Map a name to a customer" });
+    await form.getByLabel("Name the source sent").selectOption("");
     await form.getByLabel("Name, exactly as the source sends it").fill(alias);
     const customer = form.getByLabel("Customer to map to");
     const northwind = (await customer.locator("option", { hasText: "Northwind" }).first().textContent()) ?? "";
@@ -88,6 +89,7 @@ test.describe("customer master", () => {
     await page.goto("/mapping");
     await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
     const form = page.getByRole("form", { name: "Map a name to a customer" });
+    await form.getByLabel("Name the source sent").selectOption("");
     await form.getByLabel("Name, exactly as the source sends it").fill(alias);
     await form.getByLabel("Onboard a new customer").check();
     await form.getByLabel("Canonical name").fill(`E2E Prospect ${code}`);
@@ -105,10 +107,43 @@ test.describe("customer master", () => {
     await expect(page.getByTestId("decided-proposal").filter({ hasText: alias })).toContainText("Rejected");
   });
 
+  test("picks the source and the name it sent from lists, and every choice is readable", async ({ signedIn: page }) => {
+    const alias = unique("E2E Listed Ltd");
+    holdName(alias, 3);
+    await page.goto("/mapping");
+    await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
+    const form = page.getByRole("form", { name: "Map a name to a customer" });
+    const source = form.getByLabel("Source system");
+    for (const name of ["ServiceNow", "SharePoint", "Qualys", "CoreStack"]) {
+      await expect(source.locator("option", { hasText: name })).toHaveCount(1);
+    }
+    // The held name is offered with its sightings, most sighted first; nothing to type.
+    const names = form.getByLabel("Name the source sent");
+    await expect(names.locator("option", { hasText: `${alias} (3 sightings)` })).toHaveCount(1);
+    await names.selectOption(alias);
+    await expect(form.getByLabel("Name, exactly as the source sends it")).toHaveCount(0);
+
+    // A name not held yet is typed instead, and changing source starts the name again.
+    await names.selectOption("");
+    await expect(form.getByLabel("Name, exactly as the source sends it")).toHaveValue("");
+    await source.selectOption("corestack");
+    await expect(names.locator("option", { hasText: alias })).toHaveCount(0);
+
+    // The options carry the theme's colours, so no choice draws blank in either theme.
+    const customer = form.getByLabel("Customer to map to");
+    const [field, option] = await customer.evaluate((el) => {
+      const style = (e: Element) => getComputedStyle(e);
+      return [style(el).color, style(el.querySelectorAll("option")[1] ?? el).backgroundColor];
+    });
+    expect(field).not.toEqual(option);
+    await form.getByRole("button", { name: "Cancel" }).click();
+  });
+
   test("a short code that is not 2 to 10 capitals is caught before sending", async ({ signedIn: page }) => {
     await page.goto("/mapping");
     await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
     const form = page.getByRole("form", { name: "Map a name to a customer" });
+    await form.getByLabel("Name the source sent").selectOption("");
     await form.getByLabel("Name, exactly as the source sends it").fill(unique("E2E Bad Code"));
     await form.getByLabel("Onboard a new customer").check();
     await form.getByLabel("Canonical name").fill("Bad Code Co");
