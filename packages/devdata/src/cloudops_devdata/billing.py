@@ -4,7 +4,7 @@ connectors would. Local only.
     CLOUDOPS_ENV=local python -m cloudops_devdata.billing --tenant <uuid> \\
         --daily 150 --currency EUR --months 7
 
-For the console's commercial setup journey (ADR 0034): a customer onboarded by
+For the console's commercial setup journey (ADR 0035): a customer onboarded by
 the journey has no billing yet, so its margin would stay "not captured: no
 billing data" whatever SOW it is given. This loads one consumption line a day,
 the same amount every day, from the first day of the month ``--months`` back to

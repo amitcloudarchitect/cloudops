@@ -1,6 +1,6 @@
 "use client";
 
-// Settings → Commercial setup (ADR 0033, ADR 0034): what margin, pricing and the
+// Settings → Commercial setup (ADR 0033, ADR 0035): what margin, pricing and the
 // report packs compute from, recorded through the platform.
 //
 // - The SOW register, per customer: contract currency, term, scope, the recurring

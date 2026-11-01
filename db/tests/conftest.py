@@ -366,7 +366,7 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             "INSERT INTO cloudops.anomaly_threshold VALUES (%s, 'day', 0.5, 250, %s)",
             (t.id, t.currency),
         )
-        # Migration 0032: an answered "recompute margin now" request.
+        # Migration 0033: an answered "recompute margin now" request.
         cx.execute(
             "INSERT INTO cloudops.margin_recompute (tenant_id, requested_by, status,"
             " started_at, finished_at) VALUES (%s, gen_random_uuid(), 'succeeded', now(), now())",

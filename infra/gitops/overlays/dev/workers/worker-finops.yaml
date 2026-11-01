@@ -1,5 +1,5 @@
 # id-cloudops-ingest-dev (stack 05 output workload_client_ids). Not secrets.
-# The FinOps worker in dev (ADR 0034). Needs stack 05's federated credential
+# The FinOps worker in dev (ADR 0035). Needs stack 05's federated credential
 # ingest-worker-finops applied first, or the Key Vault mount fails and the pod waits.
 apiVersion: v1
 kind: ServiceAccount

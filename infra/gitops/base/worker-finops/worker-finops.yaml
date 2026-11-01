@@ -1,4 +1,4 @@
-# The FinOps worker (ADR 0019; deployed in dev by ADR 0034): reconciliation,
+# The FinOps worker (ADR 0019; deployed in dev by ADR 0035): reconciliation,
 # anomalies and margin daily, and "recompute margin now" requests every minute. It
 # reads and writes only the database, on the ingest login under the finops role
 # class, so it calls no Azure API and holds no customer credential. Federated to

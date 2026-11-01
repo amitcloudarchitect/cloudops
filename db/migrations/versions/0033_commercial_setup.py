@@ -1,10 +1,10 @@
 """Commercial setup: the SOW register written through the platform (expand).
 
-Revision ID: 0032
-Revises: 0031
+Revision ID: 0033
+Revises: 0032
 Create Date: 2026-11-01
 
-ADR 0034. Until now SOWs came only from migrations and the seed (ADR 0019,
+ADR 0035. Until now SOWs came only from migrations and the seed (ADR 0019,
 "margin needs SOW capture"; ADR 0021, "no API writes the uplift"). Settings →
 Commercial setup records them, and asks the FinOps worker to recompute margin.
 
@@ -39,8 +39,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0032"
-down_revision = "0031"
+revision = "0033"
+down_revision = "0032"
 branch_labels = None
 depends_on = None
 

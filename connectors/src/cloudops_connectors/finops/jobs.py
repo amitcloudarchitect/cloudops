@@ -698,7 +698,7 @@ async def margins(db: Database, on: date) -> MarginReport:
     return await _per_tenant(db, report, _daily(on, report))
 
 
-# --- recompute now (migration 0032, ADR 0034) -------------------------------------------------
+# --- recompute now (migration 0033, ADR 0035) -------------------------------------------------
 
 # The oldest waiting request, claimed so no other worker takes it. Under the
 # finops role across every customer: the commercial policy admits it, and the

@@ -4,7 +4,7 @@
 # connector-azure feeds the platform's own cost into the internal tenant (ADR 0023).
 # connector-sharepoint, -qualys and -corestack read those sources, read-only (ADR 0028);
 # Qualys is the simulated estate until dev has a Qualys subscription. worker-finops
-# computes reconciliation, anomalies and margin, and answers recompute requests (ADR 0034).
+# computes reconciliation, anomalies and margin, and answers recompute requests (ADR 0035).
 #
 # Image tags are the only thing the pipeline changes here (step 13). Nothing in
 # this directory is a secret.

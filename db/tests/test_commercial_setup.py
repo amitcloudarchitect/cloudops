@@ -1,4 +1,4 @@
-"""Settings → Commercial setup (migration 0032, ADR 0034): the SOW register and
+"""Settings → Commercial setup (migration 0033, ADR 0035): the SOW register and
 "recompute margin now".
 
 A SOW version is never edited: an amendment is a new version and the previous

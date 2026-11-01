@@ -166,7 +166,7 @@ test("no screen scrolls sideways at tablet width", async ({ signedIn: page }) =>
   }
 });
 
-// Commercial setup's forms (ADR 0033, ADR 0034), open, as the platform administrator.
+// Commercial setup's forms (ADR 0033, ADR 0035), open, as the platform administrator.
 for (const theme of ["light", "dark"] as const) {
   test.describe(`commercial setup forms, ${theme} theme`, () => {
     test.use({ role: "admin", colorScheme: theme });

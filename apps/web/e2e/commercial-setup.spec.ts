@@ -1,4 +1,4 @@
-// Settings → Commercial setup (ADR 0033, ADR 0034), end to end from entered data alone:
+// Settings → Commercial setup (ADR 0033, ADR 0035), end to end from entered data alone:
 // a customer the journey onboards through Customer mapping, with billing as the connectors would load it,
 // gets its first SOW and an amendment through the page, margin is recomputed on
 // request, and the Margin page fills from those figures. The rate card gets a new

@@ -2,7 +2,7 @@
 
 Settings → Commercial setup (`/settings/commercial`) is where commercial and Finance record
 what Pricing, Margin and the report packs compute from. ADR 0033 covers the rate card and
-ADR 0034 the SOW register.
+ADR 0035 the SOW register.
 
 > **The repository is public.** The figures below are invented examples, chosen to be
 > obviously round. Never commit a customer's real commercial terms: not here, not in a

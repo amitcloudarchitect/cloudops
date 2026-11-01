@@ -72,7 +72,7 @@ def has_python(*globs: str) -> Callable[[], bool]:
 
 def edit_sow_fixture(cx: psycopg.Connection[Any], sql: str, params: Any = None) -> None:
     """Change a seeded SOW in place, for a test's fixture only. The product never
-    can: ``sow_history`` (0032) refuses every edit of a version, so a test that
+    can: ``sow_history`` (0033) refuses every edit of a version, so a test that
     needs other figures on its seeded SOW sets them with triggers off, as the
     superuser, in one transaction."""
     with cx.transaction():

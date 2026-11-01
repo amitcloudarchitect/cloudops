@@ -1,11 +1,11 @@
-# ADR 0034: Commercial setup: the SOW register through the platform, and the FinOps worker in dev
+# ADR 0035: Commercial setup: the SOW register through the platform, and the FinOps worker in dev
 
 - **Status:** Accepted, 2026-11-01
 - **Decided by:** Amit Kumar ("Deploy the worker (Recommended)"; the Settings area)
 - **Amends:** ADR 0019 (SOW capture was a dependency; the FinOps worker had no
   deployment), ADR 0021 (decision 9: "no API writes the uplift")
 - **Implements:** HLD M1 (the SOW register), M11 and M12 (what pricing and margin read);
-  migration `0032_commercial_setup` (expand), `cloudops_api.commercial_setup`,
+  migration `0033_commercial_setup` (expand), `cloudops_api.commercial_setup`,
   `cloudops_connectors.finops` (`recompute_pending`, `FinOpsRecompute`, the schedules),
   `infra/gitops/base/worker-finops` and its dev overlay, stack 05's federated credential,
   and the console's Settings → Commercial setup (`/settings/commercial`). The rate card

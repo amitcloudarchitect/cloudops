@@ -5,8 +5,8 @@ The order matters: margin reads the cost reconciliation just wrote about. Each
 step is an activity with the connector retry policy; a failed step fails the
 run after its retries, and the next day's run recomputes everything it covers.
 
-``FinOpsRecompute``: every waiting "recompute margin now" request (migration 0032,
-ADR 0034), each customer's daily margin work as of today. A schedule runs it every
+``FinOpsRecompute``: every waiting "recompute margin now" request (migration 0033,
+ADR 0035), each customer's daily margin work as of today. A schedule runs it every
 minute; the API only records the request.
 
 ``FinOpsReprocess``: month-end reprocessing of one closed month (billing restated

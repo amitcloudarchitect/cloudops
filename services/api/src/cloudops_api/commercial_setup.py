@@ -1,12 +1,12 @@
 """Settings → Commercial setup: the SOW register, written through the platform
-(HLD M1; ADR 0034), and a request to recompute a customer's margin now.
+(HLD M1; ADR 0035), and a request to recompute a customer's margin now.
 
 Same rules as ``commercial``: each endpoint declares its matrix permission,
 queries run under the caller's scope so row-level security decides what exists,
 and a customer outside scope is a 404 exactly like one that never existed.
 
 Writes go through ``access.record_sow`` and ``access.request_margin_recompute``
-(migration 0032), which check ``commercial.write`` and the tenant again in the
+(migration 0033), which check ``commercial.write`` and the tenant again in the
 database, whatever this module did. A SOW is versioned: an amendment is a new
 version effective from a later date, and the one before is closed the day before
 it, never edited. Money is a decimal string on the way in (never a JSON number)
@@ -54,7 +54,7 @@ Money = Annotated[str, Field(pattern=r"^\d{1,12}(\.\d{1,6})?$")]
 Fraction = Annotated[str, Field(pattern=r"^-?0?\.\d{1,6}$|^0$")]
 Frequency = Literal["monthly", "quarterly", "annual"]
 
-# The functions' refusals (migration 0032), by SQLSTATE. Anything else is a 500.
+# The functions' refusals (migration 0033), by SQLSTATE. Anything else is a 500.
 _REFUSALS: Final = {
     "42501": (403, "forbidden"),
     "CMSCP": (404, "not_found"),
