@@ -109,7 +109,8 @@ and the pod's egress (NAT gateway, `443`) reaches ARM, Entra and AWS.
 **Cloud onboarding** (`/cloud-onboarding`, platform administrators only):
 
 1. Choose the customer, or **A new customer…** (name *Azure Sponsorship*, short code
-   `AZSPONSOR`). The short code names the secrets.
+   `AZSPONSOR`). The short code names the secrets. If the simulation dataset (ADR
+   0025) was loaded, *Azure Sponsorship* already exists: choose it.
 2. Choose **Azure** and give the directory id, the client id and the subscription ids;
    or **AWS** and the account id and the access key id. **No secret.**
 3. Give the date the secret expires (or the key will be rotated by): at most 90 days.
