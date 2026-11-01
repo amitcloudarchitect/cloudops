@@ -1526,6 +1526,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/secops/coverage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Coverage */
+        get: operations["coverage_v1_secops_coverage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/secops/findings/{finding_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Finding */
+        get: operations["finding_v1_secops_findings__finding_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/secops/posture-score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Posture Scores */
+        get: operations["posture_scores_v1_secops_posture_score_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/secops/vulnerabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vulnerabilities */
+        get: operations["vulnerabilities_v1_secops_vulnerabilities_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/roles": {
         parameters: {
             query?: never;
@@ -2509,6 +2577,14 @@ export interface components {
             /** Points */
             points: components["schemas"]["CostPoint"][];
         };
+        /** CustomerAgeing */
+        CustomerAgeing: {
+            at_risk: components["schemas"]["Metric_int_"];
+            breached: components["schemas"]["Metric_int_"];
+            open: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+            urgent_or_critical: components["schemas"]["Metric_int_"];
+        };
         /** CustomerCost */
         CustomerCost: {
             anomalies: components["schemas"]["Metric_int_"];
@@ -2542,6 +2618,17 @@ export interface components {
             reconciliation: components["schemas"]["MonthReconciliation"][];
             tenant: components["schemas"]["TenantView"];
         };
+        /** CustomerCoverage */
+        CustomerCoverage: {
+            asset_id_only: components["schemas"]["Metric_int_"];
+            coverage_percent: components["schemas"]["Metric_Decimal_"] | null;
+            detected: components["schemas"]["Metric_int_"];
+            quarantined_hosts: components["schemas"]["Metric_int_"];
+            scannable: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+            unlinked_open_findings: components["schemas"]["Metric_int_"];
+            unmatched: components["schemas"]["Metric_int_"];
+        };
         /** CustomerFinOps */
         CustomerFinOps: {
             /** Allocation */
@@ -2560,6 +2647,16 @@ export interface components {
             price_last_month: components["schemas"]["CustomerPrice"][] | null;
             resources: components["schemas"]["Metric_int_"] | null;
             sla_breached_open: components["schemas"]["Metric_int_"] | null;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** CustomerPostureScore */
+        CustomerPostureScore: {
+            coverage: components["schemas"]["Metric_Decimal_"] | null;
+            exposure: components["schemas"]["Metric_Decimal_"] | null;
+            hosts: components["schemas"]["Metric_int_"];
+            open_findings: components["schemas"]["Metric_int_"];
+            score: components["schemas"]["Metric_Decimal_"] | null;
+            sla_compliance: components["schemas"]["Metric_Decimal_"] | null;
             tenant: components["schemas"]["TenantView"];
         };
         /**
@@ -2805,6 +2902,26 @@ export interface components {
             unit: string;
             /** Value */
             value: string;
+        };
+        /** FindingDetail */
+        FindingDetail: {
+            /** Detection Type */
+            detection_type: string | null;
+            finding: components["schemas"]["SecOpsFinding"];
+            /** Operating System */
+            operating_system: string | null;
+            other_open_on_asset: components["schemas"]["Metric_int_"];
+            /** Remediated At */
+            remediated_at: string | null;
+            resource: components["schemas"]["ResourceStaffView"] | null;
+            /** Scope */
+            scope: string;
+            /** Solution */
+            solution: string | null;
+            /** Threat */
+            threat: string | null;
+            /** Tickets */
+            tickets: components["schemas"]["WorkItemSummary"][] | null;
         };
         /** FinOpsOverview */
         FinOpsOverview: {
@@ -3425,6 +3542,31 @@ export interface components {
             source_system: string;
             suggested_tenant: components["schemas"]["TenantView"] | null;
         };
+        /** QuarantinedHost */
+        QuarantinedHost: {
+            /** External Key */
+            external_key: string;
+            /**
+             * First Seen
+             * Format: date-time
+             */
+            first_seen: string;
+            /** Id */
+            id: string;
+            /** Ip Address */
+            ip_address: string | null;
+            /**
+             * Last Seen
+             * Format: date-time
+             */
+            last_seen: string;
+            /** Name */
+            name: string | null;
+            occurrences: components["schemas"]["Metric_int_"];
+            open_findings: components["schemas"]["Metric_int_"];
+            possible_resources: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+        };
         /** QuarantineList */
         QuarantineList: {
             /**
@@ -3973,6 +4115,15 @@ export interface components {
             percent: components["schemas"]["Metric_Decimal_"] | null;
             scorable: components["schemas"]["Metric_int_"];
         };
+        /** ScoreWeight */
+        ScoreWeight: {
+            /**
+             * Part
+             * @enum {string}
+             */
+            part: "sla_compliance" | "coverage" | "exposure";
+            weight: components["schemas"]["Metric_Decimal_"];
+        };
         /**
          * ScreenContext
          * @description Where the panel was opened. A hint, re-checked under the resolved scope.
@@ -3988,6 +4139,83 @@ export interface components {
              * @enum {string}
              */
             screen: "home" | "customers" | "customer" | "work" | "ticket" | "resources" | "resource" | "finops" | "finops_customer" | "margin" | "margin_customer" | "pricing" | "posture" | "performance" | "approvals" | "reports" | "report" | "knowledge" | "assurance" | "users" | "other";
+        };
+        /** SecOpsCoverage */
+        SecOpsCoverage: {
+            /** By Customer */
+            by_customer: components["schemas"]["CustomerCoverage"][];
+            /** Quarantined Hosts */
+            quarantined_hosts: components["schemas"]["QuarantinedHost"][];
+            quarantined_total: components["schemas"]["Metric_int_"];
+            scannable_total: components["schemas"]["Metric_int_"];
+            /** Scannable Types */
+            scannable_types: string[];
+            /** Unmatched Resources */
+            unmatched_resources: components["schemas"]["UnmatchedResource"][];
+            unmatched_total: components["schemas"]["Metric_int_"];
+        };
+        /** SecOpsFinding */
+        SecOpsFinding: {
+            age: components["schemas"]["Metric_int_"];
+            /** Asset Ipv4 */
+            asset_ipv4: string | null;
+            /** Asset Name */
+            asset_name: string;
+            /**
+             * First Detected
+             * Format: date-time
+             */
+            first_detected: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Detected */
+            last_detected: string | null;
+            /** Qid */
+            qid: string;
+            /** Resource Id */
+            resource_id: string | null;
+            /**
+             * Severity
+             * @enum {integer}
+             */
+            severity: 1 | 2 | 3 | 4 | 5;
+            /**
+             * Sla
+             * @enum {string}
+             */
+            sla: "breached" | "at_risk" | "within" | "no_target";
+            /** Status */
+            status: string | null;
+            target_days: components["schemas"]["Metric_int_"] | null;
+            tenant: components["schemas"]["TenantView"];
+            /** Title */
+            title: string;
+        };
+        /** SecOpsPostureScores */
+        SecOpsPostureScores: {
+            /** Customers */
+            customers: components["schemas"]["CustomerPostureScore"][];
+            /** Formula */
+            formula: string;
+            /** Weights */
+            weights: components["schemas"]["ScoreWeight"][];
+        };
+        /** SecOpsVulnerabilities */
+        SecOpsVulnerabilities: {
+            at_risk_fraction: components["schemas"]["Metric_Decimal_"];
+            at_risk_total: components["schemas"]["Metric_int_"];
+            breached_total: components["schemas"]["Metric_int_"];
+            /** By Customer */
+            by_customer: components["schemas"]["CustomerAgeing"][];
+            /** By Severity */
+            by_severity: components["schemas"]["SeverityAgeing"][];
+            /** Findings */
+            findings: components["schemas"]["SecOpsFinding"][];
+            listed: components["schemas"]["Metric_int_"];
+            open_total: components["schemas"]["Metric_int_"];
         };
         /** SectionNarrativeEdit */
         SectionNarrativeEdit: {
@@ -4008,6 +4236,22 @@ export interface components {
             tables: components["schemas"]["TableSnapshot"][];
             /** Title */
             title: string;
+        };
+        /** SeverityAgeing */
+        SeverityAgeing: {
+            at_risk: components["schemas"]["Metric_int_"] | null;
+            breached: components["schemas"]["Metric_int_"] | null;
+            /** By Age */
+            by_age: components["schemas"]["AgeBand"][];
+            oldest_days: components["schemas"]["Metric_int_"] | null;
+            open: components["schemas"]["Metric_int_"];
+            /**
+             * Severity
+             * @enum {integer}
+             */
+            severity: 1 | 2 | 3 | 4 | 5;
+            target_days: components["schemas"]["Metric_int_"] | null;
+            within: components["schemas"]["Metric_int_"] | null;
         };
         /** SeverityCount */
         SeverityCount: {
@@ -4518,6 +4762,31 @@ export interface components {
             dimension: "application" | "cost_centre";
             share: components["schemas"]["Metric_Decimal_"] | null;
             unallocated: components["schemas"]["Metric_Decimal_"];
+        };
+        /** UnmatchedResource */
+        UnmatchedResource: {
+            /** Fqdn */
+            fqdn: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Ip Addresses */
+            ip_addresses: string[];
+            /**
+             * Last Seen
+             * Format: date-time
+             */
+            last_seen: string;
+            /** Name */
+            name: string;
+            possible_hosts: components["schemas"]["Metric_int_"];
+            /** Region */
+            region: string | null;
+            tenant: components["schemas"]["TenantView"];
+            /** Type */
+            type: string;
         };
         /** UsageDay */
         UsageDay: {
@@ -7365,6 +7634,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResourceContext"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    coverage_v1_secops_coverage_get: {
+        parameters: {
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecOpsCoverage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finding_v1_secops_findings__finding_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                finding_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    posture_scores_v1_secops_posture_score_get: {
+        parameters: {
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecOpsPostureScores"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vulnerabilities_v1_secops_vulnerabilities_get: {
+        parameters: {
+            query?: {
+                severity?: number | null;
+                sla?: ("breached" | "at_risk" | "within" | "no_target") | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecOpsVulnerabilities"];
                 };
             };
             /** @description Validation Error */

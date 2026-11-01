@@ -166,3 +166,16 @@ export type SowRegister = Schemas["SowRegister"];
 export type SowVersionView = Schemas["SowVersionView"];
 export type SowInput = Schemas["SowInput"];
 export type RecomputeView = Schemas["RecomputeView"];
+// The SecOps workspace (ADR 0036).
+export type SecOpsVulnerabilities = Schemas["SecOpsVulnerabilities"];
+export type SecOpsFinding = Schemas["SecOpsFinding"];
+export type SeverityAgeing = Schemas["SeverityAgeing"];
+export type CustomerAgeing = Schemas["CustomerAgeing"];
+export type SecOpsCoverage = Schemas["SecOpsCoverage"];
+export type CustomerCoverage = Schemas["CustomerCoverage"];
+export type UnmatchedResource = Schemas["UnmatchedResource"];
+export type QuarantinedHost = Schemas["QuarantinedHost"];
+export type SecOpsPostureScores = Schemas["SecOpsPostureScores"];
+export type CustomerPostureScore = Schemas["CustomerPostureScore"];
+export type FindingDetail = Schemas["FindingDetail"];
+export type SlaBand = SecOpsFinding["sla"];

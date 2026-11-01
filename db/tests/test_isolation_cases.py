@@ -128,6 +128,10 @@ NOT_INGESTED = frozenset({
     "cloudops.report_pack_price",
 })
 
+# Staging tables the application login reads (columns only), under their RLS: the
+# resource quarantine, for the SecOps workspace's scanner coverage (0034, ADR 0036).
+APP_READS_STAGING = frozenset({"staging.resource_quarantine"})
+
 
 # migrator_dsn is the schema owner, the role migrations run as: without FORCE it
 # would bypass every policy, so this is the behavioural proof that FORCE holds.
@@ -139,9 +143,9 @@ def test_case2_unscoped_sql_sees_zero_rows(seeded: Seeded, login: str, table: st
     assert seeded_rows is not None
     assert seeded_rows[0] > 0, "zero proves nothing on an empty table"
     with psycopg.connect(getattr(seeded, login)) as cx:
-        if (table.startswith("staging.") and login == "app_dsn") or (
-                table in NOT_INGESTED and login == "ingest_dsn"):
-            # Quarantine is ingest-only, and assurance and reporting are
+        if (table.startswith("staging.") and table not in APP_READS_STAGING
+                and login == "app_dsn") or (table in NOT_INGESTED and login == "ingest_dsn"):
+            # Staging is ingest-only, and assurance and reporting are
             # application-only: the other role cannot even look.
             with pytest.raises(psycopg.errors.InsufficientPrivilege):
                 cx.execute(f"SELECT count(*) FROM {table}")

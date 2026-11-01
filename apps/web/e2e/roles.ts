@@ -5,6 +5,8 @@ export const ROLES = {
   finops: "finops-all",
   admin: "platform-admin",
   customerMaster: "customer-master",
+  // The SecOps workspace (ADR 0036): SecOps role, every tenant.
+  secops: "secops-all",
   // Step 18: one Northwind user per default customer role (seed.py, PORTAL_TENANTS).
   // The CXO is also Northwind's first administrator.
   cxo: "customer-nwl-admin",

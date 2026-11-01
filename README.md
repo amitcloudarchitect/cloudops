@@ -231,6 +231,7 @@ principals, and prints their Entra object ids:
 | `customer-nwl` | A Northwind customer: the customer view, its own tenant only |
 | `customer-fab-one-sub` | A Fabrikam customer limited to one subscription |
 | `customer-master` | Staff, Customer master role, every tenant: the alias quarantine, onboarding and mapping (ADR 0015) |
+| `secops-all` | Staff, SecOps role, every tenant: vulnerabilities, scanner coverage and posture (ADR 0036) |
 
 ```bash
 make api
