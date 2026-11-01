@@ -27,7 +27,9 @@ pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
 TODAY = datetime.now(UTC).date()
 _FIRST = TODAY.replace(day=1)
-PERIOD: date = (_FIRST - timedelta(days=1)).replace(day=1)  # last month: its partitions exist
+# Two months back: closed, its partitions exist (partman premakes four back), and no
+# row the shared seed writes "a few days ago" can land in it, even on the 1st.
+PERIOD: date = ((_FIRST - timedelta(days=1)).replace(day=1) - timedelta(days=1)).replace(day=1)
 LABEL = f"{PERIOD:%Y-%m}"
 D1, D2 = PERIOD + timedelta(days=2), PERIOD + timedelta(days=15)
 UPLIFT_A = Decimal("0.08")  # alpha's SOW; bravo's and charlie's have none (ADR 0021)
