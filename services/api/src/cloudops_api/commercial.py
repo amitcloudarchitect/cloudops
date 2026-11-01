@@ -20,6 +20,7 @@ or a 0. Rounding happens once, in the console.
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -46,7 +47,14 @@ from cloudops_api.pipeline import (
 )
 from cloudops_api.provenance import ApiModel, Metric, query_ref
 from cloudops_commercial import finops, margin, pricing
-from cloudops_commercial.ratecard import RateCardError, rate_card_on
+from cloudops_commercial.ratecard import (
+    InvalidRateCardError,
+    RateCard,
+    RateCardError,
+    chain,
+    from_document,
+    rate_card_on,
+)
 from cloudops_tenancy import ScopedConnection
 
 router = APIRouter(prefix="/v1", route_class=AuditedRoute)
@@ -840,13 +848,24 @@ class QuoteView(ApiModel):
     repricing_due: bool
 
 
+_RATE_CARDS: Final = text("SELECT document FROM cloudops.rate_card_documents()")
+
+
+async def _rate_card_on(request: Request, access: Access, day: date) -> RateCard:
+    """The version in force on ``day``, read under the caller's scope: the
+    commercial policy decides whether any row exists (ADR 0033)."""
+    async with platform(request).db.transaction(access.scope) as conn:
+        cards = chain(r[0] for r in await conn.execute(_RATE_CARDS))
+    return rate_card_on(day, cards)
+
+
 @router.get("/commercial/rate-card", response_model=RateCardView)
 @requires("commercial.read")
 async def rate_card_view(request: Request, access: AccessDep) -> RateCardView:
     if access.kind != "staff":
         raise ApiError(403, "forbidden")
     try:
-        card = rate_card_on(_now().date())
+        card = await _rate_card_on(request, access, _now().date())
     except RateCardError:
         raise ApiError(404, "not_found") from None
     return RateCardView(
@@ -858,6 +877,196 @@ async def rate_card_view(request: Request, access: AccessDep) -> RateCardView:
         locations=sorted(card.people_cost))
 
 
+# --- rate card versions (ADR 0033) -------------------------------------------------------------
+
+# Every number is a string: a JSON number would be a float (CLAUDE.md rule 5), a
+# string is never coerced from one, and the API serves no bare number.
+Dec = Annotated[str, Field(pattern=r"^\d{1,12}(\.\d{1,16})?$")]
+Whole = Annotated[str, Field(pattern=r"^\d{1,10}$")]
+Name = Annotated[str, Field(min_length=1, max_length=200)]
+Coverage = Literal["8x5", "16x5", "24x7"]
+Support = Literal["Bronze", "Silver", "Gold"]
+
+
+class _Row(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class ComplexityRow(_Row):
+    complexity: str = Field(pattern=r"^([0-9]{1,3}|Case)$")
+    minutes: Dec
+
+
+class MultiplierRow(_Row):
+    coverage: Coverage
+    support: Support
+    multiplier: Dec
+
+
+class CatalogueRow(_Row):
+    resource_type: Name
+    complexity: str = Field(pattern=r"^([0-9]{1,3}|Case)$")
+
+
+class TypeMapRow(_Row):
+    type_canonical: Name
+    resource_type: Name
+
+
+class BaseBandRow(_Row):
+    lower: Dec
+    upper: Dec | None
+    rate: Dec
+
+
+class CoverageUpliftRow(_Row):
+    coverage: Coverage
+    uplift: Dec
+
+
+class SlabRow(_Row):
+    label: Name
+    lower: Whole
+    upper: Whole
+    transition_weeks: Whole
+
+
+class ToolRow(_Row):
+    tool: Name
+    cost_per_ci: Dec
+    default: bool
+
+
+class PeopleCostRow(_Row):
+    location: Literal["India", "Budapest"]
+    monthly_cost: Dec
+
+
+class RoleRow(_Row):
+    role: Name
+    share: Dec
+
+
+class HealthBandRow(_Row):
+    below: Annotated[str, Field(pattern=r"^-?0?\.\d{1,6}$|^0$")]
+    label: Annotated[str, Field(min_length=1, max_length=40)]
+
+
+class RateCardDocument(_Row):
+    """A whole rate card version, as the database stores it and the engine reads it
+    (``cloudops_commercial.ratecard.from_document``)."""
+
+    version: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$")
+    effective_from: date
+    source: Name
+    currency: str = Field(pattern=r"^[A-Z]{3}$")
+    blended_day_rate: Dec
+    minutes_per_day: Dec
+    working_days_per_month: Dec
+    hours_per_day: Dec
+    base_pack_floor: Dec
+    corestack_consumption_rate: Dec
+    repricing_headroom_minimum: Whole
+    repricing_headroom_share: Dec
+    healthy_label: Annotated[str, Field(min_length=1, max_length=40)]
+    complexity_minutes: list[ComplexityRow] = Field(min_length=1, max_length=50)
+    service_multipliers: list[MultiplierRow] = Field(min_length=9, max_length=9)
+    catalogue: list[CatalogueRow] = Field(min_length=1, max_length=500)
+    type_map: list[TypeMapRow] = Field(max_length=500)
+    base_pack_bands: list[BaseBandRow] = Field(min_length=1, max_length=50)
+    base_pack_coverage_uplift: list[CoverageUpliftRow] = Field(min_length=3, max_length=3)
+    ci_slabs: list[SlabRow] = Field(min_length=1, max_length=50)
+    tools: list[ToolRow] = Field(min_length=1, max_length=50)
+    people_cost: list[PeopleCostRow] = Field(min_length=1, max_length=2)
+    roles: list[RoleRow] = Field(min_length=1, max_length=50)
+    health_bands: list[HealthBandRow] = Field(min_length=1, max_length=10)
+
+
+class RateCardVersionView(ApiModel):
+    id: str  # a version identifier, not a figure
+    version: str
+    effective_from: date
+    effective_to: date | None  # exclusive: where the next version begins
+    in_force: bool
+    published_at: datetime
+    published_by: str
+    reason: str
+    document: RateCardDocument
+
+
+class PublishRateCard(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    document: RateCardDocument
+    reason: str = Field(min_length=3, max_length=500)
+
+
+_DOCUMENTS: Final = text(
+    "SELECT id, document, published_by, published_at, reason"
+    " FROM cloudops.rate_card_documents()")
+
+# The publish function's refusals (migration 0031), by SQLSTATE.
+_RATE_CARD_REFUSALS: Final = {
+    **_REFUSALS,
+    "RCDAT": (422, "effective_date_not_future"),
+    "RCVER": (409, "version_exists"),
+    "23505": (409, "version_exists"),
+}
+
+
+def _versions(rows: list[tuple[Any, ...]]) -> list[RateCardVersionView]:
+    cards = {c.version: c for c in chain(r[1] for r in rows)}
+    today = _now().date()
+    out = []
+    for rid, doc, by, at, reason in rows:
+        card = cards[doc["version"]]
+        out.append(RateCardVersionView(
+            id=str(rid), version=card.version, effective_from=card.effective_from,
+            effective_to=card.effective_to, in_force=card.in_force_on(today),
+            published_at=at, published_by=str(by), reason=str(reason),
+            document=RateCardDocument.model_validate(doc)))
+    return sorted(out, key=lambda v: v.effective_from, reverse=True)
+
+
+@router.get("/commercial/rate-cards", response_model=list[RateCardVersionView])
+@requires("commercial.read")
+async def list_rate_cards(request: Request, access: AccessDep) -> list[RateCardVersionView]:
+    """Every published version, newest first, each whole: history is never edited."""
+    if access.kind != "staff":
+        raise ApiError(403, "forbidden")
+    async with platform(request).db.transaction(access.scope) as conn:
+        rows = _rows(await conn.execute(_DOCUMENTS))
+    return _versions(rows)
+
+
+@router.post("/commercial/rate-cards", response_model=RateCardVersionView, status_code=201)
+@requires("ratecard.publish")
+async def publish_rate_card(
+    request: Request, body: PublishRateCard, access: AccessDep
+) -> RateCardVersionView:
+    """Publish a new version, effective from a future date. It is a new row; the
+    version before it ends where this one begins and is otherwise untouched."""
+    if access.kind != "staff":
+        raise ApiError(403, "forbidden")
+    doc = body.document.model_dump(mode="json")
+    try:
+        from_document(doc)  # the engine's own checks: can this card price every case?
+    except InvalidRateCardError:
+        raise ApiError(422, "invalid_rate_card") from None
+    try:
+        async with platform(request).db.transaction(access.scope) as conn:
+            new_id = await conn.scalar(text(
+                "SELECT access.publish_rate_card(:actor, CAST(:doc AS jsonb), :why)"), {
+                "actor": access.identity.oid, "doc": json.dumps(doc), "why": body.reason})
+            rows = _rows(await conn.execute(_DOCUMENTS))
+    except DBAPIError as exc:
+        refusal = _RATE_CARD_REFUSALS.get(str(getattr(exc.orig, "sqlstate", "")))
+        if refusal is None:
+            raise
+        raise ApiError(*refusal) from None
+    return next(v for v in _versions(rows) if v.id == str(new_id))
+
+
 @router.post("/commercial/quotes", response_model=QuoteView)
 @requires("commercial.read")
 async def quote(request: Request, body: QuoteRequest, access: AccessDep) -> QuoteView:
@@ -865,7 +1074,7 @@ async def quote(request: Request, body: QuoteRequest, access: AccessDep) -> Quot
     if access.kind != "staff":
         raise ApiError(403, "forbidden")
     try:
-        card = rate_card_on(body.on or _now().date())
+        card = await _rate_card_on(request, access, body.on or _now().date())
     except RateCardError:
         raise ApiError(422, "no_rate_card") from None
     if body.currency != card.currency:

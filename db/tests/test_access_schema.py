@@ -200,7 +200,11 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
             " WHERE p.polpermissive AND p.polname <> 'tenant_isolation'"
             # No tenant isolation to widen (0020); its policies are pinned in
             # test_platform_action_log.py.
-            "   AND c.oid <> 'audit.platform_action_log'::regclass ORDER BY 1, 2"
+            "   AND c.oid <> 'audit.platform_action_log'::regclass"
+            # Nor on the rate card (0031, platform-wide reference data); its
+            # policies are pinned in test_rate_card.py.
+            "   AND c.relname NOT LIKE 'rate\\_card%'"
+            " ORDER BY 1, 2"
         ).fetchall()
     assert extra == [
         ("agent_run", "assistant_forget", ["cloudops_resolver"]),

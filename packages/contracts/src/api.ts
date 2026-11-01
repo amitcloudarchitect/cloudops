@@ -529,6 +529,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/commercial/rate-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Rate Cards
+         * @description Every published version, newest first, each whole: history is never edited.
+         */
+        get: operations["list_rate_cards_v1_commercial_rate_cards_get"];
+        put?: never;
+        /**
+         * Publish Rate Card
+         * @description Publish a new version, effective from a future date. It is a new row; the
+         *     version before it ends where this one begins and is otherwise untouched.
+         */
+        post: operations["publish_rate_card_v1_commercial_rate_cards_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/sows": {
         parameters: {
             query?: never;
@@ -1785,6 +1810,15 @@ export interface components {
             late_after_intervals: components["schemas"]["Metric_int_"];
             outage_after_intervals: components["schemas"]["Metric_int_"];
         };
+        /** BaseBandRow */
+        BaseBandRow: {
+            /** Lower */
+            lower: string;
+            /** Rate */
+            rate: string;
+            /** Upper */
+            upper: string | null;
+        };
         /** CatalogueRole */
         CatalogueRole: {
             /** Description */
@@ -1795,6 +1829,13 @@ export interface components {
             name: string;
             /** Permissions */
             permissions: string[];
+        };
+        /** CatalogueRow */
+        CatalogueRow: {
+            /** Complexity */
+            complexity: string;
+            /** Resource Type */
+            resource_type: string;
         };
         /** ChangeRef */
         ChangeRef: {
@@ -1937,6 +1978,13 @@ export interface components {
             proposed_result: ("compliant" | "partially_compliant" | "non_compliant") | null;
             /** Query Name */
             query_name: string;
+        };
+        /** ComplexityRow */
+        ComplexityRow: {
+            /** Complexity */
+            complexity: string;
+            /** Minutes */
+            minutes: string;
         };
         /** ConnectorHealth */
         ConnectorHealth: {
@@ -2153,6 +2201,16 @@ export interface components {
             period_start: string;
             /** Reporting Currency */
             reporting_currency: string | null;
+        };
+        /** CoverageUpliftRow */
+        CoverageUpliftRow: {
+            /**
+             * Coverage
+             * @enum {string}
+             */
+            coverage: "8x5" | "16x5" | "24x7";
+            /** Uplift */
+            uplift: string;
         };
         /** CoverageView */
         CoverageView: {
@@ -2616,6 +2674,13 @@ export interface components {
              */
             tenant_id: string;
         };
+        /** HealthBandRow */
+        HealthBandRow: {
+            /** Below */
+            below: string;
+            /** Label */
+            label: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -2781,6 +2846,21 @@ export interface components {
             state: "final" | "provisional" | "unverified" | "unchecked" | "no_cost";
             verified: components["schemas"]["Metric_int_"];
         };
+        /** MultiplierRow */
+        MultiplierRow: {
+            /**
+             * Coverage
+             * @enum {string}
+             */
+            coverage: "8x5" | "16x5" | "24x7";
+            /** Multiplier */
+            multiplier: string;
+            /**
+             * Support
+             * @enum {string}
+             */
+            support: "Bronze" | "Silver" | "Gold";
+        };
         /** NarrativeView */
         NarrativeView: {
             /** Draft Note */
@@ -2927,6 +3007,16 @@ export interface components {
             state: string | null;
             tenant: components["schemas"]["TenantView"];
         };
+        /** PeopleCostRow */
+        PeopleCostRow: {
+            /**
+             * Location
+             * @enum {string}
+             */
+            location: "India" | "Budapest";
+            /** Monthly Cost */
+            monthly_cost: string;
+        };
         /** Performance */
         Performance: {
             /** Months */
@@ -3070,6 +3160,12 @@ export interface components {
             source_system: string;
             tenant: components["schemas"]["TenantView"];
         };
+        /** PublishRateCard */
+        PublishRateCard: {
+            document: components["schemas"]["RateCardDocument"];
+            /** Reason */
+            reason: string;
+        };
         /** QuarantinedAlias */
         QuarantinedAlias: {
             /** Alias */
@@ -3165,6 +3261,90 @@ export interface components {
             team: components["schemas"]["TeamLine"][];
             total_monthly: components["schemas"]["Metric_Decimal_"];
             transition_weeks: components["schemas"]["Metric_int_"];
+        };
+        /**
+         * RateCardDocument
+         * @description A whole rate card version, as the database stores it and the engine reads it
+         *     (``cloudops_commercial.ratecard.from_document``).
+         */
+        RateCardDocument: {
+            /** Base Pack Bands */
+            base_pack_bands: components["schemas"]["BaseBandRow"][];
+            /** Base Pack Coverage Uplift */
+            base_pack_coverage_uplift: components["schemas"]["CoverageUpliftRow"][];
+            /** Base Pack Floor */
+            base_pack_floor: string;
+            /** Blended Day Rate */
+            blended_day_rate: string;
+            /** Catalogue */
+            catalogue: components["schemas"]["CatalogueRow"][];
+            /** Ci Slabs */
+            ci_slabs: components["schemas"]["SlabRow"][];
+            /** Complexity Minutes */
+            complexity_minutes: components["schemas"]["ComplexityRow"][];
+            /** Corestack Consumption Rate */
+            corestack_consumption_rate: string;
+            /** Currency */
+            currency: string;
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Health Bands */
+            health_bands: components["schemas"]["HealthBandRow"][];
+            /** Healthy Label */
+            healthy_label: string;
+            /** Hours Per Day */
+            hours_per_day: string;
+            /** Minutes Per Day */
+            minutes_per_day: string;
+            /** People Cost */
+            people_cost: components["schemas"]["PeopleCostRow"][];
+            /** Repricing Headroom Minimum */
+            repricing_headroom_minimum: string;
+            /** Repricing Headroom Share */
+            repricing_headroom_share: string;
+            /** Roles */
+            roles: components["schemas"]["RoleRow"][];
+            /** Service Multipliers */
+            service_multipliers: components["schemas"]["MultiplierRow"][];
+            /** Source */
+            source: string;
+            /** Tools */
+            tools: components["schemas"]["ToolRow"][];
+            /** Type Map */
+            type_map: components["schemas"]["TypeMapRow"][];
+            /** Version */
+            version: string;
+            /** Working Days Per Month */
+            working_days_per_month: string;
+        };
+        /** RateCardVersionView */
+        RateCardVersionView: {
+            document: components["schemas"]["RateCardDocument"];
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to: string | null;
+            /** Id */
+            id: string;
+            /** In Force */
+            in_force: boolean;
+            /**
+             * Published At
+             * Format: date-time
+             */
+            published_at: string;
+            /** Published By */
+            published_by: string;
+            /** Reason */
+            reason: string;
+            /** Version */
+            version: string;
         };
         /** RateCardView */
         RateCardView: {
@@ -3500,6 +3680,13 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** RoleRow */
+        RoleRow: {
+            /** Role */
+            role: string;
+            /** Share */
+            share: string;
+        };
         /** RoutingView */
         RoutingView: {
             /** Description */
@@ -3568,6 +3755,17 @@ export interface components {
              * @enum {integer}
              */
             severity: 1 | 2 | 3 | 4 | 5;
+        };
+        /** SlabRow */
+        SlabRow: {
+            /** Label */
+            label: string;
+            /** Lower */
+            lower: string;
+            /** Transition Weeks */
+            transition_weeks: string;
+            /** Upper */
+            upper: string;
         };
         /** SourceView */
         SourceView: {
@@ -3725,6 +3923,15 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** ToolRow */
+        ToolRow: {
+            /** Cost Per Ci */
+            cost_per_ci: string;
+            /** Default */
+            default: boolean;
+            /** Tool */
+            tool: string;
+        };
         /** TrendPoint */
         TrendPoint: {
             /** Band */
@@ -3857,6 +4064,13 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "answered" | "dont_know" | "refused" | "failed";
+        };
+        /** TypeMapRow */
+        TypeMapRow: {
+            /** Resource Type */
+            resource_type: string;
+            /** Type Canonical */
+            type_canonical: string;
         };
         /** Unallocated */
         Unallocated: {
@@ -4935,6 +5149,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RateCardView"];
+                };
+            };
+        };
+    };
+    list_rate_cards_v1_commercial_rate_cards_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateCardVersionView"][];
+                };
+            };
+        };
+    };
+    publish_rate_card_v1_commercial_rate_cards_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishRateCard"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RateCardVersionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

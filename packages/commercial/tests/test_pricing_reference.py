@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import importlib.util
 import itertools
+import json
 import sys
 from decimal import ROUND_HALF_EVEN, Decimal
 from pathlib import Path
@@ -24,7 +25,12 @@ from typing import Any
 import pytest
 
 from cloudops_commercial import pricing
-from cloudops_commercial.ratecard import V2_14
+from cloudops_commercial.ratecard import from_document
+
+# Version 1 as migration 0031 seeds it: the workbook's constants (ADR 0033).
+V2_14 = from_document(json.loads(
+    (Path(__file__).resolve().parents[3] / "db/migrations/data/rate_card_2026-v2.14.json")
+    .read_text(encoding="utf-8")))
 
 SIX: Decimal = Decimal("0.000001")
 REFERENCE = Path(__file__).resolve().parents[3] / "reference" / "pricing_engine.py"
@@ -144,6 +150,7 @@ CONSUMPTIONS = ["0", "999.99", "1000", "4321.5", "25000", "60000.25", "99999", "
 def test_port_matches_reference_everywhere(
     ref: ModuleType, coverage: Any, support: Any, location: Any
 ) -> None:
+
     for inventory, consumption, corestack in itertools.product(
             INVENTORIES, CONSUMPTIONS, (True, False)):
         e = pricing.Engagement("c", inventory, Decimal(consumption), coverage, support,

@@ -1,0 +1,397 @@
+{
+  "version": "2026-v2.14",
+  "effective_from": "2026-01-01",
+  "source": "Public_Cloud_Services_-_Pricing_Calculator_-_2026_-_V2_14.xlsx",
+  "currency": "EUR",
+  "blended_day_rate": "266.9932626632895",
+  "minutes_per_day": "480",
+  "working_days_per_month": "18.1",
+  "hours_per_day": "8",
+  "base_pack_floor": "250.0",
+  "corestack_consumption_rate": "0.021",
+  "repricing_headroom_minimum": "10",
+  "repricing_headroom_share": "0.05",
+  "healthy_label": "healthy",
+  "complexity_minutes": [
+    {
+      "complexity": "1",
+      "minutes": "3"
+    },
+    {
+      "complexity": "2",
+      "minutes": "5"
+    },
+    {
+      "complexity": "3",
+      "minutes": "6"
+    },
+    {
+      "complexity": "4",
+      "minutes": "10"
+    },
+    {
+      "complexity": "5",
+      "minutes": "25"
+    },
+    {
+      "complexity": "6",
+      "minutes": "30"
+    },
+    {
+      "complexity": "7",
+      "minutes": "45"
+    },
+    {
+      "complexity": "8",
+      "minutes": "60"
+    },
+    {
+      "complexity": "9",
+      "minutes": "75"
+    },
+    {
+      "complexity": "10",
+      "minutes": "90"
+    },
+    {
+      "complexity": "11",
+      "minutes": "120"
+    },
+    {
+      "complexity": "Case",
+      "minutes": "150"
+    }
+  ],
+  "service_multipliers": [
+    {
+      "coverage": "24x7",
+      "support": "Gold",
+      "multiplier": "5.544"
+    },
+    {
+      "coverage": "16x5",
+      "support": "Gold",
+      "multiplier": "3.96"
+    },
+    {
+      "coverage": "8x5",
+      "support": "Gold",
+      "multiplier": "3.6"
+    },
+    {
+      "coverage": "24x7",
+      "support": "Silver",
+      "multiplier": "3.542"
+    },
+    {
+      "coverage": "16x5",
+      "support": "Silver",
+      "multiplier": "2.53"
+    },
+    {
+      "coverage": "8x5",
+      "support": "Silver",
+      "multiplier": "2.3"
+    },
+    {
+      "coverage": "24x7",
+      "support": "Bronze",
+      "multiplier": "3.08"
+    },
+    {
+      "coverage": "16x5",
+      "support": "Bronze",
+      "multiplier": "2.2"
+    },
+    {
+      "coverage": "8x5",
+      "support": "Bronze",
+      "multiplier": "2.0"
+    }
+  ],
+  "catalogue": [
+    {
+      "resource_type": "AD Domain Services / AWS Managed Microsoft AD",
+      "complexity": "Case"
+    },
+    {
+      "resource_type": "Microsoft Active Directory IaaS / AD on AWS EC2",
+      "complexity": "Case"
+    },
+    {
+      "resource_type": "Microsoft Entra ID / AWS IAM Identity Center",
+      "complexity": "6"
+    },
+    {
+      "resource_type": "Azure Virtual Machines / Amazon EC2",
+      "complexity": "3"
+    },
+    {
+      "resource_type": "App Service / AWS Elastic Beanstalk",
+      "complexity": "3"
+    },
+    {
+      "resource_type": "Azure Kubernetes Service (AKS) / Amazon EKS",
+      "complexity": "5"
+    },
+    {
+      "resource_type": "File Sync / AWS DataSync",
+      "complexity": "3"
+    },
+    {
+      "resource_type": "MS SQL DB / Azure SQL / Amazon RDS",
+      "complexity": "4"
+    },
+    {
+      "resource_type": "Event Hubs / Amazon Kinesis",
+      "complexity": "3"
+    },
+    {
+      "resource_type": "Azure Functions / AWS Lambda",
+      "complexity": "3"
+    },
+    {
+      "resource_type": "Fileshare / Amazon FSx",
+      "complexity": "11"
+    },
+    {
+      "resource_type": "Web Application Firewall / AWS WAF",
+      "complexity": "9"
+    },
+    {
+      "resource_type": "Load Balancer / Elastic Load Balancing",
+      "complexity": "6"
+    },
+    {
+      "resource_type": "ExpressRoute / AWS Direct Connect",
+      "complexity": "6"
+    },
+    {
+      "resource_type": "Firewall / AWS Network Firewall",
+      "complexity": "3"
+    },
+    {
+      "resource_type": "Azure CDN / Amazon CloudFront",
+      "complexity": "2"
+    },
+    {
+      "resource_type": "Virtual WANs / AWS Transit Gateway",
+      "complexity": "4"
+    },
+    {
+      "resource_type": "VPN Gateway / AWS Site-to-Site VPN",
+      "complexity": "6"
+    },
+    {
+      "resource_type": "Application Gateway / AWS ALB",
+      "complexity": "Case"
+    },
+    {
+      "resource_type": "Azure DevOps / AWS Developer Tools",
+      "complexity": "Case"
+    }
+  ],
+  "type_map": [
+    {
+      "type_canonical": "compute.vm",
+      "resource_type": "Azure Virtual Machines / Amazon EC2"
+    },
+    {
+      "type_canonical": "web.app",
+      "resource_type": "App Service / AWS Elastic Beanstalk"
+    },
+    {
+      "type_canonical": "compute.kubernetes",
+      "resource_type": "Azure Kubernetes Service (AKS) / Amazon EKS"
+    },
+    {
+      "type_canonical": "database.sql",
+      "resource_type": "MS SQL DB / Azure SQL / Amazon RDS"
+    },
+    {
+      "type_canonical": "compute.function",
+      "resource_type": "Azure Functions / AWS Lambda"
+    },
+    {
+      "type_canonical": "network.load_balancer",
+      "resource_type": "Load Balancer / Elastic Load Balancing"
+    },
+    {
+      "type_canonical": "network.firewall",
+      "resource_type": "Firewall / AWS Network Firewall"
+    },
+    {
+      "type_canonical": "network.vpn_gateway",
+      "resource_type": "VPN Gateway / AWS Site-to-Site VPN"
+    },
+    {
+      "type_canonical": "network.application_gateway",
+      "resource_type": "Application Gateway / AWS ALB"
+    },
+    {
+      "type_canonical": "messaging.event_stream",
+      "resource_type": "Event Hubs / Amazon Kinesis"
+    },
+    {
+      "type_canonical": "storage.file_share",
+      "resource_type": "Fileshare / Amazon FSx"
+    }
+  ],
+  "base_pack_bands": [
+    {
+      "lower": "0",
+      "upper": "1000",
+      "rate": "0.0"
+    },
+    {
+      "lower": "1000",
+      "upper": "5000",
+      "rate": "0.07"
+    },
+    {
+      "lower": "5000",
+      "upper": "10000",
+      "rate": "0.055"
+    },
+    {
+      "lower": "10000",
+      "upper": "25000",
+      "rate": "0.045"
+    },
+    {
+      "lower": "25000",
+      "upper": "50000",
+      "rate": "0.03"
+    },
+    {
+      "lower": "50000",
+      "upper": "75000",
+      "rate": "0.02"
+    },
+    {
+      "lower": "75000",
+      "upper": "100000",
+      "rate": "0.015"
+    },
+    {
+      "lower": "100000",
+      "upper": null,
+      "rate": "0.0085"
+    }
+  ],
+  "base_pack_coverage_uplift": [
+    {
+      "coverage": "8x5",
+      "uplift": "1.0"
+    },
+    {
+      "coverage": "16x5",
+      "uplift": "1.1"
+    },
+    {
+      "coverage": "24x7",
+      "uplift": "1.4"
+    }
+  ],
+  "ci_slabs": [
+    {
+      "label": "0 - 50 CIs",
+      "lower": "0",
+      "upper": "50",
+      "transition_weeks": "6"
+    },
+    {
+      "label": "51 - 150 CIs",
+      "lower": "51",
+      "upper": "150",
+      "transition_weeks": "8"
+    },
+    {
+      "label": "151 - 300 CIs",
+      "lower": "151",
+      "upper": "300",
+      "transition_weeks": "10"
+    },
+    {
+      "label": "301 - 500 CIs",
+      "lower": "301",
+      "upper": "500",
+      "transition_weeks": "12"
+    },
+    {
+      "label": "501 - 1000 CIs",
+      "lower": "501",
+      "upper": "1000",
+      "transition_weeks": "14"
+    },
+    {
+      "label": "> 1001 CIs",
+      "lower": "1001",
+      "upper": "1000000000",
+      "transition_weeks": "18"
+    }
+  ],
+  "tools": [
+    {
+      "tool": "OpsRamp",
+      "cost_per_ci": "4.343",
+      "default": true
+    },
+    {
+      "tool": "Qualys",
+      "cost_per_ci": "3.225",
+      "default": true
+    },
+    {
+      "tool": "CloudBolt",
+      "cost_per_ci": "7.00",
+      "default": true
+    }
+  ],
+  "people_cost": [
+    {
+      "location": "India",
+      "monthly_cost": "1786.9079747305266"
+    },
+    {
+      "location": "Budapest",
+      "monthly_cost": "7878.248133680555"
+    }
+  ],
+  "roles": [
+    {
+      "role": "Full Stack Cloud Engineer",
+      "share": "0.45"
+    },
+    {
+      "role": "Cloud Specialist",
+      "share": "0.35"
+    },
+    {
+      "role": "Cloud Architect",
+      "share": "0.10"
+    },
+    {
+      "role": "CloudOps Manager",
+      "share": "0.05"
+    },
+    {
+      "role": "Cloud Delivery Manager",
+      "share": "0.05"
+    }
+  ],
+  "health_bands": [
+    {
+      "below": "0.10",
+      "label": "critical"
+    },
+    {
+      "below": "0.20",
+      "label": "at risk"
+    },
+    {
+      "below": "0.30",
+      "label": "watch"
+    }
+  ]
+}

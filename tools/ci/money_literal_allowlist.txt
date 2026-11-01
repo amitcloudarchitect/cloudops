@@ -3,7 +3,11 @@
 # One repo-relative path per line, followed by '#' and a justification. An entry
 # without one fails the gate. These are the rate cards: the one place a price lives.
 #
+# The commercial rate card is no longer here (ADR 0033): its prices are data,
+# published to cloudops.rate_card and seeded by migration 0031 from
+# db/migrations/data/, so packages/commercial holds no price at all and the gate
+# now covers it like any other product code.
+#
 services/gateway/src/cloudops_gateway/pricing.py  # the AI rate card: list prices per tier, ADR 0012
 packages/devdata/  # synthetic dataset generator (make seed): invented amounts, never product logic
 packages/evals/src/cloudops_evals/scoring.py  # the evaluation's per-case cost band, a gate threshold
-packages/commercial/src/cloudops_commercial/ratecard.py  # the commercial rate card: the workbook's prices, versioned and effective-dated (step 16)

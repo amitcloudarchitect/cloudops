@@ -2,6 +2,8 @@
 
 - **Status:** Accepted, 2026-10-31
 - **Decided by:** Amit Kumar
+- **Amended by:** ADR 0033 (decision 7: the rate card is published from Settings and
+  held in the database, no longer in `ratecard.py`)
 - **Implements:** step 16; HLD M10 (FinOps), M11 (effort and pricing), M12 (margin),
   Multi-currency, principles 1 and 7; LLD Row-level security, Multi-currency, CI/CD
   (pricing regression, monetary literals), open item L4. Migration `0012_commercial`,

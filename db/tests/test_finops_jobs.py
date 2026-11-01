@@ -17,10 +17,12 @@ June to August are backfilled closed.
 
 from __future__ import annotations
 
+import json
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -30,11 +32,16 @@ from sqlalchemy import text
 
 from cloudops_commercial import margin
 from cloudops_commercial.margin import EffortBucket, MarginInputs
-from cloudops_commercial.ratecard import V2_14
+from cloudops_commercial.ratecard import from_document
 from cloudops_connectors.finops import jobs
 from cloudops_tenancy import Database, Role, TenantScope
 
 from .conftest import _database
+
+# Version 1 as migration 0031 seeds it: the workbook's constants (ADR 0033).
+V2_14 = from_document(json.loads(
+    (Path(__file__).resolve().parents[2] / "db/migrations/data/rate_card_2026-v2.14.json")
+    .read_text(encoding="utf-8")))
 
 pytestmark = pytest.mark.integration
 
@@ -581,6 +588,7 @@ async def test_one_customers_margin_failure_stops_only_theirs(
 async def test_a_closed_month_whose_cost_stops_reconciling_is_restated(
     fdb: Db, ingest: Database
 ) -> None:
+
     """A later invoice check that disagrees makes September unverified: a new
     version, the verified one kept."""
     await jobs.reconcile(ingest, ON)
