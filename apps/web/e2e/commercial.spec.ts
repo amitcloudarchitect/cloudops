@@ -65,9 +65,16 @@ test.describe("finops", () => {
     await expect(row(page, "Allocation by cost centre", "Unallocated")).toHaveCount(1);
 
     await page.getByRole("link", { name: "All customers" }).click();
+    const listed = row(page, "Cost by customer", "Northwind Logistics B.V.");
+    await expect(listed).toContainText(/[1-9]\d* anomal(y|ies)/);
+    const counted = Number(/(\d+) anomal(?:y|ies)/.exec(await listed.innerText())?.[1]);
     await page.getByRole("link", { name: "Northwind Logistics B.V." }).click();
     await expect(page.getByText("Every account matches the provider’s own total.")).toBeVisible();
-    await expect(row(page, "Cost anomalies", "Spike").filter({ hasText: /\bDay\b/ })).toHaveCount(1);
+    // Every anomaly the overview counts is listed, and exactly one is the seeded day
+    // spike (matched by its Window cell: a row's text runs its cells together).
+    await expect(page.getByRole("table", { name: "Cost anomalies" }).locator("tbody tr")).toHaveCount(counted);
+    const daySpikes = row(page, "Cost anomalies", "Spike").filter({ has: page.getByRole("cell", { name: "Day", exact: true }) });
+    await expect(daySpikes).toHaveCount(1);
   });
 
   test("records an FX correction with its reason, and it is listed", async ({ signedIn: page }) => {
