@@ -184,7 +184,8 @@ that looks like what the sources really send:
 `Dataset.alias_truth` and `Dataset.ci_truth` record the correct outcome for every messy
 value: tenant, resolution path, and whether a CI should be linked or quarantined. Use
 them to score a resolver. The same `--seed` always produces the same rows and ids. Only
-the dates move, because the 90-day window ends yesterday. Pass `--anchor 2026-10-27`
+the dates move, because the 90-day window ends yesterday (today on the 1st, so the
+current month always has cost). Pass `--anchor 2026-10-27`
 for fixed dates:
 
 ```bash

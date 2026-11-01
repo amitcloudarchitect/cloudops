@@ -394,11 +394,18 @@ async def run(anchor: date, seed: int) -> None:
         await app.dispose()
 
 
+def default_anchor(today: date) -> date:
+    """Yesterday, as cost lands a day late, but never before this month: the
+    console opens on the current month, which on the 1st would otherwise have
+    no cost at all."""
+    return max(today - timedelta(days=1), today.replace(day=1))
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m cloudops_devdata.seed")
-    yesterday = datetime.now(UTC).date() - timedelta(days=1)
-    parser.add_argument("--anchor", type=date.fromisoformat, default=yesterday,
-                        help="last cost day (default: yesterday, UTC)")
+    parser.add_argument("--anchor", type=date.fromisoformat,
+                        default=default_anchor(datetime.now(UTC).date()),
+                        help="last cost day (default: yesterday, UTC, or today on the 1st)")
     parser.add_argument("--seed", type=int, default=7, help="random seed (default 7)")
     args = parser.parse_args(argv)
     if sys.platform == "win32":
