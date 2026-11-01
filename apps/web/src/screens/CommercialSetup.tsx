@@ -419,7 +419,8 @@ function Recompute({ tenantId, register, write, onDone }: { tenantId: string; re
         <p className="font-semibold text-ink">Margin</p>
         <p className="text-muted">
           {r ? `${STATUS[r.status]} (requested ${dateTime(r.requested_at)}${r.finished_at ? `, finished ${dateTime(r.finished_at)}` : ""}).` : "Recomputed daily by the FinOps worker."}{" "}
-          <Link href={`/margin/${tenantId}`} className="link">
+          {/* The id the API returned for this register, never the select's DOM value. */}
+          <Link href={`/margin/${encodeURIComponent(register.tenant.id)}`} className="link">
             Open this customer’s margin
           </Link>
         </p>
