@@ -31,6 +31,9 @@ pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 TICKET_A = "INC0001001"
 TICKET_B = "INC0002001"
 SECRET_B = "bravo-only maintenance window"
+# Fixed, and holding the 47 the made-up answer below quotes: the minutes of a
+# timestamp must not ground a figure, so that test runs the same at any time.
+OPENED_AT = "2026-11-01T06:47:12Z"
 
 
 @dataclass
@@ -63,8 +66,8 @@ async def assisted(seeded: Seeded, principals: Principals, api: Api) -> AsyncIte
                                      (seeded.b, TICKET_B, SECRET_B)):
             cx.execute(
                 "INSERT INTO cloudops.work_item (tenant_id, kind, number, company_raw, opened_at,"
-                " short_description, state, priority) VALUES (%s, 'incident', %s, 'X', now(),"
-                " %s, 'In Progress', '2')", (tenant.id, number, text))
+                " short_description, state, priority) VALUES (%s, 'incident', %s, 'X', %s,"
+                " %s, 'In Progress', '2')", (tenant.id, number, OPENED_AT, text))
     model = MockProvider("mock")
     db = Database.create(seeded.app_dsn, pool_size=4, max_overflow=0)
     gateway = Gateway(db, {"mock": model, "mock-secondary": MockProvider("mock-secondary")},
