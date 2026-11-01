@@ -23,12 +23,13 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
     "Cloud onboarding",
     "Portal onboarding",
     "Customer mapping",
+    "Manage customers",
     "Connectors",
     "Commercial setup",
   ]);
   expect(await navAreas(page)).toEqual(["Operations", "Security", "Commercial", "Assurance & Reports", "Knowledge", "Settings"]);
   const settings = page.getByRole("list", { name: "Settings" });
-  await expect(settings.getByRole("link")).toHaveText(["Cloud onboarding", "Portal onboarding", "Customer mapping", "Connectors", "Commercial setup"]);
+  await expect(settings.getByRole("link")).toHaveText(["Cloud onboarding", "Portal onboarding", "Customer mapping", "Manage customers", "Connectors", "Commercial setup"]);
   await page.goto("/mapping");
   await expect(page.getByRole("heading", { level: 1, name: "Customer mapping" })).toBeVisible();
 });

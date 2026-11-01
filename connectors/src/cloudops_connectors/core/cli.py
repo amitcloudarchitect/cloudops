@@ -73,6 +73,7 @@ from cloudops_connectors.core.ingest import (
     task_queue,
 )
 from cloudops_connectors.core.raw import BlobRawStore
+from cloudops_connectors.lifecycle import purge
 from cloudops_observability import TelemetryConfigError
 from cloudops_observability.process import start, temporal_options
 from cloudops_tenancy import Database
@@ -213,15 +214,20 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
                 await probes.wait_closed()
 
             stack.push_async_callback(close)
+            loops = []
             if name in sync.SYNC_SOURCES:  # ADR 0037: sync now when a customer is onboarded
-                requests = asyncio.create_task(sync.serve(
-                    db, temporal, name, [f"{name}-{e}" for e in run_entities]))
+                loops.append(asyncio.create_task(sync.serve(
+                    db, temporal, name, [f"{name}-{e}" for e in run_entities])))
+            if name == purge.HOST:  # ADR 0038: it holds the credentials' bronze pages
+                loops.append(asyncio.create_task(purge.serve(
+                    purge.TenantPurge(db, [purge.BlobBronzePages(container)]))))
 
-                async def stop_requests() -> None:
-                    requests.cancel()
-                    await asyncio.gather(requests, return_exceptions=True)
+            async def stop_loops() -> None:
+                for task in loops:
+                    task.cancel()
+                await asyncio.gather(*loops, return_exceptions=True)
 
-                stack.push_async_callback(stop_requests)
+            stack.push_async_callback(stop_loops)
             print(f"worker serving {queue}")
             await run_worker(worker, settings.temporal)
             return 0

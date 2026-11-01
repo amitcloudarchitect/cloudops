@@ -4849,6 +4849,143 @@
         "title": "NoisyCi",
         "type": "object"
       },
+      "OffboardRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Confirm Name",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_name",
+          "reason"
+        ],
+        "title": "OffboardRequest",
+        "type": "object"
+      },
+      "Offboarded": {
+        "additionalProperties": false,
+        "properties": {
+          "purge_after": {
+            "format": "date-time",
+            "title": "Purge After",
+            "type": "string"
+          },
+          "status": {
+            "const": "offboarded",
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "status",
+          "purge_after"
+        ],
+        "title": "Offboarded",
+        "type": "object"
+      },
+      "OffboardedTenant": {
+        "additionalProperties": false,
+        "properties": {
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          },
+          "may_purge": {
+            "title": "May Purge",
+            "type": "boolean"
+          },
+          "may_restore": {
+            "title": "May Restore",
+            "type": "boolean"
+          },
+          "offboarded_at": {
+            "format": "date-time",
+            "title": "Offboarded At",
+            "type": "string"
+          },
+          "offboarded_by_me": {
+            "title": "Offboarded By Me",
+            "type": "boolean"
+          },
+          "purge": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PurgeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "purge_after": {
+            "format": "date-time",
+            "title": "Purge After",
+            "type": "string"
+          },
+          "purged_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purged At"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "short_code": {
+            "title": "Short Code",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "offboarded",
+              "purging",
+              "purged"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "short_code",
+          "internal",
+          "status",
+          "offboarded_at",
+          "offboarded_by_me",
+          "reason",
+          "purge_after",
+          "purged_at",
+          "may_restore",
+          "may_purge",
+          "purge"
+        ],
+        "title": "OffboardedTenant",
+        "type": "object"
+      },
       "OnboardRequest": {
         "additionalProperties": false,
         "properties": {
@@ -5865,6 +6002,86 @@
           "reason"
         ],
         "title": "PublishRateCard",
+        "type": "object"
+      },
+      "PurgeRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm_code": {
+            "maxLength": 10,
+            "minLength": 1,
+            "title": "Confirm Code",
+            "type": "string"
+          },
+          "confirm_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Confirm Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "confirm_name",
+          "confirm_code"
+        ],
+        "title": "PurgeRequest",
+        "type": "object"
+      },
+      "PurgeView": {
+        "additionalProperties": false,
+        "properties": {
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "requested_at",
+          "finished_at",
+          "outcome"
+        ],
+        "title": "PurgeView",
         "type": "object"
       },
       "QuarantineList": {
@@ -7428,6 +7645,27 @@
           "evidence"
         ],
         "title": "ResponseView",
+        "type": "object"
+      },
+      "Restored": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "const": "restored",
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "status"
+        ],
+        "title": "Restored",
         "type": "object"
       },
       "ReviewRequest": {
@@ -9099,6 +9337,46 @@
           "tenant"
         ],
         "title": "TenantBacklog",
+        "type": "object"
+      },
+      "TenantEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "canonical_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Canonical Name",
+            "type": "string"
+          },
+          "short_code": {
+            "pattern": "^[A-Z0-9]{2,10}$",
+            "title": "Short Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "canonical_name",
+          "short_code"
+        ],
+        "title": "TenantEdit",
+        "type": "object"
+      },
+      "TenantEdited": {
+        "additionalProperties": false,
+        "properties": {
+          "short_code": {
+            "title": "Short Code",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "short_code"
+        ],
+        "title": "TenantEdited",
         "type": "object"
       },
       "TenantKind": {
@@ -14996,6 +15274,223 @@
           }
         },
         "summary": "Disable Tenant User"
+      }
+    },
+    "/v1/tenants/offboarded": {
+      "get": {
+        "description": "Offboarded, purging and purged tenants this platform administrator is assigned\n(or every one), latest first: the only place a tenant that has left is listed.",
+        "operationId": "list_offboarded_v1_tenants_offboarded_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OffboardedTenant"
+                  },
+                  "title": "Response List Offboarded V1 Tenants Offboarded Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Offboarded"
+      }
+    },
+    "/v1/tenants/{tenant_id}/edit": {
+      "post": {
+        "description": "Rename, or change the short code where it is safe. An internal tenant also\nneeds a platform administrator, as onboarding one does (ADR 0031).",
+        "operationId": "edit_tenant_v1_tenants__tenant_id__edit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantEdited"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Tenant"
+      }
+    },
+    "/v1/tenants/{tenant_id}/offboard": {
+      "post": {
+        "description": "The console's Delete: effective at once. Recorded under the tenant while it is\nstill in this request's scope.",
+        "operationId": "offboard_tenant_v1_tenants__tenant_id__offboard_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OffboardRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Offboarded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Offboard Tenant"
+      }
+    },
+    "/v1/tenants/{tenant_id}/purge": {
+      "post": {
+        "description": "Ask for the purge, after the retention, with the name and the short code typed.\nAccepted, not done: the purge worker runs it within a minute or two.",
+        "operationId": "purge_tenant_v1_tenants__tenant_id__purge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurgeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffboardedTenant"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Purge Tenant"
+      }
+    },
+    "/v1/tenants/{tenant_id}/restore": {
+      "post": {
+        "description": "Back within the retention. In every scope that holds it again from the next\nrequest; its credentials stay revoked and its portal suspended.",
+        "operationId": "restore_tenant_v1_tenants__tenant_id__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Restored"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restore Tenant"
       }
     },
     "/v1/work-items": {

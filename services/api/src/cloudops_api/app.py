@@ -31,6 +31,7 @@ from cloudops_api import (
     portal,
     reports,
     secops,
+    tenants,
 )
 from cloudops_api.access import ScopeResolver
 from cloudops_api.assistant import AssistantRuntime
@@ -106,7 +107,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
     commercial.router, knowledge.router, assurance.router, reports.router, assistant.router,
     cloud_onboarding.router, home.router, observability.router, commercial_setup.router,
-    secops.router,
+    secops.router, tenants.router,
 )
 
 

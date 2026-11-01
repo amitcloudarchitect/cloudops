@@ -3,7 +3,7 @@
 // Who the API says the user is: role, permissions and tenants from /v1/me.
 // Navigation and every screen read permissions from here, never from the token.
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { Me } from "@cloudops/contracts";
@@ -20,10 +20,15 @@ type SessionState =
   | { status: "ready"; me: Me };
 
 const SessionContext = createContext<SessionState>({ status: "loading" });
+// Ask /v1/me again: after a change to which customers exist (ADR 0038), so the selector
+// and every list built from the session follow at once. The current view stays until then.
+const ReloadContext = createContext<() => void>(() => undefined);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const { state, token } = useAuth();
   const [session, setSession] = useState<SessionState>({ status: "loading" });
+  const [round, setRound] = useState(0);
+  const reload = useCallback(() => setRound((n) => n + 1), []);
 
   useEffect(() => {
     if (state.status === "loading") return;
@@ -46,9 +51,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [state, token]);
+  }, [state, token, round]);
 
-  return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
+  return (
+    <SessionContext.Provider value={session}>
+      <ReloadContext.Provider value={reload}>{children}</ReloadContext.Provider>
+    </SessionContext.Provider>
+  );
+}
+
+export function useReloadSession(): () => void {
+  return useContext(ReloadContext);
 }
 
 export function useSession(): SessionState {

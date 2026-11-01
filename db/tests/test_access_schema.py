@@ -192,7 +192,10 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     no tenant isolation to widen. Cloud onboarding (0025): the credential check
     queue as the re-process queue; the credential registry, unrevoked only; and
     the shared-account trigger, which reads every tenant's account ids and marks
-    the shared flag, and reads which tenant is internal. Function owner only."""
+    the shared flag, and reads which tenant is internal. Function owner only.
+    Tenant lifecycle (0036, ADR 0038): the resolver records a purge request and
+    moves it forward, reads every purge, and updates a tenant only while it is
+    offboarded or purging (restore, the purge request). Function owner only."""
     with psycopg.connect(seeded.admin_dsn) as cx:
         extra = cx.execute(
             "SELECT c.relname, p.polname, array(SELECT rolname FROM pg_roles"
@@ -228,9 +231,13 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
         ("portal_role_agreement", "access_admin_all", ["cloudops_access_admin"]),
         ("portal_role_agreement", "resolver_read", ["cloudops_resolver"]),
         ("report_narrative", "draft_queue_read", ["cloudops_resolver"]),
+        ("tenant", "tenant_lifecycle", ["cloudops_resolver"]),
         ("tenant", "tenant_onboarding", ["cloudops_access_admin"]),
         ("tenant", "tenant_registry_read", ["cloudops_resolver"]),
         ("tenant_alias", "alias_registry_read", ["cloudops_resolver"]),
+        ("tenant_purge", "purge_progress", ["cloudops_resolver"]),
+        ("tenant_purge", "purge_registry", ["cloudops_resolver"]),
+        ("tenant_purge", "purge_request", ["cloudops_resolver"]),
     ]
 
 

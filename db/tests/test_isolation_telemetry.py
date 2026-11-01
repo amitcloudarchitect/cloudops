@@ -171,3 +171,28 @@ def test_the_application_user_cannot_change_the_schema(telemetry_store: Telemetr
             assert app.post("/", content=ddl.encode()).status_code != 200
     default = httpx.post(telemetry_store.url, content=b"SELECT 1")
     assert default.status_code != 200, "no default user"
+
+
+async def test_a_purge_deletes_one_tenant_at_every_grain(
+    store: TelemetryStore, world: World, telemetry_store: Telemetry
+) -> None:
+    """ADR 0038. The application's user (SELECT and INSERT) cannot delete at all; a user
+    that may (``ALTER DELETE``, for a purge) deletes only the one tenant it is given."""
+    from cloudops_tenancy.telemetry import TelemetryError
+
+    with pytest.raises(TelemetryError):
+        await store.purge(TenantScope([world.a], Role.INGEST, "worker:purge"))
+    user, password = f"cloudops_purge_{uuid4().hex[:8]}", uuid4().hex
+    for statement in (f"CREATE USER {user} IDENTIFIED WITH sha256_password BY '{password}'",
+                      f"GRANT SELECT, INSERT, ALTER DELETE ON telemetry.* TO {user}"):
+        telemetry_store.admin.post("/", content=statement.encode()).raise_for_status()
+    purger = TelemetryStore.create(telemetry_store.url, "telemetry", user, password)
+    try:
+        await purger.purge(TenantScope([world.a], Role.INGEST, "worker:purge"))
+    finally:
+        await purger.aclose()
+        telemetry_store.admin.post("/", content=f"DROP USER IF EXISTS {user}".encode())
+    for table in ("metric_sample", "metric_5m", "metric_1h"):
+        assert _count(telemetry_store, world.a, table) == 0, table
+        assert _count(telemetry_store, world.b, table) > 0, table
+        assert _count(telemetry_store, world.c, table) > 0, table
