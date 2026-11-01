@@ -1038,6 +1038,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/observability/ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ai */
+        get: operations["ai_v1_observability_ai_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/connectors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Connector Summary
+         * @description Per source, not per tenant: the run log is the platform's own.
+         */
+        get: operations["connector_summary_v1_observability_connectors_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/platform-cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform Cost */
+        get: operations["platform_cost_v1_observability_platform_cost_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Triage */
+        get: operations["triage_v1_observability_triage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/observability/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Usage */
+        get: operations["usage_v1_observability_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/onboarding": {
         parameters: {
             query?: never;
@@ -1545,6 +1633,59 @@ export interface components {
             band: "0-30" | "31-90" | "91+";
             open: components["schemas"]["Metric_int_"];
         };
+        /** AiAgent */
+        AiAgent: {
+            /**
+             * Agent
+             * @enum {string}
+             */
+            agent: "classifier" | "enricher" | "drafter" | "assistant" | "other";
+            calls: components["schemas"]["Metric_int_"];
+            failed: components["schemas"]["Metric_int_"];
+            refused: components["schemas"]["Metric_int_"];
+            /** Spend */
+            spend: components["schemas"]["AiSpend"][] | null;
+            tokens: components["schemas"]["Metric_int_"];
+        };
+        /** AiCustomer */
+        AiCustomer: {
+            assistant_budget: components["schemas"]["Metric_int_"];
+            assistant_budget_used: components["schemas"]["Metric_Decimal_"];
+            assistant_month_tokens: components["schemas"]["Metric_int_"];
+            calls: components["schemas"]["Metric_int_"];
+            failed: components["schemas"]["Metric_int_"];
+            month_tokens: components["schemas"]["Metric_int_"];
+            quota: components["schemas"]["Metric_int_"];
+            quota_used: components["schemas"]["Metric_Decimal_"];
+            refused: components["schemas"]["Metric_int_"];
+            /** Spend */
+            spend: components["schemas"]["AiSpend"][] | null;
+            tenant: components["schemas"]["TenantView"];
+            tokens: components["schemas"]["Metric_int_"];
+        };
+        /** AiDay */
+        AiDay: {
+            calls: components["schemas"]["Metric_int_"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            failed: components["schemas"]["Metric_int_"];
+            refused: components["schemas"]["Metric_int_"];
+            /** Spend */
+            spend: components["schemas"]["AiSpend"][] | null;
+            tokens: components["schemas"]["Metric_int_"];
+        };
+        /** AiFigures */
+        AiFigures: {
+            calls: components["schemas"]["Metric_int_"];
+            failed: components["schemas"]["Metric_int_"];
+            refused: components["schemas"]["Metric_int_"];
+            /** Spend */
+            spend: components["schemas"]["AiSpend"][] | null;
+            tokens: components["schemas"]["Metric_int_"];
+        };
         /** AiSpend */
         AiSpend: {
             /** Currency */
@@ -1569,6 +1710,22 @@ export interface components {
             month: string;
             /** Tenants */
             tenants: components["schemas"]["AiTenantUsage"][];
+        };
+        /** AiView */
+        AiView: {
+            alert_share: components["schemas"]["Metric_Decimal_"];
+            /** By Agent */
+            by_agent: components["schemas"]["AiAgent"][];
+            /** By Customer */
+            by_customer: components["schemas"]["AiCustomer"][];
+            /** Daily */
+            daily: components["schemas"]["AiDay"][];
+            /** Month */
+            month: string;
+            /** Spend Visible */
+            spend_visible: boolean;
+            totals: components["schemas"]["AiFigures"];
+            window: components["schemas"]["Window"];
         };
         /** AliasView */
         AliasView: {
@@ -2041,6 +2198,18 @@ export interface components {
             outages: components["schemas"]["Metric_int_"];
             rules: components["schemas"]["BandRules"];
         };
+        /** ConnectorSummary */
+        ConnectorSummary: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Sources */
+            sources: components["schemas"]["SourceHealth"][];
+            /** Visible */
+            visible: boolean;
+        };
         /** ControlDefinition */
         ControlDefinition: {
             /**
@@ -2484,6 +2653,13 @@ export interface components {
              * Format: uuid
              */
             tenant_id: string;
+        };
+        /** EndpointUse */
+        EndpointUse: {
+            /** Action */
+            action: string;
+            requests: components["schemas"]["Metric_int_"];
+            users: components["schemas"]["Metric_int_"];
         };
         /** EvidencePackSummary */
         EvidencePackSummary: {
@@ -3023,6 +3199,18 @@ export interface components {
             months: components["schemas"]["MonthPerformance"][];
             open_incidents: components["schemas"]["Metric_int_"];
             sla_breached_open: components["schemas"]["Metric_int_"];
+        };
+        /** PlatformCost */
+        PlatformCost: {
+            /** Captured */
+            captured: boolean;
+            /** Currencies */
+            currencies: components["schemas"]["CurrencyTrend"][];
+            host: components["schemas"]["TenantView"] | null;
+            /** Months */
+            months: string[];
+            /** Visible */
+            visible: boolean;
         };
         /**
          * PlatformCostHome
@@ -3687,6 +3875,12 @@ export interface components {
             /** Share */
             share: string;
         };
+        /** RoleUsers */
+        RoleUsers: {
+            /** Role */
+            role: string;
+            users: components["schemas"]["Metric_int_"];
+        };
         /** RoutingView */
         RoutingView: {
             /** Description */
@@ -3766,6 +3960,24 @@ export interface components {
             transition_weeks: string;
             /** Upper */
             upper: string;
+        };
+        /** SourceHealth */
+        SourceHealth: {
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "healthy" | "watch" | "at-risk" | "critical" | "unknown";
+            drift_open: components["schemas"]["Metric_int_"];
+            entities: components["schemas"]["Metric_int_"];
+            failed_run_rate_24h: components["schemas"]["Metric_Decimal_"] | null;
+            failed_runs_24h: components["schemas"]["Metric_int_"];
+            /** Last Success At */
+            last_success_at: string | null;
+            quarantine_depth: components["schemas"]["Metric_int_"];
+            runs_24h: components["schemas"]["Metric_int_"];
+            /** Source System */
+            source_system: string;
         };
         /** SourceView */
         SourceView: {
@@ -3945,6 +4157,39 @@ export interface components {
              */
             status: "provisional" | "closed";
         };
+        /** TriageCustomer */
+        TriageCustomer: {
+            accepted: components["schemas"]["Metric_int_"];
+            human: components["schemas"]["Metric_int_"];
+            overridden: components["schemas"]["Metric_int_"];
+            override_rate: components["schemas"]["Metric_Decimal_"] | null;
+            ready_for_planning: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+            triaged: components["schemas"]["Metric_int_"];
+        };
+        /** TriageDay */
+        TriageDay: {
+            accepted: components["schemas"]["Metric_int_"];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            human: components["schemas"]["Metric_int_"];
+            overridden: components["schemas"]["Metric_int_"];
+            override_rate: components["schemas"]["Metric_Decimal_"] | null;
+            ready_for_planning: components["schemas"]["Metric_int_"];
+            triaged: components["schemas"]["Metric_int_"];
+        };
+        /** TriageFigures */
+        TriageFigures: {
+            accepted: components["schemas"]["Metric_int_"];
+            human: components["schemas"]["Metric_int_"];
+            overridden: components["schemas"]["Metric_int_"];
+            override_rate: components["schemas"]["Metric_Decimal_"] | null;
+            ready_for_planning: components["schemas"]["Metric_int_"];
+            triaged: components["schemas"]["Metric_int_"];
+        };
         /** TriageHome */
         TriageHome: {
             awaiting: components["schemas"]["Metric_int_"];
@@ -3995,6 +4240,15 @@ export interface components {
              * Format: date-time
              */
             triaged_at: string;
+        };
+        /** TriageThroughput */
+        TriageThroughput: {
+            /** By Customer */
+            by_customer: components["schemas"]["TriageCustomer"][];
+            /** Daily */
+            daily: components["schemas"]["TriageDay"][];
+            totals: components["schemas"]["TriageFigures"];
+            window: components["schemas"]["Window"];
         };
         /** TriageView */
         TriageView: {
@@ -4085,6 +4339,50 @@ export interface components {
             share: components["schemas"]["Metric_Decimal_"] | null;
             unallocated: components["schemas"]["Metric_Decimal_"];
         };
+        /** UsageDay */
+        UsageDay: {
+            active_users: components["schemas"]["Metric_int_"];
+            /** By Role */
+            by_role: components["schemas"]["RoleUsers"][];
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            requests: components["schemas"]["Metric_int_"];
+            sessions: components["schemas"]["Metric_int_"];
+        };
+        /** UsageView */
+        UsageView: {
+            active_users: components["schemas"]["Metric_int_"];
+            blocked: components["schemas"]["Metric_int_"];
+            /** By Role */
+            by_role: components["schemas"]["RoleUsers"][];
+            customer_users: components["schemas"]["Metric_int_"];
+            /** Daily */
+            daily: components["schemas"]["UsageDay"][];
+            requests: components["schemas"]["Metric_int_"];
+            sessions: components["schemas"]["Metric_int_"];
+            staff_users: components["schemas"]["Metric_int_"];
+            /** Top Endpoints */
+            top_endpoints: components["schemas"]["EndpointUse"][];
+            /** Weekly */
+            weekly: components["schemas"]["UsageWeek"][];
+            window: components["schemas"]["Window"];
+        };
+        /** UsageWeek */
+        UsageWeek: {
+            active_users: components["schemas"]["Metric_int_"];
+            /** By Role */
+            by_role: components["schemas"]["RoleUsers"][];
+            /** Partial */
+            partial: boolean;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -4149,6 +4447,20 @@ export interface components {
             solution: string | null;
             /** Title */
             title: string;
+        };
+        /** Window */
+        Window: {
+            /**
+             * Since
+             * Format: date
+             */
+            since: string;
+            tenant: components["schemas"]["TenantView"] | null;
+            /**
+             * Until
+             * Format: date
+             */
+            until: string;
         };
         /** WorkgroupBacklog */
         WorkgroupBacklog: {
@@ -5971,6 +6283,157 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeView"];
+                };
+            };
+        };
+    };
+    ai_v1_observability_ai_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    connector_summary_v1_observability_connectors_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectorSummary"];
+                };
+            };
+        };
+    };
+    platform_cost_v1_observability_platform_cost_get: {
+        parameters: {
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformCost"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    triage_v1_observability_triage_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageThroughput"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_v1_observability_usage_get: {
+        parameters: {
+            query?: {
+                days?: number;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

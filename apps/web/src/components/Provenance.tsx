@@ -25,6 +25,8 @@ const SOURCE_LABEL: Record<string, string> = {
   ecb: "ECB reference rates",
   triage_classifier: "Triage classifier",
   customer_price: "Price charged",
+  audit_log: "Action log",
+  triage_review: "Triage reviews",
 };
 
 export function sourceLabel(source: string): string {

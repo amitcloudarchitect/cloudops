@@ -30,8 +30,8 @@ export const MODULES: readonly Module[] = [
   // Step 18: the customer roles' landing views (ADR 0018); staff with the permission see them too.
   { href: "/performance", label: "Performance", area: "Operations", permission: "tickets.read" },
   { href: "/customers", label: "Customers", area: "Operations", permission: "authenticated" },
-  // The platform's own health (ADR 0022). Its page and permission come with it; until then, reserved.
-  { href: "/observability", label: "Observability", area: "Operations", permission: "connectors.read", staff: true, reserved: true },
+  // The platform's own usage and health (ADR 0034).
+  { href: "/observability", label: "Observability", area: "Operations", permission: "platform.observe", staff: true },
   { href: "/posture", label: "Security posture", area: "Security", permission: "vulnerabilities.read" },
   // The SecOps workspace: built separately; shown once its page exists.
   { href: "/secops", label: "SecOps", area: "Security", permission: "vulnerabilities.read", staff: true, reserved: true },

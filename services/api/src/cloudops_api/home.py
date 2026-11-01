@@ -546,19 +546,19 @@ _ANOMALIES: Final = text(
     " WHERE observed_on >= :since GROUP BY 1"
 )
 # As platform_metrics counts it: lines of resources in a platform resource group.
-_PLATFORM_TREND: Final = text(
+PLATFORM_TREND: Final = text(
     "SELECT c.invoice_period, c.currency, sum(c.amortized_cost), max(c.usage_date)"
     " FROM cloudops.cost_fact c JOIN cloudops.resource r ON r.id = c.resource_id"
     " WHERE c.tenant_id = :tenant AND c.invoice_period = ANY(CAST(:periods AS text[]))"
     "   AND lower(r.native_id) ~ :group GROUP BY 1, 2"
 )
-_RESOURCE_LINES: Final = text(
+RESOURCE_LINES: Final = text(
     "SELECT EXISTS (SELECT 1 FROM cloudops.cost_fact c WHERE c.tenant_id = :tenant"
     " AND c.invoice_period = :period AND c.resource_id IS NOT NULL)"
 )
 
 
-def _periods(today: date, months: int) -> list[str]:
+def month_periods(today: date, months: int) -> list[str]:
     out: list[str] = []
     y, m = today.year, today.month
     for _ in range(months):
@@ -586,7 +586,7 @@ async def cost(request: Request, access: AccessDep) -> CostHome:
     charged through ``/v1/cost/summary`` (ADR 0021), never this."""
     _staff(access)
     now = _now()
-    periods = _periods(now.date(), TREND_MONTHS)
+    periods = month_periods(now.date(), TREND_MONTHS)
     checked = periods[-RECONCILED_MONTHS:]
     async with platform(request).db.transaction(access.scope) as conn:
         tenants = [(UUID(str(r[0])), str(r[1]), bool(r[2]), bool(r[3]))
@@ -603,8 +603,8 @@ async def cost(request: Request, access: AccessDep) -> CostHome:
         captured = False
         if host is not None:
             params = {"tenant": host[0], "periods": periods, "group": PLATFORM_GROUP}
-            platform_rows = _rows(await conn.execute(_PLATFORM_TREND, params))
-            captured = bool(await conn.scalar(_RESOURCE_LINES,
+            platform_rows = _rows(await conn.execute(PLATFORM_TREND, params))
+            captured = bool(await conn.scalar(RESOURCE_LINES,
                                               {"tenant": host[0], "period": periods[-1]}))
 
     amounts: dict[UUID, dict[str, dict[str, tuple[Any, date]]]] = defaultdict(
