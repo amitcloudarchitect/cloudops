@@ -132,7 +132,9 @@ class CoreStackSource(Source):
         snap = mapping.parse(await raw.get(ref))
         counts = state.RunCounts(pages=1, records=len(snap.recommendations))
         found: list[mapping.Finding] = []
-        held: list[str] = []  # listed but unreadable: neither written nor resolved
+        # Listed but unreadable, or filed without the detail CoreStack refused: what
+        # an earlier snapshot wrote for these ids is not resolved by this one.
+        held: list[str] = sorted(snap.unavailable)
         for rec in snap.recommendations:
             try:
                 found.extend(mapping.findings(rec))
