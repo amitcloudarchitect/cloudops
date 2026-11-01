@@ -1,167 +1,195 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 
-import { expect, test } from "./fixtures";
+import type { SizeBandSettings } from "@cloudops/contracts";
+
+import { api, apiPost, expect, test } from "./fixtures";
 import type { RoleName } from "./roles";
 
-// The home dashboards (ADR 0030): each role lands on its own widgets, in its
-// default order, sees only what it may, can follow each widget to its evidence, and
-// can hide and reorder widgets in this browser.
+// The home sections (ADR 0038, amending ADR 0030): each role sees only the sections
+// it may, its landing view's first; each section has a date range and a compare
+// mode; the customer selector narrows every section; modelled figures say so.
 
-async function widgets(page: Page): Promise<string[]> {
+async function sections(page: Page): Promise<string[]> {
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  const sections = page.locator("section[data-widget]");
-  await expect(sections.first()).toBeVisible();
-  return (await sections.locator("h2").allTextContents()).map((s) => s.trim());
+  const found = page.locator("section[data-section]");
+  await expect(found.first()).toBeVisible();
+  return (await found.locator("h2").allTextContents()).map((s) => s.trim());
 }
 
-const COMMERCIAL_WIDGETS = ["Margin by customer", "Cloud cost by customer", "Cost reconciliation", "Platform cost", "AI gateway usage"];
+async function settled(page: Page) {
+  // Every section settles: data, a named gap, or a refusal, never a spinner left behind.
+  await expect(page.getByText(/^Loading /)).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.getByText(/^Could not load/)).toHaveCount(0);
+}
 
-const LAYOUTS: { role: RoleName; widgets: string[] }[] = [
-  {
-    role: "engineer",
-    widgets: [
-      "Open incidents and SLA risk",
-      "Closest to breach",
-      "Triage awaiting review",
-      "Changes this week",
-      "Noisy configuration items",
-      "Vulnerabilities",
-      "Connector health",
-    ],
-  },
-  {
-    // A delivery lead without commercial visibility: the margin widget is not there.
-    role: "customerMaster",
-    widgets: [
-      "SLA attainment",
-      "Open incidents and SLA risk",
-      "Backlog and MTTR by customer",
-      "Backlog and MTTR by workgroup",
-      "Changes this week",
-      "Connector health",
-      "Customer satisfaction",
-      "Alias and mapping queue",
-    ],
-  },
-  {
-    role: "finops",
-    widgets: ["Cloud cost by customer", "Cost anomalies", "Cost reconciliation", "Platform cost", "Margin by customer", "AI gateway usage"],
-  },
-  {
-    role: "admin",
-    widgets: [
-      "Connector health",
-      "Alias and mapping queue",
-      "Portal onboarding",
-      "AI gateway usage",
-      "Platform cost",
-      "Triage awaiting review",
-      "Open incidents and SLA risk",
-      "Changes this week",
-    ],
-  },
-  {
-    role: "customer",
-    widgets: ["Your service", "Open incidents and SLA risk", "Closest to breach", "SLA attainment", "Cloud consumption", "Vulnerabilities", "Availability"],
-  },
-  {
-    role: "cxo",
-    widgets: [
-      "Your service",
-      "Open incidents and SLA risk",
-      "Closest to breach",
-      "SLA attainment",
-      "Cloud consumption",
-      "Vulnerabilities",
-      "Availability",
-      "Latest report pack",
-    ],
-  },
-  { role: "security", widgets: ["Vulnerabilities", "Your service", "Availability"] },
+const LAYOUTS: { role: RoleName; sections: string[] }[] = [
+  // No cost.read: no revenue section.
+  { role: "engineer", sections: ["Operations", "Security & compliance", "Platform", "Top 10 customers"] },
+  // No tickets.read or vulnerabilities.read: no operations, security or top 10.
+  { role: "finops", sections: ["Revenue & margin", "Platform"] },
+  { role: "admin", sections: ["Operations", "Revenue & margin", "Security & compliance", "Platform", "Top 10 customers"] },
+  // A customer: its own service, never the platform or other customers.
+  { role: "customer", sections: ["Operations", "Your cloud consumption", "Security & compliance"] },
+  { role: "cxo", sections: ["Operations", "Your cloud consumption", "Security & compliance"] },
+  // The security officer's landing view is the posture: its section leads.
+  { role: "security", sections: ["Security & compliance"] },
 ];
 
 for (const layout of LAYOUTS) {
   test.describe(`${layout.role} home`, () => {
     test.use({ role: layout.role });
 
-    test("lands on its dashboard with its role's widgets, in order", async ({ signedIn: page }) => {
+    test("shows its role's sections, in order, and each settles", async ({ signedIn: page }) => {
       await page.goto("/");
-      expect(await widgets(page)).toEqual(layout.widgets);
-      // Every widget settles: data, a named gap, or a refusal, never a spinner left behind.
-      await expect(page.getByText(/^Loading /)).toHaveCount(0);
-      await expect(page.getByText(/^Could not load/)).toHaveCount(0);
+      expect(await sections(page)).toEqual(layout.sections);
+      await settled(page);
     });
   });
 }
 
-test.describe("engineer", () => {
+test.describe("operations", () => {
   test.use({ role: "engineer" });
 
-  test("sees SLA risk marked as modelled, and follows triage to its evidence", async ({ signedIn: page }) => {
+  test("says auto-remediation is not yet available, and marks SLA attainment as modelled", async ({ signedIn: page }) => {
     await page.goto("/");
-    const incidents = page.locator('section[data-widget="incidents"]');
-    await expect(incidents.getByText("Modelled", { exact: true }).first()).toBeVisible();
-    await expect(incidents.getByText(/at risk is an open incident that ServiceNow has not flagged/)).toBeVisible();
-    await expect(incidents.getByRole("table", { name: /Open incidents by priority/ })).toBeVisible();
-    for (const title of COMMERCIAL_WIDGETS) await expect(page.getByRole("heading", { name: title })).toHaveCount(0);
-    await page.getByRole("link", { name: "View the evidence for Triage awaiting review" }).click();
-    await expect(page).toHaveURL(/\/work$/);
+    const ops = page.locator('section[data-section="operations"]');
+    await settled(page);
+    await expect(ops.getByTestId("remediation-note")).toContainText("Auto-remediation: not yet available.");
+    await expect(ops.getByRole("heading", { level: 3, name: "Auto-remediated" })).toBeVisible();
+    await expect(ops.getByRole("table", { name: "Work received by kind", exact: true })).toBeVisible();
+    await expect(ops.getByRole("table", { name: /Incidents resolved within their priority's modelled target/ })).toBeVisible();
+    await expect(ops.getByText("Modelled", { exact: true }).first()).toBeVisible();
+  });
+
+  test("compares two ranges side by side, by component", async ({ signedIn: page }) => {
+    await page.goto("/");
+    const ops = page.locator('section[data-section="operations"]');
+    await settled(page);
+    await ops.getByLabel("Range", { exact: true }).selectOption("last_month");
+    await ops.getByLabel("Compare with another range").check();
+    const table = ops.getByRole("table", { name: "Work received by kind", exact: true });
+    await expect(table.getByRole("columnheader", { name: "Change" })).toBeVisible();
+    // Last month against the month before it: both named as whole months.
+    await expect(table.getByRole("columnheader")).toHaveCount(4);
+    await expect(table.getByRole("rowheader", { name: "Incidents" })).toBeVisible();
+    await settled(page);
+  });
+
+  test("refuses a range that ends before it starts, without asking the API", async ({ signedIn: page }) => {
+    await page.goto("/");
+    const ops = page.locator('section[data-section="operations"]');
+    await ops.getByLabel("From", { exact: true }).fill("2026-10-20");
+    await ops.getByLabel("To", { exact: true }).fill("2026-10-01");
+    await expect(ops.getByRole("alert")).toHaveText("The range ends before it starts.");
   });
 });
 
-test.describe("finops", () => {
+test.describe("revenue and margin", () => {
   test.use({ role: "finops" });
 
-  test("sees cost by customer in its own currencies and reconciliation states", async ({ signedIn: page }) => {
+  test("totals in a reporting currency, and says project prices have no source yet", async ({ signedIn: page }) => {
     await page.goto("/");
-    const cost = page.locator('section[data-widget="cost_trend"]');
-    await expect(cost.getByRole("table", { name: /Cloud cost by customer and currency/ })).toBeVisible();
-    await expect(cost.getByText("Getronics' amortised cost", { exact: false })).toBeVisible();
-    const recon = page.locator('section[data-widget="reconciliation"]');
-    await expect(recon.getByRole("table")).toBeVisible();
-    await expect(recon.getByText(/Provisional|Final|Not checked|Unverified/).first()).toBeVisible();
+    const revenue = page.locator('section[data-section="revenue"]');
+    await settled(page);
+    const table = revenue.getByRole("table", { name: "Revenue and margin by component, in the reporting currency" });
+    await expect(table.getByRole("rowheader", { name: "Hosting cost (Azure and AWS consumption)" })).toBeVisible();
+    await expect(table.getByRole("rowheader", { name: "Managed services margin" })).toBeVisible();
+    await expect(table.getByRole("row", { name: /New project price/ })).toContainText("No data source yet");
+    await revenue.getByLabel("Reporting currency").selectOption("");
+    await expect(revenue.getByText("Choose a reporting currency to total across currencies.")).toBeVisible();
   });
 });
 
-test.describe("customer", () => {
-  test.use({ role: "customer" });
+test.describe("a customer's revenue section", () => {
+  test.use({ role: "cxo" });
 
-  test("sees its own service and price, never Getronics' cost or triage", async ({ signedIn: page }) => {
+  test("shows its consumption price, never Getronics' cost or margin", async ({ signedIn: page }) => {
     await page.goto("/");
-    await expect(page.locator('section[data-widget="availability"]').getByText(/Not captured/)).toBeVisible();
-    await expect(page.locator('section[data-widget="price"]').getByText(/Closed calendar months only/)).toBeVisible();
-    for (const title of [...COMMERCIAL_WIDGETS, "Triage awaiting review", "Backlog and MTTR by workgroup"]) {
-      await expect(page.getByRole("heading", { name: title })).toHaveCount(0);
+    await settled(page);
+    const revenue = page.locator('section[data-section="revenue"]');
+    await expect(revenue.getByRole("heading", { level: 2, name: "Your cloud consumption" })).toBeVisible();
+    for (const text of ["Hosting cost", "Managed services", "Margin", "Top 10 customers", "Platform"]) {
+      await expect(page.getByRole("heading", { name: text })).toHaveCount(0);
     }
-    await expect(page.getByText(/Getronics' (amortised )?cost/)).toHaveCount(0);
+    await expect(page.getByText(/Routed to a person|Auto-triaged/)).toHaveCount(0);
   });
 });
 
-test.describe("arranging widgets", () => {
+test.describe("platform and size bands", () => {
+  test.use({ role: "admin" });
+
+  test("bands each customer, and saves new thresholds as a new version", async ({ signedIn: page }) => {
+    await page.goto("/");
+    const platform = page.locator('section[data-section="platform"]');
+    await settled(page);
+    await expect(platform.getByRole("table", { name: /Customers onboarded by the end of each range/ })).toBeVisible();
+    await expect(platform.getByText(/The higher of two bands/)).toBeVisible();
+    await platform.getByRole("link", { name: "change them in Settings" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Size bands" })).toBeVisible();
+    const before = await api<SizeBandSettings>("admin", "/v1/settings/size-bands");
+    // The same thresholds again: a new version, without moving anyone's band.
+    const reason = `Journey: confirm the thresholds ${Date.now()}`;
+    await page.getByLabel("Reason").fill(reason);
+    await page.getByRole("button", { name: "Save as a new version" }).click();
+    const next = Number(before.current.version.value) + 1;
+    await expect(page.getByRole("status")).toHaveText(`Version ${next} is in force from now.`);
+    await expect(page.getByRole("table", { name: /Every version of the size band thresholds/ }).getByRole("row", { name: new RegExp(reason) })).toBeVisible();
+  });
+});
+
+test.describe("size bands without the permission", () => {
   test.use({ role: "engineer" });
 
-  test("hides, moves and resets, kept in this browser across a reload", async ({ signedIn: page }) => {
-    await page.goto("/");
-    const before = await widgets(page);
-    await page.getByRole("button", { name: "Arrange widgets" }).click();
-    await page.getByRole("button", { name: "Hide Noisy configuration items" }).click();
-    await page.getByRole("button", { name: "Move up Closest to breach" }).click();
-    await page.getByRole("button", { name: "Done" }).click();
-    const arranged = ["Closest to breach", "Open incidents and SLA risk", ...before.slice(2).filter((t) => t !== "Noisy configuration items")];
-    expect(await widgets(page)).toEqual(arranged);
-    await page.reload();
-    expect(await widgets(page)).toEqual(arranged);
-    await page.getByRole("button", { name: "Arrange widgets" }).click();
-    await page.getByRole("button", { name: "Show Noisy configuration items" }).click();
-    await page.getByRole("button", { name: "Reset to default" }).click();
-    await page.getByRole("button", { name: "Done" }).click();
-    expect(await widgets(page)).toEqual(before);
+  test("reads the thresholds but cannot set them; the API refuses too", async ({ signedIn: page }) => {
+    await page.goto("/settings/size-bands");
+    await expect(page.getByRole("heading", { level: 2, name: /In force: version/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Save as a new version" })).toHaveCount(0);
+    const refused = await apiPost("engineer", "/v1/settings/size-bands", {
+      spend_currency: "EUR", spend_medium_from: "1", spend_large_above: "2",
+      resources_medium_from: 1, resources_large_above: 2, reason: "Not mine to set",
+    });
+    expect(refused.status).toBe(403);
   });
 });
 
-// WCAG 2.1 AA in both themes, keyboard focus order through the widgets, and no
-// sideways scroll at tablet width, for a staff and a customer dashboard.
+test.describe("top 10 customers", () => {
+  test.use({ role: "admin" });
+
+  test("sorts by revenue or health, and narrows every section to a chosen customer", async ({ signedIn: page }) => {
+    await page.goto("/");
+    const top = page.locator('section[data-section="top"]');
+    await settled(page);
+    await expect(top.getByLabel("Sort by")).toHaveValue("revenue");
+    await top.getByLabel("Sort by").selectOption("health");
+    await settled(page);
+    const table = top.getByTestId("top-customers");
+    await expect(table).toBeVisible();
+    await expect(top.getByText(/Health is modelled/)).toBeVisible();
+    const first = table.getByRole("rowheader").first().getByRole("button");
+    const name = ((await first.textContent()) ?? "").replace(": show this customer on every section", "").trim();
+    await first.click();
+    const chosen = () => page.getByTestId("customer-select").evaluate((el) => (el as HTMLSelectElement).selectedOptions[0]?.text ?? "");
+    await expect.poll(chosen).toBe(name);
+    await expect(page.getByText(`${name} only.`)).toBeVisible();
+    await settled(page);
+  });
+});
+
+test.describe("an engineer's top 10", () => {
+  test.use({ role: "engineer" });
+
+  test("ranks by health only: revenue is commercial", async ({ signedIn: page }) => {
+    await page.goto("/");
+    const top = page.locator('section[data-section="top"]');
+    await settled(page);
+    await expect(top.getByLabel("Sort by").locator("option")).toHaveText(["Health, least healthy first"]);
+    await expect(top.getByRole("columnheader", { name: /Revenue/ })).toHaveCount(0);
+  });
+});
+
+// WCAG 2.1 AA in both themes, with compare on, and no sideways scroll at tablet
+// width, for a staff and a customer dashboard.
 for (const role of ["admin", "finops", "engineer", "cxo"] as const) {
   for (const theme of ["light", "dark"] as const) {
     test.describe(`${role} home, ${theme} theme`, () => {
@@ -169,12 +197,12 @@ for (const role of ["admin", "finops", "engineer", "cxo"] as const) {
 
       test("passes axe (WCAG 2.1 AA) and fits tablet width", async ({ signedIn: page }) => {
         await page.goto("/");
-        await widgets(page);
-        await expect(page.getByText(/^Loading /)).toHaveCount(0);
-        await page.getByRole("button", { name: "Arrange widgets" }).click();
+        await sections(page);
+        await settled(page);
+        await page.locator("section[data-section]").first().getByLabel("Compare with another range").check();
+        await settled(page);
         const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
         expect(results.violations.map((v) => `/: ${v.id} ${v.nodes.length}`)).toEqual([]);
-        await page.getByRole("button", { name: "Done" }).click();
         await page.setViewportSize({ width: 768, height: 1024 });
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
         expect(overflow).toBeLessThanOrEqual(0);
@@ -186,16 +214,16 @@ for (const role of ["admin", "finops", "engineer", "cxo"] as const) {
 test.describe("keyboard", () => {
   test.use({ role: "engineer" });
 
-  test("reaches a widget's evidence link by keyboard alone", async ({ signedIn: page }) => {
+  test("reaches a section's evidence link by keyboard alone", async ({ signedIn: page }) => {
     await page.goto("/");
-    await widgets(page);
-    const target = page.getByRole("link", { name: "View the evidence for Open incidents and SLA risk" });
+    await sections(page);
+    const target = page.getByRole("link", { name: "View the evidence for Operations" });
     for (let i = 0; i < 60; i += 1) {
       await page.keyboard.press("Tab");
       if (await target.evaluate((el) => el === document.activeElement)) break;
     }
     await expect(target).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(/\/work\?kind=Incident$/);
+    await expect(page).toHaveURL(/\/work$/);
   });
 });

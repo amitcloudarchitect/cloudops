@@ -77,6 +77,9 @@ export const MODULES: readonly Module[] = [
   // SOWs and the rate card (ADR 0033, ADR 0035): commercial roles read it; recording
   // needs commercial.write and publishing ratecard.publish, checked on the page and by the API.
   { href: "/settings/commercial", label: "Commercial setup", area: "Settings", icon: "sliders", permission: "commercial.read", staff: true },
+  // Customer size band thresholds (ADR 0038). Listed to those who set them; any staff
+  // role with inventory.read reads them from Home's Platform section.
+  { href: "/settings/size-bands", label: "Size bands", area: "Settings", icon: "layers", permission: "sizebands.manage", staff: true },
 ];
 
 export function visibleModules(has: (permission: string) => boolean, staff: boolean): Module[] {

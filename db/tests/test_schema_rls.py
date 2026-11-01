@@ -56,6 +56,9 @@ NON_TENANT = {
     "audit.platform_action_log",
     # ADR 0033: the rate card, platform-wide like fx_rate. Commercial: below.
     *RATE_CARD,
+    # ADR 0038: the customer size band thresholds, platform-wide; staff read them,
+    # a customer scope has no grant (test_api_home_sections.py).
+    "cloudops.size_band_policy",
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
 COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance",

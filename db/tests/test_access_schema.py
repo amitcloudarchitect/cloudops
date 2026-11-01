@@ -205,6 +205,9 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
             # Nor on the rate card (0031, platform-wide reference data); its
             # policies are pinned in test_rate_card.py.
             "   AND c.relname NOT LIKE 'rate\\_card%'"
+            # Nor on the size band thresholds (0036, likewise); pinned in
+            # test_api_home_sections.py.
+            "   AND c.oid <> 'cloudops.size_band_policy'::regclass"
             " ORDER BY 1, 2"
         ).fetchall()
     assert extra == [

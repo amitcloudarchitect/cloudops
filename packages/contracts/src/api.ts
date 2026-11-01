@@ -848,6 +848,100 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/home/sections/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations */
+        get: operations["operations_v1_home_sections_operations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/sections/platform": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform Section */
+        get: operations["platform_section_v1_home_sections_platform_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/sections/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Revenue
+         * @description Staff: hosting cost, and with ``commercial.read`` the commercial figures. A
+         *     customer: the price of its own consumption, closed months only (ADR 0021).
+         */
+        get: operations["revenue_v1_home_sections_revenue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/sections/security": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Security */
+        get: operations["security_v1_home_sections_security_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/sections/top-customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Top Customers
+         * @description The ten customers first by ``sort``: ``revenue`` (largest first) or
+         *     ``health`` (least healthy first: what needs attention). Revenue is commercial,
+         *     so sorting by it without ``commercial.read`` is refused.
+         */
+        get: operations["top_customers_v1_home_sections_top_customers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/home/triage": {
         parameters: {
             query?: never;
@@ -1594,6 +1688,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/settings/size-bands": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Size Bands */
+        get: operations["size_bands_v1_settings_size_bands_get"];
+        put?: never;
+        /**
+         * Set Size Bands
+         * @description A new version of the thresholds, in force from now. The version before it
+         *     stays, with its reason; the request is in the audit log.
+         */
+        post: operations["set_size_bands_v1_settings_size_bands_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/tenant/roles": {
         parameters: {
             query?: never;
@@ -1742,6 +1858,15 @@ export interface components {
         };
         /** AgeBand */
         AgeBand: {
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "0-30" | "31-90" | "91+";
+            open: components["schemas"]["Metric_int_"];
+        };
+        /** AgeCount */
+        AgeCount: {
             /**
              * Band
              * @enum {string}
@@ -1978,6 +2103,20 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** AssessmentScore */
+        AssessmentScore: {
+            /** Framework */
+            framework: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            score: components["schemas"]["Metric_Decimal_"] | null;
+            tenant: components["schemas"]["TenantView"];
+            /** Title */
+            title: string;
+        };
         /** AssessmentSummary */
         AssessmentSummary: {
             /**
@@ -2072,6 +2211,15 @@ export interface components {
              * Format: uuid
              */
             tenant_id: string;
+        };
+        /** BandCustomers */
+        BandCustomers: {
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "large" | "medium" | "small";
+            customers: components["schemas"]["Metric_int_"];
         };
         /**
          * BandRules
@@ -2235,6 +2383,27 @@ export interface components {
             short_description: string | null;
             target_hours: components["schemas"]["Metric_int_"] | null;
             tenant: components["schemas"]["TenantView"];
+        };
+        /**
+         * TriageFigures
+         * @description Incidents and requests received in the range that the classifier triaged,
+         *     by the route of their latest triage.
+         */
+        cloudops_api__home_sections__TriageFigures: {
+            eligible: components["schemas"]["Metric_int_"];
+            human: components["schemas"]["Metric_int_"];
+            ready_for_planning: components["schemas"]["Metric_int_"];
+            share: components["schemas"]["Metric_Decimal_"] | null;
+            triaged: components["schemas"]["Metric_int_"];
+        };
+        /** TriageFigures */
+        cloudops_api__observability__TriageFigures: {
+            accepted: components["schemas"]["Metric_int_"];
+            human: components["schemas"]["Metric_int_"];
+            overridden: components["schemas"]["Metric_int_"];
+            override_rate: components["schemas"]["Metric_Decimal_"] | null;
+            ready_for_planning: components["schemas"]["Metric_int_"];
+            triaged: components["schemas"]["Metric_int_"];
         };
         /** CollectedView */
         CollectedView: {
@@ -2679,6 +2848,42 @@ export interface components {
             period: string;
             price: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /** CustomerSize */
+        CustomerSize: {
+            /**
+             * Band
+             * @enum {string}
+             */
+            band: "large" | "medium" | "small";
+            /** Providers */
+            providers: string[];
+            /**
+             * Resource Band
+             * @enum {string}
+             */
+            resource_band: "large" | "medium" | "small";
+            resources: components["schemas"]["Metric_int_"];
+            spend: components["schemas"]["Metric_Decimal_"] | null;
+            /** Spend Band */
+            spend_band: ("large" | "medium" | "small") | null;
+            /** Spend Reason */
+            spend_reason: ("not_permitted" | "no_cost" | "no_fx_rate") | null;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** DateRange */
+        DateRange: {
+            days: components["schemas"]["Metric_int_"];
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
         /** DecisionRequest */
         DecisionRequest: {
             /**
@@ -2805,6 +3010,16 @@ export interface components {
             action: string;
             requests: components["schemas"]["Metric_int_"];
             users: components["schemas"]["Metric_int_"];
+        };
+        /** EventLine */
+        EventLine: {
+            detected: components["schemas"]["Metric_int_"];
+            open: components["schemas"]["Metric_int_"];
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "high" | "medium" | "low";
         };
         /** EvidencePackSummary */
         EvidencePackSummary: {
@@ -3022,10 +3237,40 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** HealthPart */
+        HealthPart: {
+            cap: components["schemas"]["Metric_int_"];
+            observed: components["schemas"]["Metric_int_"] | null;
+            /**
+             * Part
+             * @enum {string}
+             */
+            part: "p1_p2" | "availability" | "vulnerabilities" | "security_events";
+            penalty: components["schemas"]["Metric_Decimal_"] | null;
+        };
+        /** HostingLine */
+        HostingLine: {
+            cost: components["schemas"]["Metric_Decimal_"];
+            cost_converted: components["schemas"]["Metric_Decimal_"] | null;
+            /** Currency */
+            currency: string;
+            price: components["schemas"]["Metric_Decimal_"] | null;
+            price_converted: components["schemas"]["Metric_Decimal_"] | null;
+            /** Provider */
+            provider: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** KindReceived */
+        KindReceived: {
+            /** By Priority */
+            by_priority: components["schemas"]["PriorityCount"][];
+            /** Kind */
+            kind: string;
+            received: components["schemas"]["Metric_int_"];
         };
         /** LiveRequest */
         LiveRequest: {
@@ -3039,6 +3284,23 @@ export interface components {
             /** Library Version */
             library_version: string;
             loaded: components["schemas"]["Metric_int_"];
+        };
+        /**
+         * ManagedLine
+         * @description Managed services in one contract currency, from the margin engine's
+         *     latest snapshot of every customer-month that overlaps the range.
+         */
+        ManagedLine: {
+            cost: components["schemas"]["Metric_Decimal_"];
+            cost_converted: components["schemas"]["Metric_Decimal_"] | null;
+            /** Currency */
+            currency: string;
+            margin: components["schemas"]["Metric_Decimal_"];
+            margin_converted: components["schemas"]["Metric_Decimal_"] | null;
+            months: components["schemas"]["Metric_int_"];
+            provisional: components["schemas"]["Metric_int_"];
+            revenue: components["schemas"]["Metric_Decimal_"];
+            revenue_converted: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** MarginDetail */
         MarginDetail: {
@@ -3325,6 +3587,18 @@ export interface components {
             noisy_cis: components["schemas"]["NoisyCi"][];
             open_incidents: components["schemas"]["Metric_int_"];
         };
+        /** OperationsSection */
+        OperationsSection: {
+            attainment: components["schemas"]["Metric_Decimal_"] | null;
+            range: components["schemas"]["DateRange"];
+            /** Received */
+            received: components["schemas"]["KindReceived"][];
+            received_total: components["schemas"]["Metric_int_"];
+            remediation: components["schemas"]["RemediationFigures"];
+            /** Sla */
+            sla: components["schemas"]["SlaLine"][];
+            triage: components["schemas"]["cloudops_api__home_sections__TriageFigures"] | null;
+        };
         /** PendingChange */
         PendingChange: {
             /** Change Request */
@@ -3393,6 +3667,23 @@ export interface components {
             /** Tenant Id */
             tenant_id: string | null;
         };
+        /** PlatformSection */
+        PlatformSection: {
+            /** Bands */
+            bands: components["schemas"]["BandCustomers"][];
+            both_clouds: components["schemas"]["Metric_int_"];
+            /** By Provider */
+            by_provider: components["schemas"]["ProviderCustomers"][];
+            customers: components["schemas"]["Metric_int_"];
+            internal: components["schemas"]["Metric_int_"];
+            no_cloud: components["schemas"]["Metric_int_"];
+            policy: components["schemas"]["SizePolicyView"];
+            range: components["schemas"]["DateRange"];
+            /** Sizes */
+            sizes: components["schemas"]["CustomerSize"][];
+            /** Spend Month */
+            spend_month: string;
+        };
         /** PortfolioLine */
         PortfolioLine: {
             consumption: components["schemas"]["Metric_Decimal_"] | null;
@@ -3459,6 +3750,12 @@ export interface components {
             /** Reporting Currency */
             reporting_currency: string | null;
         };
+        /** PriorityCount */
+        PriorityCount: {
+            /** Priority */
+            priority: string;
+            received: components["schemas"]["Metric_int_"];
+        };
         /** PriorityLine */
         PriorityLine: {
             at_risk: components["schemas"]["Metric_int_"] | null;
@@ -3467,6 +3764,19 @@ export interface components {
             /** Priority */
             priority: string;
             target_hours: components["schemas"]["Metric_int_"] | null;
+        };
+        /**
+         * ProjectFigures
+         * @description Closed project tasks (new project price) and open ones (proposed
+         *     initiatives). No source holds their prices yet (ADR 0038).
+         */
+        ProjectFigures: {
+            /** Available */
+            available: boolean;
+            new_project_price: components["schemas"]["Metric_Decimal_"] | null;
+            proposed_price: components["schemas"]["Metric_Decimal_"] | null;
+            /** Reason */
+            reason: "no_data_source" | null;
         };
         /** ProposalRequest */
         ProposalRequest: {
@@ -3512,6 +3822,15 @@ export interface components {
             /** Source System */
             source_system: string;
             tenant: components["schemas"]["TenantView"];
+        };
+        /** ProviderCustomers */
+        ProviderCustomers: {
+            customers: components["schemas"]["Metric_int_"];
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "azure" | "aws";
         };
         /** PublishRateCard */
         PublishRateCard: {
@@ -3769,6 +4088,18 @@ export interface components {
             status: "requested" | "running" | "succeeded" | "failed";
         };
         /**
+         * RemediationFigures
+         * @description Always 0 until the execution plane exists (CLAUDE.md: not before the
+         *     security review). The figure is shown with its reason, never hidden.
+         */
+        RemediationFigures: {
+            auto_remediated: components["schemas"]["Metric_int_"];
+            /** Available */
+            available: boolean;
+            /** Reason */
+            reason: "execution_plane_not_built" | null;
+        };
+        /**
          * Reported
          * @description The contract-currency margin converted for the viewer, FX impact apart.
          */
@@ -4022,6 +4353,53 @@ export interface components {
             /** Result */
             result: ("compliant" | "partially_compliant" | "non_compliant" | "not_applicable" | "manual") | null;
         };
+        /**
+         * RevenueParts
+         * @description In the reporting currency. None: a line without a rate, or no SOW price.
+         */
+        RevenueParts: {
+            hosting: components["schemas"]["Metric_Decimal_"] | null;
+            managed: components["schemas"]["Metric_Decimal_"] | null;
+            projects: components["schemas"]["Metric_Decimal_"] | null;
+            total: components["schemas"]["Metric_Decimal_"] | null;
+        };
+        /** RevenueSection */
+        RevenueSection: {
+            /** Commercial */
+            commercial: boolean;
+            /** Customer Price */
+            customer_price: components["schemas"]["PriceLine"][] | null;
+            /** Hosting */
+            hosting: components["schemas"]["HostingLine"][] | null;
+            /** Managed */
+            managed: components["schemas"]["ManagedLine"][] | null;
+            projects: components["schemas"]["ProjectFigures"] | null;
+            range: components["schemas"]["DateRange"];
+            /** Reporting Currency */
+            reporting_currency: string | null;
+            totals: components["schemas"]["RevenueTotals"] | null;
+            /**
+             * View
+             * @enum {string}
+             */
+            view: "staff" | "customer";
+        };
+        /**
+         * RevenueTotals
+         * @description In the reporting currency; each None when any line under it has no rate.
+         */
+        RevenueTotals: {
+            /** Currency */
+            currency: string;
+            hosting_cost: components["schemas"]["Metric_Decimal_"] | null;
+            hosting_price: components["schemas"]["Metric_Decimal_"] | null;
+            managed_cost: components["schemas"]["Metric_Decimal_"] | null;
+            managed_margin: components["schemas"]["Metric_Decimal_"] | null;
+            managed_revenue: components["schemas"]["Metric_Decimal_"] | null;
+            margin: components["schemas"]["Metric_Decimal_"] | null;
+            margin_share: components["schemas"]["Metric_Decimal_"] | null;
+            revenue: components["schemas"]["Metric_Decimal_"] | null;
+        };
         /** ReviewRequest */
         ReviewRequest: {
             /**
@@ -4237,6 +4615,23 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** SecurityEvents */
+        SecurityEvents: {
+            /** By Severity */
+            by_severity: components["schemas"]["EventLine"][];
+            compliance_open: components["schemas"]["Metric_int_"];
+        };
+        /** SecuritySection */
+        SecuritySection: {
+            assessment_average: components["schemas"]["Metric_Decimal_"] | null;
+            /** Assessments */
+            assessments: components["schemas"]["AssessmentScore"][] | null;
+            events: components["schemas"]["SecurityEvents"] | null;
+            open_total: components["schemas"]["Metric_int_"];
+            range: components["schemas"]["DateRange"];
+            /** Vulnerabilities */
+            vulnerabilities: components["schemas"]["SeverityLine"][];
+        };
         /** SeverityAgeing */
         SeverityAgeing: {
             at_risk: components["schemas"]["Metric_int_"] | null;
@@ -4262,6 +4657,80 @@ export interface components {
              */
             severity: 1 | 2 | 3 | 4 | 5;
         };
+        /** SeverityLine */
+        SeverityLine: {
+            /** By Age */
+            by_age: components["schemas"]["AgeCount"][];
+            fixed: components["schemas"]["Metric_int_"];
+            found: components["schemas"]["Metric_int_"];
+            open: components["schemas"]["Metric_int_"];
+            /**
+             * Severity
+             * @enum {integer}
+             */
+            severity: 1 | 2 | 3 | 4 | 5;
+        };
+        /** SizeBandSettings */
+        SizeBandSettings: {
+            /** Can Edit */
+            can_edit: boolean;
+            current: components["schemas"]["SizePolicyView"];
+            /** History */
+            history: components["schemas"]["SizePolicyVersion"][];
+        };
+        /**
+         * SizeBandsInput
+         * @description A whole set of thresholds. Spend is a decimal string: a JSON number would
+         *     arrive as a float (CLAUDE.md rule 5).
+         */
+        SizeBandsInput: {
+            /** Reason */
+            reason: string;
+            /** Resources Large Above */
+            resources_large_above: number;
+            /** Resources Medium From */
+            resources_medium_from: number;
+            /** Spend Currency */
+            spend_currency: string;
+            /** Spend Large Above */
+            spend_large_above: string;
+            /** Spend Medium From */
+            spend_medium_from: string;
+        };
+        /** SizePolicyVersion */
+        SizePolicyVersion: {
+            /** Currency */
+            currency: string;
+            /** Reason */
+            reason: string;
+            resources_large_above: components["schemas"]["Metric_int_"];
+            resources_medium_from: components["schemas"]["Metric_int_"];
+            /**
+             * Set At
+             * Format: date-time
+             */
+            set_at: string;
+            /** Set By You */
+            set_by_you: boolean;
+            spend_large_above: components["schemas"]["Metric_Decimal_"];
+            spend_medium_from: components["schemas"]["Metric_Decimal_"];
+            version: components["schemas"]["Metric_int_"];
+        };
+        /** SizePolicyView */
+        SizePolicyView: {
+            /** Currency */
+            currency: string;
+            resources_large_above: components["schemas"]["Metric_int_"];
+            resources_medium_from: components["schemas"]["Metric_int_"];
+            /**
+             * Set At
+             * Format: date-time
+             */
+            set_at: string;
+            spend_large_above: components["schemas"]["Metric_Decimal_"];
+            spend_medium_from: components["schemas"]["Metric_Decimal_"];
+            version: components["schemas"]["Metric_int_"];
+        };
         /** SlabRow */
         SlabRow: {
             /** Label */
@@ -4272,6 +4741,16 @@ export interface components {
             transition_weeks: string;
             /** Upper */
             upper: string;
+        };
+        /** SlaLine */
+        SlaLine: {
+            attainment: components["schemas"]["Metric_Decimal_"] | null;
+            breached_flagged: components["schemas"]["Metric_int_"];
+            /** Priority */
+            priority: string;
+            resolved: components["schemas"]["Metric_int_"];
+            target_hours: components["schemas"]["Metric_int_"] | null;
+            within_target: components["schemas"]["Metric_int_"] | null;
         };
         /** SourceHealth */
         SourceHealth: {
@@ -4568,6 +5047,36 @@ export interface components {
             /** Tool */
             tool: string;
         };
+        /** TopCustomer */
+        TopCustomer: {
+            health: components["schemas"]["Metric_Decimal_"];
+            /**
+             * Health Band
+             * @enum {string}
+             */
+            health_band: "healthy" | "watch" | "at-risk" | "critical";
+            /** Parts */
+            parts: components["schemas"]["HealthPart"][];
+            rank: components["schemas"]["Metric_int_"];
+            revenue: components["schemas"]["RevenueParts"] | null;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** TopCustomers */
+        TopCustomers: {
+            /** Commercial */
+            commercial: boolean;
+            /** Customers */
+            customers: components["schemas"]["TopCustomer"][];
+            range: components["schemas"]["DateRange"];
+            ranked: components["schemas"]["Metric_int_"];
+            /** Reporting Currency */
+            reporting_currency: string;
+            /**
+             * Sort
+             * @enum {string}
+             */
+            sort: "health" | "revenue";
+        };
         /** TrendPoint */
         TrendPoint: {
             /** Band */
@@ -4599,15 +5108,6 @@ export interface components {
              * Format: date
              */
             day: string;
-            human: components["schemas"]["Metric_int_"];
-            overridden: components["schemas"]["Metric_int_"];
-            override_rate: components["schemas"]["Metric_Decimal_"] | null;
-            ready_for_planning: components["schemas"]["Metric_int_"];
-            triaged: components["schemas"]["Metric_int_"];
-        };
-        /** TriageFigures */
-        TriageFigures: {
-            accepted: components["schemas"]["Metric_int_"];
             human: components["schemas"]["Metric_int_"];
             overridden: components["schemas"]["Metric_int_"];
             override_rate: components["schemas"]["Metric_Decimal_"] | null;
@@ -4671,7 +5171,7 @@ export interface components {
             by_customer: components["schemas"]["TriageCustomer"][];
             /** Daily */
             daily: components["schemas"]["TriageDay"][];
-            totals: components["schemas"]["TriageFigures"];
+            totals: components["schemas"]["cloudops_api__observability__TriageFigures"];
             window: components["schemas"]["Window"];
         };
         /** TriageView */
@@ -6408,6 +6908,189 @@ export interface operations {
             };
         };
     };
+    operations_v1_home_sections_operations_get: {
+        parameters: {
+            query?: {
+                /** @description Last day, inclusive (UTC); default today. */
+                end?: string | null;
+                /** @description First day, inclusive (UTC). */
+                start?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsSection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    platform_section_v1_home_sections_platform_get: {
+        parameters: {
+            query?: {
+                /** @description Last day, inclusive (UTC); default today. */
+                end?: string | null;
+                /** @description First day, inclusive (UTC). */
+                start?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformSection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revenue_v1_home_sections_revenue_get: {
+        parameters: {
+            query?: {
+                currency?: string | null;
+                /** @description Last day, inclusive (UTC); default today. */
+                end?: string | null;
+                /** @description First day, inclusive (UTC). */
+                start?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueSection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    security_v1_home_sections_security_get: {
+        parameters: {
+            query?: {
+                /** @description Last day, inclusive (UTC); default today. */
+                end?: string | null;
+                /** @description First day, inclusive (UTC). */
+                start?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SecuritySection"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    top_customers_v1_home_sections_top_customers_get: {
+        parameters: {
+            query?: {
+                currency?: string;
+                /** @description Last day, inclusive (UTC); default today. */
+                end?: string | null;
+                sort?: ("health" | "revenue") | null;
+                /** @description First day, inclusive (UTC). */
+                start?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopCustomers"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     triage_v1_home_triage_get: {
         parameters: {
             query?: never;
@@ -7763,6 +8446,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SecOpsVulnerabilities"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    size_bands_v1_settings_size_bands_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizeBandSettings"];
+                };
+            };
+        };
+    };
+    set_size_bands_v1_settings_size_bands_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SizeBandsInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SizeBandSettings"];
                 };
             };
             /** @description Validation Error */
