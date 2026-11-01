@@ -17,7 +17,7 @@ test.describe("platform administrator", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Cloud onboarding" })).toBeVisible();
     const form = page.getByRole("form", { name: "Onboard a cloud account" });
     // Identifiers only: there is no field a secret could be typed into.
-    await expect(form.getByLabel(/secret value|client secret$/i)).toHaveCount(0);
+    await expect(form.getByLabel(/(?:secret value|client secret)$/i)).toHaveCount(0);
     await form.getByLabel("Customer").selectOption("new");
     await form.getByLabel("New customer’s name").fill(`E2E Lab ${short}`);
     await form.getByLabel("Short code (names its Key Vault secrets)").fill(short);
@@ -38,7 +38,7 @@ test.describe("platform administrator", () => {
     await form.getByLabel("AWS account id").fill("123456789012");
     await form.getByLabel("Access key id (not the secret key)").fill("not-a-key");
     await form.getByRole("button", { name: "Record and check" }).click();
-    await expect(page.getByRole("alert")).toContainText("access key id");
+    await expect(form.getByRole("alert")).toContainText("access key id");
   });
 });
 

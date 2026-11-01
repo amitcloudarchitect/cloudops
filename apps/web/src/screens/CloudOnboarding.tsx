@@ -25,6 +25,9 @@ const ACCOUNT = /^[0-9]{12}$/;
 const ACCESS_KEY = /^AKIA[A-Z0-9]{16}$/;
 const CODE = /^[A-Z0-9]{2,10}$/;
 const MAX_DAYS = 90; // ADR 0003, guardrail 3
+// The latest day to pick: expiry is recorded as the end of the chosen day, so day 90
+// would fall after now + 90 days and the database refuses it.
+const LAST_DAY = MAX_DAYS - 1;
 const POLL_MS = 15_000;
 // Where the secrets go: the platform's application Key Vault, per environment (LLD naming).
 const KEY_VAULT = "kv-cloudops-app-<env>-weu (dev: kv-cloudops-app-dev-weu)";
@@ -123,7 +126,7 @@ function SecretNames({ item }: { item: CloudCredential }) {
 
 function Detail({ item, onChanged }: { item: CloudCredential; onChanged: (next: CloudCredential, text: string) => void }) {
   const { token } = useAuth();
-  const [expiry, setExpiry] = useState(isoDay(MAX_DAYS));
+  const [expiry, setExpiry] = useState(isoDay(LAST_DAY));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
   const params = { credential_id: item.id };
@@ -211,7 +214,7 @@ function Detail({ item, onChanged }: { item: CloudCredential; onChanged: (next: 
           <form onSubmit={rotate} className="flex flex-wrap items-end gap-2">
             <label className={label}>
               Rotated: the new secret expires on
-              <input type="date" className={control} value={expiry} min={isoDay(1)} max={isoDay(MAX_DAYS)} onChange={(e) => setExpiry(e.target.value)} />
+              <input type="date" className={control} value={expiry} min={isoDay(1)} max={isoDay(LAST_DAY)} onChange={(e) => setExpiry(e.target.value)} />
             </label>
             <button type="submit" disabled={busy || waiting} className={secondary}>
               Record rotation
@@ -234,7 +237,7 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
   const [subscriptions, setSubscriptions] = useState("");
   const [account, setAccount] = useState("");
   const [keyId, setKeyId] = useState("");
-  const [expiry, setExpiry] = useState(isoDay(MAX_DAYS));
+  const [expiry, setExpiry] = useState(isoDay(LAST_DAY));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<Message>(null);
   const creating = tenantId === "new";
@@ -345,7 +348,7 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
         )}
         <label className={label}>
           {provider === "azure" ? "The client secret expires on" : "The key will be rotated by"}
-          <input type="date" className={control} value={expiry} min={isoDay(1)} max={isoDay(MAX_DAYS)} onChange={(e) => setExpiry(e.target.value)} />
+          <input type="date" className={control} value={expiry} min={isoDay(1)} max={isoDay(LAST_DAY)} onChange={(e) => setExpiry(e.target.value)} />
         </label>
       </div>
       <button type="submit" disabled={busy} className={primary}>
