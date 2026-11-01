@@ -60,6 +60,7 @@ from cloudops_config import (
 from cloudops_config.probes import serve_probes
 from cloudops_config.settings import environment_from
 from cloudops_config.temporal import connect, run_worker
+from cloudops_connectors.core import sync
 from cloudops_connectors.core.ingest import (
     WORKFLOWS,
     ConnectorActivities,
@@ -212,6 +213,15 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
                 await probes.wait_closed()
 
             stack.push_async_callback(close)
+            if name in sync.SYNC_SOURCES:  # ADR 0037: sync now when a customer is onboarded
+                requests = asyncio.create_task(sync.serve(
+                    db, temporal, name, [f"{name}-{e}" for e in run_entities]))
+
+                async def stop_requests() -> None:
+                    requests.cancel()
+                    await asyncio.gather(requests, return_exceptions=True)
+
+                stack.push_async_callback(stop_requests)
             print(f"worker serving {queue}")
             await run_worker(worker, settings.temporal)
             return 0

@@ -230,3 +230,38 @@ async def test_a_subscription_shared_with_the_platform_files_under_the_customer_
                 cx.execute("INSERT INTO cloudops.tenant_alias (tenant_id, source_system, alias,"
                            " confirmed_by) VALUES (%s, 'azure', %s, 'test:restore')",
                            (tenant, native))
+
+
+async def test_a_refused_detail_files_the_recommendation_and_resolves_nothing_it_held(
+    env: WorkflowEnvironment, db: Database, synthetic_module: Synthetic
+) -> None:
+    """CoreStack answers 400 for some details (every Defender for Cloud one). The run
+    still succeeds; the recommendation is filed from its list fields, and what an
+    earlier snapshot read from its detail is not resolved for want of it."""
+    dsn = synthetic_module.admin_dsn
+    raw, fake = MemoryRawStore(), FakeCoreStack.from_fixtures()
+    acts = ConnectorActivities(db, raw, _source(fake))
+    await _ingest(env, acts)
+    held = next(e for e in _written("security") if e.status == "open" and ":" in e.finding_id)
+    rec_id = held.finding_id.split(":")[0]
+    siblings = {e.finding_id for e in _written("security")
+                if e.finding_id.startswith(f"{rec_id}:")}
+
+    fake.refuse_detail(rec_id)
+    second = await _ingest(env, acts)
+    assert second.status == "succeeded"
+    stored = _stored(dsn, "security_finding")
+    assert "resolved" not in {stored[f][3] for f in siblings}
+    tenant, account, resource, status, _scope, extra = stored[rec_id]
+    assert (tenant, account, resource, status) == (tenant_id(held.tenant_code or ""), None,
+                                                   None, "open")
+    assert extra["detail_status"] == 400
+
+    # The detail answers again: the list-only finding is gone from the snapshot, so
+    # it resolves; the per-resource ones carry on.
+    fake.refused.clear()
+    third = await _ingest(env, acts)
+    assert third.status == "succeeded"
+    stored = _stored(dsn, "security_finding")
+    assert stored[rec_id][3] == "resolved"
+    assert "resolved" not in {stored[f][3] for f in siblings}

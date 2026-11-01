@@ -43,6 +43,8 @@ NON_TENANT = {
     "staging.schema_field",
     "staging.metric_allowlist",
     "staging.connector_schedule",
+    # ADR 0037: a source and a reason code, queued by the database (ingest-only grants).
+    "staging.sync_request",
     # Step 16: the platform's default anomaly thresholds, and the explicit entry
     # an FX correction creates (reference data, like fx_rate).
     "staging.anomaly_threshold_default",

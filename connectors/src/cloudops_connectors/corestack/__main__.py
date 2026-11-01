@@ -14,11 +14,11 @@ the token request and the two recommendation GETs (``client.ALLOWED``).
 from __future__ import annotations
 
 from contextlib import AsyncExitStack
-from datetime import timedelta
 from typing import Final
 
 from cloudops_config import Component, Settings
 from cloudops_connectors.core.cli import Live, main
+from cloudops_connectors.core.sync import CUSTOMER_SYNC
 from cloudops_connectors.corestack.client import CoreStackClient
 from cloudops_connectors.corestack.fake import (
     FIXTURE_ACCESS_KEY,
@@ -57,4 +57,4 @@ LIVE: Final = Live(frozenset({Component.CORESTACK}), live_entities, live_source,
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(SOURCE, {ENTITY: timedelta(days=1)}, _fixtures, live=LIVE))
+    raise SystemExit(main(SOURCE, {ENTITY: CUSTOMER_SYNC}, _fixtures, live=LIVE))

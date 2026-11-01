@@ -137,6 +137,42 @@ async def test_the_snapshot_holds_every_page_and_no_token() -> None:
     assert FIXTURE_SECRET.encode() not in body
 
 
+async def test_a_refused_detail_is_kept_and_its_recommendation_filed_from_the_list() -> None:
+    fake = FakeCoreStack.from_fixtures()
+    want = FIXTURE["recommendations"][NWL]
+    refused = next(r for r in want if r["detail"]["resources"])
+    fake.refuse_detail(refused["id"])
+    body = await mapping.snapshot(_client(fake), NWL, T0)
+    (kept,) = [r for r in json.loads(body)["responses"] if r.get("status") == 400]
+    assert kept["kind"] == "detail"
+    assert kept["path"].endswith(refused["id"])
+    snap = mapping.parse(body)
+    assert snap.unavailable == frozenset({refused["id"]})
+    assert [r["id"] for r in snap.recommendations] == [r["id"] for r in want]
+    rec = next(r for r in snap.recommendations if r["id"] == refused["id"])
+    assert rec["resources"] == []
+    assert rec["detail_status"] == 400
+    if mapping.TABLES.get(rec["classification"].lower()):
+        (lone,) = mapping.findings(rec)
+        assert lone.finding_id == refused["id"]
+        assert lone.raw_extra["detail_status"] == 400
+
+
+@pytest.mark.parametrize("status", [401, 403, 500])
+async def test_a_detail_failing_any_other_way_fails_the_snapshot(status: int) -> None:
+    fake = FakeCoreStack.from_fixtures()
+    fake.refuse_detail(FIXTURE["recommendations"][NWL][0]["id"], status)
+    with pytest.raises(httpx.HTTPStatusError):
+        await mapping.snapshot(_client(fake), NWL, T0)
+
+
+def test_a_refused_page_that_is_not_a_detail_is_malformed() -> None:
+    body = json.dumps({"tenant": NWL, "fetched_at": T0.isoformat(), "responses": [
+        {"kind": "list", "path": "/x", "page": 1, "status": 400, "body": "{}"}]}).encode()
+    with pytest.raises(mapping.MalformedSnapshotError):
+        mapping.parse(body)
+
+
 async def test_a_server_ignoring_the_page_number_is_read_once() -> None:
     fake = FakeCoreStack.from_fixtures()
 

@@ -11,7 +11,8 @@ detail with its resources paged the same way, each with ``X-Auth-Token``. A
 missing, wrong or expired token is 401; a tenant the user cannot see is 403.
 Anything else is 404, and any method but those two is 405: the fake records every
 request, so tests can prove the client sent nothing else. Tests change the
-account between runs (``resolve``, ``expire_tokens``) or force throttling.
+account between runs (``resolve``, ``expire_tokens``, ``refuse_detail``) or force
+throttling.
 """
 
 from __future__ import annotations
@@ -52,6 +53,7 @@ class FakeCoreStack:
             fixture["recommendations"])
         self.tokens: set[str] = set()
         self.throttle_next = 0
+        self.refused: dict[str, int] = {}  # rec id -> the status its detail answers
         self.requests: list[httpx.Request] = []
 
     @classmethod
@@ -64,6 +66,11 @@ class FakeCoreStack:
         """The recommendation is fixed: CoreStack stops listing it."""
         self.recommendations[tenant] = [r for r in self.recommendations[tenant]
                                         if r["id"] != rec_id]
+
+    def refuse_detail(self, rec_id: str, status: int = 400) -> None:
+        """The recommendation's detail fails as CoreStack's does for every Defender
+        for Cloud recommendation: 400 ``{"message": "'actions'"}``."""
+        self.refused[rec_id] = status
 
     def expire_tokens(self) -> None:
         self.tokens.clear()
@@ -99,6 +106,8 @@ class FakeCoreStack:
             found = next((r for r in self.recommendations[tenant] if r["id"] == rec_id), None)
             if found is None:
                 return _respond(404, {"message": "Recommendation not found"})
+            if rec_id in self.refused:
+                return _respond(self.refused[rec_id], {"message": "'actions'"})
             # As CoreStack's detail: the list's fields less id, tenant id and source.
             detail = {k: v for k, v in found.items()
                       if k not in ("detail", "id", "tenant_id", "source")}

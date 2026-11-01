@@ -18,11 +18,11 @@ connector code over it.
 from __future__ import annotations
 
 from contextlib import AsyncExitStack
-from datetime import timedelta
 from typing import Final
 
 from cloudops_config import Component, ConfigurationError, QualysSource, Settings
 from cloudops_connectors.core.cli import Live, main
+from cloudops_connectors.core.sync import CUSTOMER_SYNC
 from cloudops_connectors.qualys import source
 from cloudops_connectors.qualys.auth import ApiUser
 from cloudops_connectors.qualys.client import QualysClient
@@ -59,4 +59,4 @@ LIVE: Final = Live(frozenset({Component.QUALYS}), live_entities, live_source,
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(SOURCE, {ENTITY: timedelta(days=1)}, _fixtures, live=LIVE))
+    raise SystemExit(main(SOURCE, {ENTITY: CUSTOMER_SYNC}, _fixtures, live=LIVE))

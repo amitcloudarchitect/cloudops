@@ -18,6 +18,7 @@ from temporalio.client import (
 )
 
 from cloudops_connectors.core.cli import upsert_schedule
+from cloudops_connectors.core.sync import CUSTOMER_SYNC
 
 
 class FakeHandle:
@@ -68,3 +69,16 @@ async def test_no_trigger_unless_asked() -> None:
     fake = FakeClient()
     await upsert_schedule(cast(Client, fake), "customer-azure-x-resource", _daily())
     assert fake.triggered == []
+
+
+async def test_an_update_applies_a_changed_interval() -> None:
+    """ADR 0037: daily becomes six-hourly on the next schedule sync, with no extra run.
+    (Checked against a Temporal server too: the update replaces the spec.)"""
+    fake = FakeClient()
+    client = cast(Client, fake)
+    await upsert_schedule(client, "qualys-detection", _daily(), trigger_on_create=True)
+    six = Schedule(action=_daily().action, spec=ScheduleSpec(
+        intervals=[ScheduleIntervalSpec(every=CUSTOMER_SYNC)]))
+    await upsert_schedule(client, "qualys-detection", six, trigger_on_create=True)
+    assert fake.schedules["qualys-detection"].spec.intervals[0].every == timedelta(hours=6)
+    assert fake.triggered == ["qualys-detection"]
