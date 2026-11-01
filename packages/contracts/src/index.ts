@@ -179,3 +179,11 @@ export type SecOpsPostureScores = Schemas["SecOpsPostureScores"];
 export type CustomerPostureScore = Schemas["CustomerPostureScore"];
 export type FindingDetail = Schemas["FindingDetail"];
 export type SlaBand = SecOpsFinding["sla"];
+// Settings → Manage customers: edit, delete (offboard), restore, purge (ADR 0038).
+export type TenantEdit = Schemas["TenantEdit"];
+export type TenantEdited = Schemas["TenantEdited"];
+export type OffboardRequest = Schemas["OffboardRequest"];
+export type Offboarded = Schemas["Offboarded"];
+export type OffboardedTenant = Schemas["OffboardedTenant"];
+export type PurgeRequest = Schemas["PurgeRequest"];
+export type Restored = Schemas["Restored"];

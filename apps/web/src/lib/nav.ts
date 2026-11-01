@@ -56,6 +56,8 @@ export const MODULES: readonly Module[] = [
   // Step 14b: onboarding tenants, mapping source company names to them (HLD M1), and
   // which tenant hosts the platform (ADR 0031).
   { href: "/mapping", label: "Customer mapping", area: "Settings", permission: "mapping.manage" },
+  // ADR 0038: rename a customer; a platform administrator deletes (offboards), restores and purges.
+  { href: "/settings/customers", label: "Manage customers", area: "Settings", permission: "mapping.manage", staff: true },
   // Step 15: ingest health per source and entity, and schema drift (staff only).
   { href: "/connectors", label: "Connectors", area: "Settings", permission: "connectors.read" },
   // SOWs and the rate card (ADR 0033, ADR 0035): commercial roles read it; recording

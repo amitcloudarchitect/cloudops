@@ -95,7 +95,7 @@ def test_a_metric_name_cannot_carry_anything_else(metric: str) -> None:
 
 def test_no_method_accepts_sql() -> None:
     public = {n for n in dir(TelemetryStore) if not n.startswith("_")}
-    assert public == {"create", "aclose", "ping", "query", "write"}
+    assert public == {"create", "aclose", "ping", "query", "write", "purge"}
 
 
 async def test_an_empty_scope_reads_nothing_and_sends_nothing() -> None:
@@ -203,3 +203,32 @@ async def test_cross_tenant_refusals_are_security_events(
     assert events == [("cross_tenant_attempt", "tenancy.telemetry_read"),
                       ("cross_tenant_attempt", "tenancy.telemetry_write")]
     assert str(B) not in caplog.text
+
+
+async def test_a_purge_deletes_one_tenant_at_every_grain_and_nothing_else() -> None:
+    """ADR 0038: a purged tenant's telemetry. One tenant, named by parameter, under the
+    tenant predicate, in every table."""
+    rec = _Recorder()
+    assert await _store(rec).purge(TenantScope([A], Role.INGEST, "p")) == 3
+    tables = []
+    for request in rec.requests:
+        sql = request.content.decode()
+        assert "WHERE tenant_id IN {tenants:Array(UUID)}" in sql
+        assert str(A) not in sql
+        assert request.url.params["param_tenants"] == f"['{A}']"
+        assert "readonly" not in request.url.params
+        tables.append(sql.split()[2])
+    assert tables == ["telemetry.metric_sample", "telemetry.metric_5m", "telemetry.metric_1h"]
+
+
+@pytest.mark.parametrize("scope", [
+    TenantScope([A], Role.PLATFORM_ADMIN, "p"),  # not the ingest role
+    TenantScope([A, B], Role.INGEST, "p"),  # more than one tenant
+    TenantScope([], Role.INGEST, "p"),  # none
+    TenantScope([A], Role.INGEST, "p", account_ids=[ACCT]),  # part of a tenant
+])
+async def test_a_purge_names_exactly_one_whole_tenant(scope: TenantScope) -> None:
+    rec = _Recorder()
+    with pytest.raises(TelemetryScopeError):
+        await _store(rec).purge(scope)
+    assert rec.requests == []

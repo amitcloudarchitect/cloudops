@@ -307,6 +307,20 @@ class TelemetryStore:
         _raise(response)
         return len(samples)
 
+    async def purge(self, scope: TenantScope) -> int:
+        """Delete one tenant's samples at every grain: a purged tenant (ADR 0038).
+        The ingest role, exactly one tenant and no account restriction, so the
+        statement can only ever name that tenant. Returns the tables cleared."""
+        if not isinstance(scope, TenantScope) or scope.role is not Role.INGEST:
+            raise TelemetryScopeError("only the ingest role purges telemetry")
+        if len(scope.tenant_ids) != 1 or scope.account_ids is not None:
+            raise _refused("tenancy.telemetry_purge", "a purge names exactly one whole tenant")
+        params = {"tenants": _array(scope.tenant_ids)}
+        for table in _TABLE.values():
+            await self._send(f"ALTER TABLE {self._database}.{table} DELETE {_PREDICATE}"
+                             " SETTINGS mutations_sync = 2", params, read_only=False)
+        return len(_TABLE)
+
     async def _send(self, sql: str, params: dict[str, str], *, read_only: bool) -> str:
         if _PREDICATE not in sql:
             raise _refused("tenancy.telemetry_predicate",

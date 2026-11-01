@@ -1646,6 +1646,111 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/tenants/{tenant_id}/edit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Edit Tenant
+         * @description Rename, or change the short code where it is safe. An internal tenant also
+         *     needs a platform administrator, as onboarding one does (ADR 0031).
+         */
+        post: operations["edit_tenant_v1_tenants__tenant_id__edit_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/{tenant_id}/offboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Offboard Tenant
+         * @description The console's Delete: effective at once. Recorded under the tenant while it is
+         *     still in this request's scope.
+         */
+        post: operations["offboard_tenant_v1_tenants__tenant_id__offboard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/{tenant_id}/purge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Purge Tenant
+         * @description Ask for the purge, after the retention, with the name and the short code typed.
+         *     Accepted, not done: the purge worker runs it within a minute or two.
+         */
+        post: operations["purge_tenant_v1_tenants__tenant_id__purge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/{tenant_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Restore Tenant
+         * @description Back within the retention. In every scope that holds it again from the next
+         *     request; its credentials stay revoked and its portal suspended.
+         */
+        post: operations["restore_tenant_v1_tenants__tenant_id__restore_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tenants/offboarded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Offboarded
+         * @description Offboarded, purging and purged tenants this platform administrator is assigned
+         *     (or every one), latest first: the only place a tenant that has left is listed.
+         */
+        get: operations["list_offboarded_v1_tenants_offboarded_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/work-items": {
         parameters: {
             query?: never;
@@ -3230,6 +3335,61 @@ export interface components {
             resource_id: string | null;
             tenant: components["schemas"]["TenantView"];
         };
+        /** Offboarded */
+        Offboarded: {
+            /**
+             * Purge After
+             * Format: date-time
+             */
+            purge_after: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "offboarded";
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** OffboardedTenant */
+        OffboardedTenant: {
+            /** Internal */
+            internal: boolean;
+            /** May Purge */
+            may_purge: boolean;
+            /** May Restore */
+            may_restore: boolean;
+            /**
+             * Offboarded At
+             * Format: date-time
+             */
+            offboarded_at: string;
+            /** Offboarded By Me */
+            offboarded_by_me: boolean;
+            purge: components["schemas"]["PurgeView"] | null;
+            /**
+             * Purge After
+             * Format: date-time
+             */
+            purge_after: string;
+            /** Purged At */
+            purged_at: string | null;
+            /** Reason */
+            reason: string;
+            /** Short Code */
+            short_code: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "offboarded" | "purging" | "purged";
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** OffboardRequest */
+        OffboardRequest: {
+            /** Confirm Name */
+            confirm_name: string;
+            /** Reason */
+            reason: string;
+        };
         /** OnboardedTenant */
         OnboardedTenant: {
             /** Internal */
@@ -3518,6 +3678,35 @@ export interface components {
             document: components["schemas"]["RateCardDocument"];
             /** Reason */
             reason: string;
+        };
+        /** PurgeRequest */
+        PurgeRequest: {
+            /** Confirm Code */
+            confirm_code: string;
+            /** Confirm Name */
+            confirm_name: string;
+        };
+        /** PurgeView */
+        PurgeView: {
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "requested" | "running" | "succeeded" | "failed";
         };
         /** QuarantinedAlias */
         QuarantinedAlias: {
@@ -4022,6 +4211,19 @@ export interface components {
             /** Result */
             result: ("compliant" | "partially_compliant" | "non_compliant" | "not_applicable" | "manual") | null;
         };
+        /** Restored */
+        Restored: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "restored";
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
         /** ReviewRequest */
         ReviewRequest: {
             /**
@@ -4484,6 +4686,19 @@ export interface components {
             open_incidents: components["schemas"]["Metric_int_"];
             open_items: components["schemas"]["Metric_int_"];
             resolved_30d: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** TenantEdit */
+        TenantEdit: {
+            /** Canonical Name */
+            canonical_name: string;
+            /** Short Code */
+            short_code: string;
+        };
+        /** TenantEdited */
+        TenantEdited: {
+            /** Short Code */
+            short_code: string;
             tenant: components["schemas"]["TenantView"];
         };
         /** TenantKind */
@@ -7876,6 +8091,162 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    edit_tenant_v1_tenants__tenant_id__edit_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TenantEdit"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantEdited"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    offboard_tenant_v1_tenants__tenant_id__offboard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OffboardRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Offboarded"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    purge_tenant_v1_tenants__tenant_id__purge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PurgeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OffboardedTenant"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_tenant_v1_tenants__tenant_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Restored"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_offboarded_v1_tenants_offboarded_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OffboardedTenant"][];
                 };
             };
         };
