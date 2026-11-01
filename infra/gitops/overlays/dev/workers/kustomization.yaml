@@ -15,10 +15,10 @@ resources:
 images:
   - name: connector-servicenow
     newName: crcloudopsdevweu.azurecr.io/connector-servicenow
-    newTag: fd7e244
+    newTag: d2122dc
   - name: worker-ai
     newName: crcloudopsdevweu.azurecr.io/worker-ai
-    newTag: fd7e244
+    newTag: d2122dc
 patches:
   - path: connector-servicenow.yaml
   - path: connector-azure.yaml
