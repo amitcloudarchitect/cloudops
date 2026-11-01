@@ -605,7 +605,7 @@ export function CostTrendWidget() {
     <Frame {...frame("cost_trend")} href="/finops">
       <Body loaded={loaded} what="cost">
         {(cost) => {
-          const customers = cost.customers.filter((c) => !c.internal && c.currencies.length > 0);
+          const customers = cost.customers.filter((c) => c.currencies.length > 0);
           const previous = cost.months.at(-2) ?? "";
           const first = customers[0]?.currencies[0]?.points.at(-2)?.amortized;
           return customers.length === 0 ? (
@@ -703,7 +703,7 @@ export function ReconciliationWidget() {
                       <tr key={c.tenant.id} className="border-t border-line-subtle">
                         <th scope="row" className="py-1.5 pr-2 text-left font-normal">
                           {c.tenant.name}
-                          {c.internal ? <span className="ml-1 text-xs text-muted">(platform)</span> : null}
+                          {c.internal ? <span className="ml-1 text-xs text-muted">(internal)</span> : null}
                         </th>
                         {c.reconciliation.map((r) => (
                           <td key={r.period} className="py-1.5">
@@ -782,12 +782,18 @@ export function PlatformCostWidget() {
     <Frame {...frame("platform_cost")} href="/finops">
       <Body loaded={loaded} what="platform cost">
         {(cost) => {
-          const internal = cost.customers.find((c) => c.internal);
-          if (!internal) return <Gap text="Not captured: no tenant is marked as the platform's own (ADR 0023)." />;
-          if (internal.currencies.length === 0) return <Gap text="No platform cost in the last six months." />;
+          const platform = cost.platform;
+          if (!platform) return <Gap text="Not captured: no tenant is marked as hosting the platform (Customer mapping, ADR 0031)." />;
+          if (!platform.captured)
+            return (
+              <Gap
+                text={`Not captured: ${platform.host.name}'s cost this month has no resource-level lines, so the platform's own resources cannot be told apart from the rest of the subscription.`}
+              />
+            );
+          if (platform.currencies.length === 0) return <Gap text="No platform resource cost in the last six months." />;
           return (
             <div className="grid gap-3">
-              {internal.currencies.map((t) => {
+              {platform.currencies.map((t) => {
                 const pts = t.points;
                 const last = pts.at(-2);
                 const mtd = pts.at(-1);
@@ -797,14 +803,14 @@ export function PlatformCostWidget() {
                       label={`${last ? periodLabel(last.period) : "Last month"} (${t.currency})`}
                       metric={last?.amortized}
                       display={(m) => money(String(m.value), m.unit, 0)}
-                      href={`/finops/${internal.tenant.id}`}
+                      href={`/finops/${platform.host.id}`}
                       unavailable="No cost that month"
                     />
                     <MetricCard
                       label={`Month to date (${t.currency})`}
                       metric={mtd?.amortized}
                       display={(m) => money(String(m.value), m.unit, 0)}
-                      href={`/finops/${internal.tenant.id}`}
+                      href={`/finops/${platform.host.id}`}
                       unavailable="No cost yet this month"
                     />
                   </div>

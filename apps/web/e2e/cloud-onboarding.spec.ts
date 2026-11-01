@@ -19,8 +19,9 @@ test.describe("platform administrator", () => {
     // Identifiers only: there is no field a secret could be typed into.
     await expect(form.getByLabel(/(?:secret value|client secret)$/i)).toHaveCount(0);
     await form.getByLabel("Customer").selectOption("new");
-    await form.getByLabel("New customer’s name").fill(`E2E Lab ${short}`);
+    await form.getByLabel("New tenant’s name").fill(`E2E Lab ${short}`);
     await form.getByLabel("Short code (names its Key Vault secrets)").fill(short);
+    await form.getByLabel("A customer", { exact: true }).check();
     await form.getByLabel("Directory (tenant) id").fill(crypto.randomUUID());
     await form.getByLabel("Application (client) id").fill(crypto.randomUUID());
     await form.getByLabel("Subscription ids, one per line").fill(crypto.randomUUID());

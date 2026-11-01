@@ -8,7 +8,8 @@ application login and checks what each scope sees.
 The tenant is found, not assumed: by its short code (``AZSPONSOR``). If it is
 there (onboarded in the console, or by an earlier run), its id is used; if not,
 it is onboarded through ``access.onboard_tenant`` by the local platform
-administrator, as the console would. ``make seed`` must have run first: it
+administrator, as the console would, as an internal tenant (ADR 0031: Azure
+Sponsorship is Getronics' own, and hosts the platform in dev). ``make seed`` must have run first: it
 bootstraps that administrator and loads the FX rates margin needs.
 """
 
@@ -47,7 +48,7 @@ async def find_tenant(ingest: Database, code: str = SHORT_CODE) -> UUID | None:
 async def onboard(app: Database, ingest: Database, admin: UUID) -> UUID:
     async with app.transaction(TenantScope.for_resolution(PRINCIPAL)) as conn:
         try:
-            tenant = await conn.scalar(text("SELECT access.onboard_tenant(:a, :n, :c)"),
+            tenant = await conn.scalar(text("SELECT access.onboard_tenant(:a, :n, :c, true)"),
                                        {"a": admin, "n": COMPANY, "c": SHORT_CODE})
         except Exception as exc:
             raise SeedError(

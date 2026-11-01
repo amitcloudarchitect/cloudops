@@ -16,9 +16,9 @@ Customer, by a stored credential (ADR 0003, ADR 0027): a run made with a
 customer's own credential is bound to that customer. Its ``Binding`` names the
 tenant and the ids the credential was onboarded for; those resolve to the tenant
 without consulting the alias map, and any other id the credential can see
-resolves to nobody, so it is quarantined and never read. The same id may then be
-held by the internal tenant through its alias (the platform's own subscription,
-ADR 0023): one id, two tenants, each through its own credential.
+resolves to nobody, so it is quarantined and never read. An id has one owner
+(ADR 0031): the platform's own cost feed reaches the same subscription through an
+alias of the same tenant, never another.
 
 Resource (Qualys, CoreStack, CUR): external key, then ``name_norm`` plus IP,
 then ``name_norm`` alone, each only if exactly one resource in the tenant
@@ -115,8 +115,8 @@ async def upsert_accounts(
 ) -> dict[str, UUID]:
     """``cloud_account`` ids for accounts already resolved to tenants, created on
     first sight. Must run in a transaction scoped to those tenants. An account
-    another customer holds fails loudly (the database's ``CAOWN``); one the
-    internal tenant holds is shared and marked so on both rows (ADR 0027)."""
+    another tenant holds fails loudly (a unique violation on
+    ``cloud_account_provider_native_key``: one owner per account, ADR 0031)."""
     out: dict[str, UUID] = {}
     for a in sorted(seen, key=lambda x: x.native_id):
         tenant = tenant_of.get(a.native_id)
@@ -135,10 +135,9 @@ async def known_accounts(
 ) -> dict[str, tuple[UUID, UUID]]:
     """native id -> (account id, tenant id), for accounts visible in scope.
 
-    An id may be held by two tenants (the platform's own subscription, also a
-    customer's: ADR 0027). Given ``{id: tenant}``, each id's row is its tenant's.
-    Given bare ids, an id held by two tenants in scope is ambiguous and raises,
-    rather than picking one."""
+    An id has one owner (ADR 0031). Given ``{id: tenant}``, each id's row is its
+    tenant's. Given bare ids, an id held by two tenants in scope (which the
+    database no longer allows) still raises rather than picking one."""
     wanted = dict(ids) if isinstance(ids, Mapping) else None
     held: dict[str, dict[UUID, UUID]] = {}
     for r in await conn.execute(_ACCOUNTS, {"provider": provider, "ids": sorted(set(ids))}):

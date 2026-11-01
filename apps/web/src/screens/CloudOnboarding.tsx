@@ -55,7 +55,7 @@ const OUTCOME: Record<string, string> = {
   role_not_allowed: "The app registration holds a role beyond Reader, Cost Management Reader and Monitoring Reader. Remove it.",
   reader_missing: "Reader is missing on a subscription.",
   cannot_read_role_assignments: "The app registration cannot read its own role assignments: Reader is missing.",
-  account_held_by_another_tenant: "Another customer already holds one of these accounts.",
+  account_held_by_another_tenant: "Another tenant already holds one of these accounts: a subscription belongs to one tenant only.",
   access_key_mismatch: "The access key id in Key Vault is not the one recorded.",
   account_mismatch: "The key belongs to a different AWS account.",
   not_an_iam_user: "The key is not an IAM user's (never use the root user's keys).",
@@ -183,11 +183,6 @@ function Detail({ item, onChanged }: { item: CloudCredential; onChanged: (next: 
         ) : (
           <p className="text-sm text-muted">No check yet.</p>
         )}
-        {item.shared_with_platform.length ? (
-          <p className="text-sm text-ink" role="note">
-            Shared with the platform: {item.shared_with_platform.join(", ")} is also the platform’s own subscription. Its cost appears under this customer and under the internal tenant, each reconciled on its own figures (ADR 0023, ADR 0027).
-          </p>
-        ) : null}
       </section>
       {item.status !== "revoked" ? (
         <section className="card space-y-3 p-4" aria-labelledby="credential-actions">
@@ -231,6 +226,7 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
   const [tenantId, setTenantId] = useState("");
   const [newName, setNewName] = useState("");
   const [newCode, setNewCode] = useState("");
+  const [newKind, setNewKind] = useState<"" | "customer" | "internal">("");
   const [provider, setProvider] = useState<Provider>("azure");
   const [directory, setDirectory] = useState("");
   const [client, setClient] = useState("");
@@ -247,7 +243,8 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
     const subs = subscriptions.split(/[\s,]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
     const problems: string[] = [];
     if (!tenantId) problems.push("choose the customer");
-    if (creating && (!newName.trim() || !CODE.test(newCode))) problems.push("give the new customer a name and a short code of 2 to 10 capitals or digits");
+    if (creating && (!newName.trim() || !CODE.test(newCode))) problems.push("give the new tenant a name and a short code of 2 to 10 capitals or digits");
+    if (creating && newKind === "") problems.push("choose whether the new tenant is a customer or internal to Getronics");
     if (provider === "azure" && (!UUID.test(directory.trim()) || !UUID.test(client.trim()))) problems.push("give the directory (tenant) id and the application (client) id");
     if (provider === "azure" && (subs.length === 0 || subs.some((s) => !UUID.test(s)))) problems.push("give the subscription ids, one per line");
     if (provider === "aws" && (!ACCOUNT.test(account.trim()) || !ACCESS_KEY.test(keyId.trim()))) problems.push("give the twelve-digit account id and the access key id (AKIA…)");
@@ -260,7 +257,7 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
     try {
       const t = await token();
       let tenant = tenantId;
-      if (creating) tenant = (await apiPost(t, "/v1/mapping/tenants", {}, { canonical_name: newName.trim(), short_code: newCode })).tenant.id;
+      if (creating) tenant = (await apiPost(t, "/v1/mapping/tenants", {}, { canonical_name: newName.trim(), short_code: newCode, internal: newKind === "internal" })).tenant.id;
       const expires = endOfDay(expiry);
       const created =
         provider === "azure"
@@ -293,7 +290,7 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
                 {t.tenant.name} ({t.short_code})
               </option>
             ))}
-            <option value="new">A new customer…</option>
+            <option value="new">A new tenant…</option>
           </select>
         </label>
         <fieldset className="flex flex-col gap-1">
@@ -310,13 +307,30 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
         {creating ? (
           <>
             <label className={label}>
-              New customer’s name
+              New tenant’s name
               <input className={control} value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={200} />
             </label>
             <label className={label}>
               Short code (names its Key Vault secrets)
               <input className={control} value={newCode} onChange={(e) => setNewCode(e.target.value.toUpperCase())} maxLength={10} />
             </label>
+            <fieldset className="flex flex-col gap-1 sm:col-span-2">
+              <legend className="text-xs font-semibold text-muted">Kind of tenant</legend>
+              <div className="flex gap-4 text-sm">
+                <label className="flex items-center gap-1">
+                  <input type="radio" name="tenant-kind" checked={newKind === "customer"} onChange={() => setNewKind("customer")} />
+                  A customer
+                </label>
+                <label className="flex items-center gap-1">
+                  <input type="radio" name="tenant-kind" checked={newKind === "internal"} onChange={() => setNewKind("internal")} />
+                  Internal to Getronics
+                </label>
+              </div>
+              <p className="text-xs text-muted">
+                Internal or not, a subscription belongs to one tenant only, and internal tenants are reported on like customers (ADR 0031). Change it later, or
+                choose the tenant that hosts the platform, in Customer mapping.
+              </p>
+            </fieldset>
           </>
         ) : null}
         {provider === "azure" ? (
@@ -407,7 +421,6 @@ export function CloudOnboarding() {
     { key: "check", header: "Last check", value: (c) => c.latest_check?.outcome ?? c.latest_check?.status ?? null },
     { key: "expires", header: "Secret expires", value: (c) => c.expires_at, render: (c) => `${date(c.expires_at)} (${c.days_to_expiry.value} days)` },
     { key: "owner", header: "Owner", value: (c) => (c.owned_by_me ? "You" : "Another administrator") },
-    { key: "shared", header: "Shared with platform", value: (c) => (c.shared_with_platform.length ? "Yes" : null) },
   ];
 
   return (

@@ -77,10 +77,11 @@ async def loaded(admin_server: str) -> AsyncIterator[Loaded]:
 async def test_the_tenant_is_found_by_its_short_code_not_a_fixed_id(loaded: Loaded) -> None:
     assert await loader.find_tenant(loaded.ingest) == loaded.tenant
     assert loaded.tenant != platform_rows(loaded.sim, uuid4()).tenant_id
-    (name, code, location), = rows(loaded.admin_dsn, "SELECT canonical_name, short_code,"
-                                   " delivery_location FROM cloudops.tenant WHERE id = %s",
-                                   loaded.tenant)
-    assert (name, code, location) == (COMPANY, SHORT_CODE, "India")
+    (name, code, location, internal), = rows(
+        loaded.admin_dsn, "SELECT canonical_name, short_code, delivery_location, internal"
+        " FROM cloudops.tenant WHERE id = %s", loaded.tenant)
+    # Getronics' own (ADR 0031), onboarded as internal.
+    assert (name, code, location, internal) == (COMPANY, SHORT_CODE, "India", True)
 
 
 async def test_every_row_is_in_the_tenant_and_only_its_scope_sees_it(loaded: Loaded) -> None:

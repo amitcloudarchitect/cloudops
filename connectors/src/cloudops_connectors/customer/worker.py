@@ -11,17 +11,19 @@ Every ``interval`` (a minute) it:
    it reads the credential, refuses one that is revoked or expired, fails (for a
    person to fix, then ask again) one whose secret is not in the store, and
    otherwise runs the read-only check (``check.py``). A passed check creates the
-   credential's ``cloud_account`` rows in its tenant; an account another customer
-   holds refuses it (``account_held_by_another_tenant``), one the internal tenant
-   holds is shared and marked so (ADR 0027). The outcome is recorded with
+   credential's ``cloud_account`` rows in its tenant; an account another tenant
+   holds, internal or not, refuses it (``account_held_by_another_tenant``: one
+   owner per account, ADR 0031). The outcome is recorded with
    ``cloudops.finish_credential_check``. A passed onboarding or rotation then
    starts the first sync: the credential's schedules are created and triggered.
 2. **Reconciles workers.** Each active, unexpired credential whose secrets the
    store holds gets a Temporal worker on its own task queue
    (``connectors-<provider>-customer-<code>``), running the ordinary
    ``ConnectorIngest`` over its bound source, and one schedule per entity
-   (``customer-<provider>-<code>-<entity>``). A credential revoked, expired or no
-   longer mounted loses its worker and its schedules at once.
+   (``customer-<provider>-<code>-<entity>``). No cost entity runs for an account
+   the platform's own feed reads (an approved alias of the provider in the same
+   tenant, ADR 0023): one cost feed per subscription (ADR 0031). A credential
+   revoked, expired or no longer mounted loses its worker and its schedules at once.
 
 Nothing here writes to a customer's estate: every call the sources and the check
 make is a read, and the roles they run with are checked to be read-only.
@@ -84,12 +86,15 @@ _CLAIM: Final = text("SELECT id, tenant_id, credential_id, reason"
                      " FROM cloudops.claim_credential_check(:provider)")
 _FINISH: Final = text("SELECT cloudops.finish_credential_check(:id, :status, :outcome,"
                       " CAST(:detail AS jsonb))")
-_SHARED: Final = text(
-    "SELECT native_id FROM cloudops.cloud_account WHERE tenant_id = :tenant"
-    " AND provider = :provider AND native_id = ANY(CAST(:ids AS text[]))"
-    " AND shared_with_platform ORDER BY native_id"
+# An approved alias of the provider is how the platform's own cost feed (ADR 0023)
+# finds an account: under the credential's tenant, those accounts' cost is its.
+_PLATFORM_FED: Final = text(
+    "SELECT alias FROM cloudops.tenant_alias WHERE tenant_id = :tenant"
+    " AND source_system = :provider AND alias = ANY(CAST(:ids AS text[]))"
 )
-OWNED_ELSEWHERE: Final = "CAOWN"
+# One owner per account (ADR 0031): another tenant's row fails the insert.
+OWNED_ELSEWHERE: Final = "23505"
+OWNER_INDEX: Final = "cloud_account_provider_native_key"
 
 
 @dataclass(frozen=True)
@@ -160,6 +165,7 @@ class CustomerWorker:
             outcome = await self._evaluate(found)
             if outcome.status == "passed" and found is not None:
                 outcome = await self._bind(found, outcome)
+                found = await self._fed(found)
         except Exception:  # recorded, never left running; the type only, no payload
             log.exception("credential check %s failed", check_id)
         finally:
@@ -207,20 +213,31 @@ class CustomerWorker:
         return check.Outcome("refused", "unknown_provider")
 
     async def _bind(self, credential: StoredCredential, outcome: check.Outcome) -> check.Outcome:
-        """The credential's accounts, in its tenant (ADR 0016: created once bound)."""
+        """The credential's accounts, in its tenant (ADR 0016: created once bound).
+        An account another tenant holds refuses the whole check: one owner each."""
         tenant = {a: credential.tenant_id for a in credential.account_ids}
         try:
             async with self._db.transaction(self._scope(credential.tenant_id)) as conn:
                 await identity.upsert_accounts(conn, credential.provider, tenant, [
                     identity.AccountSeen(a, None) for a in credential.account_ids])
-                shared = [str(r[0]) for r in await conn.execute(_SHARED, {
-                    "tenant": credential.tenant_id, "provider": credential.provider,
-                    "ids": list(credential.account_ids)})]
         except DBAPIError as exc:
-            if str(getattr(exc.orig, "sqlstate", "")) == OWNED_ELSEWHERE:
+            orig = exc.orig
+            if (str(getattr(orig, "sqlstate", "")) == OWNED_ELSEWHERE
+                    and getattr(getattr(orig, "diag", None), "constraint_name", None)
+                    == OWNER_INDEX):
                 return check.Outcome("refused", "account_held_by_another_tenant")
             raise
-        return replace(outcome, detail={**outcome.detail, "shared_with_platform": shared})
+        fed = await self._fed(credential)
+        return replace(outcome, detail={**outcome.detail,
+                                        "cost_read_by_platform": sorted(fed.platform_fed)})
+
+    async def _fed(self, credential: StoredCredential) -> StoredCredential:
+        """The credential, knowing which of its accounts' cost the platform reads."""
+        async with self._db.transaction(self._scope(credential.tenant_id)) as conn:
+            fed = frozenset(str(r[0]) for r in await conn.execute(_PLATFORM_FED, {
+                "tenant": credential.tenant_id, "provider": credential.provider,
+                "ids": list(credential.account_ids)}))
+        return replace(credential, platform_fed=fed)
 
     # --- workers and schedules -------------------------------------------------------
 
@@ -228,20 +245,23 @@ class CustomerWorker:
         """Exactly the usable credentials have a worker and schedules."""
         async with self._db.transaction(self._scope()) as conn:
             wanted = {c.id: c for p in self._providers for c in await credentials.active(conn, p)}
-        usable = {i: c for i, c in wanted.items() if not c.missing_secrets(self._store)}
+        usable = {i: await self._fed(c) for i, c in wanted.items()
+                  if not c.missing_secrets(self._store)}
         for i, running in list(self._running.items()):
             if i not in usable or running.task.done() \
-                    or running.credential.account_ids != usable[i].account_ids:
+                    or running.credential.account_ids != usable[i].account_ids \
+                    or running.credential.platform_fed != usable[i].platform_fed:
                 await self._stop(i)
         for c in usable.values():
             if c.id not in self._running:
                 await self._ensure(c, first_sync=False)
         await self._drop_schedules(keep={sources.schedule_id(c, e) for c in usable.values()
-                                         for e in sources.CADENCE[c.provider]})
+                                         for e in sources.entities(c)})
 
     async def _ensure(self, credential: StoredCredential, *, first_sync: bool) -> None:
         temporal = self._temporal
-        if temporal is None:
+        runs = sources.entities(credential)
+        if temporal is None or not runs:
             return
         if credential.id not in self._running:
             stack = AsyncExitStack()
@@ -252,7 +272,7 @@ class CustomerWorker:
             self._running[credential.id] = _Running(credential, worker,
                                                     asyncio.create_task(worker.run()), stack)
         since = (self._clock() - timedelta(days=90)).isoformat()
-        for entity, every in sources.CADENCE[credential.provider].items():
+        for entity, every in runs.items():
             sid = sources.schedule_id(credential, entity)
             await upsert_schedule(temporal, sid, Schedule(
                 action=ScheduleActionStartWorkflow(

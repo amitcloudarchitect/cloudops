@@ -75,6 +75,11 @@ def reconcile(ledger: Decimal, ledger_currency: str, reference: Decimal,
 # --- anomalies -----------------------------------------------------------------------------
 
 Window = Literal["day", "month"]
+# The platform's own resources (ADR 0031): a resource in a platform resource group,
+# by the LLD's naming, the platform's groups and the node group AKS makes for its
+# cluster. A PostgreSQL regular expression on the lowercased ARM id.
+PLATFORM_GROUP: Final = r"/resourcegroups/(mc_)?rg-cloudops-[^/]+(/|$)"
+
 TRAILING_DAYS: Final = 7
 MIN_BASELINE_DAYS: Final = 3
 

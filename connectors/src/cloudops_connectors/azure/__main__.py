@@ -7,7 +7,8 @@
 See ``core/cli.py``. The billing fixtures were recorded on ``BILLING_DAY``, so
 the fixture source runs its billing entities as of that day.
 
-The live path (ADR 0023) feeds the internal tenant: ``cost_total``, and line items
+The live path (ADR 0023) feeds the tenant that owns each platform subscription
+(ADR 0031; in dev, Azure Sponsorship): ``cost_total``, and line items
 from either the Cost Management exports of the platform's own subscriptions
 (``cost_export``) or, where the agreement allows no export, the query API's daily
 cost (``cost_daily``), as ``CLOUDOPS_AZURE_COST_LINES`` says. Read with the pod's

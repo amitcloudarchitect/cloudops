@@ -14,8 +14,9 @@ the source serves one stored credential: its subscriptions resolve to its tenant
 without the alias map, every call names only them (the client's ``allowed`` is the
 second lock), anything else the listing shows is quarantined and never read, and
 its ``instance`` names the credential. Its watermarks are its own, and a replay
-skips any bronze page another instance fetched, so the platform's own pages of a
-shared subscription never land in the customer's tenant, or the reverse.
+skips any bronze page another instance fetched. Where the platform's own feed
+reads a subscription's cost (ADR 0023), the credential reads its resources only:
+``cost_binding`` leaves that subscription out of the cost entities (ADR 0031).
 
 The rest of this docstring is the ``resource`` entity.
 
@@ -129,6 +130,7 @@ class AzureSource(Source):
         billing_account: str | None = None, today: Callable[[], date] | None = None,
         entities: frozenset[str] = mapping.ENTITIES,
         binding: identity.Binding | None = None, credential: str | None = None,
+        cost_binding: identity.Binding | None = None,
     ) -> None:
         """``exports`` reads the storage account the FOCUS exports land in;
         ``export_roots`` are ``<container>/<root path>``, one export each.
@@ -136,7 +138,9 @@ class AzureSource(Source):
         ``today`` is the run's day for the billing entities (UTC by default).
         ``entities`` narrows what this source serves (the live path, ADR 0023):
         any other is refused before a request is made. ``binding`` and
-        ``credential`` (its inventory id): a customer credential's run."""
+        ``credential`` (its inventory id): a customer credential's run.
+        ``cost_binding``: the part of the binding whose cost this run reads, when the
+        platform's own feed reads the rest (ADR 0031); the whole binding by default."""
         if not entities or not entities <= mapping.ENTITIES:
             raise ValueError("entities must be among the Azure entities")
         if batch_size < 1:
@@ -154,9 +158,14 @@ class AzureSource(Source):
         self._exports = exports
         self._roots = list(export_roots)
         day = today or (lambda: datetime.now(UTC).date())
+        if cost_binding is not None and (
+                binding is None or cost_binding.tenant_id != binding.tenant_id
+                or not cost_binding.native_ids <= binding.native_ids):
+            raise ValueError("a cost binding is part of the source's binding")
         self._binding = binding
-        self._billing = AzureBilling(client, billing_account, day, binding)
-        self._daily = AzureDaily(client, day, binding)
+        cost = cost_binding or binding
+        self._billing = AzureBilling(client, billing_account, day, cost)
+        self._daily = AzureDaily(client, day, cost)
         self.instance = (client.base_url if credential is None
                          else f"{client.base_url}#credential={credential}")
         self.entities = entities

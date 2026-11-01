@@ -12,6 +12,10 @@
 - **Amends:** ADR 0016, decision 5 (a cloud account resolves through the alias map),
   for runs made with a customer's own credential; ADR 0023 (the platform's dev
   subscription is also a customer's; see its amendment).
+- **Amended by:** ADR 0031 (2026-11-01): decisions 8 and 9 (the shared subscription
+  and its provenance) are withdrawn. A subscription has one owner, and a credential
+  runs no cost entity for an account the platform's own feed reads (see the amendment
+  at the end).
 
 ## Context
 
@@ -166,3 +170,25 @@ Four things were not specified and were asked (2026-10-31):
   store is still LLD L1.
 - Removing a subscription from a credential, or adding one: today, revoke and onboard
   again (a new check).
+
+## Amendment (ADR 0031): no shared subscriptions
+
+The user decided on 2026-11-01 that a tenant, internal or a customer, owns its
+subscriptions alone, and that many tenants may be internal.
+
+- **Decision 1 and decision 8 are withdrawn.** `cloud_account` is unique on
+  `(provider, native_id)` again (migration 0030). The sharing trigger, its tenant
+  trigger and their policies are gone. A credential bound to an account another tenant
+  holds, internal or not, is refused at the check (`account_held_by_another_tenant`).
+- **Decision 9 is withdrawn.** No `shared_with_platform` in the API, the console or
+  FinOps. The column stays, always false, until a later contract drops it.
+- **Decision 7, one change.** A credential runs no cost entity (`cost_daily`,
+  `cost_total`) for an account whose cost ADR 0023's feed reads, that is, an account
+  with an alias of the provider in the credential's own tenant. Its resources are still
+  read with the credential.
+- **Azure Sponsorship** is an internal tenant that hosts the platform and is
+  `cd12743c`'s single owner. Migration 0029 folded the dev pair into it.
+- **Still open from the consequences.** Every workload identity can read every secret
+  in the app vault. The user chose (2026-11-01) a separate customer vault: the API
+  writes the secret typed into the console, and a dedicated identity reads it by name
+  at runtime. That change has its own ADR.

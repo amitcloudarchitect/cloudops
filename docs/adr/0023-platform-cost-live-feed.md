@@ -3,6 +3,8 @@
 - **Status:** Accepted, 2026-10-31
 - **Amended by:** ADR 0027: the dev subscription is also a customer's ("Azure
   Sponsorship"), read with its own credential; its cost is in both tenants (below).
+  ADR 0031 (2026-11-01) withdrew that: one owner per subscription, one cost feed, and
+  this feed writes to the owner (second amendment, below).
 - **Decided by:** Amit Kumar
 - **Implements:** the follow-up deferred by ADR 0022, decision 11. `connectors/.../azure/auth.py`,
   the live path in `azure/__main__.py` and `core/cli.py`, `cloudops_config` component
@@ -138,3 +140,23 @@ The user onboarded "Azure Sponsorship" (`azsponsor`) with the dev subscription
   customer's first check binds the subscription, or the check is refused
   (`account_held_by_another_tenant`).
 
+
+## Amendment (ADR 0031): one owner, one cost feed
+
+Superseding the amendment above (user decisions, 2026-11-01):
+
+- **The cost lands in whichever tenant owns the subscription.** The alias map still
+  routes it (decision 2), and a subscription has one owner (`cloud_account` is unique on
+  provider and id again, migration 0030). In dev, `cd12743c-f76e-4284-aa62-eb8bd576ac91`
+  belongs to Azure Sponsorship (`azsponsor`), an internal tenant that hosts the
+  platform. Migration 0029 moved its alias and dropped the old internal tenant's copy.
+- **One cost feed per subscription.** This feed reads the cost. A stored credential of
+  the same tenant reads its resources only, and runs no cost entity for an account
+  this feed reads (an alias of `azure` in the same tenant). Nothing is counted twice,
+  and nothing is marked shared.
+- **Many internal tenants; one host.** "The internal tenant" in this ADR now means the
+  tenant that hosts the platform (`cloudops.tenant.hosts_platform`). The platform's own
+  cost is that tenant's platform resources (`rg-cloudops-*`), not its whole subscription.
+  Dev's query feed has no resource, so the platform's part shows as not captured.
+- Step 3 of `docs/platform-cost-feed.md` is now a console action (Customer mapping:
+  internal at onboarding, then **Hosts the platform**), not a manual `UPDATE`.

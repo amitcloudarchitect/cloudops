@@ -2,12 +2,13 @@
 connector workflow over an Azure source bound to one stored credential, on the
 synthetic dataset, with the recorded responses served through the real client.
 
-The case that matters is the dev subscription: the platform's own (the internal
-tenant's, through its alias and the workload identity, ADR 0023) and also the
-first customer's (through its app registration). Both runs read the same
-subscription; each lands in its own tenant, neither supersedes the other, every
-call the bound client makes names only the credential's subscription, and each
-tenant reconciles on its own figures, never on the two added together.
+The case that matters is the dev subscription: Azure Sponsorship's, its single
+owner (ADR 0031), read by two feeds. The platform's own (the workload identity,
+ADR 0023) reads its cost, through the alias, into its owner; Sponsorship's app
+registration reads its resources and, for that subscription, no cost: one cost
+feed per subscription, so nothing is counted twice. Every call the bound client
+makes names only the credential's subscription, and the owner reconciles on its
+one ledger.
 """
 
 from __future__ import annotations
@@ -53,15 +54,18 @@ async def env() -> AsyncIterator[WorkflowEnvironment]:
 
 @pytest.fixture(scope="module")
 def shared(synthetic_module: Synthetic) -> tuple[str, UUID]:
-    """A mapped subscription, its tenant made internal, and a customer tenant."""
+    """A mapped subscription handed to Azure Sponsorship, its one owner: the old
+    tenant's account goes, and the alias (the platform feed's route) moves."""
     truth = daily_expectations()
     sub = sorted(s for s, code in truth.tenant.items() if code is not None)[0]
-    internal = tenant_id(str(truth.tenant[sub]))
+    before = tenant_id(str(truth.tenant[sub]))
     with psycopg.connect(synthetic_module.admin_dsn, autocommit=True) as cx:
-        cx.execute("UPDATE cloudops.tenant SET internal = true WHERE id = %s", (internal,))
-        cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code)"
-                   " VALUES (%s, 'Azure Sponsorship', 'AZSPONSOR')", (CUSTOMER,))
-    return sub, internal
+        cx.execute("INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal)"
+                   " VALUES (%s, 'Azure Sponsorship', 'AZSPONSOR', true)", (CUSTOMER,))
+        cx.execute("DELETE FROM cloudops.cloud_account WHERE native_id = %s", (sub,))
+        cx.execute("UPDATE cloudops.tenant_alias SET tenant_id = %s"
+                   " WHERE source_system = 'azure' AND alias = %s", (CUSTOMER, sub))
+    return sub, before
 
 
 @pytest.fixture
@@ -82,12 +86,13 @@ def _platform(fake: FakeAzure) -> AzureSource:
 
 
 def _customer(fake: FakeAzure, sub: str) -> AzureSource:
+    """As ``customer.sources`` builds it for a subscription the platform's feed reads
+    the cost of: resources only."""
     base = f"https://c{uuid.uuid4().hex[:8]}.management.example"
     client = AzureClient(base, transport=fake.transport(), sleep=no_sleep,
                          allowed=frozenset({sub}))
     return AzureSource(client, today=lambda: date.fromisoformat(BILLING_DAY),
-                       entities=frozenset({mapping.ENTITY, mapping.COST_DAILY,
-                                           mapping.COST_TOTAL}),
+                       entities=frozenset({mapping.ENTITY}),
                        binding=Binding(CUSTOMER, frozenset({sub})), credential=CREDENTIAL)
 
 
@@ -115,88 +120,62 @@ def _cost_by_tenant(dsn: str, sub: str) -> dict[Any, list[tuple[Any, ...]]]:
     return out
 
 
-async def test_one_subscription_two_tenants_neither_supersedes_the_other(
+async def test_one_subscription_one_owner_one_cost_feed(
     env: WorkflowEnvironment, db: Database, synthetic_module: Synthetic,
     shared: tuple[str, UUID],
 ) -> None:
     dsn = synthetic_module.admin_dsn
-    sub, internal = shared
+    sub, before = shared
     fake, raw = FakeAzure.from_fixtures(), MemoryRawStore()  # one bronze, as in Azure
-    for source in (_platform(fake), _customer(fake, sub), _platform(fake)):
+    customer = _customer(fake, sub)
+    for source, entity in ((_platform(fake), mapping.COST_DAILY), (customer, mapping.ENTITY)):
         start = len(fake.requests)
         (report,) = await run(env, ConnectorActivities(db, raw, source),
-                              ConnectorIngest.run, [IngestRequest(mapping.COST_DAILY, SINCE)])
+                              ConnectorIngest.run, [IngestRequest(entity, SINCE)])
         assert report.status == "succeeded"
-        if source.instance.endswith(CREDENTIAL):
+        if source is customer:
             assert _named(fake, start) == {sub}  # the listing names none; the rest only it
+    # The credential's source refuses cost for it before any request.
+    start = len(fake.requests)
+    with pytest.raises(ValueError, match="unknown entity"):
+        await customer.scopes(db, mapping.COST_DAILY)
+    assert len(fake.requests) == start
+    # The cost is the owner's, once; no other tenant holds the subscription.
     by_tenant = _cost_by_tenant(dsn, sub)
-    assert set(by_tenant) == {internal, CUSTOMER}
-    assert by_tenant[internal] == by_tenant[CUSTOMER]
+    assert set(by_tenant) == {CUSTOMER}
     assert by_tenant[CUSTOMER]
-    # The customer's statement survives the platform's newer one, and the reverse.
-    assert rows(dsn, "SELECT a.tenant_id, a.shared_with_platform FROM cloudops.cloud_account a"
-                     " WHERE a.native_id = %s ORDER BY a.tenant_id = %s", sub, CUSTOMER) == [
-        (internal, True), (CUSTOMER, True)]
-    # The customer reads nothing else: no other subscription's cost under it.
+    assert rows(dsn, "SELECT tenant_id FROM cloudops.cloud_account WHERE native_id = %s",
+                sub) == [(CUSTOMER,)]
+    assert before != CUSTOMER
+    # The credential read nothing else: no other subscription under it.
     assert rows(dsn, "SELECT DISTINCT a.native_id FROM cloudops.cost_fact f JOIN"
                      " cloudops.cloud_account a ON a.id = f.account_id"
                      " WHERE f.tenant_id = %s", CUSTOMER) == [(sub,)]
 
 
-async def test_a_newer_platform_statement_never_supersedes_the_customers(
-    env: WorkflowEnvironment, db: Database, synthetic_module: Synthetic,
-    shared: tuple[str, UUID],
-) -> None:
-    """Two schedules, one subscription: the platform's statement may be swapped in
-    after the customer's run fetched its own. A statement is superseded only by
-    a newer one of its own tenant (``AzureDaily._statement``)."""
-    dsn = synthetic_module.admin_dsn
-    sub, internal = shared
-    fake, raw = FakeAzure.from_fixtures(), MemoryRawStore()
-    (report,) = await run(env, ConnectorActivities(db, raw, _platform(fake)),
-                          ConnectorIngest.run, [IngestRequest(mapping.COST_DAILY, SINCE)])
-    assert report.status == "succeeded"
-    for meta in raw.metadata.values():  # the platform's statements: newer than anything
-        if "last_modified" in meta:
-            meta["last_modified"] = "2099-01-01T00:00:00+00:00"
-    (report,) = await run(env, ConnectorActivities(db, raw, _customer(fake, sub)),
-                          ConnectorIngest.run, [IngestRequest(mapping.COST_DAILY, SINCE)])
-    assert report.status == "succeeded"
-    by_tenant = _cost_by_tenant(dsn, sub)
-    assert by_tenant.get(CUSTOMER)
-    assert by_tenant[CUSTOMER] == by_tenant[internal]
-
-
-async def test_each_tenant_reconciles_on_its_own_figures(
+async def test_the_owner_reconciles_on_its_one_ledger(
     env: WorkflowEnvironment, db: Database, synthetic_module: Synthetic,
     shared: tuple[str, UUID],
 ) -> None:
     dsn = synthetic_module.admin_dsn
-    sub, internal = shared
+    sub, _ = shared
     fake, raw = FakeAzure.from_fixtures(), MemoryRawStore()
-    for source in (_platform(fake), _customer(fake, sub)):
-        reports = await run(env, ConnectorActivities(db, raw, source),
-                            ConnectorIngest.run, [IngestRequest(mapping.COST_DAILY, SINCE),
-                                                  IngestRequest(mapping.COST_TOTAL, SINCE)])
-        assert {r.status for r in reports} == {"succeeded"}
-    totals = rows(dsn, "SELECT b.tenant_id, b.amount, b.currency FROM cloudops.billing_total b"
+    reports = await run(env, ConnectorActivities(db, raw, _platform(fake)),
+                        ConnectorIngest.run, [IngestRequest(mapping.COST_DAILY, SINCE),
+                                              IngestRequest(mapping.COST_TOTAL, SINCE)])
+    assert {r.status for r in reports} == {"succeeded"}
+    totals = rows(dsn, "SELECT b.tenant_id FROM cloudops.billing_total b"
                        " JOIN cloudops.cloud_account a ON a.id = b.account_id"
-                       " WHERE a.native_id = %s AND b.kind = 'provider_total'"
-                       " ORDER BY b.tenant_id = %s", sub, CUSTOMER)
-    assert [t[0] for t in totals] == [internal, CUSTOMER]
-    assert totals[0][1:] == totals[1][1:]  # the same provider figure, once per tenant
+                       " WHERE a.native_id = %s AND b.kind = 'provider_total'", sub)
+    assert totals == [(CUSTOMER,)]
     await jobs.reconcile(db, date.fromisoformat(BILLING_DAY))
-    checks = rows(dsn, "SELECT r.tenant_id, r.ledger_amount, r.reference_amount, r.status,"
-                       " r.reason FROM cloudops.cost_reconciliation r JOIN cloudops.cloud_account"
-                       " a ON a.id = r.account_id WHERE a.native_id = %s"
-                       " AND r.kind = 'provider_total' AND r.invoice_period = %s"
-                       " ORDER BY r.tenant_id = %s", sub, BILLING_DAY[:7], CUSTOMER)
-    assert [c[0] for c in checks] == [internal, CUSTOMER]
-    internal_check, customer_check = checks
-    # Each ledger is its own tenant's rows only: equal, and never the two summed.
-    assert internal_check[1:] == customer_check[1:]
+    checks = rows(dsn, "SELECT r.tenant_id, r.ledger_amount FROM cloudops.cost_reconciliation r"
+                       " JOIN cloudops.cloud_account a ON a.id = r.account_id"
+                       " WHERE a.native_id = %s AND r.kind = 'provider_total'"
+                       " AND r.invoice_period = %s", sub, BILLING_DAY[:7])
+    assert [c[0] for c in checks] == [CUSTOMER]
     own = sum((Decimal(r[3]) for r in _cost_by_tenant(dsn, sub)[CUSTOMER]), Decimal(0))
-    assert Decimal(customer_check[1]) == own
+    assert Decimal(checks[0][1]) == own
 
 
 async def test_the_bound_listing_quarantines_what_the_credential_was_not_onboarded_for(

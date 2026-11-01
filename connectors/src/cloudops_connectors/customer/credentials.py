@@ -49,10 +49,20 @@ class StoredCredential:
     secret_names: tuple[str, ...]
     expires_at: datetime
     status: str = "active"
+    # Accounts whose cost the platform's own feed reads (ADR 0023): an approved alias
+    # of the provider names them. Their cost is not read a second time (ADR 0031).
+    platform_fed: frozenset[str] = frozenset()
 
     @property
     def binding(self) -> Binding:
         return Binding(self.tenant_id, frozenset(self.account_ids))
+
+    @property
+    def cost_binding(self) -> Binding | None:
+        """The accounts this credential reads cost for; ``None`` when the platform's
+        feed reads every one of them."""
+        own = frozenset(self.account_ids) - self.platform_fed
+        return Binding(self.tenant_id, own) if own else None
 
     def missing_secrets(self, store: SecretStore) -> list[str]:
         """Names the store does not hold (they are names, never values)."""

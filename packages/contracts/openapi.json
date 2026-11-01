@@ -60,10 +60,6 @@
               }
             ]
           },
-          "shared_with_platform": {
-            "title": "Shared With Platform",
-            "type": "boolean"
-          },
           "status": {
             "enum": [
               "verified",
@@ -82,8 +78,7 @@
           "checked_on",
           "ledger",
           "reference",
-          "drift",
-          "shared_with_platform"
+          "drift"
         ],
         "title": "AccountCheck",
         "type": "object"
@@ -1910,11 +1905,22 @@
             },
             "title": "Months",
             "type": "array"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PlatformCostHome"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "months",
-          "customers"
+          "customers",
+          "platform"
         ],
         "title": "CostHome",
         "type": "object"
@@ -1943,16 +1949,6 @@
           "provider": {
             "title": "Provider",
             "type": "string"
-          },
-          "shared_with_platform": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         },
         "required": [
@@ -2187,13 +2183,6 @@
             "title": "Secret Set At",
             "type": "string"
           },
-          "shared_with_platform": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Shared With Platform",
-            "type": "array"
-          },
           "status": {
             "enum": [
               "pending",
@@ -2238,7 +2227,6 @@
           "status",
           "validated_at",
           "revoked_at",
-          "shared_with_platform",
           "latest_check"
         ],
         "title": "CredentialView",
@@ -2334,6 +2322,10 @@
             "title": "Currencies",
             "type": "array"
           },
+          "hosts_platform": {
+            "title": "Hosts Platform",
+            "type": "boolean"
+          },
           "internal": {
             "title": "Internal",
             "type": "boolean"
@@ -2364,6 +2356,7 @@
         "required": [
           "tenant",
           "internal",
+          "hosts_platform",
           "currencies",
           "anomalies_30d",
           "last_anomaly_on",
@@ -4144,6 +4137,10 @@
             "title": "Canonical Name",
             "type": "string"
           },
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          },
           "short_code": {
             "pattern": "^[A-Z0-9]{2,10}$",
             "title": "Short Code",
@@ -4152,7 +4149,8 @@
         },
         "required": [
           "canonical_name",
-          "short_code"
+          "short_code",
+          "internal"
         ],
         "title": "OnboardRequest",
         "type": "object"
@@ -4160,6 +4158,10 @@
       "OnboardedTenant": {
         "additionalProperties": false,
         "properties": {
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          },
           "short_code": {
             "title": "Short Code",
             "type": "string"
@@ -4170,7 +4172,8 @@
         },
         "required": [
           "tenant",
-          "short_code"
+          "short_code",
+          "internal"
         ],
         "title": "OnboardedTenant",
         "type": "object"
@@ -4607,6 +4610,55 @@
           "sla_breached_open"
         ],
         "title": "Performance",
+        "type": "object"
+      },
+      "PlatformCostHome": {
+        "additionalProperties": false,
+        "description": "The platform's own resources' cost in its host tenant (ADR 0031).",
+        "properties": {
+          "captured": {
+            "title": "Captured",
+            "type": "boolean"
+          },
+          "currencies": {
+            "items": {
+              "$ref": "#/components/schemas/CurrencyTrend"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "host": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "host",
+          "captured",
+          "currencies"
+        ],
+        "title": "PlatformCostHome",
+        "type": "object"
+      },
+      "PlatformHostRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "tenant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          }
+        },
+        "required": [
+          "tenant_id"
+        ],
+        "title": "PlatformHostRequest",
         "type": "object"
       },
       "PortfolioLine": {
@@ -6770,6 +6822,14 @@
             "title": "Aliases",
             "type": "array"
           },
+          "hosts_platform": {
+            "title": "Hosts Platform",
+            "type": "boolean"
+          },
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          },
           "short_code": {
             "title": "Short Code",
             "type": "string"
@@ -6786,6 +6846,8 @@
           "tenant",
           "short_code",
           "status",
+          "internal",
+          "hosts_platform",
           "aliases"
         ],
         "title": "TenantAliases",
@@ -6829,6 +6891,43 @@
           "tenant"
         ],
         "title": "TenantBacklog",
+        "type": "object"
+      },
+      "TenantKind": {
+        "additionalProperties": false,
+        "properties": {
+          "hosts_platform": {
+            "title": "Hosts Platform",
+            "type": "boolean"
+          },
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "internal",
+          "hosts_platform"
+        ],
+        "title": "TenantKind",
+        "type": "object"
+      },
+      "TenantKindRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "internal": {
+            "title": "Internal",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "internal"
+        ],
+        "title": "TenantKindRequest",
         "type": "object"
       },
       "TenantOption": {
@@ -9952,6 +10051,53 @@
         "summary": "Coverage Gaps"
       }
     },
+    "/v1/mapping/platform-host": {
+      "post": {
+        "description": "The internal tenant whose subscription the platform runs in: its platform\nresources are the platform's own cost, and help-only assistant history is kept\nunder it (ADR 0031). At most one; naming another moves it.",
+        "operationId": "set_platform_host_v1_mapping_platform_host_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformHostRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/TenantKind"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Set Platform Host V1 Mapping Platform Host Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Platform Host"
+      }
+    },
     "/v1/mapping/proposals": {
       "get": {
         "operationId": "list_proposals_v1_mapping_proposals_get",
@@ -10209,7 +10355,7 @@
         "summary": "List Tenants"
       },
       "post": {
-        "description": "A new customer. Every all-tenant principal can see it from its next request\n(ADR 0002, D9); a principal assigned named tenants needs it granted.",
+        "description": "A new tenant, internal or a customer. Every all-tenant principal can see it\nfrom its next request (ADR 0002, D9); a principal assigned named tenants needs\nit granted. Internal needs a platform administrator (ADR 0031).",
         "operationId": "onboard_tenant_v1_mapping_tenants_post",
         "requestBody": {
           "content": {
@@ -10244,6 +10390,57 @@
           }
         },
         "summary": "Onboard Tenant"
+      }
+    },
+    "/v1/mapping/tenants/{tenant_id}/kind": {
+      "post": {
+        "description": "Internal to Getronics, or a customer (ADR 0031). The platform's host must\nstay internal: move the host first.",
+        "operationId": "set_kind_v1_mapping_tenants__tenant_id__kind_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantKindRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantKind"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Kind"
       }
     },
     "/v1/me": {

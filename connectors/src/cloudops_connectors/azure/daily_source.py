@@ -203,8 +203,8 @@ class AzureDaily:
 
     def _statement(self, tenant: Any, sub: str) -> str:
         """What a newer statement supersedes. A customer credential's statements are
-        its tenant's: the platform's own run of the same subscription (ADR 0023)
-        restates the internal tenant's month, never the customer's (ADR 0027)."""
+        its tenant's. One feed reads a subscription's cost (ADR 0031), so the
+        platform's run and a credential's never restate the same month."""
         return f"daily/{sub}" if self._binding is None else f"daily/{tenant}/{sub}"
 
     async def fetch(self, cursor: str | None) -> Fetched:
