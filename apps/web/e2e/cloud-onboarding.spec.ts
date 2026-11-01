@@ -18,7 +18,7 @@ test.describe("platform administrator", () => {
     const form = page.getByRole("form", { name: "Onboard a cloud account" });
     // Identifiers only: there is no field a secret could be typed into.
     await expect(form.getByLabel(/(?:secret value|client secret)$/i)).toHaveCount(0);
-    await form.getByLabel("Customer", { exact: true }).selectOption("new");
+    await form.getByLabel("Customer").selectOption("new");
     await form.getByLabel("New tenant’s name").fill(`E2E Lab ${short}`);
     await form.getByLabel("Short code (names its Key Vault secrets)").fill(short);
     await form.getByLabel("A customer", { exact: true }).check();
