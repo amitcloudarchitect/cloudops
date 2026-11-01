@@ -9,12 +9,17 @@ choices and references from ``display_value`` (what people see).
 Every field not mapped here is kept, as received, in ``raw_extra``: nothing a
 source sends is discarded (LLD, Connector contract).
 
+Project tasks (``pm_project_task``, ADR 0038) map to ``cloudops.project_task``
+with ``normalise_project``: open or closed from the state choice, and a price
+with its currency code, read from a configurable field.
+
 Ticket text (descriptions, notes) is stored verbatim. It is data, never
 instruction (CLAUDE.md rule 4): nothing here interprets it.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -190,3 +195,104 @@ def updated_at(record: Mapping[str, Any]) -> datetime | None:
         return _time(record, "sys_updated_on")
     except MalformedRecordError:
         return None
+
+
+# --- project tasks (ADR 0038) ------------------------------------------------------
+#
+# Fields, state values and the currency-field shape as dev407774 has them, recorded
+# (connectors/tests/recorded). PPM holds costs, not a price: which cost stands for
+# the price is a setting, not a constant.
+
+PROJECT_ENTITY: Final = "pm_project_task"
+ALL_ENTITIES: Final = (*ENTITIES, PROJECT_ENTITY)
+PRICE_FIELD_VAR: Final = "CLOUDOPS_SERVICENOW_PROJECT_PRICE_FIELD"
+DEFAULT_PRICE_FIELD: Final = "cost"  # planned_task.cost, "Total planned cost"
+_FIELD_NAME: Final = re.compile(r"^[a-z][a-z0-9_]{0,79}$")
+# planned_task's state choice: these values are closed; any other is open.
+CLOSED_STATES: Final = frozenset({"3", "4", "7"})
+PROJECT_MAPPED: Final = frozenset({
+    "sys_id", "number", "company", "top_task", "short_description", "state", "opened_at",
+    "start_date", "end_date", "closed_at", "sys_updated_on",
+})
+_CURRENCY_STRING: Final = re.compile(r"^([A-Z]{3});(-?\d+(?:\.\d+)?)$")
+
+
+def price_field(environ: Mapping[str, str]) -> str:
+    """The source field read as the price: ``cost`` unless configured. A field
+    name only, checked, so the configuration cannot reach the query string."""
+    name = environ.get(PRICE_FIELD_VAR, "").strip() or DEFAULT_PRICE_FIELD
+    if not _FIELD_NAME.match(name):
+        raise ValueError(f"{PRICE_FIELD_VAR} must be a ServiceNow field name")
+    return name
+
+
+@dataclass(frozen=True)
+class ProjectTask:
+    sys_id: str
+    number: str
+    company_raw: str
+    updated_at: datetime
+    project: str | None
+    short_description: str | None
+    state: str | None
+    status: str  # open | closed
+    opened_at: datetime | None
+    start_at: datetime | None
+    end_at: datetime | None
+    closed_at: datetime | None
+    price: Decimal | None
+    price_currency: str | None
+    price_field: str | None
+    raw_extra: dict[str, Any] = field(default_factory=dict)
+
+
+def money(record: Mapping[str, Any], name: str) -> tuple[Decimal, str] | None:
+    """A currency field as (amount, ISO code) in the currency it was entered in, or
+    None when the record does not state one.
+
+    With ``sysparm_display_value=all`` a currency field carries three halves
+    (dev407774, 2026-11-01): ``value`` and ``display_value`` converted to the
+    instance's reference currency at the instance's own rate (``1379.1834``,
+    ``$1,379.1834``), and ``currency_display_value``, the amount as entered with its
+    code (``EUR;1234.50``). Only the last is the transaction amount (CLAUDE.md rule
+    5), so only it is read; a stored currency string in ``value`` is accepted too.
+    A plain or converted amount is never paired with a guessed currency."""
+    raw = record.get(name)
+    entered = raw.get("currency_display_value") if isinstance(raw, Mapping) else None
+    candidates = (str(entered or "").strip(), _field(record, name)[0].strip())
+    found = next((m for m in map(_CURRENCY_STRING.match, candidates) if m), None)
+    if found is None:
+        return None
+    try:
+        return Decimal(found.group(2)), found.group(1)
+    except InvalidOperation:  # pragma: no cover - the pattern admits only decimals
+        return None
+
+
+def normalise_project(record: Mapping[str, Any], price_field: str) -> ProjectTask:
+    sys_id = _text(record, "sys_id", display=False)
+    number = _text(record, "number", display=False)
+    updated = _time(record, "sys_updated_on")
+    state_value, state_shown = _field(record, "state")
+    if sys_id is None or number is None or updated is None or not state_value.strip():
+        raise MalformedRecordError("sys_id, number, state and sys_updated_on are required")
+    priced = money(record, price_field)
+    return ProjectTask(
+        sys_id=sys_id,
+        number=number,
+        company_raw=_text(record, "company") or NO_COMPANY,
+        updated_at=updated,
+        project=_text(record, "top_task"),
+        short_description=_text(record, "short_description", display=False),
+        state=state_shown.strip() or None,
+        status="closed" if state_value.strip() in CLOSED_STATES else "open",
+        opened_at=_time(record, "opened_at"),
+        start_at=_time(record, "start_date"),
+        end_at=_time(record, "end_date"),
+        closed_at=_time(record, "closed_at"),
+        price=None if priced is None else priced[0],
+        price_currency=None if priced is None else priced[1],
+        price_field=None if priced is None else price_field,
+        # The price field stays here too: it is configurable, and kept as received.
+        raw_extra={k: v for k, v in record.items() if k not in PROJECT_MAPPED},
+    )

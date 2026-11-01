@@ -179,3 +179,8 @@ export type SecOpsPostureScores = Schemas["SecOpsPostureScores"];
 export type CustomerPostureScore = Schemas["CustomerPostureScore"];
 export type FindingDetail = Schemas["FindingDetail"];
 export type SlaBand = SecOpsFinding["sla"];
+
+// ServiceNow project tasks (ADR 0038): delivered project price and proposed initiatives.
+export type ProjectPrices = Schemas["ProjectPrices"];
+export type CustomerProjectPrices = Schemas["CustomerProjectPrices"];
+export type ProjectPriceBucket = Schemas["PriceBucket"];

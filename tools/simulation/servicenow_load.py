@@ -18,6 +18,10 @@ files (``docs/simulation``), which remain the fallback, through the Table API:
   marked records, then updates those it finds and creates the rest. A company
   or group of the same name *without* the marker is someone else's: it is used
   for references and never changed or deleted.
+- **``--only TABLE``** (repeatable) writes only those tables. The tables they
+  reference are read, for their marked records' sys_ids, and never written; the
+  rest are not touched. For adding a table (``pm_project_task`` once Project
+  Portfolio Management is active, ADR 0038) without re-sending what is there.
 - **``--purge``** deletes only marked records, newest table first.
 - **``--dry-run``** makes no request and needs no credential: it reports what a
   run would send.
@@ -252,11 +256,30 @@ def _body(row: Mapping[str, str], spec: TableSpec,
     return body
 
 
-async def seed(instance: Instance, sim: Simulation) -> dict[str, Counts]:
+def _needed(only: frozenset[str] | None) -> frozenset[str]:
+    """The tables a run writes, and those whose sys_ids they reference."""
+    if only is None:
+        return frozenset(s.table for s in SPECS)
+    unknown = only - {s.table for s in SPECS}
+    if unknown:
+        raise SeedError(f"--only names no seeded table: {', '.join(sorted(unknown))}")
+    wanted = set(only)
+    for spec in reversed(SPECS):  # references point at earlier tables
+        if spec.table in wanted:
+            wanted.update(spec.refs.values())
+    return frozenset(wanted)
+
+
+async def seed(instance: Instance, sim: Simulation,
+               only: frozenset[str] | None = None) -> dict[str, Counts]:
     rows = records(sim)
     ids: dict[str, dict[str, str]] = {}  # table -> reference key -> sys_id
     counts: dict[str, Counts] = {}
+    needed = _needed(only)
     for spec in SPECS:
+        if spec.table not in needed:
+            continue
+        writes = only is None or spec.table in only
         c = counts[spec.table] = Counts()
         if spec.optional and not await instance.exists(spec.table):
             c.skipped = len(rows[spec.table])
@@ -273,6 +296,8 @@ async def seed(instance: Instance, sim: Simulation) -> dict[str, Counts]:
                 if r["name"] not in marked:
                     ids[spec.table][r["name"]] = r["sys_id"]
                     c.skipped += 1
+        if not writes:
+            continue  # read for its references only
         for row in rows[spec.table]:
             key = row[spec.key]
             if key not in marked and key in ids[spec.table]:
@@ -346,7 +371,8 @@ async def _run(args: argparse.Namespace, sim: Simulation) -> int:
         if args.purge:
             _print("purge", await purge(api))
         else:
-            _print("seed", await seed(api, sim))
+            only = frozenset(args.only) if args.only else None
+            _print("seed", await seed(api, sim, only))
         print(f"  {api.requests} requests")
     return 0
 
@@ -361,6 +387,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--seed", type=int, default=11)
     parser.add_argument("--estate", type=Path, default=DEFAULT_ESTATE,
                         help=f"the subscription's VM export, local only (default {DEFAULT_ESTATE})")
+    parser.add_argument("--only", action="append", metavar="TABLE",
+                        help="write only this table (repeatable); referenced tables are read")
     parser.add_argument("--interval", type=float, default=0.25,
                         help="seconds between requests (default 0.25)")
     mode = parser.add_mutually_exclusive_group()

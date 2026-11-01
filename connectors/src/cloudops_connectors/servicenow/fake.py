@@ -24,7 +24,7 @@ from typing import Any, Final
 
 import httpx
 
-from cloudops_connectors.servicenow.mapping import ENTITIES
+from cloudops_connectors.servicenow.mapping import ALL_ENTITIES
 
 FIXTURE_HOST: Final = "https://fixture.service-now.example"
 _SINCE = re.compile(r"sys_updated_on>=(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
@@ -66,7 +66,7 @@ class FakeServiceNow:
 
     @classmethod
     def from_fixtures(cls, **kwargs: Any) -> FakeServiceNow:
-        return cls({e: load_fixture(e) for e in ENTITIES}, **kwargs)
+        return cls({e: load_fixture(e) for e in ALL_ENTITIES}, **kwargs)
 
     def touch(self, entity: str, number: str, updated: str, **fields: str) -> None:
         """Edit a record as ServiceNow would: new values and a later sys_updated_on."""
@@ -97,8 +97,14 @@ class FakeServiceNow:
             self.fail_next -= 1
             return httpx.Response(503, json={"error": {"message": "unavailable"}})
         match = re.fullmatch(r"/api/now/table/(\w+)", request.url.path)
-        if match is None or match.group(1) not in self.tables:
-            return httpx.Response(404, json={"error": {"message": "No such table"}})
+        if match is None:
+            return httpx.Response(404, json={"error": {"message": "Not found"}})
+        if match.group(1) not in self.tables:
+            # As a real instance answers for a table that does not exist (dev407774,
+            # pm_project_task with PPM inactive, 2026-11-01).
+            return httpx.Response(400, json={
+                "error": {"message": f"Invalid table {match.group(1)}", "detail": None},
+                "status": "failure"})
         params = request.url.params
         since = _SINCE.search(params.get("sysparm_query", ""))
         rows = [

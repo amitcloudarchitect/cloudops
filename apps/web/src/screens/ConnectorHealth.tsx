@@ -38,6 +38,7 @@ const REASON: Record<Reason, string> = {
   rejected_records: "rejected malformed records in the last 24 hours",
   dead_letters: "dead letters wait for a replay",
   schema_drift: "schema drift waits to be acknowledged",
+  source_absent: "the source has no such table (its module is not active there)",
 };
 
 /** The badge's words: the most serious cause, so the band is never colour alone. */
@@ -47,6 +48,7 @@ function status(c: Connector): string {
   if (c.reasons.includes("failing")) return "Failing";
   if (c.band === "watch") return "Needs attention";
   if (c.timeliness === "never_run") return "Never run";
+  if (c.timeliness === "source_absent") return "Source absent";
   return "Healthy";
 }
 

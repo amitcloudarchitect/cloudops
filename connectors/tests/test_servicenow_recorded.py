@@ -6,12 +6,19 @@ from __future__ import annotations
 
 import json
 import re
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from cloudops_connectors.servicenow.mapping import ENTITIES, normalise
+from cloudops_connectors.servicenow.mapping import (
+    DEFAULT_PRICE_FIELD,
+    ENTITIES,
+    PROJECT_ENTITY,
+    normalise,
+    normalise_project,
+)
 
 RECORDED = Path(__file__).parent / "recorded"
 INSTANCES = sorted(p.name for p in RECORDED.iterdir() if p.is_dir())
@@ -60,3 +67,32 @@ def test_recordings_carry_no_personal_data(instance: str, entity: str) -> None:
         for name in ("description", "comments", "work_notes"):
             if name in record:
                 assert record[name]["display_value"] in ("", "[redacted]"), name
+
+
+# --- project tasks (ADR 0038): recorded from dev407774 once PPM was active ---------
+
+PROJECTS = [i for i in INSTANCES if (RECORDED / i / f"{PROJECT_ENTITY}.json").exists()]
+
+
+@pytest.mark.parametrize("instance", PROJECTS)
+def test_every_real_project_task_normalises_with_its_entered_price(instance: str) -> None:
+    """The price is the amount as entered, with its code (``currency_display_value``),
+    never ``value``, which the instance converts to its reference currency."""
+    tasks = [normalise_project(r, DEFAULT_PRICE_FIELD) for r in _records(instance, PROJECT_ENTITY)]
+    assert tasks
+    for task, record in zip(tasks, _records(instance, PROJECT_ENTITY), strict=True):
+        entered = record["cost"]["currency_display_value"]
+        assert (task.price_currency, f"{task.price:.2f}") == tuple(entered.split(";"))
+        assert task.price != Decimal(record["cost"]["value"]) or task.price_currency == "USD"
+    assert {t.status for t in tasks} == {"open", "closed"}
+
+
+@pytest.mark.parametrize("instance", PROJECTS)
+def test_project_task_text_that_names_an_estate_is_redacted_everywhere(instance: str) -> None:
+    """A project task's short description names the customer's resource groups and
+    networks, and ServiceNow echoes it in ``project`` and ``task``."""
+    for record in _records(instance, PROJECT_ENTITY):
+        assert record["short_description"]["display_value"] in ("", "[redacted]")
+        for name in ("project", "task"):
+            shown = record[name]["display_value"]
+            assert shown == "" or shown.startswith("[redacted]"), name

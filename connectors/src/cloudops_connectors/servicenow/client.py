@@ -12,6 +12,8 @@ against ``FakeServiceNow`` (fixtures); only the httpx transport differs.
 - 429: waits Retry-After and tries again, up to ``max_throttle_retries``.
 - Quota below 20%: returns the page, then waits for the window to reset
   before the next call can go out.
+- 400 "Invalid table" raises ``SourceTableAbsentError``: the table does not exist
+  on the instance (a plugin not active, ADR 0038). Not retryable, not a failure.
 - Anything else non-2xx raises ``httpx.HTTPStatusError``; Temporal's activity
   retry policy owns those retries (LLD: exponential backoff, five attempts).
 
@@ -43,6 +45,21 @@ UTC_ZONES: Final = frozenset({"GMT", "UTC", "Etc/UTC", "Etc/GMT", "Etc/Universal
 
 class ThrottledError(Exception):
     """Still throttled after the allowed waits. Retryable by Temporal."""
+
+
+class SourceTableAbsentError(Exception):
+    """The instance has no such table (its plugin is not active). Carries the table
+    name only. Not retryable: the run ends ``source_absent``."""
+
+
+def _table_absent(response: httpx.Response) -> bool:
+    if response.status_code != 400:
+        return False
+    try:
+        message = str(response.json().get("error", {}).get("message", ""))
+    except ValueError:
+        return False
+    return message.startswith("Invalid table")
 
 
 class IntegrationUserError(Exception):
@@ -101,6 +118,8 @@ class ServiceNowClient:
                     raise ThrottledError(f"{table}: throttled after {attempt + 1} attempts")
                 await self._sleep(pause.seconds)
                 continue
+            if _table_absent(response):
+                raise SourceTableAbsentError(table)
             response.raise_for_status()
             if pause is not None:
                 # Wait before the next request, not before handing this page back.

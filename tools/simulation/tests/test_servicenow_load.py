@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 import uuid
 from datetime import date
@@ -186,6 +187,30 @@ async def test_a_missing_project_task_table_is_skipped() -> None:
     counts = await sl.seed(_api(fake), SIM)
     assert counts["pm_project_task"].skipped == _expected()["pm_project_task"]
     assert counts["pm_project_task"].created == 0
+
+
+async def test_only_adds_one_table_and_writes_nothing_else() -> None:
+    """ADR 0038: once PPM is active, project tasks are added to an instance that
+    holds the rest, without re-sending it. Referenced tables are read, not written."""
+    fake = FakeInstance(ppm=False)
+    await sl.seed(_api(fake), SIM)
+    fake.tables["pm_project_task"] = {}
+    fake.log.clear()
+    counts = await sl.seed(_api(fake), SIM, frozenset({"pm_project_task"}))
+    assert counts["pm_project_task"].created == _expected()["pm_project_task"]
+    assert set(counts) == {"core_company", "sys_user_group", "pm_project_task"}
+    writes = {path.split("/")[4] for method, path in fake.log if method != "GET"}
+    assert writes == {"pm_project_task"}
+    company = next(iter(fake.tables["core_company"]))
+    tasks = fake.tables["pm_project_task"].values()
+    assert all(r["company"] == company for r in tasks)
+    # Made-up prices, stored in the currency they are entered in.
+    assert all(re.fullmatch(r"EUR;\d+\.\d{2}", r["cost"]) for r in tasks)
+
+
+async def test_only_refuses_a_table_the_seeder_does_not_write() -> None:
+    with pytest.raises(sl.SeedError, match="--only"):
+        await sl.seed(_api(FakeInstance()), SIM, frozenset({"pm_project"}))
 
 
 async def test_throttling_is_honoured_with_retry_after() -> None:

@@ -80,7 +80,10 @@
  },
  "pm_project_task": {
   "planned_hours_lognormal": {"median": 3.5, "p90": 15.0},
-  "actual_over_planned": {"p10": 0.97, "p50": 1.0, "p90": 1.06}
+  "actual_over_planned": {"p10": 0.97, "p50": 1.0, "p90": 1.06},
+  "price_lognormal": {"_source": "made up (ADR 0038): the workbook has no project prices", "median": 6500.0, "p90": 24000.0},
+  "price_currency": "EUR",
+  "open_tasks": 2
  },
  "assignment_group_shares": [0.93, 0.05, 0.02],
  "assignees": 6,

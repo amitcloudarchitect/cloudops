@@ -216,6 +216,13 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             (t.id, f"SOW-{t.name}", t.currency),
         )
         cx.execute(
+            "INSERT INTO cloudops.project_task (tenant_id, sys_id, number, company_raw, status,"
+            " opened_at, closed_at, source_updated_at, price, price_currency, price_field)"
+            " VALUES (%s, md5(%s), %s, %s, 'closed', %s, %s, %s, 12500.000000, %s, 'cost')",
+            (t.id, f"project-{t.name}", f"PRJTASK-{t.name}", f"{t.name.upper()} LIMITED",
+             now, now, now, t.currency),
+        )
+        cx.execute(
             "INSERT INTO cloudops.cloud_account (id, tenant_id, provider, native_id, display_name)"
             " VALUES (%s, %s, 'azure', %s, %s)",
             (t.account_id, t.id, t.account_native_id, f"{t.name} production"),

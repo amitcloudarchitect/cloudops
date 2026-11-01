@@ -185,12 +185,14 @@ def requested_items(sim: Simulation) -> str:
 
 def project_tasks(sim: Simulation) -> str:
     def row(t: Ticket) -> dict[str, Any]:
+        # A currency field takes "CODE;amount": stored in that currency (ADR 0038).
+        cost = "" if t.price is None else f"{t.price_currency};{t.price:.2f}"
         return {**_task(t), "u_planned_hours": _h(t.planned_hours),
-                "u_actual_hours": _h(t.actual_hours)}
+                "u_actual_hours": _h(t.actual_hours), "cost": cost}
 
     return _csv(("number", "company", "opened_at", "state", "short_description", "description",
                  "assignment_group", "assigned_to", "closed_at", "u_planned_hours",
-                 "u_actual_hours", "correlation_id", "correlation_display"),
+                 "u_actual_hours", "cost", "correlation_id", "correlation_display"),
                 [row(t) for t in sim.table("pm_project_task")])
 
 

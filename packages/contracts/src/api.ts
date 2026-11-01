@@ -540,6 +540,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/commercial/project-prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Project Prices
+         * @description Delivered project price (closed tasks) and proposed initiatives (open tasks)
+         *     for every customer in scope, over a date range.
+         */
+        get: operations["project_prices_v1_commercial_project_prices_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/quotes": {
         parameters: {
             query?: never;
@@ -1865,6 +1886,12 @@ export interface components {
             /** Value */
             value: string | null;
         };
+        /** Amount */
+        Amount: {
+            amount: components["schemas"]["Metric_Decimal_"];
+            /** Currency */
+            currency: string;
+        };
         /** AnomalyView */
         AnomalyView: {
             /**
@@ -2279,13 +2306,13 @@ export interface components {
             /** Last Run At */
             last_run_at: string | null;
             /** Last Status */
-            last_status: ("running" | "succeeded" | "dead_lettered" | "failed") | null;
+            last_status: ("running" | "succeeded" | "dead_lettered" | "failed" | "source_absent") | null;
             last_success_age: components["schemas"]["Metric_int_"] | null;
             /** Last Success At */
             last_success_at: string | null;
             quarantined_24h: components["schemas"]["Metric_int_"];
             /** Reasons */
-            reasons: ("late" | "outage" | "never_run" | "no_success" | "failing" | "failed_runs" | "last_run_failed" | "rejected_records" | "dead_letters" | "schema_drift")[];
+            reasons: ("late" | "outage" | "never_run" | "no_success" | "failing" | "failed_runs" | "last_run_failed" | "rejected_records" | "dead_letters" | "schema_drift" | "source_absent")[];
             records_24h: components["schemas"]["Metric_int_"];
             rejected_24h: components["schemas"]["Metric_int_"];
             rejected_record_rate_24h: components["schemas"]["Metric_Decimal_"] | null;
@@ -2297,7 +2324,7 @@ export interface components {
              * Timeliness
              * @enum {string}
              */
-            timeliness: "on_time" | "late" | "outage" | "never_run";
+            timeliness: "on_time" | "late" | "outage" | "never_run" | "source_absent";
         };
         /** ConnectorHealthList */
         ConnectorHealthList: {
@@ -2313,6 +2340,7 @@ export interface components {
             never_run: components["schemas"]["Metric_int_"];
             outages: components["schemas"]["Metric_int_"];
             rules: components["schemas"]["BandRules"];
+            source_absent: components["schemas"]["Metric_int_"];
         };
         /** ConnectorSummary */
         ConnectorSummary: {
@@ -2678,6 +2706,12 @@ export interface components {
              */
             period: string;
             price: components["schemas"]["Metric_Decimal_"] | null;
+        };
+        /** CustomerProjectPrices */
+        CustomerProjectPrices: {
+            delivered: components["schemas"]["PriceBucket"];
+            proposed: components["schemas"]["PriceBucket"];
+            tenant: components["schemas"]["TenantView"];
         };
         /** DecisionRequest */
         DecisionRequest: {
@@ -3426,6 +3460,14 @@ export interface components {
             findings: components["schemas"]["OpenFinding"][];
             open_total: components["schemas"]["Metric_int_"];
         };
+        /** PriceBucket */
+        PriceBucket: {
+            /** Amounts */
+            amounts: components["schemas"]["Amount"][];
+            converted: components["schemas"]["Metric_Decimal_"] | null;
+            tasks: components["schemas"]["Metric_int_"];
+            unpriced_tasks: components["schemas"]["Metric_int_"];
+        };
         /** PriceLine */
         PriceLine: {
             converted: components["schemas"]["Metric_Decimal_"] | null;
@@ -3467,6 +3509,30 @@ export interface components {
             /** Priority */
             priority: string;
             target_hours: components["schemas"]["Metric_int_"] | null;
+        };
+        /** ProjectPrices */
+        ProjectPrices: {
+            /** As Of */
+            as_of: string | null;
+            /** Customers */
+            customers: components["schemas"]["CustomerProjectPrices"][];
+            /**
+             * From
+             * Format: date
+             */
+            from: string;
+            /** Reporting Currency */
+            reporting_currency: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "available" | "source_absent" | "never_synced";
+            /**
+             * To
+             * Format: date
+             */
+            to: string;
         };
         /** ProposalRequest */
         ProposalRequest: {
@@ -5945,6 +6011,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MarginDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    project_prices_v1_commercial_project_prices_get: {
+        parameters: {
+            query: {
+                currency?: string | null;
+                /** @description First day, inclusive (UTC). */
+                from: string;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+                /** @description Last day, inclusive (UTC). */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPrices"];
                 };
             };
             /** @description Validation Error */

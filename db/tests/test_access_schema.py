@@ -39,6 +39,7 @@ ACCOUNT_SCOPED = (
     "cloudops.margin_variance",  # 0012, likewise
     "cloudops.anomaly_threshold",  # 0012, likewise
     "cloudops.margin_recompute",  # 0033, a request to recompute margin: likewise
+    "cloudops.project_task",  # 0036, project prices per customer: likewise
     # 0013: an assessment and a report pack answer for the whole estate.
     "cloudops.assessment",
     "cloudops.control_response",

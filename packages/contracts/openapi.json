@@ -551,6 +551,24 @@
         "title": "AllocationLine",
         "type": "object"
       },
+      "Amount": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "amount"
+        ],
+        "title": "Amount",
+        "type": "object"
+      },
       "AnomalyView": {
         "additionalProperties": false,
         "properties": {
@@ -1763,7 +1781,8 @@
                   "running",
                   "succeeded",
                   "dead_lettered",
-                  "failed"
+                  "failed",
+                  "source_absent"
                 ],
                 "type": "string"
               },
@@ -1810,7 +1829,8 @@
                 "last_run_failed",
                 "rejected_records",
                 "dead_letters",
-                "schema_drift"
+                "schema_drift",
+                "source_absent"
               ],
               "type": "string"
             },
@@ -1848,7 +1868,8 @@
               "on_time",
               "late",
               "outage",
-              "never_run"
+              "never_run",
+              "source_absent"
             ],
             "title": "Timeliness",
             "type": "string"
@@ -1911,6 +1932,9 @@
           },
           "rules": {
             "$ref": "#/components/schemas/BandRules"
+          },
+          "source_absent": {
+            "$ref": "#/components/schemas/Metric_int_"
           }
         },
         "required": [
@@ -1920,7 +1944,8 @@
           "outages",
           "late",
           "attention",
-          "never_run"
+          "never_run",
+          "source_absent"
         ],
         "title": "ConnectorHealthList",
         "type": "object"
@@ -3057,6 +3082,27 @@
           "not_captured"
         ],
         "title": "CustomerPrice",
+        "type": "object"
+      },
+      "CustomerProjectPrices": {
+        "additionalProperties": false,
+        "properties": {
+          "delivered": {
+            "$ref": "#/components/schemas/PriceBucket"
+          },
+          "proposed": {
+            "$ref": "#/components/schemas/PriceBucket"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "delivered",
+          "proposed"
+        ],
+        "title": "CustomerProjectPrices",
         "type": "object"
       },
       "DecisionRequest": {
@@ -5577,6 +5623,42 @@
         "title": "Posture",
         "type": "object"
       },
+      "PriceBucket": {
+        "additionalProperties": false,
+        "properties": {
+          "amounts": {
+            "items": {
+              "$ref": "#/components/schemas/Amount"
+            },
+            "title": "Amounts",
+            "type": "array"
+          },
+          "converted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tasks": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "unpriced_tasks": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "tasks",
+          "unpriced_tasks",
+          "amounts",
+          "converted"
+        ],
+        "title": "PriceBucket",
+        "type": "object"
+      },
       "PriceLine": {
         "additionalProperties": false,
         "properties": {
@@ -5720,6 +5802,70 @@
           "target_hours"
         ],
         "title": "PriorityLine",
+        "type": "object"
+      },
+      "ProjectPrices": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerProjectPrices"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "from": {
+            "format": "date",
+            "title": "From",
+            "type": "string"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
+          },
+          "source": {
+            "enum": [
+              "available",
+              "source_absent",
+              "never_synced"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "to": {
+            "format": "date",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "reporting_currency",
+          "source",
+          "as_of",
+          "customers"
+        ],
+        "title": "ProjectPrices",
         "type": "object"
       },
       "ProposalRequest": {
@@ -12233,6 +12379,97 @@
           }
         },
         "summary": "Margin Detail"
+      }
+    },
+    "/v1/commercial/project-prices": {
+      "get": {
+        "description": "Delivered project price (closed tasks) and proposed initiatives (open tasks)\nfor every customer in scope, over a date range.",
+        "operationId": "project_prices_v1_commercial_project_prices_get",
+        "parameters": [
+          {
+            "description": "First day, inclusive (UTC).",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "First day, inclusive (UTC).",
+              "format": "date",
+              "title": "From",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Last day, inclusive (UTC).",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Last day, inclusive (UTC).",
+              "format": "date",
+              "title": "To",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectPrices"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Prices"
       }
     },
     "/v1/commercial/quotes": {

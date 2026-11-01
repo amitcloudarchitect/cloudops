@@ -143,7 +143,7 @@ records the earlier ones create. For each file:
 | 5 | `05_change_request.csv` | `change_request` | `number` | as 4 |
 | 6 | `06_change_task.csv` | `change_task` | `number` | as 4, and `change_request`: **reject** |
 | 7 | `07_sc_req_item.csv` | `sc_req_item` | `number` | as 4 (`configuration_item` instead of `cmdb_ci`) |
-| 8 | `08_pm_project_task.csv` | `pm_project_task` | `number` | as 4. **Skip this file if the table does not exist** (PPM not active) |
+| 8 | `08_pm_project_task.csv` | `pm_project_task` | `number` | as 4; `cost` is `EUR;amount` (made up, ADR 0038). **Skip this file if the table does not exist** (PPM not active); to add it later, `servicenow_load.py --only pm_project_task` |
 
 What the options do:
 

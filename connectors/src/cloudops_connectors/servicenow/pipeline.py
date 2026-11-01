@@ -27,6 +27,10 @@ refuses the write, which pages as a cross-tenant attempt (Sev0, ADR 0022), and
 the page is dead-lettered for a human rather than the platform guessing which
 tenant is right.
 
+Project tasks (``pm_project_task``, ADR 0038) take the same steps into
+``cloudops.project_task``, keyed by ``sys_id``, with no resource to link. A task's
+price is read from ``price_field`` (a setting: ``mapping.price_field``).
+
 ``reprocess_page`` is the same path narrowed to one company name, for an
 approved mapping's held records (ADR 0015): only that name's records, only if
 the name still resolves exactly to the tenant the request was approved for
@@ -50,10 +54,14 @@ from sqlalchemy import text
 from cloudops_connectors.core import state
 from cloudops_connectors.core.raw import RawStore
 from cloudops_connectors.servicenow.mapping import (
+    DEFAULT_PRICE_FIELD,
+    PROJECT_ENTITY,
     SOURCE,
     MalformedRecordError,
+    ProjectTask,
     Ticket,
     normalise,
+    normalise_project,
     updated_at,
 )
 from cloudops_observability import ticket_span, traceparent
@@ -139,9 +147,13 @@ async def process_page(
     ref: str,
     *,
     advance_watermark: bool = True,
+    price_field: str = DEFAULT_PRICE_FIELD,
 ) -> state.RunCounts:
     body = await raw.get(ref)
     records: list[dict[str, Any]] = json.loads(body)["result"]
+    if entity == PROJECT_ENTITY:
+        return await _process_projects(db, ref, records, scope_key, advance_watermark,
+                                       price_field)
     counts = state.RunCounts(pages=1, records=len(records))
 
     tickets: list[Ticket] = []
@@ -257,9 +269,12 @@ class ReprocessCounts:
 
 async def reprocess_page(
     db: Database, raw: RawStore, entity: str, ref: str, alias: str, tenant: UUID,
+    *, price_field: str = DEFAULT_PRICE_FIELD,
 ) -> ReprocessCounts:
     body = await raw.get(ref)
     records: list[dict[str, Any]] = json.loads(body)["result"]
+    if entity == PROJECT_ENTITY:
+        return await _reprocess_projects(db, ref, records, alias, tenant, price_field)
     tickets: list[Ticket] = []
     for record in records:
         try:
@@ -278,4 +293,110 @@ async def reprocess_page(
     written: list[tuple[str, datetime, bool]] = []
     await _commit(db, {tenant: tickets}, Counter(), ref, entity, "", None, returning=written)
     counts.inserted = sorted({f"{n}|{at.isoformat()}" for n, at, new in written if new})
+    return counts
+
+
+# --- project tasks ------------------------------------------------------------------
+
+_PROJECT_COLUMNS: Final = (
+    "sys_id", "number", "company_raw", "project", "short_description", "state", "status",
+    "opened_at", "start_at", "end_at", "closed_at", "price", "price_currency", "price_field",
+)
+_PROJECT_INSERT: Final = ("tenant_id", *_PROJECT_COLUMNS, "source_updated_at", "raw_extra")
+_PROJECT_UPSERT: Final = text(
+    f"INSERT INTO cloudops.project_task ({', '.join(_PROJECT_INSERT)}) VALUES ("  # noqa: S608
+    + ", ".join(f"CAST(:{c} AS jsonb)" if c == "raw_extra" else f":{c}" for c in _PROJECT_INSERT)
+    + ") ON CONFLICT (sys_id) DO UPDATE SET "
+    + ", ".join(f"{c} = EXCLUDED.{c}" for c in (*_PROJECT_COLUMNS[1:], "source_updated_at",
+                                                 "raw_extra"))
+    + ", ingested_at = now()"
+    # A replay of an older page never rolls a task back.
+    + " WHERE cloudops.project_task.source_updated_at <= EXCLUDED.source_updated_at"
+)
+_PROJECT_EXISTING: Final = text(
+    "SELECT sys_id FROM cloudops.project_task WHERE sys_id = ANY(CAST(:ids AS text[]))"
+)
+
+
+def _project_row(task: ProjectTask, tenant: UUID) -> dict[str, Any]:
+    values = {c: getattr(task, c) for c in _PROJECT_COLUMNS}
+    return {
+        **values,
+        "tenant_id": tenant,
+        "source_updated_at": task.updated_at,
+        "raw_extra": json.dumps(task.raw_extra, sort_keys=True) if task.raw_extra else None,
+    }
+
+
+async def _commit_projects(
+    db: Database, by_tenant: Mapping[UUID, list[ProjectTask]], unmatched: Counter[str],
+    ref: str, scope_key: str, watermark: datetime | None,
+) -> tuple[int, set[str]]:
+    """One transaction scoped to exactly these tenants. Returns rows written and
+    the sys_ids that were not there before."""
+    rows = [_project_row(t, tenant) for tenant, ts in by_tenant.items() for t in ts]
+    new: set[str] = set()
+    async with db.transaction(TenantScope(by_tenant, Role.INGEST, PRINCIPAL)) as conn:
+        if rows:
+            ids = [r["sys_id"] for r in rows]
+            known = {str(r[0]) for r in await conn.execute(_PROJECT_EXISTING, {"ids": ids})}
+            new = set(ids) - known
+            await conn.execute(_PROJECT_UPSERT, rows)
+        await state.quarantine_aliases(conn, SOURCE, unmatched, ref)
+        if watermark is not None:
+            await state.advance_watermark(conn, SOURCE, PROJECT_ENTITY, scope_key, watermark)
+    return len(rows), new
+
+
+async def _process_projects(
+    db: Database, ref: str, records: list[dict[str, Any]], scope_key: str,
+    advance_watermark: bool, price_field: str,
+) -> state.RunCounts:
+    counts = state.RunCounts(pages=1, records=len(records))
+    tasks: list[ProjectTask] = []
+    for record in records:
+        try:
+            tasks.append(normalise_project(record, price_field))
+        except MalformedRecordError:
+            counts.rejected += 1
+    moments = [m for m in (updated_at(r) for r in records) if m is not None]
+    high_water = max(moments) if moments and advance_watermark else None
+
+    async with db.transaction(TenantScope((), Role.INGEST, PRINCIPAL)) as conn:
+        resolved = await state.resolve_aliases(conn, SOURCE, (t.company_raw for t in tasks))
+    by_tenant: dict[UUID, list[ProjectTask]] = defaultdict(list)
+    unmatched: Counter[str] = Counter()
+    for t in tasks:
+        tenant = resolved[t.company_raw].tenant_id
+        if tenant is None:
+            unmatched[t.company_raw] += 1
+        else:
+            by_tenant[tenant].append(t)
+    counts.quarantined = sum(unmatched.values())
+    counts.written, _ = await _commit_projects(db, by_tenant, unmatched, ref, scope_key,
+                                               high_water)
+    return counts
+
+
+async def _reprocess_projects(
+    db: Database, ref: str, records: list[dict[str, Any]], alias: str, tenant: UUID,
+    price_field: str,
+) -> ReprocessCounts:
+    tasks: list[ProjectTask] = []
+    for record in records:
+        try:
+            task = normalise_project(record, price_field)
+        except MalformedRecordError:
+            continue  # counted by the run that first read it
+        if task.company_raw == alias:
+            tasks.append(task)
+    counts = ReprocessCounts(pages=1, matched=len(tasks))
+    if not tasks:
+        return counts
+    async with db.transaction(TenantScope((), Role.INGEST, PRINCIPAL)) as conn:
+        resolved = (await state.resolve_aliases(conn, SOURCE, [alias]))[alias]
+    if resolved.outcome != "exact" or resolved.tenant_id != tenant:
+        raise ReprocessRefusedError("mapping_changed")
+    _, new = await _commit_projects(db, {tenant: tasks}, Counter(), ref, "", None)
+    counts.inserted = sorted(f"{PROJECT_ENTITY}|{s}" for s in new)
     return counts

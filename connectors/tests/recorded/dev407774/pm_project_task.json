@@ -1,0 +1,2962 @@
+{
+ "result": [
+  {
+   "active": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "activity_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "actual_benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "additional_assignee_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "allow_dates_outside_schedule": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "approval": {
+    "display_value": "Not Yet Requested",
+    "value": "not requested"
+   },
+   "approval_history": {
+    "display_value": "",
+    "value": ""
+   },
+   "approval_set": {
+    "display_value": "",
+    "value": ""
+   },
+   "assigned_to": {
+    "display_value": "",
+    "value": ""
+   },
+   "assignment_group": {
+    "display_value": "GTN Cloud Ops L2",
+    "value": "d88adc1d93d853904aa774dcebba10df"
+   },
+   "benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "budget_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "business_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "business_service": {
+    "display_value": "",
+    "value": ""
+   },
+   "calculation_type": {
+    "display_value": "Automatic",
+    "value": "automatic"
+   },
+   "calendar_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "capex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "close_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_at": {
+    "display_value": "2026-08-21 19:09:36",
+    "value": "2026-08-21 19:09:36"
+   },
+   "closed_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "cmdb_ci": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments_and_work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "company": {
+    "display_value": "Azure Sponsorship",
+    "value": "0c8adc1d93d853904aa774dcebba10d3"
+   },
+   "constraint_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "contact_type": {
+    "display_value": null,
+    "value": ""
+   },
+   "contract": {
+    "display_value": "",
+    "value": ""
+   },
+   "correlation_display": {
+    "display_value": "cloudops-simulation",
+    "value": "cloudops-simulation"
+   },
+   "correlation_id": {
+    "display_value": "SIM-AZSPONSOR-PRJTASK0900001",
+    "value": "SIM-AZSPONSOR-PRJTASK0900001"
+   },
+   "cost": {
+    "currency_display_value": "EUR;35300.00",
+    "display_value": "$39,437.16",
+    "value": "39437.16"
+   },
+   "critical_path": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "dependency": {
+    "display_value": "",
+    "value": ""
+   },
+   "description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "due_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "end": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "end_date": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   },
+   "end_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "escalation": {
+    "display_value": "Normal",
+    "value": "0"
+   },
+   "expected_start": {
+    "display_value": "",
+    "value": ""
+   },
+   "follow_up": {
+    "display_value": "",
+    "value": ""
+   },
+   "group_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "has_conflict": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "html_description": {
+    "display_value": null,
+    "value": ""
+   },
+   "impact": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "key_milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "knowledge": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "level": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "link": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "location": {
+    "display_value": "",
+    "value": ""
+   },
+   "made_sla": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "model_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "mpp_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "number": {
+    "display_value": "PRJTASK0900001",
+    "value": "PRJTASK0900001"
+   },
+   "opened_at": {
+    "display_value": "2026-08-12 19:09:36",
+    "value": "2026-08-12 19:09:36"
+   },
+   "opened_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "opex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "order": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_sys_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_top_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "override_status": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "parent": {
+    "display_value": "",
+    "value": ""
+   },
+   "percent_complete": {
+    "display_value": "100",
+    "value": "100"
+   },
+   "phase_type": {
+    "display_value": "Waterfall",
+    "value": "waterfall"
+   },
+   "priority": {
+    "display_value": "4 - Low",
+    "value": "4"
+   },
+   "project": {
+    "display_value": "[redacted]\u200bPRJTASK0900001",
+    "value": "[redacted]\u200bPRJTASK0900001"
+   },
+   "reassignment_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "relation_applied": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "rollup": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "route_reason": {
+    "display_value": "",
+    "value": ""
+   },
+   "run_calc_brs": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "schedule_end_date": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   },
+   "schedule_start_date": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   },
+   "service_offering": {
+    "display_value": "",
+    "value": ""
+   },
+   "shadow": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "short_description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "skills": {
+    "display_value": "",
+    "value": ""
+   },
+   "sla_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "software_model": {
+    "display_value": "",
+    "value": ""
+   },
+   "start": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "start_date": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   },
+   "start_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "state": {
+    "display_value": "Closed Complete",
+    "value": "3"
+   },
+   "status": {
+    "display_value": "Red",
+    "value": "red"
+   },
+   "sub_tree_root": {
+    "display_value": "PRJTASK0900001",
+    "value": "0599b9ad93d817904aa774dcebba109c"
+   },
+   "sys_class_name": {
+    "display_value": "Project Task",
+    "value": "pm_project_task"
+   },
+   "sys_created_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_created_on": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   },
+   "sys_domain": {
+    "display_value": "global",
+    "value": "global"
+   },
+   "sys_domain_path": {
+    "display_value": "/",
+    "value": "/"
+   },
+   "sys_id": {
+    "display_value": "0599b9ad93d817904aa774dcebba109c",
+    "value": "0599b9ad93d817904aa774dcebba109c"
+   },
+   "sys_mod_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "sys_tags": {
+    "display_value": "",
+    "value": ""
+   },
+   "sys_updated_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_updated_on": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   },
+   "task": {
+    "display_value": "[redacted]\u200bPRJTASK0900001",
+    "value": "[redacted]\u200bPRJTASK0900001"
+   },
+   "task_effective_number": {
+    "display_value": "PRJTASK0900001",
+    "value": "PRJTASK0900001"
+   },
+   "time_constraint": {
+    "display_value": "Start ASAP",
+    "value": "asap"
+   },
+   "time_worked": {
+    "display_value": "",
+    "value": ""
+   },
+   "time_zone": {
+    "display_value": "",
+    "value": ""
+   },
+   "top_task": {
+    "display_value": "PRJTASK0900001",
+    "value": "0599b9ad93d817904aa774dcebba109c"
+   },
+   "universal_request": {
+    "display_value": "",
+    "value": ""
+   },
+   "upon_approval": {
+    "display_value": "Proceed to Next Task",
+    "value": "proceed"
+   },
+   "upon_reject": {
+    "display_value": "Cancel all future Tasks",
+    "value": "cancel"
+   },
+   "urgency": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "user_input": {
+    "display_value": "",
+    "value": ""
+   },
+   "version": {
+    "display_value": "2",
+    "value": "2"
+   },
+   "watch_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs_order": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "work_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "work_duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "work_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_end": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   },
+   "work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_start": {
+    "display_value": "2026-11-01 20:21:13",
+    "value": "2026-11-01 20:21:13"
+   }
+  },
+  {
+   "active": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "activity_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "actual_benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "additional_assignee_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "allow_dates_outside_schedule": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "approval": {
+    "display_value": "Not Yet Requested",
+    "value": "not requested"
+   },
+   "approval_history": {
+    "display_value": "",
+    "value": ""
+   },
+   "approval_set": {
+    "display_value": "",
+    "value": ""
+   },
+   "assigned_to": {
+    "display_value": "",
+    "value": ""
+   },
+   "assignment_group": {
+    "display_value": "GTN Cloud Ops L2",
+    "value": "d88adc1d93d853904aa774dcebba10df"
+   },
+   "benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "budget_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "business_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "business_service": {
+    "display_value": "",
+    "value": ""
+   },
+   "calculation_type": {
+    "display_value": "Automatic",
+    "value": "automatic"
+   },
+   "calendar_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "capex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "close_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_at": {
+    "display_value": "2026-08-13 23:10:49",
+    "value": "2026-08-13 23:10:49"
+   },
+   "closed_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "cmdb_ci": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments_and_work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "company": {
+    "display_value": "Azure Sponsorship",
+    "value": "0c8adc1d93d853904aa774dcebba10d3"
+   },
+   "constraint_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "contact_type": {
+    "display_value": null,
+    "value": ""
+   },
+   "contract": {
+    "display_value": "",
+    "value": ""
+   },
+   "correlation_display": {
+    "display_value": "cloudops-simulation",
+    "value": "cloudops-simulation"
+   },
+   "correlation_id": {
+    "display_value": "SIM-AZSPONSOR-PRJTASK0900002",
+    "value": "SIM-AZSPONSOR-PRJTASK0900002"
+   },
+   "cost": {
+    "currency_display_value": "EUR;1350.00",
+    "display_value": "$1,508.22",
+    "value": "1508.22"
+   },
+   "critical_path": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "dependency": {
+    "display_value": "",
+    "value": ""
+   },
+   "description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "due_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "end": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "end_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "end_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "escalation": {
+    "display_value": "Normal",
+    "value": "0"
+   },
+   "expected_start": {
+    "display_value": "",
+    "value": ""
+   },
+   "follow_up": {
+    "display_value": "",
+    "value": ""
+   },
+   "group_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "has_conflict": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "html_description": {
+    "display_value": null,
+    "value": ""
+   },
+   "impact": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "key_milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "knowledge": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "level": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "link": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "location": {
+    "display_value": "",
+    "value": ""
+   },
+   "made_sla": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "model_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "mpp_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "number": {
+    "display_value": "PRJTASK0900002",
+    "value": "PRJTASK0900002"
+   },
+   "opened_at": {
+    "display_value": "2026-08-12 23:10:49",
+    "value": "2026-08-12 23:10:49"
+   },
+   "opened_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "opex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "order": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_sys_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_top_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "override_status": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "parent": {
+    "display_value": "",
+    "value": ""
+   },
+   "percent_complete": {
+    "display_value": "100",
+    "value": "100"
+   },
+   "phase_type": {
+    "display_value": "Waterfall",
+    "value": "waterfall"
+   },
+   "priority": {
+    "display_value": "4 - Low",
+    "value": "4"
+   },
+   "project": {
+    "display_value": "[redacted]\u200bPRJTASK0900002",
+    "value": "[redacted]\u200bPRJTASK0900002"
+   },
+   "reassignment_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "relation_applied": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "rollup": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "route_reason": {
+    "display_value": "",
+    "value": ""
+   },
+   "run_calc_brs": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "schedule_end_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "schedule_start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "service_offering": {
+    "display_value": "",
+    "value": ""
+   },
+   "shadow": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "short_description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "skills": {
+    "display_value": "",
+    "value": ""
+   },
+   "sla_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "software_model": {
+    "display_value": "",
+    "value": ""
+   },
+   "start": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "start_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "state": {
+    "display_value": "Closed Complete",
+    "value": "3"
+   },
+   "status": {
+    "display_value": "Red",
+    "value": "red"
+   },
+   "sub_tree_root": {
+    "display_value": "PRJTASK0900002",
+    "value": "1199b9ad93d817904aa774dcebba10dc"
+   },
+   "sys_class_name": {
+    "display_value": "Project Task",
+    "value": "pm_project_task"
+   },
+   "sys_created_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_created_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "sys_domain": {
+    "display_value": "global",
+    "value": "global"
+   },
+   "sys_domain_path": {
+    "display_value": "/",
+    "value": "/"
+   },
+   "sys_id": {
+    "display_value": "1199b9ad93d817904aa774dcebba10dc",
+    "value": "1199b9ad93d817904aa774dcebba10dc"
+   },
+   "sys_mod_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "sys_tags": {
+    "display_value": "",
+    "value": ""
+   },
+   "sys_updated_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_updated_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "task": {
+    "display_value": "[redacted]\u200bPRJTASK0900002",
+    "value": "[redacted]\u200bPRJTASK0900002"
+   },
+   "task_effective_number": {
+    "display_value": "PRJTASK0900002",
+    "value": "PRJTASK0900002"
+   },
+   "time_constraint": {
+    "display_value": "Start ASAP",
+    "value": "asap"
+   },
+   "time_worked": {
+    "display_value": "",
+    "value": ""
+   },
+   "time_zone": {
+    "display_value": "",
+    "value": ""
+   },
+   "top_task": {
+    "display_value": "PRJTASK0900002",
+    "value": "1199b9ad93d817904aa774dcebba10dc"
+   },
+   "universal_request": {
+    "display_value": "",
+    "value": ""
+   },
+   "upon_approval": {
+    "display_value": "Proceed to Next Task",
+    "value": "proceed"
+   },
+   "upon_reject": {
+    "display_value": "Cancel all future Tasks",
+    "value": "cancel"
+   },
+   "urgency": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "user_input": {
+    "display_value": "",
+    "value": ""
+   },
+   "version": {
+    "display_value": "2",
+    "value": "2"
+   },
+   "watch_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs_order": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "work_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "work_duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "work_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_end": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_start": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   }
+  },
+  {
+   "active": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "activity_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "actual_benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "additional_assignee_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "allow_dates_outside_schedule": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "approval": {
+    "display_value": "Not Yet Requested",
+    "value": "not requested"
+   },
+   "approval_history": {
+    "display_value": "",
+    "value": ""
+   },
+   "approval_set": {
+    "display_value": "",
+    "value": ""
+   },
+   "assigned_to": {
+    "display_value": "",
+    "value": ""
+   },
+   "assignment_group": {
+    "display_value": "GTN Cloud Ops L2",
+    "value": "d88adc1d93d853904aa774dcebba10df"
+   },
+   "benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "budget_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "business_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "business_service": {
+    "display_value": "",
+    "value": ""
+   },
+   "calculation_type": {
+    "display_value": "Automatic",
+    "value": "automatic"
+   },
+   "calendar_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "capex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "close_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_at": {
+    "display_value": "2026-09-11 18:55:19",
+    "value": "2026-09-11 18:55:19"
+   },
+   "closed_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "cmdb_ci": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments_and_work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "company": {
+    "display_value": "Azure Sponsorship",
+    "value": "0c8adc1d93d853904aa774dcebba10d3"
+   },
+   "constraint_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "contact_type": {
+    "display_value": null,
+    "value": ""
+   },
+   "contract": {
+    "display_value": "",
+    "value": ""
+   },
+   "correlation_display": {
+    "display_value": "cloudops-simulation",
+    "value": "cloudops-simulation"
+   },
+   "correlation_id": {
+    "display_value": "SIM-AZSPONSOR-PRJTASK0900004",
+    "value": "SIM-AZSPONSOR-PRJTASK0900004"
+   },
+   "cost": {
+    "currency_display_value": "EUR;12200.00",
+    "display_value": "$13,629.84",
+    "value": "13629.84"
+   },
+   "critical_path": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "dependency": {
+    "display_value": "",
+    "value": ""
+   },
+   "description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "due_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "end": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "end_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "end_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "escalation": {
+    "display_value": "Normal",
+    "value": "0"
+   },
+   "expected_start": {
+    "display_value": "",
+    "value": ""
+   },
+   "follow_up": {
+    "display_value": "",
+    "value": ""
+   },
+   "group_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "has_conflict": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "html_description": {
+    "display_value": null,
+    "value": ""
+   },
+   "impact": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "key_milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "knowledge": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "level": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "link": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "location": {
+    "display_value": "",
+    "value": ""
+   },
+   "made_sla": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "model_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "mpp_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "number": {
+    "display_value": "PRJTASK0900004",
+    "value": "PRJTASK0900004"
+   },
+   "opened_at": {
+    "display_value": "2026-09-06 18:55:19",
+    "value": "2026-09-06 18:55:19"
+   },
+   "opened_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "opex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "order": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_sys_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_top_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "override_status": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "parent": {
+    "display_value": "",
+    "value": ""
+   },
+   "percent_complete": {
+    "display_value": "100",
+    "value": "100"
+   },
+   "phase_type": {
+    "display_value": "Waterfall",
+    "value": "waterfall"
+   },
+   "priority": {
+    "display_value": "4 - Low",
+    "value": "4"
+   },
+   "project": {
+    "display_value": "[redacted]\u200bPRJTASK0900004",
+    "value": "[redacted]\u200bPRJTASK0900004"
+   },
+   "reassignment_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "relation_applied": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "rollup": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "route_reason": {
+    "display_value": "",
+    "value": ""
+   },
+   "run_calc_brs": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "schedule_end_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "schedule_start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "service_offering": {
+    "display_value": "",
+    "value": ""
+   },
+   "shadow": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "short_description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "skills": {
+    "display_value": "",
+    "value": ""
+   },
+   "sla_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "software_model": {
+    "display_value": "",
+    "value": ""
+   },
+   "start": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "start_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "state": {
+    "display_value": "Closed Complete",
+    "value": "3"
+   },
+   "status": {
+    "display_value": "Red",
+    "value": "red"
+   },
+   "sub_tree_root": {
+    "display_value": "PRJTASK0900004",
+    "value": "1199b9ad93d817904aa774dcebba10f1"
+   },
+   "sys_class_name": {
+    "display_value": "Project Task",
+    "value": "pm_project_task"
+   },
+   "sys_created_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_created_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "sys_domain": {
+    "display_value": "global",
+    "value": "global"
+   },
+   "sys_domain_path": {
+    "display_value": "/",
+    "value": "/"
+   },
+   "sys_id": {
+    "display_value": "1199b9ad93d817904aa774dcebba10f1",
+    "value": "1199b9ad93d817904aa774dcebba10f1"
+   },
+   "sys_mod_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "sys_tags": {
+    "display_value": "",
+    "value": ""
+   },
+   "sys_updated_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_updated_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "task": {
+    "display_value": "[redacted]\u200bPRJTASK0900004",
+    "value": "[redacted]\u200bPRJTASK0900004"
+   },
+   "task_effective_number": {
+    "display_value": "PRJTASK0900004",
+    "value": "PRJTASK0900004"
+   },
+   "time_constraint": {
+    "display_value": "Start ASAP",
+    "value": "asap"
+   },
+   "time_worked": {
+    "display_value": "",
+    "value": ""
+   },
+   "time_zone": {
+    "display_value": "",
+    "value": ""
+   },
+   "top_task": {
+    "display_value": "PRJTASK0900004",
+    "value": "1199b9ad93d817904aa774dcebba10f1"
+   },
+   "universal_request": {
+    "display_value": "",
+    "value": ""
+   },
+   "upon_approval": {
+    "display_value": "Proceed to Next Task",
+    "value": "proceed"
+   },
+   "upon_reject": {
+    "display_value": "Cancel all future Tasks",
+    "value": "cancel"
+   },
+   "urgency": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "user_input": {
+    "display_value": "",
+    "value": ""
+   },
+   "version": {
+    "display_value": "2",
+    "value": "2"
+   },
+   "watch_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs_order": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "work_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "work_duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "work_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_end": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_start": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   }
+  },
+  {
+   "active": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "activity_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "actual_benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "additional_assignee_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "allow_dates_outside_schedule": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "approval": {
+    "display_value": "Not Yet Requested",
+    "value": "not requested"
+   },
+   "approval_history": {
+    "display_value": "",
+    "value": ""
+   },
+   "approval_set": {
+    "display_value": "",
+    "value": ""
+   },
+   "assigned_to": {
+    "display_value": "",
+    "value": ""
+   },
+   "assignment_group": {
+    "display_value": "GTN Cloud Ops L2",
+    "value": "d88adc1d93d853904aa774dcebba10df"
+   },
+   "benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "budget_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "business_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "business_service": {
+    "display_value": "",
+    "value": ""
+   },
+   "calculation_type": {
+    "display_value": "Automatic",
+    "value": "automatic"
+   },
+   "calendar_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "capex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "close_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_at": {
+    "display_value": "2026-08-20 04:46:45",
+    "value": "2026-08-20 04:46:45"
+   },
+   "closed_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "cmdb_ci": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments_and_work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "company": {
+    "display_value": "Azure Sponsorship",
+    "value": "0c8adc1d93d853904aa774dcebba10d3"
+   },
+   "constraint_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "contact_type": {
+    "display_value": null,
+    "value": ""
+   },
+   "contract": {
+    "display_value": "",
+    "value": ""
+   },
+   "correlation_display": {
+    "display_value": "cloudops-simulation",
+    "value": "cloudops-simulation"
+   },
+   "correlation_id": {
+    "display_value": "SIM-AZSPONSOR-PRJTASK0900003",
+    "value": "SIM-AZSPONSOR-PRJTASK0900003"
+   },
+   "cost": {
+    "currency_display_value": "EUR;250.00",
+    "display_value": "$279.30",
+    "value": "279.3"
+   },
+   "critical_path": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "dependency": {
+    "display_value": "",
+    "value": ""
+   },
+   "description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "due_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "end": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "end_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "end_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "escalation": {
+    "display_value": "Normal",
+    "value": "0"
+   },
+   "expected_start": {
+    "display_value": "",
+    "value": ""
+   },
+   "follow_up": {
+    "display_value": "",
+    "value": ""
+   },
+   "group_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "has_conflict": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "html_description": {
+    "display_value": null,
+    "value": ""
+   },
+   "impact": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "key_milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "knowledge": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "level": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "link": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "location": {
+    "display_value": "",
+    "value": ""
+   },
+   "made_sla": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "model_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "mpp_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "number": {
+    "display_value": "PRJTASK0900003",
+    "value": "PRJTASK0900003"
+   },
+   "opened_at": {
+    "display_value": "2026-08-13 04:46:45",
+    "value": "2026-08-13 04:46:45"
+   },
+   "opened_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "opex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "order": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_sys_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_top_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "override_status": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "parent": {
+    "display_value": "",
+    "value": ""
+   },
+   "percent_complete": {
+    "display_value": "100",
+    "value": "100"
+   },
+   "phase_type": {
+    "display_value": "Waterfall",
+    "value": "waterfall"
+   },
+   "priority": {
+    "display_value": "4 - Low",
+    "value": "4"
+   },
+   "project": {
+    "display_value": "[redacted]\u200bPRJTASK0900003",
+    "value": "[redacted]\u200bPRJTASK0900003"
+   },
+   "reassignment_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "relation_applied": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "rollup": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "route_reason": {
+    "display_value": "",
+    "value": ""
+   },
+   "run_calc_brs": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "schedule_end_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "schedule_start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "service_offering": {
+    "display_value": "",
+    "value": ""
+   },
+   "shadow": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "short_description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "skills": {
+    "display_value": "",
+    "value": ""
+   },
+   "sla_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "software_model": {
+    "display_value": "",
+    "value": ""
+   },
+   "start": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "start_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "state": {
+    "display_value": "Closed Complete",
+    "value": "3"
+   },
+   "status": {
+    "display_value": "Red",
+    "value": "red"
+   },
+   "sub_tree_root": {
+    "display_value": "PRJTASK0900003",
+    "value": "1999b9ad93d817904aa774dcebba10e6"
+   },
+   "sys_class_name": {
+    "display_value": "Project Task",
+    "value": "pm_project_task"
+   },
+   "sys_created_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_created_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "sys_domain": {
+    "display_value": "global",
+    "value": "global"
+   },
+   "sys_domain_path": {
+    "display_value": "/",
+    "value": "/"
+   },
+   "sys_id": {
+    "display_value": "1999b9ad93d817904aa774dcebba10e6",
+    "value": "1999b9ad93d817904aa774dcebba10e6"
+   },
+   "sys_mod_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "sys_tags": {
+    "display_value": "",
+    "value": ""
+   },
+   "sys_updated_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_updated_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "task": {
+    "display_value": "[redacted]\u200bPRJTASK0900003",
+    "value": "[redacted]\u200bPRJTASK0900003"
+   },
+   "task_effective_number": {
+    "display_value": "PRJTASK0900003",
+    "value": "PRJTASK0900003"
+   },
+   "time_constraint": {
+    "display_value": "Start ASAP",
+    "value": "asap"
+   },
+   "time_worked": {
+    "display_value": "",
+    "value": ""
+   },
+   "time_zone": {
+    "display_value": "",
+    "value": ""
+   },
+   "top_task": {
+    "display_value": "PRJTASK0900003",
+    "value": "1999b9ad93d817904aa774dcebba10e6"
+   },
+   "universal_request": {
+    "display_value": "",
+    "value": ""
+   },
+   "upon_approval": {
+    "display_value": "Proceed to Next Task",
+    "value": "proceed"
+   },
+   "upon_reject": {
+    "display_value": "Cancel all future Tasks",
+    "value": "cancel"
+   },
+   "urgency": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "user_input": {
+    "display_value": "",
+    "value": ""
+   },
+   "version": {
+    "display_value": "2",
+    "value": "2"
+   },
+   "watch_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs_order": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "work_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "work_duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "work_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_end": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_start": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   }
+  },
+  {
+   "active": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "activity_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "actual_benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "additional_assignee_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "allow_dates_outside_schedule": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "approval": {
+    "display_value": "Not Yet Requested",
+    "value": "not requested"
+   },
+   "approval_history": {
+    "display_value": "",
+    "value": ""
+   },
+   "approval_set": {
+    "display_value": "",
+    "value": ""
+   },
+   "assigned_to": {
+    "display_value": "",
+    "value": ""
+   },
+   "assignment_group": {
+    "display_value": "GTN Cloud Ops L2",
+    "value": "d88adc1d93d853904aa774dcebba10df"
+   },
+   "benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "budget_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "business_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "business_service": {
+    "display_value": "",
+    "value": ""
+   },
+   "calculation_type": {
+    "display_value": "Automatic",
+    "value": "automatic"
+   },
+   "calendar_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "capex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "close_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_at": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_by": {
+    "display_value": "",
+    "value": ""
+   },
+   "cmdb_ci": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments_and_work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "company": {
+    "display_value": "Azure Sponsorship",
+    "value": "0c8adc1d93d853904aa774dcebba10d3"
+   },
+   "constraint_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "contact_type": {
+    "display_value": null,
+    "value": ""
+   },
+   "contract": {
+    "display_value": "",
+    "value": ""
+   },
+   "correlation_display": {
+    "display_value": "cloudops-simulation",
+    "value": "cloudops-simulation"
+   },
+   "correlation_id": {
+    "display_value": "SIM-AZSPONSOR-PRJTASK0900005",
+    "value": "SIM-AZSPONSOR-PRJTASK0900005"
+   },
+   "cost": {
+    "currency_display_value": "EUR;4950.00",
+    "display_value": "$5,530.14",
+    "value": "5530.14"
+   },
+   "critical_path": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "dependency": {
+    "display_value": "",
+    "value": ""
+   },
+   "description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "due_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "end": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "end_date": {
+    "display_value": "2026-11-02 20:21:14",
+    "value": "2026-11-02 20:21:14"
+   },
+   "end_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "escalation": {
+    "display_value": "Normal",
+    "value": "0"
+   },
+   "expected_start": {
+    "display_value": "",
+    "value": ""
+   },
+   "follow_up": {
+    "display_value": "",
+    "value": ""
+   },
+   "group_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "has_conflict": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "html_description": {
+    "display_value": null,
+    "value": ""
+   },
+   "impact": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "key_milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "knowledge": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "level": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "link": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "location": {
+    "display_value": "",
+    "value": ""
+   },
+   "made_sla": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "model_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "mpp_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "number": {
+    "display_value": "PRJTASK0900005",
+    "value": "PRJTASK0900005"
+   },
+   "opened_at": {
+    "display_value": "2026-10-15 04:27:37",
+    "value": "2026-10-15 04:27:37"
+   },
+   "opened_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "opex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "order": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_sys_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_top_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "override_status": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "parent": {
+    "display_value": "",
+    "value": ""
+   },
+   "percent_complete": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "phase_type": {
+    "display_value": "Waterfall",
+    "value": "waterfall"
+   },
+   "priority": {
+    "display_value": "4 - Low",
+    "value": "4"
+   },
+   "project": {
+    "display_value": "[redacted]\u200bPRJTASK0900005",
+    "value": "[redacted]\u200bPRJTASK0900005"
+   },
+   "reassignment_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "relation_applied": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "rollup": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "route_reason": {
+    "display_value": "",
+    "value": ""
+   },
+   "run_calc_brs": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "schedule_end_date": {
+    "display_value": "2026-11-02 20:21:14",
+    "value": "2026-11-02 20:21:14"
+   },
+   "schedule_start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "service_offering": {
+    "display_value": "",
+    "value": ""
+   },
+   "shadow": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "short_description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "skills": {
+    "display_value": "",
+    "value": ""
+   },
+   "sla_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "software_model": {
+    "display_value": "",
+    "value": ""
+   },
+   "start": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "start_date": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "start_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "state": {
+    "display_value": "Work in Progress",
+    "value": "2"
+   },
+   "status": {
+    "display_value": "Yellow",
+    "value": "yellow"
+   },
+   "sub_tree_root": {
+    "display_value": "PRJTASK0900005",
+    "value": "1999b9ad93d817904aa774dcebba10fb"
+   },
+   "sys_class_name": {
+    "display_value": "Project Task",
+    "value": "pm_project_task"
+   },
+   "sys_created_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_created_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "sys_domain": {
+    "display_value": "global",
+    "value": "global"
+   },
+   "sys_domain_path": {
+    "display_value": "/",
+    "value": "/"
+   },
+   "sys_id": {
+    "display_value": "1999b9ad93d817904aa774dcebba10fb",
+    "value": "1999b9ad93d817904aa774dcebba10fb"
+   },
+   "sys_mod_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "sys_tags": {
+    "display_value": "",
+    "value": ""
+   },
+   "sys_updated_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_updated_on": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   },
+   "task": {
+    "display_value": "[redacted]\u200bPRJTASK0900005",
+    "value": "[redacted]\u200bPRJTASK0900005"
+   },
+   "task_effective_number": {
+    "display_value": "PRJTASK0900005",
+    "value": "PRJTASK0900005"
+   },
+   "time_constraint": {
+    "display_value": "Start ASAP",
+    "value": "asap"
+   },
+   "time_worked": {
+    "display_value": "",
+    "value": ""
+   },
+   "time_zone": {
+    "display_value": "",
+    "value": ""
+   },
+   "top_task": {
+    "display_value": "PRJTASK0900005",
+    "value": "1999b9ad93d817904aa774dcebba10fb"
+   },
+   "universal_request": {
+    "display_value": "",
+    "value": ""
+   },
+   "upon_approval": {
+    "display_value": "Proceed to Next Task",
+    "value": "proceed"
+   },
+   "upon_reject": {
+    "display_value": "Cancel all future Tasks",
+    "value": "cancel"
+   },
+   "urgency": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "user_input": {
+    "display_value": "",
+    "value": ""
+   },
+   "version": {
+    "display_value": "2",
+    "value": "2"
+   },
+   "watch_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs_order": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "work_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "work_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_end": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_start": {
+    "display_value": "2026-11-01 20:21:14",
+    "value": "2026-11-01 20:21:14"
+   }
+  },
+  {
+   "active": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "activity_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "actual_benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "additional_assignee_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "allow_dates_outside_schedule": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "approval": {
+    "display_value": "Not Yet Requested",
+    "value": "not requested"
+   },
+   "approval_history": {
+    "display_value": "",
+    "value": ""
+   },
+   "approval_set": {
+    "display_value": "",
+    "value": ""
+   },
+   "assigned_to": {
+    "display_value": "",
+    "value": ""
+   },
+   "assignment_group": {
+    "display_value": "GTN Cloud Ops L2",
+    "value": "d88adc1d93d853904aa774dcebba10df"
+   },
+   "benefits": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "budget_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "business_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "business_service": {
+    "display_value": "",
+    "value": ""
+   },
+   "calculation_type": {
+    "display_value": "Automatic",
+    "value": "automatic"
+   },
+   "calendar_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "capex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "close_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_at": {
+    "display_value": "",
+    "value": ""
+   },
+   "closed_by": {
+    "display_value": "",
+    "value": ""
+   },
+   "cmdb_ci": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments": {
+    "display_value": "",
+    "value": ""
+   },
+   "comments_and_work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "company": {
+    "display_value": "Azure Sponsorship",
+    "value": "0c8adc1d93d853904aa774dcebba10d3"
+   },
+   "constraint_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "contact_type": {
+    "display_value": null,
+    "value": ""
+   },
+   "contract": {
+    "display_value": "",
+    "value": ""
+   },
+   "correlation_display": {
+    "display_value": "cloudops-simulation",
+    "value": "cloudops-simulation"
+   },
+   "correlation_id": {
+    "display_value": "SIM-AZSPONSOR-PRJTASK0900006",
+    "value": "SIM-AZSPONSOR-PRJTASK0900006"
+   },
+   "cost": {
+    "currency_display_value": "EUR;13100.00",
+    "display_value": "$14,635.32",
+    "value": "14635.32"
+   },
+   "critical_path": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "dependency": {
+    "display_value": "",
+    "value": ""
+   },
+   "description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "due_date": {
+    "display_value": "",
+    "value": ""
+   },
+   "duration": {
+    "display_value": "1 Day",
+    "value": "1970-01-02 00:00:00"
+   },
+   "effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "end": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "end_date": {
+    "display_value": "2026-11-02 20:21:15",
+    "value": "2026-11-02 20:21:15"
+   },
+   "end_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "escalation": {
+    "display_value": "Normal",
+    "value": "0"
+   },
+   "expected_start": {
+    "display_value": "",
+    "value": ""
+   },
+   "follow_up": {
+    "display_value": "",
+    "value": ""
+   },
+   "group_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "has_conflict": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "html_description": {
+    "display_value": null,
+    "value": ""
+   },
+   "impact": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "key_milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "knowledge": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "level": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "link": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "location": {
+    "display_value": "",
+    "value": ""
+   },
+   "made_sla": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "milestone": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "model_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "mpp_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "number": {
+    "display_value": "PRJTASK0900006",
+    "value": "PRJTASK0900006"
+   },
+   "opened_at": {
+    "display_value": "2026-10-18 10:41:06",
+    "value": "2026-10-18 10:41:06"
+   },
+   "opened_by": {
+    "display_value": "Person 1",
+    "value": "00000000000000000000000000000001"
+   },
+   "opex_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "order": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_sys_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "orig_top_task_id": {
+    "display_value": "",
+    "value": ""
+   },
+   "override_status": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "parent": {
+    "display_value": "",
+    "value": ""
+   },
+   "percent_complete": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "phase_type": {
+    "display_value": "Waterfall",
+    "value": "waterfall"
+   },
+   "priority": {
+    "display_value": "4 - Low",
+    "value": "4"
+   },
+   "project": {
+    "display_value": "[redacted]\u200bPRJTASK0900006",
+    "value": "[redacted]\u200bPRJTASK0900006"
+   },
+   "reassignment_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "relation_applied": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "remaining_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "rollup": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "route_reason": {
+    "display_value": "",
+    "value": ""
+   },
+   "run_calc_brs": {
+    "display_value": "true",
+    "value": "true"
+   },
+   "schedule_end_date": {
+    "display_value": "2026-11-02 20:21:15",
+    "value": "2026-11-02 20:21:15"
+   },
+   "schedule_start_date": {
+    "display_value": "2026-11-01 20:21:15",
+    "value": "2026-11-01 20:21:15"
+   },
+   "service_offering": {
+    "display_value": "",
+    "value": ""
+   },
+   "shadow": {
+    "display_value": "false",
+    "value": "false"
+   },
+   "short_description": {
+    "display_value": "[redacted]",
+    "value": "[redacted]"
+   },
+   "skills": {
+    "display_value": "",
+    "value": ""
+   },
+   "sla_due": {
+    "display_value": "UNKNOWN",
+    "value": ""
+   },
+   "software_model": {
+    "display_value": "",
+    "value": ""
+   },
+   "start": {
+    "display_value": "2026-11-01",
+    "value": "2026-11-01"
+   },
+   "start_date": {
+    "display_value": "2026-11-01 20:21:15",
+    "value": "2026-11-01 20:21:15"
+   },
+   "start_date_derived_from": {
+    "display_value": "",
+    "value": ""
+   },
+   "state": {
+    "display_value": "Work in Progress",
+    "value": "2"
+   },
+   "status": {
+    "display_value": "Yellow",
+    "value": "yellow"
+   },
+   "sub_tree_root": {
+    "display_value": "PRJTASK0900006",
+    "value": "a599f9ad93d817904aa774dcebba102b"
+   },
+   "sys_class_name": {
+    "display_value": "Project Task",
+    "value": "pm_project_task"
+   },
+   "sys_created_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_created_on": {
+    "display_value": "2026-11-01 20:21:15",
+    "value": "2026-11-01 20:21:15"
+   },
+   "sys_domain": {
+    "display_value": "global",
+    "value": "global"
+   },
+   "sys_domain_path": {
+    "display_value": "/",
+    "value": "/"
+   },
+   "sys_id": {
+    "display_value": "a599f9ad93d817904aa774dcebba102b",
+    "value": "a599f9ad93d817904aa774dcebba102b"
+   },
+   "sys_mod_count": {
+    "display_value": "0",
+    "value": "0"
+   },
+   "sys_tags": {
+    "display_value": "",
+    "value": ""
+   },
+   "sys_updated_by": {
+    "display_value": "Person 2",
+    "value": "00000000000000000000000000000002"
+   },
+   "sys_updated_on": {
+    "display_value": "2026-11-01 20:21:15",
+    "value": "2026-11-01 20:21:15"
+   },
+   "task": {
+    "display_value": "[redacted]\u200bPRJTASK0900006",
+    "value": "[redacted]\u200bPRJTASK0900006"
+   },
+   "task_effective_number": {
+    "display_value": "PRJTASK0900006",
+    "value": "PRJTASK0900006"
+   },
+   "time_constraint": {
+    "display_value": "Start ASAP",
+    "value": "asap"
+   },
+   "time_worked": {
+    "display_value": "",
+    "value": ""
+   },
+   "time_zone": {
+    "display_value": "",
+    "value": ""
+   },
+   "top_task": {
+    "display_value": "PRJTASK0900006",
+    "value": "a599f9ad93d817904aa774dcebba102b"
+   },
+   "universal_request": {
+    "display_value": "",
+    "value": ""
+   },
+   "upon_approval": {
+    "display_value": "Proceed to Next Task",
+    "value": "proceed"
+   },
+   "upon_reject": {
+    "display_value": "Cancel all future Tasks",
+    "value": "cancel"
+   },
+   "urgency": {
+    "display_value": "3 - Low",
+    "value": "3"
+   },
+   "user_input": {
+    "display_value": "",
+    "value": ""
+   },
+   "version": {
+    "display_value": "2",
+    "value": "2"
+   },
+   "watch_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs": {
+    "display_value": "",
+    "value": ""
+   },
+   "wbs_order": {
+    "display_value": "1",
+    "value": "1"
+   },
+   "work_cost": {
+    "currency_display_value": "USD;0.00",
+    "display_value": "$0.00",
+    "value": "0"
+   },
+   "work_duration": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_effort": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_end": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_notes_list": {
+    "display_value": "",
+    "value": ""
+   },
+   "work_start": {
+    "display_value": "2026-11-01 20:21:15",
+    "value": "2026-11-01 20:21:15"
+   }
+  }
+ ]
+}

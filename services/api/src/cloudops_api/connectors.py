@@ -24,6 +24,11 @@ outage     more than ``OUTAGE_AFTER`` intervals (LLD: a P2 page), or    critical
 never_run  no run at all yet (or the first is still running)           unknown
 =========  ==========================================================  =========
 
+``source_absent``: the last run found the source has no such table (ServiceNow
+project tasks while Project Portfolio Management is inactive, ADR 0038). A
+supported state, not a failure: band ``unknown``, its own reason and count, and
+none of the attention causes apply.
+
 Attention raises the band to at least ``watch``: a failed or dead-lettered run
 in the last 24 hours, the last run failed, a rejected record in the last 24
 hours, an open dead letter, or open schema drift. A failed-run rate of
@@ -73,12 +78,12 @@ _RATE_PLACES: Final = Decimal("0.0001")
 _INTERVAL_PLACES: Final = Decimal("0.01")
 
 Band = Literal["healthy", "watch", "at-risk", "critical", "unknown"]
-Timeliness = Literal["on_time", "late", "outage", "never_run"]
+Timeliness = Literal["on_time", "late", "outage", "never_run", "source_absent"]
 Reason = Literal[
     "late", "outage", "never_run", "no_success", "failing", "failed_runs",
-    "last_run_failed", "rejected_records", "dead_letters", "schema_drift",
+    "last_run_failed", "rejected_records", "dead_letters", "schema_drift", "source_absent",
 ]
-RunStatus = Literal["running", "succeeded", "dead_lettered", "failed"]
+RunStatus = Literal["running", "succeeded", "dead_lettered", "failed", "source_absent"]
 
 RANK: Final[dict[Band, int]] = {"unknown": -1, "healthy": 0, "watch": 1, "at-risk": 2,
                                  "critical": 3}
@@ -148,6 +153,10 @@ def _worst(a: Band, b: Band) -> Band:
 
 def assess(f: Figures, now: datetime) -> Assessment:
     """The health band of one connector at ``now`` (the database's clock)."""
+    if f.last_status == "source_absent":
+        return Assessment(band="unknown", timeliness="source_absent", reasons=("source_absent",),
+                          age_seconds=None, intervals=None, failed_run_rate=None,
+                          rejected_rate=None)
     reasons: list[Reason] = []
     age = None if f.last_success_at is None else max(
         0, int((now - f.last_success_at).total_seconds()))
@@ -240,7 +249,8 @@ class ConnectorHealthList(ApiModel):
     outages: Metric[int]  # connectors whose band is critical
     late: Metric[int]  # at-risk
     attention: Metric[int]  # watch
-    never_run: Metric[int]  # unknown
+    never_run: Metric[int]  # unknown: never run
+    source_absent: Metric[int]  # unknown: the source has no such table (ADR 0038)
 
 
 class DriftView(ApiModel):
@@ -363,14 +373,17 @@ async def connector_health(request: Request, access: AccessDep) -> ConnectorHeal
     items = sorted((health_row(r) for r in rows),
                    key=lambda h: (-RANK[h.band], h.source_system, h.entity))
 
-    def total(band: Band, name: str) -> Metric[int]:
-        return _metric(sum(1 for h in items if h.band == band), "connectors",
+    def total(band: Band, name: str, timeliness: Timeliness | None = None) -> Metric[int]:
+        return _metric(sum(1 for h in items if h.band == band
+                           and timeliness in (None, h.timeliness)), "connectors",
                        f"connectors.{name}", now, band=band)
 
     return ConnectorHealthList(
         items=items, as_of=now, rules=_rules(now),
         outages=total("critical", "outages"), late=total("at-risk", "late"),
-        attention=total("watch", "attention"), never_run=total("unknown", "never_run"),
+        attention=total("watch", "attention"),
+        never_run=total("unknown", "never_run", "never_run"),
+        source_absent=total("unknown", "source_absent", "source_absent"),
     )
 
 

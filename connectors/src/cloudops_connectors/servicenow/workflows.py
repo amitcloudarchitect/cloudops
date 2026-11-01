@@ -24,6 +24,10 @@ its bronze reference, the run stops there and is marked ``dead_lettered``,
 and the watermark stays before that page, so nothing after it is skipped.
 The next run starts from the same place; once fixed, replay repairs history.
 
+A table the instance does not have (``pm_project_task`` while Project Portfolio
+Management is inactive, ADR 0038) ends the run ``source_absent``: a supported
+state that connector health reports as such, not a failure, and nothing moves.
+
 Workflow code is deterministic: time and ids come from ``workflow``, and every
 side effect is an activity.
 """
@@ -47,7 +51,11 @@ with workflow.unsafe.imports_passed_through():
     from cloudops_connectors.core import state
     from cloudops_connectors.core.raw import RawStore, day_prefixes, page_ref, sha256
     from cloudops_connectors.servicenow.client import ServiceNowClient
-    from cloudops_connectors.servicenow.mapping import ENTITIES, SOURCE
+    from cloudops_connectors.servicenow.mapping import (
+        ALL_ENTITIES,
+        DEFAULT_PRICE_FIELD,
+        SOURCE,
+    )
     from cloudops_connectors.servicenow.pipeline import (
         PRINCIPAL,
         ReprocessCounts,
@@ -64,7 +72,8 @@ RETRY: Final = RetryPolicy(
     backoff_coefficient=2.0,
     maximum_interval=timedelta(minutes=2),
     maximum_attempts=5,
-    non_retryable_error_types=["RawConflictError", "ValueError", "ReprocessRefusedError"],
+    non_retryable_error_types=["RawConflictError", "ValueError", "ReprocessRefusedError",
+                               "SourceTableAbsentError"],
 )
 
 
@@ -184,10 +193,12 @@ class ServiceNowActivities:
     """Every side effect of the connector. Dependencies are injected so the
     same activities run against fixtures, Azurite and a real instance."""
 
-    def __init__(self, db: Database, raw: RawStore, client: ServiceNowClient) -> None:
+    def __init__(self, db: Database, raw: RawStore, client: ServiceNowClient,
+                 *, price_field: str = DEFAULT_PRICE_FIELD) -> None:
         self._db = db
         self._raw = raw
         self._client = client
+        self._price_field = price_field  # project tasks only (mapping.price_field)
         # Watermarks are per source, entity and instance.
         self.scope_key = client.base_url
 
@@ -216,7 +227,7 @@ class ServiceNowActivities:
     async def process(self, req: ProcessRequest) -> state.RunCounts:
         return await process_page(
             self._db, self._raw, self.scope_key, req.entity, req.raw_ref,
-            advance_watermark=req.advance_watermark,
+            advance_watermark=req.advance_watermark, price_field=self._price_field,
         )
 
     @activity.defn
@@ -257,7 +268,8 @@ class ServiceNowActivities:
     @activity.defn
     async def reprocess(self, req: ReprocessPageRequest) -> ReprocessCounts:
         return await reprocess_page(self._db, self._raw, req.entity, req.raw_ref,
-                                    req.claim.alias, UUID(req.claim.tenant_id))
+                                    req.claim.alias, UUID(req.claim.tenant_id),
+                                    price_field=self._price_field)
 
     @activity.defn
     async def finish_reprocess(self, fin: ReprocessFinish) -> None:
@@ -300,11 +312,16 @@ def _error(exc: ActivityError) -> str:
     return f"{type(cause).__name__}: {first}"[:500]
 
 
+def _absent(exc: ActivityError) -> bool:
+    cause = exc.cause
+    return isinstance(cause, ApplicationError) and cause.type == "SourceTableAbsentError"
+
+
 @workflow.defn
 class ServiceNowIngest:
     @workflow.run
     async def run(self, req: IngestRequest) -> RunReport:
-        if req.entity not in ENTITIES:
+        if req.entity not in ALL_ENTITIES:
             raise ValueError(f"unknown entity {req.entity!r}")
         run_id = str(workflow.uuid4())
         acts = ServiceNowActivities
@@ -328,8 +345,10 @@ class ServiceNowIngest:
                     FetchRequest(run_id, req.entity, since.isoformat(), offset, page),
                     start_to_close_timeout=_PAGE, retry_policy=RETRY,
                 )
-            except ActivityError:
-                status = "failed"  # nothing reached bronze; the next run starts here
+            except ActivityError as exc:
+                # Nothing reached bronze; the next run starts here. A table the
+                # instance does not have is a state, not a failure.
+                status = "source_absent" if _absent(exc) else "failed"
                 break
             try:
                 done = await workflow.execute_activity_method(
@@ -366,7 +385,7 @@ class ServiceNowIngest:
 class ServiceNowReplay:
     @workflow.run
     async def run(self, req: ReplayRequest) -> RunReport:
-        if req.entity not in ENTITIES:
+        if req.entity not in ALL_ENTITIES:
             raise ValueError(f"unknown entity {req.entity!r}")
         run_id = str(workflow.uuid4())
         acts = ServiceNowActivities
@@ -428,7 +447,7 @@ class ServiceNowReprocess:
         moved: set[str] = set()
         pages = 0
         status, outcome = ("refused", refusal) if refusal else ("succeeded", None)
-        for entity in sorted(ENTITIES) if refusal is None else []:
+        for entity in sorted(ALL_ENTITIES) if refusal is None else []:
             run_id = str(workflow.uuid4())
             await workflow.execute_activity_method(
                 acts.record_run, RunUpdate(run_id, entity, "replay", workflow.now().isoformat()),
