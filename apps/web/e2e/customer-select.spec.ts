@@ -2,8 +2,9 @@ import type { Me } from "@cloudops/contracts";
 
 import { api, expect, test } from "./fixtures";
 
-// The customer selector (top bar): staff with more than one customer narrow every
-// customer-specific screen to one of them; the API refuses a tenant outside scope.
+// The customer selector (top bar): every staff user narrows customer-specific screens
+// to one customer; the API refuses a tenant outside scope. A customer sees its own
+// organisation's name there instead, never a choice.
 
 test.describe("staff with several customers", () => {
   test.use({ role: "engineer" });
@@ -54,9 +55,10 @@ test.describe("staff with several customers", () => {
 test.describe("a customer", () => {
   test.use({ role: "customer" });
 
-  test("has no selector: it only ever sees its own tenant", async ({ signedIn: page }) => {
+  test("has no selector, and the top bar names its own organisation", async ({ signedIn: page }) => {
     await page.goto("/customers");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Northwind/);
     await expect(page.getByTestId("customer-select")).toHaveCount(0);
+    await expect(page.getByTestId("customer-name")).toContainText("Northwind");
   });
 });

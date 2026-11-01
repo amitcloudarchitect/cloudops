@@ -33,8 +33,11 @@ session as a binding), each in its own way.
    `{ tenantId, setTenantId }`, and screens pass it as `tenant_id`. The choice is
    remembered per user (`localStorage`, keyed by object id, failures ignored) and
    forgotten when the tenant is no longer in `/v1/me`'s tenants. The selector shows
-   only to staff with more than one tenant; a customer never sees it, and its
-   `tenantId` is always null (its scope is already one tenant).
+   to every staff user with any tenant in scope, so the top bar always says whose
+   data a screen holds, even with one customer (amended 2026-11-01: it first showed
+   only with more than one, which left a one-customer environment with no name at
+   all). A customer sees its own organisation's name, read-only, never a choice, and
+   its `tenantId` is always null (its scope is already one tenant).
 
 5. **Navigation areas.** The console's modules are grouped into Operations, Security,
    Commercial, Assurance & Reports, Knowledge and Settings (`lib/nav.ts`). Settings
