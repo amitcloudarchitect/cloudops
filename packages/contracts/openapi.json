@@ -6232,6 +6232,51 @@
         "title": "RateCardView",
         "type": "object"
       },
+      "RecomputeView": {
+        "additionalProperties": false,
+        "properties": {
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "requested_at",
+          "finished_at"
+        ],
+        "title": "RecomputeView",
+        "type": "object"
+      },
       "ReportPackSummary": {
         "additionalProperties": false,
         "properties": {
@@ -7661,6 +7706,480 @@
           "url"
         ],
         "title": "SourceView",
+        "type": "object"
+      },
+      "SowInput": {
+        "additionalProperties": false,
+        "description": "One SOW version as commercial records it. ``amendment_reason`` is required\nonce the customer has a SOW: every later version is an amendment.",
+        "properties": {
+          "amendment_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amendment Reason"
+          },
+          "billing_frequency": {
+            "enum": [
+              "monthly",
+              "quarterly",
+              "annual"
+            ],
+            "title": "Billing Frequency",
+            "type": "string"
+          },
+          "consumption_uplift": {
+            "anyOf": [
+              {
+                "pattern": "^\\d?\\.\\d{1,6}$|^[1-9]$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumption Uplift"
+          },
+          "contracted_ci_count": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,7}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contracted Ci Count"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "8x5",
+                  "16x5",
+                  "24x7"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "document_uri": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Document Uri",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "hosting_acv": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,12}(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hosting Acv"
+          },
+          "manage_acv": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,12}(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manage Acv"
+          },
+          "professional_services": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,12}(\\.\\d{1,6})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Professional Services"
+          },
+          "recurring_fee": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,6})?$",
+            "title": "Recurring Fee",
+            "type": "string"
+          },
+          "reference": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reference",
+            "type": "string"
+          },
+          "service_scope": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Service Scope",
+            "type": "string"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "enum": [
+                  "Bronze",
+                  "Silver",
+                  "Gold"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support"
+          },
+          "target_margin": {
+            "anyOf": [
+              {
+                "pattern": "^-?0?\\.\\d{1,6}$|^0$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Margin"
+          },
+          "term_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term End"
+          },
+          "term_start": {
+            "format": "date",
+            "title": "Term Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference",
+          "effective_from",
+          "term_start",
+          "currency",
+          "service_scope",
+          "recurring_fee",
+          "billing_frequency",
+          "document_uri"
+        ],
+        "title": "SowInput",
+        "type": "object"
+      },
+      "SowRegister": {
+        "additionalProperties": false,
+        "properties": {
+          "recompute": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecomputeView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/SowVersionView"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tenant",
+          "versions",
+          "recompute"
+        ],
+        "title": "SowRegister",
+        "type": "object"
+      },
+      "SowVersionView": {
+        "additionalProperties": false,
+        "properties": {
+          "amendment_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amendment Reason"
+          },
+          "billing_frequency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "monthly",
+                  "quarterly",
+                  "annual"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Billing Frequency"
+          },
+          "consumption_uplift": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contracted_ci_count": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverage"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "document_uri": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Uri"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "entered_at": {
+            "format": "date-time",
+            "title": "Entered At",
+            "type": "string"
+          },
+          "entered_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entered By"
+          },
+          "hosting_acv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "in_force": {
+            "title": "In Force",
+            "type": "boolean"
+          },
+          "manage_acv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "monthly_manage_revenue": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "professional_services": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "recurring_fee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference": {
+            "title": "Reference",
+            "type": "string"
+          },
+          "service_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Service Scope"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Support"
+          },
+          "target_margin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "term_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term End"
+          },
+          "term_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term Start"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "reference",
+          "effective_from",
+          "effective_to",
+          "in_force",
+          "term_start",
+          "term_end",
+          "currency",
+          "service_scope",
+          "coverage",
+          "support",
+          "recurring_fee",
+          "billing_frequency",
+          "monthly_manage_revenue",
+          "target_margin",
+          "consumption_uplift",
+          "hosting_acv",
+          "manage_acv",
+          "professional_services",
+          "contracted_ci_count",
+          "document_uri",
+          "amendment_reason",
+          "entered_by",
+          "entered_at"
+        ],
+        "title": "SowVersionView",
         "type": "object"
       },
       "SowView": {
@@ -10656,6 +11175,137 @@
           }
         },
         "summary": "Revoke"
+      }
+    },
+    "/v1/commercial/customers/{tenant_id}/margin-recompute": {
+      "post": {
+        "description": "Ask the FinOps worker to recompute this customer's margin now (this month,\nthe month closing, and the restatement window) rather than at the next daily\nrun. The API starts nothing itself: the worker claims the request.",
+        "operationId": "request_recompute_v1_commercial_customers__tenant_id__margin_recompute_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecomputeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Recompute"
+      }
+    },
+    "/v1/commercial/customers/{tenant_id}/sows": {
+      "get": {
+        "description": "One customer's SOW versions, newest first, and its latest margin recompute.",
+        "operationId": "sow_register_v1_commercial_customers__tenant_id__sows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SowRegister"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sow Register"
+      },
+      "post": {
+        "description": "Record a SOW version: the customer's first, or an amendment effective after\nthe current one. Nothing already recorded changes, except that the current\nversion now ends the day before the amendment.",
+        "operationId": "record_sow_v1_commercial_customers__tenant_id__sows_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SowInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SowRegister"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Sow"
       }
     },
     "/v1/commercial/margin": {

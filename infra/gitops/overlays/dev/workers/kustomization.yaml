@@ -3,7 +3,8 @@
 # instance (ADR 0009). worker-ai calls the dev Azure OpenAI account (ADR 0012).
 # connector-azure feeds the platform's own cost into the internal tenant (ADR 0023).
 # connector-sharepoint, -qualys and -corestack read those sources, read-only (ADR 0028);
-# Qualys is the simulated estate until dev has a Qualys subscription.
+# Qualys is the simulated estate until dev has a Qualys subscription. worker-finops
+# computes reconciliation, anomalies and margin, and answers recompute requests (ADR 0034).
 #
 # Image tags are the only thing the pipeline changes here (step 13). Nothing in
 # this directory is a secret.
@@ -16,6 +17,7 @@ resources:
   - ../../../base/connector-qualys
   - ../../../base/connector-corestack
   - ../../../base/worker-ai
+  - ../../../base/worker-finops
   - values.yaml
 images:
   - name: connector-servicenow
@@ -35,6 +37,7 @@ patches:
   - path: connector-qualys.yaml
   - path: connector-corestack.yaml
   - path: worker-ai.yaml
+  - path: worker-finops.yaml
 replacements:
   - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.dataSubnet }
     targets:
@@ -49,4 +52,6 @@ replacements:
       - select: { kind: NetworkPolicy, name: connector-corestack }
         fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: worker-ai }
+        fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: worker-finops }
         fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]

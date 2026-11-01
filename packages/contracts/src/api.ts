@@ -449,6 +449,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/commercial/customers/{tenant_id}/margin-recompute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Recompute
+         * @description Ask the FinOps worker to recompute this customer's margin now (this month,
+         *     the month closing, and the restatement window) rather than at the next daily
+         *     run. The API starts nothing itself: the worker claims the request.
+         */
+        post: operations["request_recompute_v1_commercial_customers__tenant_id__margin_recompute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/commercial/customers/{tenant_id}/sows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sow Register
+         * @description One customer's SOW versions, newest first, and its latest margin recompute.
+         */
+        get: operations["sow_register_v1_commercial_customers__tenant_id__sows_get"];
+        put?: never;
+        /**
+         * Record Sow
+         * @description Record a SOW version: the customer's first, or an amendment effective after
+         *     the current one. Nothing already recorded changes, except that the current
+         *     version now ends the day before the amendment.
+         */
+        post: operations["record_sow_v1_commercial_customers__tenant_id__sows_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/margin": {
         parameters: {
             query?: never;
@@ -3558,6 +3606,26 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** RecomputeView */
+        RecomputeView: {
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "requested" | "running" | "succeeded" | "failed";
+        };
         /**
          * Reported
          * @description The contract-currency margin converted for the viewer, FX impact apart.
@@ -3993,6 +4061,118 @@ export interface components {
             source_system: string;
             /** Url */
             url: string | null;
+        };
+        /**
+         * SowInput
+         * @description One SOW version as commercial records it. ``amendment_reason`` is required
+         *     once the customer has a SOW: every later version is an amendment.
+         */
+        SowInput: {
+            /** Amendment Reason */
+            amendment_reason?: string | null;
+            /**
+             * Billing Frequency
+             * @enum {string}
+             */
+            billing_frequency: "monthly" | "quarterly" | "annual";
+            /** Consumption Uplift */
+            consumption_uplift?: string | null;
+            /** Contracted Ci Count */
+            contracted_ci_count?: string | null;
+            /** Coverage */
+            coverage?: ("8x5" | "16x5" | "24x7") | null;
+            /** Currency */
+            currency: string;
+            /** Document Uri */
+            document_uri: string;
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Hosting Acv */
+            hosting_acv?: string | null;
+            /** Manage Acv */
+            manage_acv?: string | null;
+            /** Professional Services */
+            professional_services?: string | null;
+            /** Recurring Fee */
+            recurring_fee: string;
+            /** Reference */
+            reference: string;
+            /** Service Scope */
+            service_scope: string;
+            /** Support */
+            support?: ("Bronze" | "Silver" | "Gold") | null;
+            /** Target Margin */
+            target_margin?: string | null;
+            /** Term End */
+            term_end?: string | null;
+            /**
+             * Term Start
+             * Format: date
+             */
+            term_start: string;
+        };
+        /** SowRegister */
+        SowRegister: {
+            recompute: components["schemas"]["RecomputeView"] | null;
+            tenant: components["schemas"]["TenantView"];
+            /** Versions */
+            versions: components["schemas"]["SowVersionView"][];
+        };
+        /** SowVersionView */
+        SowVersionView: {
+            /** Amendment Reason */
+            amendment_reason: string | null;
+            /** Billing Frequency */
+            billing_frequency: ("monthly" | "quarterly" | "annual") | null;
+            consumption_uplift: components["schemas"]["Metric_Decimal_"] | null;
+            contracted_ci_count: components["schemas"]["Metric_int_"] | null;
+            /** Coverage */
+            coverage: string | null;
+            /** Currency */
+            currency: string;
+            /** Document Uri */
+            document_uri: string | null;
+            /**
+             * Effective From
+             * Format: date
+             */
+            effective_from: string;
+            /** Effective To */
+            effective_to: string | null;
+            /**
+             * Entered At
+             * Format: date-time
+             */
+            entered_at: string;
+            /** Entered By */
+            entered_by: string | null;
+            hosting_acv: components["schemas"]["Metric_Decimal_"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** In Force */
+            in_force: boolean;
+            manage_acv: components["schemas"]["Metric_Decimal_"] | null;
+            monthly_manage_revenue: components["schemas"]["Metric_Decimal_"];
+            professional_services: components["schemas"]["Metric_Decimal_"];
+            recurring_fee: components["schemas"]["Metric_Decimal_"] | null;
+            /** Reference */
+            reference: string;
+            /** Service Scope */
+            service_scope: string | null;
+            /** Support */
+            support: string | null;
+            target_margin: components["schemas"]["Metric_Decimal_"] | null;
+            /** Term End */
+            term_end: string | null;
+            /** Term Start */
+            term_start: string | null;
+            version: components["schemas"]["Metric_int_"];
         };
         /** SowView */
         SowView: {
@@ -5331,6 +5511,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_recompute_v1_commercial_customers__tenant_id__margin_recompute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecomputeView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    sow_register_v1_commercial_customers__tenant_id__sows_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SowRegister"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_sow_v1_commercial_customers__tenant_id__sows_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SowInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SowRegister"];
                 };
             };
             /** @description Validation Error */

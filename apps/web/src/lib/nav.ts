@@ -58,8 +58,9 @@ export const MODULES: readonly Module[] = [
   { href: "/mapping", label: "Customer mapping", area: "Settings", permission: "mapping.manage" },
   // Step 15: ingest health per source and entity, and schema drift (staff only).
   { href: "/connectors", label: "Connectors", area: "Settings", permission: "connectors.read" },
-  // SOWs and rate cards: built separately; shown once its page exists.
-  { href: "/settings/commercial", label: "Commercial setup", area: "Settings", permission: "commercial.read", staff: true, reserved: true },
+  // SOWs and the rate card (ADR 0033, ADR 0034): commercial roles read it; recording
+  // needs commercial.write and publishing ratecard.publish, checked on the page and by the API.
+  { href: "/settings/commercial", label: "Commercial setup", area: "Settings", permission: "commercial.read", staff: true },
 ];
 
 export function visibleModules(has: (permission: string) => boolean, staff: boolean): Module[] {

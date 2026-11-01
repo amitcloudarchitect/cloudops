@@ -5,7 +5,7 @@ test.use({ role: "finops" });
 test("has no work queue in its navigation", async ({ signedIn: page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  expect(await navLabels(page)).toEqual(["Home", "Resources", "Customers", "FinOps", "Margin", "Pricing"]);
+  expect(await navLabels(page)).toEqual(["Home", "Resources", "Customers", "FinOps", "Margin", "Pricing", "Commercial setup"]);
 });
 
 test("a typed-in work queue URL says it is not available", async ({ signedIn: page }) => {

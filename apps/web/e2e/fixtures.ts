@@ -83,3 +83,23 @@ export async function navLabels(page: Page): Promise<string[]> {
   await expect(nav).toBeVisible();
   return (await nav.getByRole("link").allTextContents()).map((s) => s.trim());
 }
+
+/** Give a customer a subscription and months of daily consumption, as the billing
+ * connectors would (local only): margin needs billing data as well as a SOW. */
+export function loadBilling(tenantId: string, daily: string, currency: string): void {
+  const repo = new URL("../../../", import.meta.url).pathname;
+  execFileSync("uv", ["run", "--quiet", "python", "-m", "cloudops_devdata.billing", "--tenant", tenantId, "--daily", daily, "--currency", currency], {
+    cwd: repo,
+    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: localSecretsFile(repo) },
+  });
+}
+
+/** Answer the waiting "recompute margin now" requests, as the FinOps worker's schedule
+ * does in a deployed environment (local only: the journeys run without Temporal). */
+export function recomputeMargins(): void {
+  const repo = new URL("../../../", import.meta.url).pathname;
+  execFileSync("uv", ["run", "--quiet", "python", "-m", "cloudops_connectors.finops", "recompute-local"], {
+    cwd: repo,
+    env: { ...process.env, CLOUDOPS_ENV: "local", CLOUDOPS_LOCAL_SECRETS_FILE: localSecretsFile(repo) },
+  });
+}

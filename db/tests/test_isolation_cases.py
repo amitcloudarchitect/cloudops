@@ -113,6 +113,8 @@ TENANT_TABLES = (
     # ADR 0028.
     "cloudops.sharepoint_folder",
     "cloudops.security_finding",
+    # ADR 0034.
+    "cloudops.margin_recompute",
 )
 # Written by people and the drafting worker through the application login only.
 NOT_INGESTED = frozenset({

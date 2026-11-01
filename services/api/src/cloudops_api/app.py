@@ -21,6 +21,7 @@ from cloudops_api import (
     bff,
     cloud_onboarding,
     commercial,
+    commercial_setup,
     connectors,
     home,
     knowledge,
@@ -103,7 +104,7 @@ AssistantFactory = Callable[[AsyncExitStack], Awaitable[AssistantRuntime]]
 ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
     commercial.router, knowledge.router, assurance.router, reports.router, assistant.router,
-    cloud_onboarding.router, home.router, observability.router,
+    cloud_onboarding.router, home.router, observability.router, commercial_setup.router,
 )
 
 

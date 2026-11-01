@@ -1,0 +1,242 @@
+# The FinOps worker (ADR 0019; deployed in dev by ADR 0034): reconciliation,
+# anomalies and margin daily, and "recompute margin now" requests every minute. It
+# reads and writes only the database, on the ingest login under the finops role
+# class, so it calls no Azure API and holds no customer credential. Federated to
+# id-cloudops-ingest-{env} only to mount postgres-ingest-dsn from Key Vault.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: worker-finops
+  annotations:
+    azure.workload.identity/client-id: SET-IN-OVERLAY
+automountServiceAccountToken: false
+---
+# Its client certificate for Temporal (mutual TLS, ADR 0010), from the internal CA.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: worker-finops-temporal
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: worker-finops-temporal-tls
+  duration: 2160h
+  renewBefore: 720h
+  privateKey: { algorithm: ECDSA, size: 256, encoding: PKCS8, rotationPolicy: Always }
+  commonName: worker-finops
+  uris: [spiffe://cloudops.internal/ns/platform-ingest/sa/worker-finops]
+  usages: [client auth]
+  issuerRef: { group: cert-manager.io, kind: ClusterIssuer, name: cloudops-internal-ca }
+---
+# The ingest login's DSN, nothing else.
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: worker-finops
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: SET-IN-OVERLAY
+    keyvaultName: SET-IN-OVERLAY
+    tenantId: SET-IN-OVERLAY
+    objects: |
+      array:
+        - |
+          objectName: postgres-ingest-dsn
+          objectType: secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-finops
+spec:
+  replicas: 1  # a daily run and a one-minute request queue: one worker is plenty
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: worker-finops
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker-finops
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: worker-finops
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60  # let in-flight activities finish
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532  # the certificate's key is group-readable only
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ingest] }
+      containers:
+        - name: worker
+          image: connector-servicenow  # the connectors package, another entry point
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.finops", "worker"]
+          ports:
+            - { name: probes, containerPort: 8080 }
+          envFrom:
+            - configMapRef: { name: worker-finops }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: probes }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet: { path: /readyz, port: probes }
+            periodSeconds: 10
+            timeoutSeconds: 3
+          volumeMounts:
+            - { name: secrets, mountPath: /mnt/secrets, readOnly: true }
+            # A whole directory, never subPath: renewed files must appear in place.
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: worker-finops
+        - name: temporal-tls
+          secret:
+            secretName: worker-finops-temporal-tls
+            defaultMode: 0440
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: worker-finops
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: worker-finops
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: temporal
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+      ports:
+        - { protocol: TCP, port: 7233 }
+    - to:
+        - ipBlock: { cidr: SET-IN-OVERLAY }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - { protocol: TCP, port: 4318 }
+---
+# Creates or updates the daily FinOps schedule and the every-minute recompute
+# schedule on every sync; safe to repeat.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: worker-finops-schedule
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker-finops-schedule
+        # The Azure profile refuses to start without a workload identity, even for
+        # a job that only talks to Temporal; it is the worker's own identity.
+        azure.workload.identity/use: "true"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: worker-finops
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ingest] }
+      containers:
+        - name: schedule
+          image: connector-servicenow
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.finops", "schedule"]
+          envFrom:
+            - configMapRef: { name: worker-finops }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
+            # The job reads no secret: an empty store, never the worker's Key Vault mount.
+            - { name: no-secrets, mountPath: /mnt/secrets, readOnly: true }
+      volumes:
+        - name: temporal-tls
+          secret:
+            secretName: worker-finops-temporal-tls
+            defaultMode: 0440
+        - name: no-secrets
+          emptyDir: { sizeLimit: 1Mi }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: worker-finops-schedule
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: worker-finops-schedule
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: temporal
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+      ports:
+        - { protocol: TCP, port: 7233 }
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - { protocol: TCP, port: 4318 }
