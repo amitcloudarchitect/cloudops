@@ -94,17 +94,17 @@ def customers(seeded: Seeded) -> Iterator[Customers]:
         _snapshot(cx, made.gbp, "2025-04-01", "2025-04-30", "GBP", "10000", "7000")
         _snapshot(cx, made.eur, "2025-03-01", "2025-03-31", "EUR", "20000", "15000")
         _snapshot(cx, made.eur, "2025-04-01", "2025-04-30", "EUR", "20000", "16000")
-        for f, t, day, rate in RATES:
+        for frm, to, day, rate in RATES:
             cx.execute("INSERT INTO cloudops.fx_rate (from_currency, to_currency, rate,"
                        " rate_type, effective_date, source) VALUES (%s, %s, %s, 'average',"
-                       " %s, 'test') ON CONFLICT DO NOTHING", (f, t, rate, day))
+                       " %s, 'test') ON CONFLICT DO NOTHING", (frm, to, rate, day))
     yield made
     with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
         cx.execute("SET session_replication_role = replica")  # the SOW history trigger
-        for f, t, day, _ in RATES:
+        for frm, to, day, _ in RATES:
             cx.execute("DELETE FROM cloudops.fx_rate WHERE from_currency = %s AND to_currency"
                        " = %s AND rate_type = 'average' AND effective_date = %s AND source"
-                       " = 'test'", (f, t, day))
+                       " = 'test'", (frm, to, day))
         for t in (made.gbp, made.eur):
             cx.execute("DELETE FROM cloudops.cost_fact WHERE tenant_id = %s", (t,))
             cx.execute("DELETE FROM cloudops.margin_snapshot WHERE tenant_id = %s", (t,))
@@ -130,8 +130,9 @@ def _v(metric: dict[str, Any] | None) -> Decimal:
 
 
 def _row(body: dict[str, Any], tenant: UUID) -> dict[str, Any]:
-    [row] = [r for r in body["rows"] if r["tenant"]["id"] == str(tenant)]
-    return row
+    rows: list[dict[str, Any]] = [r for r in body["rows"] if r["tenant"]["id"] == str(tenant)]
+    assert len(rows) == 1
+    return rows[0]
 
 
 async def _get(api: Api, who: UUID, path: str = "/v1/commercial/revenue",
@@ -185,7 +186,7 @@ async def test_an_engineer_scope_reads_no_margin_or_sow_for_the_view(
     engineer = TenantScope([recorded.gbp], Role.ENGINEER, "principal:isolation-suite")
     async with app_db.transaction(engineer) as conn:
         for table in ("cloudops.sow", "cloudops.margin_snapshot"):
-            assert await conn.scalar(text(f"SELECT count(*) FROM {table}")) == 0  # noqa: S608
+            assert await conn.scalar(text(f"SELECT count(*) FROM {table}")) == 0
 
 
 # --- figures ----------------------------------------------------------------------------------
