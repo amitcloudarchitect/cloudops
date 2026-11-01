@@ -22,7 +22,7 @@ Each draft is checked deterministically, before and after the model:
 - a control draft's citations must all be refs it was given (``cited_refs``),
   and its narrative must not assert a result (``claims_result``);
 - every number in a narrative must appear in the section's data, as given or
-  rounded (``numbers_grounded``).
+  rounded, and dates, times and ids ground no number (``numbers_grounded``).
 
 A draft that fails is stored as ``declined`` with nothing in it and the reason
 in ``draft_note``, so the person writes from the evidence instead. Either way,
@@ -45,7 +45,6 @@ import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import timedelta
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any, Final, Literal
 
 from pydantic import Field
@@ -53,6 +52,7 @@ from temporalio import activity, workflow
 from temporalio.common import RetryPolicy
 from temporalio.exceptions import ActivityError
 
+from cloudops_agents import grounding
 from cloudops_agents.base import AgentOutput, AgentSpec
 from cloudops_agents.prompts import PromptTemplate
 from cloudops_gateway.providers import Tier
@@ -153,28 +153,12 @@ def cited_refs(citations: Iterable[str], given: Iterable[str]) -> tuple[bool, li
     return not unknown, unknown
 
 
-_NUMBER: Final = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?")
-
-
-def _numbers(value: str) -> list[Decimal]:
-    out: list[Decimal] = []
-    for match in _NUMBER.findall(value):
-        try:
-            out.append(Decimal(match.replace(",", "")))
-        except InvalidOperation:
-            continue
-    return out
-
-
 def numbers_grounded(narrative: str, data: Mapping[str, Any]) -> tuple[bool, list[str]]:
     """Every number in the narrative appears in the data, exactly or rounded to
-    0, 1 or 2 places. A computed number (a difference, a new total) fails."""
-    known: set[Decimal] = set()
-    for n in _numbers(json.dumps(data, default=str)):
-        known.add(n)
-        for places in (0, 1, 2):
-            known.add(n.quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP))
-    unknown = sorted({str(n) for n in _numbers(narrative) if n not in known})
+    0, 1 or 2 places. A computed number (a difference, a new total) fails, and
+    so does a date or time not in the data: a date's digits ground nothing
+    (``grounding``)."""
+    unknown = grounding.ungrounded_numbers(narrative, [json.dumps(data, default=str)])
     return not unknown, unknown
 
 
