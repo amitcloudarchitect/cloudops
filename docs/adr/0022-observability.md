@@ -134,7 +134,7 @@ live. The user decided those before the build.
      Remediation verification (above 95%) has no signal until the execution plane.
    Receivers are variables (`page_*`, `notify_*`); webhook URLs only via `TF_VAR_`.
 
-9. **Dashboards: Azure Managed Grafana, as Terraform** (user). Grafana 11, Standard,
+9. **Dashboards: Azure Managed Grafana, as Terraform** (user). Grafana 12, Standard,
    API keys off; its system identity reads the workspace (Monitoring Data Reader) and
    the observability resource group (Monitoring Reader). Six dashboards in stack 03b
    (platform health, ingest health, execution, AI operations, data quality, platform

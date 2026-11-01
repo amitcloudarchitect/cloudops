@@ -213,12 +213,13 @@ locals {
     RollbackRateBreach = {
       # ADR 0022: two or more aborted canaries in a day breaches the rollback rate.
       expr = "sum(increase(rollout_events_total{reason=\"RolloutAborted\"}[1d])) >= 2"
-      for  = "PT0M"
+      # Azure's minimum hold: Prometheus rule groups refuse "for" under one minute.
+      for  = "PT1M"
       text = "Two or more canaries were aborted and rolled back in the last day."
     }
     AiSpendCircuitBreaker = {
       expr = "sum(increase(cloudops_llm_calls{refusal=\"spend_circuit_open\"}[10m])) > 0"
-      for  = "PT0M"
+      for  = "PT1M" # the minimum Azure accepts
       text = "The AI gateway's spend circuit breaker is open: calls are being refused."
     }
     PlatformMetricsStale = {
