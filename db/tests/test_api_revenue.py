@@ -358,7 +358,7 @@ def delivered(seeded: Seeded, recorded: Customers) -> Iterator[None]:
                           provisional boolean)
             LANGUAGE sql STABLE AS $$
                 SELECT '{recorded.gbp}'::uuid, d, 'USD'::char(3), 1000::numeric(18,6), 1,
-                       now(), true
+                       NULL::timestamptz, true
                 FROM (VALUES ('2025-03-20'::date), ('2025-04-20'::date)) v(d)
                 WHERE d BETWEEN p_first AND p_last
             $$;

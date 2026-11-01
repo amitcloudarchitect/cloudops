@@ -27,7 +27,7 @@ from __future__ import annotations
 import csv
 import io
 from collections import defaultdict
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated, Any, Final
 from uuid import UUID
@@ -264,8 +264,10 @@ async def _read(conn: ScopedConnection, scope: TenantScope, first: date,
                 revenue.Consumption(day, _ccy(ccy), Decimal(amount)))
     if await conn.scalar(_HAS_SERVICES) is not None:
         for t, day, ccy, amount, at, provisional in _rows(await conn.execute(_SERVICES, bounds)):
+            # No sync recorded: the figure is as of the end of its delivery day.
+            as_of = at or datetime.combine(day + timedelta(days=1), time.min, tzinfo=UTC)
             out.deliveries[UUID(str(t))].append(revenue.Delivery(
-                day, _ccy(ccy), Decimal(amount), at, bool(provisional)))
+                day, _ccy(ccy), Decimal(amount), as_of, bool(provisional)))
     return out
 
 
