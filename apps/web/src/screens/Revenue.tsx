@@ -184,7 +184,8 @@ function cspText(csp: boolean | null): string {
 function TotalsTable({ caption, totals, compare, changes }: { caption: string; totals: RevenueTotal[]; compare: RevenueTotal[]; changes: RevenueFigures[] }) {
   if (totals.length === 0) return <p className="text-sm text-muted">No totals: no customer has figures in the range.</p>;
   return (
-    <div className="card overflow-x-auto">
+    // Focusable, so the table scrolls sideways from the keyboard too (it holds no link).
+    <div className="card overflow-x-auto" role="region" aria-label={caption} tabIndex={0}>
       <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>
