@@ -12383,7 +12383,7 @@
     },
     "/v1/commercial/project-prices": {
       "get": {
-        "description": "Delivered project price (closed tasks) and proposed initiatives (open tasks)\nfor every customer in scope, over a date range.",
+        "description": "Project value of delivered work (closed tasks) and proposed initiatives (open\ntasks) for every customer in scope, over a date range.\n\nProject value is the planned cost from ServiceNow PPM (the task's \"Total\nplanned cost\"), not a customer price: PPM holds no price. Label it \"project\nvalue (planned cost from ServiceNow PPM)\".",
         "operationId": "project_prices_v1_commercial_project_prices_get",
         "parameters": [
           {

@@ -549,8 +549,12 @@ export interface paths {
         };
         /**
          * Project Prices
-         * @description Delivered project price (closed tasks) and proposed initiatives (open tasks)
-         *     for every customer in scope, over a date range.
+         * @description Project value of delivered work (closed tasks) and proposed initiatives (open
+         *     tasks) for every customer in scope, over a date range.
+         *
+         *     Project value is the planned cost from ServiceNow PPM (the task's "Total
+         *     planned cost"), not a customer price: PPM holds no price. Label it "project
+         *     value (planned cost from ServiceNow PPM)".
          */
         get: operations["project_prices_v1_commercial_project_prices_get"];
         put?: never;

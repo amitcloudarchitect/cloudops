@@ -4,10 +4,14 @@
 
 Two figures per customer, for the dashboards and the revenue table:
 
-- **delivered**: closed project tasks whose ``closed_at`` falls in the range, the
-  new project price;
-- **proposed**: tasks still open whose ``opened_at`` falls in the range, the
-  price of proposed initiatives.
+- **delivered**: closed project tasks whose ``closed_at`` falls in the range;
+- **proposed**: tasks still open whose ``opened_at`` falls in the range.
+
+The amount is *project value (planned cost from ServiceNow PPM)*, not a customer
+price: PPM holds no price. It is the task's ``cost`` ("Total planned cost") unless
+``CLOUDOPS_SERVICENOW_PROJECT_PRICE_FIELD`` names another field (``work_cost`` for
+actual cost). Display it under that label. The ``price`` names in this module and
+its contract are kept for the agreed shape.
 
 Staff only, holding ``commercial.read``. A price is commercial, so the database's
 restrictive ``commercial_visibility`` policy (migration 0036) hides every row from
@@ -165,8 +169,12 @@ async def project_prices(
     to: Annotated[date, Query(description="Last day, inclusive (UTC).")],
     currency: Currency = None,
 ) -> ProjectPrices:
-    """Delivered project price (closed tasks) and proposed initiatives (open tasks)
-    for every customer in scope, over a date range."""
+    """Project value of delivered work (closed tasks) and proposed initiatives (open
+    tasks) for every customer in scope, over a date range.
+
+    Project value is the planned cost from ServiceNow PPM (the task's "Total
+    planned cost"), not a customer price: PPM holds no price. Label it "project
+    value (planned cost from ServiceNow PPM)"."""
     if access.kind != "staff":
         # The database refuses a customer scope anyway (no grant, migration 0036).
         raise ApiError(403, "forbidden")

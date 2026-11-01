@@ -1,4 +1,4 @@
-# ADR 0038: Project prices from ServiceNow project tasks
+# ADR 0038: Project value from ServiceNow project tasks
 
 - **Status:** Accepted, 2026-11-01.
 - **Decided by:** Amit Kumar (project prices from ServiceNow, closed vs open);
@@ -66,9 +66,15 @@ Everything below was then checked against the instance.
      and 7 are closed. The label is kept as `state`.
    - Columns: `opened_at`, `start_at`, `end_at`, `closed_at`, and the top task.
    - `price` is `numeric(18,6)`, with `price_currency` beside it: both or neither.
-2. **The price is `cost`, "Total planned cost", and the field is a setting.**
-   - PPM has no price, so which cost stands for it is the business's call.
-     `work_cost` ("Actual cost") is the obvious alternative for delivered work.
+2. **The figure is project value: `cost`, "Total planned cost", and the field is
+   a setting.**
+   - PPM has no price. The coordinating session decided (2026-11-01) that `cost`
+     is the default for both delivered and proposed work.
+   - It is labelled **"project value (planned cost from ServiceNow PPM)"** wherever
+     it is shown, never "price". The `price` names in the table, the API and the
+     contract keep the agreed shape and are not a claim that it is a customer
+     price.
+   - `work_cost` ("Actual cost") is the switch for actual cost.
    - The setting is `CLOUDOPS_SERVICENOW_PROJECT_PRICE_FIELD` (default `cost`),
      checked to be a field name.
    - Each row records the field that priced it (`price_field`). Every field stays
@@ -136,6 +142,8 @@ Everything below was then checked against the instance.
 
 ## Consequences
 
+- Consoles and reports show the figure as "project value (planned cost from
+  ServiceNow PPM)".
 - If the business wants actual rather than planned cost: set
   `CLOUDOPS_SERVICENOW_PROJECT_PRICE_FIELD=work_cost` and replay the entity's
   bronze.
