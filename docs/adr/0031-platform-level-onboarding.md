@@ -60,7 +60,9 @@ no longer exists. The user was asked (2026-11-01):
 3. **One platform host.** `cloudops.tenant.hosts_platform`, unique where true (a partial
    unique index), and only on an internal tenant (a table check). It is set with
    `POST /v1/mapping/platform-host` (`access.manage`, through
-   `access.set_platform_host`, which moves the flag under an advisory lock), and read
+   `access.set_platform_host`, which moves the flag under an advisory lock; the old host
+   must be in the caller's scope too, since the functions get no wider reach than
+   `tenant_isolation`), and read
    with `cloudops.platform_tenant()`. 0023's `cloudops.internal_tenant()` returns the
    same tenant until a later contract drops it. The host:
    - keeps staff help-only assistant conversations, and is billed for the help pages'

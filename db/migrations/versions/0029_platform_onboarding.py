@@ -51,15 +51,12 @@ ALTER TABLE cloudops.tenant ADD COLUMN hosts_platform boolean NOT NULL DEFAULT f
 ALTER TABLE cloudops.tenant ADD CONSTRAINT tenant_platform_host_is_internal
     CHECK (NOT hosts_platform OR internal);
 
--- The writers below change these two columns on any tenant, a second one included
--- when the host moves. Update only, and only for the function owner, which no login
--- can become; the functions check the actor.
+-- The writers below change these two columns, for the function owner only, which no
+-- login can become. No new policy: they reach only tenants in the caller's scope
+-- (tenant_isolation), so nothing else the owner runs (the mapping suggestions) sees
+-- more than before.
 GRANT SELECT (id, internal, hosts_platform), UPDATE (internal, hosts_platform)
     ON cloudops.tenant TO cloudops_access_admin;
-CREATE POLICY tenant_kind_change ON cloudops.tenant FOR UPDATE
-    TO cloudops_access_admin USING (true) WITH CHECK (true);
-CREATE POLICY tenant_kind_read ON cloudops.tenant FOR SELECT
-    TO cloudops_access_admin USING (true);
 GRANT SELECT (hosts_platform) ON cloudops.tenant TO cloudops_resolver;
 """
 
@@ -114,17 +111,30 @@ CREATE FUNCTION access.onboard_tenant(
 ) RETURNS uuid
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 DECLARE
-    v_id uuid;
+    v_id uuid := gen_random_uuid();
+    v_name text := btrim(coalesce(p_canonical_name, ''));
 BEGIN
+    PERFORM access.require_mapper(p_actor, NULL);
     IF p_internal IS NULL THEN
         RAISE EXCEPTION 'internal or not' USING ERRCODE = 'check_violation';
     END IF;
     IF p_internal THEN
         PERFORM access.require_credential_admin(p_actor, NULL);
     END IF;
-    v_id := access.onboard_tenant(p_actor, p_canonical_name, p_short_code);
+    IF length(v_name) = 0 OR length(v_name) > 200
+       OR coalesce(p_short_code, '') !~ '^[A-Z0-9]{2,10}$' THEN
+        RAISE EXCEPTION 'a tenant needs a name and a short code of 2 to 10 capitals or digits'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    BEGIN
+        INSERT INTO cloudops.tenant (id, canonical_name, short_code, internal)
+        VALUES (v_id, v_name, p_short_code, p_internal);
+    EXCEPTION WHEN unique_violation THEN
+        RAISE EXCEPTION 'a tenant with that name or short code exists' USING ERRCODE = 'CMDUP';
+    END;
+    PERFORM access.log_change(p_actor::text, 'onboard_tenant', jsonb_build_object(
+        'tenant_id', v_id, 'short_code', p_short_code));
     IF p_internal THEN
-        UPDATE cloudops.tenant SET internal = true WHERE id = v_id;
         PERFORM access.log_change(p_actor::text, 'set_tenant_internal', jsonb_build_object(
             'tenant_id', v_id, 'internal', true));
     END IF;
@@ -149,8 +159,9 @@ BEGIN
         'tenant_id', p_tenant, 'internal', p_internal));
 END $$;
 
--- One host at most: the old one gives the flag up in the same statement order,
--- under a lock, so two administrators cannot both win.
+-- One host at most: the old one gives the flag up first, under a lock, so two
+-- administrators cannot both win. Moving it needs the old host in the caller's scope
+-- too; one outside it is never read, and the unique index refuses the move.
 CREATE FUNCTION access.set_platform_host(p_actor uuid, p_tenant uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp AS $$
 BEGIN
@@ -164,7 +175,11 @@ BEGIN
     UPDATE cloudops.tenant SET hosts_platform = false
      WHERE hosts_platform AND id IS DISTINCT FROM p_tenant;
     IF p_tenant IS NOT NULL THEN
-        UPDATE cloudops.tenant SET hosts_platform = true WHERE id = p_tenant;
+        BEGIN
+            UPDATE cloudops.tenant SET hosts_platform = true WHERE id = p_tenant;
+        EXCEPTION WHEN unique_violation THEN
+            RAISE EXCEPTION 'the platform host is outside your scope' USING ERRCODE = 'TKHST';
+        END;
     END IF;
     PERFORM access.log_change(p_actor::text, 'set_platform_host', jsonb_build_object(
         'tenant_id', p_tenant));

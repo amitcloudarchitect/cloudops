@@ -490,3 +490,19 @@ def test_the_application_cannot_change_a_tenants_kind_directly(seeded: Seeded) -
                 pytest.raises(psycopg.errors.InsufficientPrivilege):
             cx.execute(f"UPDATE cloudops.tenant SET {column} = true")
 
+
+
+async def test_a_host_outside_the_callers_scope_is_neither_read_nor_moved(
+    app_db: Database, seeded: Seeded, principals: Principals, fresh: list[UUID],
+) -> None:
+    held = _tenant(seeded, fresh, "HOSTO", internal=True)
+    mine = _tenant(seeded, fresh, "HOSTM", internal=True)
+    await _call(app_db, _admin(held), HOST, a=principals.admin, t=held)
+    # The caller's scope holds only its own tenant: the move is refused, and the
+    # refusal names nobody.
+    with pytest.raises(Exception, match="outside your scope") as caught:
+        await _call(app_db, _admin(mine), HOST, a=principals.admin, t=mine)
+    assert _sqlstate(caught.value) == "TKHST"
+    assert str(held) not in str(caught.value)
+    assert _kinds(seeded, held, mine) == [(mine, True, False), (held, True, True)]
+    await _call(app_db, _admin(held), HOST, a=principals.admin, t=None)
