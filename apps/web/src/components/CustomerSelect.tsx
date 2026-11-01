@@ -2,10 +2,19 @@
 
 import { useCustomer } from "@/lib/customer";
 
-// The customer every customer-specific screen shows: "All customers" or one of them.
-// Staff with more than one customer only; a customer never sees it (lib/customer.tsx).
+// The customer every customer-specific screen shows: "All customers" or one of them,
+// for every staff user. A customer user sees its own organisation's name instead,
+// never a choice (lib/customer.tsx).
 export function CustomerSelect() {
-  const { tenantId, setTenantId, selectable, tenants } = useCustomer();
+  const { tenantId, setTenantId, selectable, own, tenants } = useCustomer();
+  if (own !== null) {
+    return (
+      <span data-testid="customer-name" className="max-w-56 truncate text-sm text-chrome-ink">
+        <span className="text-chrome-muted">Customer </span>
+        {own.name}
+      </span>
+    );
+  }
   if (!selectable) return null;
   return (
     <label className="flex items-center gap-2 text-sm text-chrome-muted">
