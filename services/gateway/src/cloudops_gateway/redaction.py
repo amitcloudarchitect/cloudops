@@ -8,6 +8,12 @@ numbers, IBAN, UK National Insurance numbers), then any known personal
 values the caller supplies (for example the names of people on a ticket),
 because names cannot be found reliably by pattern.
 
+A UUID is an identifier, never personal data, so the personal-data number
+rules leave it whole: a random UUID's digit groups can pass for a Luhn-valid
+card number (about one in eight thousand do), and rewriting one breaks the ref
+a drafter cites or a tool is called with. Secrets inside one are still found:
+``password=<uuid>`` is redacted.
+
 Placeholders name the kind: ``[REDACTED:EMAIL]``. The original is never kept
 by the gateway, never written to the trace, and never logged.
 
@@ -54,6 +60,7 @@ class _Rule:
     pattern: re.Pattern[str]
     valid: Callable[[str], bool] | None = None
     keep_prefix_group: int | None = None
+    spares_uuids: bool = False  # a personal-data number rule: applied between UUIDs
 
 
 # Order matters: secrets before personal data, longer forms before shorter.
@@ -73,11 +80,28 @@ RULES: Final = (
         r"|token|sas|accountkey|sharedaccesskey)\b\s*[:=]\s*[\"']?[^\s\"',;]{4,}")),
     _Rule("EMAIL", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),
     _Rule("IBAN", re.compile(r"\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b"),
-          _iban),
-    _Rule("CARD_NUMBER", re.compile(r"\b(?:\d[ -]?){12,18}\d\b"), _luhn),
-    _Rule("UK_NI_NUMBER", re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2} ?\d{2} ?\d{2} ?\d{2} ?[A-D]\b")),
-    _Rule("PHONE", re.compile(r"(?<![\w.])\+\d{1,3}[\s.-]?(?:\(?\d+\)?[\s.-]?){2,5}\d{2,}(?!\w)")),
+          _iban, spares_uuids=True),
+    _Rule("CARD_NUMBER", re.compile(r"\b(?:\d[ -]?){12,18}\d\b"), _luhn, spares_uuids=True),
+    _Rule("UK_NI_NUMBER", re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2} ?\d{2} ?\d{2} ?\d{2} ?[A-D]\b"),
+          spares_uuids=True),
+    _Rule("PHONE", re.compile(r"(?<![\w.])\+\d{1,3}[\s.-]?(?:\(?\d+\)?[\s.-]?){2,5}\d{2,}(?!\w)"),
+          spares_uuids=True),
 )
+_UUID: Final = re.compile(
+    r"(?<![0-9A-Fa-f-])[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}(?![0-9A-Fa-f-])")
+
+
+def _outside_uuids(pattern: re.Pattern[str], replace: Callable[[re.Match[str]], str],
+                   text: str) -> str:
+    """The rule applied to the text between UUIDs, so a match can neither sit
+    in one nor reach into one (a card number written after an id is still found)."""
+    parts: list[str] = []
+    last = 0
+    for u in _UUID.finditer(text):
+        parts += [pattern.sub(replace, text[last:u.start()]), u.group(0)]
+        last = u.end()
+    parts.append(pattern.sub(replace, text[last:]))
+    return "".join(parts)
 
 
 @dataclass(frozen=True)
@@ -102,7 +126,8 @@ def redact(text: str, personal_terms: Iterable[str] = ()) -> Redacted:
                 return f"{m.group(rule.keep_prefix_group)}[REDACTED:{rule.kind}]@"
             return f"[REDACTED:{rule.kind}]"
 
-        out = rule.pattern.sub(replace, out)
+        out = (_outside_uuids(rule.pattern, replace, out) if rule.spares_uuids
+               else rule.pattern.sub(replace, out))
     # Known personal values, longest first so "Asha Patel" goes before "Asha".
     for term in sorted({t.strip() for t in personal_terms if len(t.strip()) >= 3},
                        key=len, reverse=True):
