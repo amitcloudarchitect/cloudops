@@ -98,13 +98,19 @@ async def test_tampered_claims_change_nothing(
         honest = await api.get(path, oid)
         claims = {**TAMPERED_CLAIMS, "tenant_id": str(seeded.b.id),
                   "tid_override": str(seeded.b.id)}
-        joiner = "&" if "?" in path else "?"
-        tampered = await api.get(f"{path}{joiner}tenant_id={seeded.b.id}", oid, claims=claims,
+        tampered = await api.get(path, oid, claims=claims,
                                  headers={"X-Tenant-Id": str(seeded.b.id)})
         assert tampered.status_code == honest.status_code
         if honest.status_code == 200:
             assert _strip_volatile(tampered.json()) == _strip_volatile(honest.json())
             assert str(seeded.b.id) not in tampered.text
+        # The tenant_id parameter only narrows (the customer selector): naming
+        # another tenant is 404 where the endpoint takes it, ignored where it does not.
+        joiner = "&" if "?" in path else "?"
+        named = await api.get(f"{path}{joiner}tenant_id={seeded.b.id}", oid, claims=claims)
+        assert str(seeded.b.id) not in named.text
+        if honest.status_code == 200 and path != "/v1/me":
+            assert named.status_code == 404
 
 
 def _strip_volatile(body: Any) -> Any:

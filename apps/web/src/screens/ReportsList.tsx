@@ -21,6 +21,7 @@ import { useAssistantContext } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { count, date, money } from "@/lib/format";
 import type { Band } from "@/lib/health";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { can, useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -100,7 +101,11 @@ function Portfolio() {
   const me = useMe();
   const [period, setPeriod] = useState(lastMonth());
   const [currency, setCurrency] = useState<string>("EUR");
-  const loaded = useApi((t) => apiGet(t, "/v1/reports/portfolio", {}, { period, currency }), `portfolio:${period}:${currency}`);
+  const { tenantId } = useCustomer();
+  const loaded = useApi(
+    (t) => apiGet(t, "/v1/reports/portfolio", {}, { period, currency, ...customerQuery(tenantId) }),
+    `portfolio:${period}:${currency}:${tenantId ?? "all"}`,
+  );
   const columns: Column<PortfolioLine>[] = [
     { key: "customer", header: "Customer", value: (l) => l.tenant.name, sortable: true },
     {
@@ -173,7 +178,8 @@ function PortfolioTable({ data, currency, columns, role }: { data: PortfolioView
 export function ReportsList() {
   useAssistantContext({ screen: "reports" });
   const me = useMe();
-  const loaded = useApi((t) => apiGet(t, "/v1/reports/packs"), "packs");
+  const { tenantId } = useCustomer();
+  const loaded = useApi((t) => apiGet(t, "/v1/reports/packs", {}, customerQuery(tenantId)), `packs:${tenantId ?? "all"}`);
   if (loaded.status === "loading") return <Loading what="report packs" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="report packs" />;
   const columns: Column<ReportPackSummary>[] = [

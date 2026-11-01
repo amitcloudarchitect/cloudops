@@ -38,6 +38,7 @@ from cloudops_api.bff import TenantView
 from cloudops_api.pipeline import (
     ApiError,
     AuditedRoute,
+    ScopeDep,
     audit_only,
     current_access,
     platform,
@@ -328,7 +329,7 @@ async def _customer_costs(conn: ScopedConnection, period: str, rep: str | None,
 @router.get("/finops/overview", response_model=FinOpsOverview)
 @requires("cost.read")
 async def finops_overview(
-    request: Request, access: AccessDep, period: Period | None = None,
+    request: Request, access: AccessDep, scope: ScopeDep, period: Period | None = None,
     currency: Currency = None,
 ) -> FinOpsOverview:
     """Every customer in scope for one invoice period: cost by charge class, the
@@ -336,7 +337,7 @@ async def finops_overview(
     a customer reads its own cost through the portal (step 18)."""
     _staff(access)
     period = period or _now().strftime("%Y-%m")
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         customers, _ = await _customer_costs(conn, period, currency, None)
     audit_only(request, [c.tenant.id for c in customers])
     return FinOpsOverview(period=period, reporting_currency=currency, customers=customers)
@@ -716,14 +717,14 @@ def _default_margin_period() -> str:
 @router.get("/commercial/margin", response_model=MarginOverview)
 @requires("commercial.read")
 async def margin_overview(
-    request: Request, access: AccessDep, period: Period | None = None,
+    request: Request, access: AccessDep, scope: ScopeDep, period: Period | None = None,
     currency: Currency = None,
 ) -> MarginOverview:
     """Every customer in scope for one month: modelled and actual margin in the
     contract currency, the band, the gap to target and the trend. A customer
     without a SOW is listed as not captured, never as zero."""
     period = period or _default_margin_period()
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         customers = await _margins(conn, period, currency, None)
     return MarginOverview(period=period, reporting_currency=currency, customers=customers)
 

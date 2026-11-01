@@ -13,6 +13,7 @@ import { apiGet } from "@/lib/api";
 import { useAssistantContext } from "@/lib/assistant";
 import { date } from "@/lib/format";
 import { priorityBand } from "@/lib/health";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { can, useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -22,7 +23,8 @@ import { useApi } from "@/lib/useApi";
 export function Approvals() {
   useAssistantContext({ screen: "approvals" });
   const me = useMe();
-  const loaded = useApi((token) => apiGet(token, "/v1/approvals"), "approvals");
+  const { tenantId } = useCustomer();
+  const loaded = useApi((token) => apiGet(token, "/v1/approvals", {}, customerQuery(tenantId)), `approvals:${tenantId ?? "all"}`);
   if (loaded.status === "loading") return <Loading what="changes awaiting approval" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="changes awaiting approval" />;
   const tickets = can(me, "tickets.read");

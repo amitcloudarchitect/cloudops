@@ -13,6 +13,7 @@ import { apiGet } from "@/lib/api";
 import { useAssistantContext } from "@/lib/assistant";
 import { count, date } from "@/lib/format";
 import { band, THRESHOLDS } from "@/lib/health";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -24,7 +25,8 @@ const AGE_LABEL: Record<string, string> = { "0-30": "Open up to 30 days", "31-90
 export function Posture() {
   useAssistantContext({ screen: "posture" });
   const me = useMe();
-  const loaded = useApi((token) => apiGet(token, "/v1/posture"), "posture");
+  const { tenantId } = useCustomer();
+  const loaded = useApi((token) => apiGet(token, "/v1/posture", {}, customerQuery(tenantId)), `posture:${tenantId ?? "all"}`);
   if (loaded.status === "loading") return <Loading what="security posture" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="security posture" />;
   const { by_severity, by_age, findings, open_total } = loaded.data;

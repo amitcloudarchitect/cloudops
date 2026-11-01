@@ -17,10 +17,10 @@ import logging
 import uuid
 from collections.abc import Callable, Coroutine, Iterable
 from dataclasses import dataclass, field
-from typing import Any, Final, TypeVar
+from typing import Annotated, Any, Final, TypeVar
 from uuid import UUID
 
-from fastapi import HTTPException, Request, Response
+from fastapi import Depends, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -31,7 +31,7 @@ from cloudops_api.auth import TokenError, TokenValidator
 from cloudops_domain.assurance.pack import Signer, UnavailableSigner
 from cloudops_domain.reporting.financial import CommercialSections
 from cloudops_domain.reporting.sections import AvailabilitySource, FinancialSections
-from cloudops_tenancy import Database
+from cloudops_tenancy import Database, TenantScope
 
 log = logging.getLogger("cloudops.api")
 
@@ -112,6 +112,43 @@ def current_access(request: Request) -> Access:
 def audit_only(request: Request, tenant_ids: Iterable[UUID]) -> None:
     """Narrow the audit rows to the tenants actually touched (default: all in scope)."""
     request.state.audit_tenants = frozenset(tenant_ids)
+
+
+def narrow(access: Access, tenant_id: UUID | None) -> TenantScope:
+    """The scope a request runs under: the caller's, or one customer within it.
+
+    The console's customer selector sends ``tenant_id``. It only ever narrows the
+    scope resolved from the principal (ADR 0002), never widens it: a tenant outside
+    scope is 404 ``not_found``, exactly like one that does not exist, so a caller
+    cannot learn which tenant ids are real. A customer's scope is its own tenant,
+    so naming any other is the same 404. A subscription restriction is kept: the
+    narrowed scope is the same tenant, so its accounts still apply.
+    """
+    if tenant_id is None:
+        return access.scope
+    if tenant_id not in access.scope.tenant_ids:
+        raise ApiError(404, "not_found")
+    return TenantScope([tenant_id], access.scope.role, access.scope.principal_id,
+                       account_ids=access.scope.account_ids)
+
+
+def narrowed_scope(
+    request: Request,
+    access: Annotated[Access, Depends(current_access)],
+    tenant_id: Annotated[UUID | None, Query(
+        description="One customer in the caller's scope; omitted: every customer in it.",
+    )] = None,
+) -> TenantScope:
+    """FastAPI dependency: ``narrow`` on the ``tenant_id`` query parameter, with
+    the audit rows narrowed to that tenant."""
+    scope = narrow(access, tenant_id)
+    if tenant_id is not None:
+        audit_only(request, [tenant_id])
+    return scope
+
+
+# An endpoint takes ``scope: ScopeDep`` and opens its transaction with it.
+ScopeDep = Annotated[TenantScope, Depends(narrowed_scope)]
 
 
 def _outcome(status: int) -> str:

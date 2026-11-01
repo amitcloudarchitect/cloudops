@@ -10,6 +10,7 @@ import { apiGet } from "@/lib/api";
 import { useAssistantContext } from "@/lib/assistant";
 import { count, decimal } from "@/lib/format";
 import { band, THRESHOLDS } from "@/lib/health";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -24,7 +25,8 @@ function attainment(m: MonthPerformance): string {
 export function Performance() {
   useAssistantContext({ screen: "performance" });
   const me = useMe();
-  const loaded = useApi((token) => apiGet(token, "/v1/performance"), "performance");
+  const { tenantId } = useCustomer();
+  const loaded = useApi((token) => apiGet(token, "/v1/performance", {}, customerQuery(tenantId)), `performance:${tenantId ?? "all"}`);
   if (loaded.status === "loading") return <Loading what="service performance" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="service performance" />;
   const { months, open_incidents, sla_breached_open } = loaded.data;

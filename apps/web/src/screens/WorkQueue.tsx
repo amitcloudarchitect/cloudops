@@ -15,6 +15,7 @@ import { apiGet } from "@/lib/api";
 import { useAssistantContext } from "@/lib/assistant";
 import { date } from "@/lib/format";
 import { priorityBand } from "@/lib/health";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -53,7 +54,11 @@ export function WorkQueue() {
   const params = useSearchParams();
   const [status, setStatus] = useState<Status>("open");
   const staff = me.kind === "staff";
-  const loaded = useApi((token) => apiGet(token, "/v1/work-items", {}, { status }), status);
+  const { tenantId } = useCustomer();
+  const loaded = useApi(
+    (token) => apiGet(token, "/v1/work-items", {}, { status, ...customerQuery(tenantId) }),
+    `${status}:${tenantId ?? "all"}`,
+  );
 
   const columns: Column<WorkItemSummary>[] = [
     {
