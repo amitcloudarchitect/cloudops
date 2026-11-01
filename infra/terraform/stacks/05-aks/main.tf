@@ -278,6 +278,7 @@ locals {
     ingest-connector-sharepoint  = { identity = "ingest", account = "platform-ingest/connector-sharepoint" }
     ingest-connector-qualys      = { identity = "ingest", account = "platform-ingest/connector-qualys" }
     ingest-connector-corestack   = { identity = "ingest", account = "platform-ingest/connector-corestack" }
+    ingest-worker-finops         = { identity = "ingest", account = "platform-ingest/worker-finops" } # ADR 0035: the DSN mount only
     observability-otel-collector = { identity = "observability", account = "observability/otel-collector" }
   }
   additional_enabled = {

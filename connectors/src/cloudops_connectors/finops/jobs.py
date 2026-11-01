@@ -41,7 +41,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from collections.abc import Awaitable, Callable, Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any, Final
@@ -671,9 +671,10 @@ async def compute_period(conn: ScopedConnection, tenant: UUID, period: date, thr
         log.info("finops.margin restated period=%s version=%s", period, version + 1)
 
 
-async def margins(db: Database, on: date) -> MarginReport:
-    """The daily margin run for the day before ``on`` (cost lands a day late)."""
-    report = MarginReport()
+def _daily(on: date, report: MarginReport) -> Callable[[ScopedConnection, UUID],
+                                                       Awaitable[None]]:
+    """One customer's daily margin work for the day before ``on``: this month to
+    date, the previous month (closing from the 5th), and the restatement window."""
     last = on - timedelta(days=1)
     this = month_start(last)
     previous = add_months(this, -1)
@@ -688,7 +689,69 @@ async def margins(db: Database, on: date) -> MarginReport:
             await compute_period(conn, tenant, older, month_end(older), close=True,
                                  report=report)
 
-    return await _per_tenant(db, report, work)
+    return work
+
+
+async def margins(db: Database, on: date) -> MarginReport:
+    """The daily margin run for the day before ``on`` (cost lands a day late)."""
+    report = MarginReport()
+    return await _per_tenant(db, report, _daily(on, report))
+
+
+# --- recompute now (migration 0033, ADR 0035) -------------------------------------------------
+
+# The oldest waiting request, claimed so no other worker takes it. Under the
+# finops role across every customer: the commercial policy admits it, and the
+# ingest login may move a request forward only (requested -> running -> done).
+_CLAIM: Final = text(
+    "UPDATE cloudops.margin_recompute SET status = 'running', started_at = now()"
+    " WHERE id = (SELECT id FROM cloudops.margin_recompute WHERE status = 'requested'"
+    "   ORDER BY requested_at LIMIT 1 FOR UPDATE SKIP LOCKED)"
+    " RETURNING id, tenant_id"
+)
+_FINISH: Final = text(
+    "UPDATE cloudops.margin_recompute SET status = :status, finished_at = now()"
+    " WHERE id = :id AND status = 'running'"
+)
+
+
+@dataclass
+class RecomputeReport:
+    succeeded: int = 0
+    failed: int = 0
+    margin: MarginReport = field(default_factory=MarginReport)
+
+
+async def recompute_pending(db: Database, on: date) -> RecomputeReport:
+    """Every waiting "recompute margin now" request, oldest first: the customer's
+    daily margin work as of ``on``, in its own transaction, then the request is
+    closed. One customer's failure fails only its request. Idempotent like the
+    daily run, so a request answered twice computes the same figures."""
+    out = RecomputeReport()
+    work = _daily(on, out.margin)
+    while True:
+        everyone = await tenants(db)
+        if not everyone:
+            return out
+        async with db.transaction(_scope(everyone)) as conn:
+            claimed = _rows(await conn.execute(_CLAIM))
+        if not claimed:
+            return out
+        request, tenant = claimed[0][0], UUID(str(claimed[0][1]))
+        status = "succeeded"
+        try:
+            async with db.transaction(_scope([tenant])) as conn:
+                await work(conn, tenant)
+        except Exception:
+            status = "failed"
+            log.exception("finops.recompute failed tenant=%s", tenant)
+            _alert("margin_failed", tenant=tenant)
+        async with db.transaction(_scope([tenant])) as conn:
+            await conn.execute(_FINISH, {"id": request, "status": status})
+        if status == "succeeded":
+            out.succeeded += 1
+        else:
+            out.failed += 1
 
 
 async def reprocess(db: Database, period: date) -> MarginReport:

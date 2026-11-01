@@ -92,7 +92,7 @@ async function commercialPaths(): Promise<string[]> {
   const unverified = cost.customers.find((c) => c.verification === "unverified") ?? cost.customers[0];
   const captured = margin.customers.find((m) => !m.not_captured) ?? margin.customers[0];
   if (!unverified || !captured) throw new Error("no seeded cost or margin: run make seed");
-  return ["/finops", `/finops/${unverified.tenant.id}`, "/margin?currency=EUR", `/margin/${captured.tenant.id}`, "/pricing"];
+  return ["/finops", `/finops/${unverified.tenant.id}`, "/margin?currency=EUR", `/margin/${captured.tenant.id}`, "/pricing", "/settings/commercial"];
 }
 
 for (const theme of ["light", "dark"] as const) {
@@ -100,7 +100,7 @@ for (const theme of ["light", "dark"] as const) {
     test.use({ role: "finops", colorScheme: theme });
 
     test("pass axe (WCAG 2.1 AA) and do not scroll sideways at tablet width", async ({ signedIn: page }) => {
-      test.slow(); // five screens, twice
+      test.slow(); // six screens, twice
       const paths = await commercialPaths();
       for (const width of [undefined, 768] as const) {
         if (width) await page.setViewportSize({ width, height: 1024 });
@@ -165,3 +165,21 @@ test("no screen scrolls sideways at tablet width", async ({ signedIn: page }) =>
     expect(overflow, path).toBeLessThanOrEqual(0);
   }
 });
+
+// Commercial setup's forms (ADR 0033, ADR 0035), open, as the platform administrator.
+for (const theme of ["light", "dark"] as const) {
+  test.describe(`commercial setup forms, ${theme} theme`, () => {
+    test.use({ role: "admin", colorScheme: theme });
+
+    test("pass axe (WCAG 2.1 AA) with the SOW and rate card forms open", async ({ signedIn: page }) => {
+      await page.goto("/settings/commercial");
+      await expect(page.getByRole("table", { name: "Rate card versions, newest first" })).toBeVisible();
+      await page.getByRole("button", { name: /^Record (an amendment|the first SOW)$/ }).click();
+      await page.getByRole("button", { name: "Publish a new version" }).click();
+      await expect(page.getByRole("form", { name: "Publish a new version" })).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+      expect(results.violations.map((v) => `/settings/commercial: ${v.id} ${v.nodes.length}`)).toEqual([]);
+    });
+  });
+}

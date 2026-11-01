@@ -48,6 +48,7 @@ ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
             + _build(GITOPS / "base/connector-qualys")
             + _build(GITOPS / "base/connector-corestack")
             + _build(GITOPS / "base/worker-ai")
+            + _build(GITOPS / "base/worker-finops")  # ADR 0035
             # Step 19 (ADR 0022): in dev once id-cloudops-observability-dev exists.
             + _build(GITOPS / "base/observability") + _build(GITOPS / "base/platform-metrics"))
 TEMPORAL_APP = yaml.safe_load(

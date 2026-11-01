@@ -158,3 +158,11 @@ export type TriageCustomer = Schemas["TriageCustomer"];
 export type ConnectorSummary = Schemas["ConnectorSummary"];
 export type SourceHealth = Schemas["SourceHealth"];
 export type PlatformCost = Schemas["PlatformCost"];
+// Settings → Commercial setup (ADR 0033, ADR 0035).
+export type RateCardVersionView = Schemas["RateCardVersionView"];
+export type RateCardDocument = Schemas["RateCardDocument"];
+export type PublishRateCard = Schemas["PublishRateCard"];
+export type SowRegister = Schemas["SowRegister"];
+export type SowVersionView = Schemas["SowVersionView"];
+export type SowInput = Schemas["SowInput"];
+export type RecomputeView = Schemas["RecomputeView"];

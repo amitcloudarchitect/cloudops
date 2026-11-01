@@ -19,6 +19,7 @@ from cloudops_connectors.finops.workflows import (
     WORKFLOWS,
     DayRequest,
     FinOpsDaily,
+    FinOpsRecompute,
     FinOpsReprocess,
     PeriodRequest,
 )
@@ -43,7 +44,8 @@ def _stubs(calls: list[str], fail: str | None = None) -> list[Any]:
         return run
 
     return [stub(n) for n in ("finops_reconcile", "finops_anomalies", "finops_margins",
-                              "finops_reprocess", "finops_reconcile_close")]
+                              "finops_reprocess", "finops_reconcile_close",
+                              "finops_recompute")]
 
 
 async def _run(env: WorkflowEnvironment, calls: list[str], wf: Any, req: Any,
@@ -72,3 +74,21 @@ async def test_month_end_reprocess(env: WorkflowEnvironment) -> None:
     calls: list[str] = []
     await _run(env, calls, FinOpsReprocess.run, PeriodRequest("2026-09-01"))
     assert calls == ["finops_reconcile_close", "finops_reprocess"]
+
+
+async def test_a_scheduled_run_takes_the_day_it_starts(env: WorkflowEnvironment) -> None:
+    """The schedule stores an empty request: each run resolves its own day, so a
+    schedule created once never repeats the day it was created."""
+    calls: list[str] = []
+    before = (await env.get_current_time()).date().isoformat()
+    out = await _run(env, calls, FinOpsDaily.run, DayRequest())
+    after = (await env.get_current_time()).date().isoformat()
+    # Time skips while the workflow runs; the day is the one it started on.
+    assert before <= out["on"] <= after
+
+
+async def test_recompute_answers_the_waiting_requests(env: WorkflowEnvironment) -> None:
+    calls: list[str] = []
+    out = await _run(env, calls, FinOpsRecompute.run, DayRequest())
+    assert calls == ["finops_recompute"]
+    assert out == {"ok": True}

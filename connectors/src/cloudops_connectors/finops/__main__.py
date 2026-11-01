@@ -4,11 +4,14 @@
     python -m cloudops_connectors.finops reprocess --period YYYY-MM
     python -m cloudops_connectors.finops worker
     python -m cloudops_connectors.finops schedule
+    python -m cloudops_connectors.finops recompute-local
 
 ``run`` and ``reprocess`` start a worker in this process and execute one workflow;
 ``worker`` serves the queue with probes; ``schedule`` creates or updates the
-daily schedule (safe to repeat). It reads only the database: no source, no
-credential.
+daily schedule and the every-minute "recompute margin now" schedule (safe to
+repeat). ``recompute-local`` answers the waiting recompute requests once, without
+Temporal: the local stack and the console's browser journeys only, refused in any
+other environment. It reads only the database: no source, no credential.
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ import os
 import sys
 import uuid
 from contextlib import AsyncExitStack
+from dataclasses import asdict
 from datetime import UTC, date, datetime, timedelta
 
 from temporalio.client import (
@@ -36,12 +40,14 @@ from temporalio.worker import Worker
 from cloudops_config import Component, ConfigurationError, DbLogin, Environment, load_settings
 from cloudops_config.probes import serve_probes
 from cloudops_config.temporal import connect, run_worker
+from cloudops_connectors.finops import jobs
 from cloudops_connectors.finops.workflows import (
     TASK_QUEUE,
     WORKFLOWS,
     DayRequest,
     FinOpsActivities,
     FinOpsDaily,
+    FinOpsRecompute,
     FinOpsReprocess,
     PeriodRequest,
     activities,
@@ -51,27 +57,50 @@ from cloudops_observability.process import start, temporal_options
 from cloudops_tenancy import Database
 
 SCHEDULE_ID = "finops-daily"
+RECOMPUTE_SCHEDULE_ID = "finops-recompute"
 
 
 async def _main(args: argparse.Namespace) -> int:
+    if args.command == "recompute-local":
+        settings = load_settings(os.environ, require={Component.DATABASE_INGEST})
+        if settings.environment is not Environment.LOCAL:
+            print("error: recompute-local is for the local stack; deployed, the worker's"
+                  " schedule answers requests", file=sys.stderr)
+            return 1
+        db = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=1)
+        try:
+            answered = await jobs.recompute_pending(db, datetime.now(UTC).date())
+        finally:
+            await db.dispose()
+        print(json.dumps(asdict(answered), indent=2, default=str))
+        return 0
     if args.command == "schedule":
         settings = load_settings(os.environ, require={Component.TEMPORAL})
         temporal = await connect(settings.temporal, **temporal_options())
-        wanted = Schedule(
-            action=ScheduleActionStartWorkflow(
-                FinOpsDaily.run, DayRequest(datetime.now(UTC).date().isoformat()),
-                id=SCHEDULE_ID, task_queue=TASK_QUEUE),
-            spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=timedelta(days=1))]),
-        )
-        try:
-            await temporal.create_schedule(SCHEDULE_ID, wanted)
-            print(f"created {SCHEDULE_ID}")
-        except ScheduleAlreadyRunningError:
-            def update(_: ScheduleUpdateInput) -> ScheduleUpdate:
-                return ScheduleUpdate(schedule=wanted)
+        # The request is empty: each run takes the day it starts (DayRequest.resolved).
+        wanted = {
+            SCHEDULE_ID: Schedule(
+                action=ScheduleActionStartWorkflow(
+                    FinOpsDaily.run, DayRequest(), id=SCHEDULE_ID, task_queue=TASK_QUEUE),
+                spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=timedelta(days=1))]),
+            ),
+            RECOMPUTE_SCHEDULE_ID: Schedule(
+                action=ScheduleActionStartWorkflow(
+                    FinOpsRecompute.run, DayRequest(), id=RECOMPUTE_SCHEDULE_ID,
+                    task_queue=TASK_QUEUE),
+                spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=timedelta(minutes=1))]),
+            ),
+        }
+        for schedule_id, schedule in wanted.items():
+            try:
+                await temporal.create_schedule(schedule_id, schedule)
+                print(f"created {schedule_id}")
+            except ScheduleAlreadyRunningError:
+                def update(_: ScheduleUpdateInput, s: Schedule = schedule) -> ScheduleUpdate:
+                    return ScheduleUpdate(schedule=s)
 
-            await temporal.get_schedule_handle(SCHEDULE_ID).update(update)
-            print(f"updated {SCHEDULE_ID}")
+                await temporal.get_schedule_handle(schedule_id).update(update)
+                print(f"updated {schedule_id}")
         return 0
     settings = load_settings(os.environ, require={Component.DATABASE_INGEST, Component.TEMPORAL})
     temporal = await connect(settings.temporal, **temporal_options())
@@ -125,6 +154,7 @@ def main(argv: list[str] | None = None) -> int:
                      help="the closed month, YYYY-MM")
     sub.add_parser("worker")
     sub.add_parser("schedule")
+    sub.add_parser("recompute-local")
     args = parser.parse_args(argv)
     try:
         telemetry = start("worker-finops", os.environ)

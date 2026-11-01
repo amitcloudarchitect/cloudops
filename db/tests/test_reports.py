@@ -22,6 +22,7 @@ import pytest
 from cloudops_domain.reporting.render import DRAFT_BANNER
 
 from .conftest import AGREED_ROLES, Step17, Tenant, onboard_portal
+from .support import edit_sow_fixture
 
 pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
@@ -115,9 +116,9 @@ def month(step17: Step17) -> Month:
                     " activity, hours, items, items_without_hours, share, excess_hours,"
                     " excess_cost, currency) VALUES (%s, %s, 'Cloud Ops', 'incident', 90.25,"
                     " 3, 1, 0.75, 10, 1234.567800, 'EUR')", (a.id, sid[0]))
-        cx.execute("UPDATE cloudops.sow SET hosting_acv = 120000, manage_acv = 495006,"
-                   " professional_services = 0, consumption_uplift = %s WHERE tenant_id = %s",
-                   (UPLIFT_A, a.id))
+        edit_sow_fixture(cx, "UPDATE cloudops.sow SET hosting_acv = 120000, manage_acv = 495006,"
+                         " professional_services = 0, consumption_uplift = %s WHERE tenant_id = %s",
+                         (UPLIFT_A, a.id))
     eur = Decimal("100") + Decimal("200") * Decimal("1.05") + Decimal("50") * Decimal("1.10")
     gbp = Decimal("100") * Decimal("0.85") + Decimal("250") * Decimal("0.90")
     return Month(eur, gbp, eur * (1 + UPLIFT_A))
@@ -264,14 +265,16 @@ async def test_a_priced_day_without_a_rate_is_a_gap_never_a_partial_price(
 ) -> None:
     s = step17.seeded
     with psycopg.connect(s.admin_dsn, autocommit=True) as cx:
-        cx.execute("UPDATE cloudops.sow SET consumption_uplift = 0.1 WHERE tenant_id = %s",
-                   (s.c.id,))
+        edit_sow_fixture(cx, "UPDATE cloudops.sow SET consumption_uplift = 0.1"
+                         " WHERE tenant_id = %s",
+                         (s.c.id,))
     try:
         pack = (await _generate(step17, step17.admin, s.c.id)).json()
     finally:
         with psycopg.connect(s.admin_dsn, autocommit=True) as cx:
-            cx.execute("UPDATE cloudops.sow SET consumption_uplift = NULL WHERE tenant_id = %s",
-                       (s.c.id,))
+            edit_sow_fixture(cx, "UPDATE cloudops.sow SET consumption_uplift = NULL"
+                             " WHERE tenant_id = %s",
+                             (s.c.id,))
     price = _figure(pack, "executive_summary", "customer_price")
     assert (price["value"], price["kind"]) == ("", "text")
     assert price["note"] == (

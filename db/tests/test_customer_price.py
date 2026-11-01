@@ -34,7 +34,7 @@ from sqlalchemy import text
 from cloudops_tenancy import Database, Role, TenantScope
 
 from .conftest import Api, Principals, Seeded, Tenant
-from .support import scope
+from .support import edit_sow_fixture, scope
 
 pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
@@ -69,8 +69,9 @@ def priced(seeded: Seeded) -> Iterator[None]:
     """Uplifts on alpha's and charlie's SOWs, last month's lines, and SEK rates."""
     with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
         for t, uplift in ((seeded.a, UPLIFT_A), (seeded.c, UPLIFT_C)):
-            cx.execute("UPDATE cloudops.sow SET consumption_uplift = %s WHERE tenant_id = %s",
-                       (uplift, t.id))
+            edit_sow_fixture(cx, "UPDATE cloudops.sow SET consumption_uplift = %s"
+                             " WHERE tenant_id = %s",
+                             (uplift, t.id))
         for t in seeded.tenants:
             _cost(cx, t, t.account_id, D1, "consumption", "40.000000")
             _cost(cx, t, t.account_id, D2, "support", "60.000000")
@@ -84,8 +85,8 @@ def priced(seeded: Seeded) -> Iterator[None]:
         yield
     finally:
         with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
-            cx.execute("UPDATE cloudops.sow SET consumption_uplift = NULL"
-                       " WHERE tenant_id = ANY(%s)", ([seeded.a.id, seeded.c.id],))
+            edit_sow_fixture(cx, "UPDATE cloudops.sow SET consumption_uplift = NULL"
+                             " WHERE tenant_id = ANY(%s)", ([seeded.a.id, seeded.c.id],))
             cx.execute("DELETE FROM cloudops.cost_fact WHERE service_native = %s", (SOURCE,))
             cx.execute("DELETE FROM cloudops.fx_rate WHERE source = %s", (SOURCE,))
 
@@ -175,8 +176,9 @@ async def test_no_staff_role_can_compute_the_price(
 def test_an_uplift_of_zero_or_less_is_refused(seeded: Seeded, uplift: str) -> None:
     """0 would show the customer Getronics' exact cost."""
     with psycopg.connect(seeded.admin_dsn) as cx, pytest.raises(psycopg.errors.CheckViolation):
-        cx.execute("UPDATE cloudops.sow SET consumption_uplift = %s WHERE tenant_id = %s",
-                   (uplift, seeded.a.id))
+        edit_sow_fixture(cx, "UPDATE cloudops.sow SET consumption_uplift = %s"
+                         " WHERE tenant_id = %s",
+                         (uplift, seeded.a.id))
 
 
 # --- the price -------------------------------------------------------------------------------

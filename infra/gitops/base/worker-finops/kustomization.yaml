@@ -1,0 +1,15 @@
+# The FinOps worker (ADR 0019, ADR 0035): the connectors image, its FinOps entry
+# point. Deployed by the workers Application, after Temporal (applications/<env>/workers.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-ingest
+resources:
+  - worker-finops.yaml
+configMapGenerator:
+  # Generated, so a changed setting renames it and rolls the pods (as connector-servicenow).
+  - name: worker-finops
+    envs: [config.env]
+    options:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous

@@ -21,7 +21,7 @@ test.describe("finops", () => {
 
   test("lists FinOps, Margin and Pricing", async ({ signedIn: page }) => {
     await page.goto("/");
-    expect(await navLabels(page)).toEqual(["Home", "Resources", "Customers", ...COMMERCIAL]);
+    expect(await navLabels(page)).toEqual(["Home", "Resources", "Customers", ...COMMERCIAL, "Commercial setup"]);
   });
 
   test("an unverified reconciliation is marked with its reason, not shown as a normal figure", async ({ signedIn: page }) => {
@@ -195,8 +195,8 @@ for (const role of ["engineer", "customer"] as const) {
     test("has no links to them, and typed-in URLs are refused", async ({ signedIn: page }) => {
       await page.goto("/");
       const labels = await navLabels(page);
-      for (const label of COMMERCIAL) expect(labels).not.toContain(label);
-      for (const path of ["/finops", "/margin", "/pricing", "/finops/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b", "/margin/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b"]) {
+      for (const label of [...COMMERCIAL, "Commercial setup"]) expect(labels).not.toContain(label);
+      for (const path of ["/finops", "/margin", "/pricing", "/settings/commercial", "/finops/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b", "/margin/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b"]) {
         await page.goto(path);
         await expect(page.getByText("Not available to your role"), path).toBeVisible();
         await expect(page.getByRole("table"), path).toHaveCount(0);

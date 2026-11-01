@@ -1,0 +1,31 @@
+# id-cloudops-ingest-dev (stack 05 output workload_client_ids). Not secrets.
+# The FinOps worker in dev (ADR 0035). Needs stack 05's federated credential
+# ingest-worker-finops applied first, or the Key Vault mount fails and the pod waits.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: worker-finops
+  namespace: platform-ingest
+  annotations:
+    azure.workload.identity/client-id: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: worker-finops
+  namespace: platform-ingest
+data:
+  # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
+  CLOUDOPS_TELEMETRY: "off"
+  CLOUDOPS_DEPLOYMENT: dev
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: worker-finops
+  namespace: platform-ingest
+spec:
+  parameters:
+    clientID: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe
