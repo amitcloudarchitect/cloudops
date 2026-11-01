@@ -14,6 +14,7 @@ from cloudops_config import (
     AuthMode,
     Component,
     ConfigurationError,
+    CredentialSource,
     DbLogin,
     Environment,
     MissingCredentialError,
@@ -251,10 +252,11 @@ def test_local_without_env_file_points_at_make_env(tmp_path: Path) -> None:
 
 
 def test_local_resolves_the_compose_containers(local_env: dict[str, str]) -> None:
-    # A real ServiceNow instance is opt-in locally, and the live Azure cost feed is
-    # Azure-only (both tested below).
+    # A real ServiceNow instance and a customer credential are opt-in locally, and the
+    # live Azure cost feed is Azure-only (all tested below).
     s = load_settings(local_env,
-                      require=set(Component) - {Component.SERVICENOW, Component.AZURE_COST})
+                      require=set(Component) - {Component.SERVICENOW, Component.AZURE_COST,
+                                                Component.CUSTOMER_ACCESS})
     assert s.environment is Environment.LOCAL
     assert s.workload_identity is None
     assert s.database_dsn(DbLogin.INGEST).startswith("postgresql://cloudops_ingest_local")
@@ -472,3 +474,65 @@ def test_local_has_no_live_cost_feed(local_env: dict[str, str]) -> None:
     local_env["CLOUDOPS_AZURE_COST_EXPORT_ROOTS"] = _ROOT
     with pytest.raises(ConfigurationError, match="--fixtures"):
         load_settings(local_env, require={Component.AZURE_COST})
+
+
+# Customer credentials (ADR 0003, guardrail 4; ADR 0027) ----------------------------
+
+
+@pytest.mark.parametrize("deployment", ["dev", "tst", "uat"])
+def test_stored_customer_keys_are_allowed_before_production(
+    azure_env: dict[str, str], deployment: str
+) -> None:
+    azure_env |= {"CLOUDOPS_CUSTOMER_CREDENTIALS": "stored_key",
+                  "CLOUDOPS_DEPLOYMENT": deployment}
+    access = load_settings(azure_env, require={Component.CUSTOMER_ACCESS}).customer_access
+    assert access.source is CredentialSource.STORED_KEY
+    assert access.deployment == deployment
+
+
+def test_stored_customer_keys_are_refused_in_production(azure_env: dict[str, str]) -> None:
+    azure_env |= {"CLOUDOPS_CUSTOMER_CREDENTIALS": "stored_key", "CLOUDOPS_DEPLOYMENT": "prd"}
+    with pytest.raises(ConfigurationError, match="refused in production"):
+        load_settings(azure_env, require={Component.CUSTOMER_ACCESS})
+
+
+def test_stored_customer_keys_are_refused_in_production_from_a_laptop_too(
+    local_env: dict[str, str],
+) -> None:
+    local_env |= {"CLOUDOPS_CUSTOMER_CREDENTIALS": "stored_key", "CLOUDOPS_DEPLOYMENT": "prd"}
+    with pytest.raises(ConfigurationError, match="refused in production"):
+        load_settings(local_env, require={Component.CUSTOMER_ACCESS})
+
+
+@pytest.mark.parametrize("deployment", [None, "", "production", "PRD"])
+def test_an_unnamed_deployment_never_admits_stored_keys(
+    azure_env: dict[str, str], deployment: str | None
+) -> None:
+    azure_env["CLOUDOPS_CUSTOMER_CREDENTIALS"] = "stored_key"
+    if deployment is not None:
+        azure_env["CLOUDOPS_DEPLOYMENT"] = deployment
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_DEPLOYMENT"):
+        load_settings(azure_env, require={Component.CUSTOMER_ACCESS})
+
+
+@pytest.mark.parametrize("value", [None, "", "stored", "Stored_Key", "both"])
+def test_the_credential_source_is_explicit(azure_env: dict[str, str], value: str | None) -> None:
+    azure_env["CLOUDOPS_DEPLOYMENT"] = "dev"
+    if value is not None:
+        azure_env["CLOUDOPS_CUSTOMER_CREDENTIALS"] = value
+    with pytest.raises(ConfigurationError, match="stored_key' or 'delegated"):
+        load_settings(azure_env, require={Component.CUSTOMER_ACCESS})
+
+
+@pytest.mark.parametrize("deployment", ["dev", "prd"])
+def test_delegated_access_is_not_built(azure_env: dict[str, str], deployment: str) -> None:
+    azure_env |= {"CLOUDOPS_CUSTOMER_CREDENTIALS": "delegated",
+                  "CLOUDOPS_DEPLOYMENT": deployment}
+    with pytest.raises(NotBuiltError, match="broker"):
+        load_settings(azure_env, require={Component.CUSTOMER_ACCESS})
+
+
+def test_a_laptop_may_use_a_stored_key(local_env: dict[str, str]) -> None:
+    local_env["CLOUDOPS_CUSTOMER_CREDENTIALS"] = "stored_key"
+    access = load_settings(local_env, require={Component.CUSTOMER_ACCESS}).customer_access
+    assert (access.source, access.deployment) == (CredentialSource.STORED_KEY, "local")

@@ -9,6 +9,14 @@
   cannot have an export (``daily_source.py``). An account's period comes from one
   of ``cost_export`` and ``cost_daily``, never both: each swap replaces the period.
 
+**A customer's own credential** (ADR 0003, ADR 0027). Built with a ``binding``,
+the source serves one stored credential: its subscriptions resolve to its tenant
+without the alias map, every call names only them (the client's ``allowed`` is the
+second lock), anything else the listing shows is quarantined and never read, and
+its ``instance`` names the credential. Its watermarks are its own, and a replay
+skips any bronze page another instance fetched, so the platform's own pages of a
+shared subscription never land in the customer's tenant, or the reverse.
+
 The rest of this docstring is the ``resource`` entity.
 
 A run is a snapshot of the delegated estate, not an increment: ``since`` is
@@ -120,13 +128,15 @@ class AzureSource(Source):
         exports: BlobClient | None = None, export_roots: Sequence[str] = (),
         billing_account: str | None = None, today: Callable[[], date] | None = None,
         entities: frozenset[str] = mapping.ENTITIES,
+        binding: identity.Binding | None = None, credential: str | None = None,
     ) -> None:
         """``exports`` reads the storage account the FOCUS exports land in;
         ``export_roots`` are ``<container>/<root path>``, one export each.
         ``billing_account`` names the billing account whose invoices are read.
         ``today`` is the run's day for the billing entities (UTC by default).
         ``entities`` narrows what this source serves (the live path, ADR 0023):
-        any other is refused before a request is made."""
+        any other is refused before a request is made. ``binding`` and
+        ``credential`` (its inventory id): a customer credential's run."""
         if not entities or not entities <= mapping.ENTITIES:
             raise ValueError("entities must be among the Azure entities")
         if batch_size < 1:
@@ -135,14 +145,20 @@ class AzureSource(Source):
             focus.split_scope(root)
         if export_roots and exports is None:
             raise ValueError("export roots need a blob client")
+        if (binding is None) != (credential is None):
+            raise ValueError("a binding and its credential go together")
+        if binding is not None and client.allowed != binding.native_ids:
+            raise ValueError("a bound source's client is allowed exactly the binding")
         self._client = client
         self._batch = batch_size
         self._exports = exports
         self._roots = list(export_roots)
         day = today or (lambda: datetime.now(UTC).date())
-        self._billing = AzureBilling(client, billing_account, day)
-        self._daily = AzureDaily(client, day)
-        self.instance = client.base_url
+        self._binding = binding
+        self._billing = AzureBilling(client, billing_account, day, binding)
+        self._daily = AzureDaily(client, day, binding)
+        self.instance = (client.base_url if credential is None
+                         else f"{client.base_url}#credential={credential}")
         self.entities = entities
 
     def _check(self, entity: str) -> None:
@@ -190,7 +206,7 @@ class AzureSource(Source):
         subs: list[str] = list(at.get("subs", []))
         if ref.endswith(SUBS_SUFFIX):
             listed = mapping.subscriptions(body)
-            subs = sorted({*subs, *(s.subscription_id for s in listed)})
+            subs = identity.admit(self._binding, {*subs, *(s.subscription_id for s in listed)})
             link = mapping.next_link(body)
             if link is not None:
                 return PageInfo(len(listed), _cursor(subs, next_link=link))
@@ -211,6 +227,9 @@ class AzureSource(Source):
         self, db: Database, raw: RawStore, entity: str, ref: str, ctx: PageContext
     ) -> PageOutcome:
         self._check(entity)
+        if (await raw.meta(ref)).get("instance", self.instance) != self.instance:
+            # Another credential's page (a replay lists every page of the day).
+            return PageOutcome(state.RunCounts())
         if entity == mapping.COST_EXPORT:
             return await cost_source.process(db, raw, ref, ctx)
         if entity in (mapping.COST_TOTAL, mapping.INVOICE):
@@ -282,7 +301,7 @@ class AzureSource(Source):
 
     async def _resolve(self, db: Database, subs: set[str]) -> dict[str, UUID | None]:
         async with db.transaction(TenantScope((), Role.INGEST, principal(self.source))) as conn:
-            return await identity.resolve_ids(conn, self.source, subs)
+            return await identity.resolve_ids(conn, self.source, subs, self._binding)
 
     async def _close(self, raw: RawStore, ref: str, ctx: PageContext) -> _Close | None:
         """When this page closes the snapshot: the run's subscriptions and when
@@ -309,10 +328,10 @@ class AzureSource(Source):
     ) -> dict[str, UUID]:
         """Account ids for resolved subscriptions; created here when the
         listing has not created them (a later page replayed on its own)."""
-        wanted = {s for s in subs if tenant_of.get(s) is not None}
+        wanted = {s: t for s in subs if (t := tenant_of.get(s)) is not None}
         have = {k: v[0] for k, v in (await identity.known_accounts(
             conn, self.source, wanted)).items()}
-        missing = wanted - set(have)
+        missing = set(wanted) - set(have)
         if missing:
             have |= await identity.upsert_accounts(
                 conn, self.source, {s: t for s, t in tenant_of.items() if t is not None},

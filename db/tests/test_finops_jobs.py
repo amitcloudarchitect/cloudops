@@ -316,6 +316,49 @@ async def test_tenant_threshold_overrides_the_default(fdb: Db, ingest: Database)
             cx.execute("DELETE FROM cloudops.anomaly_threshold")
 
 
+async def test_fixed_charges_on_the_first_raise_no_anomaly_but_consumption_does(
+    fdb: Db, ingest: Database
+) -> None:
+    """Licence and support are booked once a month, on the 1st (ADR 0019 amendment):
+    only consumption is a run rate."""
+    account = uuid4()
+    first, through = date(2026, 9, 1), date(2026, 10, 1)
+    with psycopg.connect(fdb.admin, autocommit=True) as cx:
+        cx.execute("INSERT INTO cloudops.cloud_account (id, tenant_id, provider, native_id,"
+                   " display_name) VALUES (%s, %s, 'azure', 'sub-fixed', 'fixed charges')",
+                   (account, fdb.nosow.id))
+        cost = ("INSERT INTO cloudops.cost_fact (tenant_id, account_id, usage_date,"
+                " invoice_period, service_native, charge_class, unblended_cost,"
+                " amortized_cost, currency) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'EUR')")
+        for d in _days(first, through):
+            day = "2000" if d == date(2026, 9, 29) else "1000"  # a real spike
+            cx.execute(cost, (fdb.nosow.id, account, d, f"{d:%Y-%m}", "VM", "consumption",
+                              day, day))
+            if d.day == 1:
+                for service, kind, amount in (("Lic", "licence", "5000"),
+                                              ("Support", "support", "2000")):
+                    cx.execute(cost, (fdb.nosow.id, account, d, f"{d:%Y-%m}", service, kind,
+                                      amount, amount))
+        try:
+            await jobs.anomalies(ingest, through + timedelta(days=1))
+            found = {(g, o, direction) for g, o, direction in q(
+                fdb.admin, "SELECT granularity, observed_on, direction FROM cloudops.cost_anomaly"
+                " WHERE account_id = %s", account)}
+            # A real consumption spike still alerts.
+            assert ("day", date(2026, 9, 29), "spike") in found
+            # The 1st's 7,000 of fixed charges raise no day-over-day spike...
+            assert not any(o == through for g, o, _ in found if g == "day")
+            # ...and October is projected from a day of consumption (31,000 against
+            # September's 31,000), not from 8,000 x 31.
+            assert not any(g == "month" for g, _, _ in found)
+            assert len(found) == 1
+        finally:
+            cx.execute("DELETE FROM cloudops.cost_anomaly WHERE observed_on BETWEEN %s AND %s",
+                       (date(2026, 9, 29), through))
+            cx.execute("DELETE FROM cloudops.cost_fact WHERE account_id = %s", (account,))
+            cx.execute("DELETE FROM cloudops.cloud_account WHERE id = %s", (account,))
+
+
 # --- margin ----------------------------------------------------------------------------------
 
 

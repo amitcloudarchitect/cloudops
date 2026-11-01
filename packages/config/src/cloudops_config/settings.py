@@ -62,6 +62,7 @@ class Component(enum.StrEnum):
     AUTH = "auth"
     SERVICENOW = "servicenow"
     AZURE_COST = "azure_cost"
+    CUSTOMER_ACCESS = "customer_access"
 
 
 class DbLogin(enum.StrEnum):
@@ -179,6 +180,63 @@ class AzureCostConfig:
     lines: str
     export_account_url: str | None = None
     export_roots: tuple[str, ...] = ()
+
+
+class CredentialSource(enum.StrEnum):
+    """How a connector reaches a customer's estate (ADR 0003, guardrail 4)."""
+
+    STORED_KEY = "stored_key"  # an app registration secret or access key, in Key Vault
+    DELEGATED = "delegated"  # Lighthouse / GDAP / AssumeRole through the broker (LLD)
+
+
+@dataclass(frozen=True, slots=True)
+class CustomerAccessConfig:
+    """Customer credentials, as ADR 0003 allows them until production.
+
+    ``source`` is explicit, never defaulted. ``stored_key`` is refused where the
+    deployment is ``prd``: production uses the broker, with no exceptions.
+    ``delegated`` is the LLD's design, whose broker is not built, so it refuses
+    to start rather than pretend. The secrets themselves are read by name from
+    the secret store when used (``cloudops_connectors.customer``), never here."""
+
+    source: CredentialSource
+    deployment: str
+
+
+CUSTOMER_CREDENTIALS_VAR: Final = "CLOUDOPS_CUSTOMER_CREDENTIALS"  # stored_key | delegated
+DEPLOYMENT_VAR: Final = "CLOUDOPS_DEPLOYMENT"  # dev, tst, uat, prd (as observability reads it)
+DEPLOYMENTS: Final = frozenset({"dev", "tst", "uat", "prd"})
+
+
+def _customer_access(environ: Mapping[str, str], env: Environment) -> CustomerAccessConfig:
+    raw = environ.get(CUSTOMER_CREDENTIALS_VAR, "").strip()
+    try:
+        source = CredentialSource(raw)
+    except ValueError:
+        raise ConfigurationError(
+            f"{CUSTOMER_CREDENTIALS_VAR} must be 'stored_key' or 'delegated', explicitly"
+        ) from None
+    deployment = environ.get(DEPLOYMENT_VAR, "").strip()
+    if env is Environment.LOCAL:
+        deployment = deployment or "local"
+        if deployment not in {"local", *DEPLOYMENTS}:
+            raise ConfigurationError(f"{DEPLOYMENT_VAR} is not a deployment name")
+    elif deployment not in DEPLOYMENTS:
+        raise ConfigurationError(
+            f"{DEPLOYMENT_VAR} must name the deployment ({', '.join(sorted(DEPLOYMENTS))}) "
+            "before a customer credential is used"
+        )
+    if source is CredentialSource.DELEGATED:
+        raise NotBuiltError(
+            "delegated customer access (Lighthouse, GDAP, AssumeRole through the broker) is "
+            "not built yet; until production, ADR 0003 allows stored_key"
+        )
+    if deployment == "prd":
+        raise ConfigurationError(
+            "stored customer credentials are refused in production (ADR 0003, guardrail 4); "
+            "production uses delegated access"
+        )
+    return CustomerAccessConfig(source, deployment)
 
 
 AZURE_COST_LINES_VAR: Final = "CLOUDOPS_AZURE_COST_LINES"  # export | query
@@ -307,6 +365,10 @@ class Settings:
         return self._get(Component.AZURE_COST, AzureCostConfig)
 
     @property
+    def customer_access(self) -> CustomerAccessConfig:
+        return self._get(Component.CUSTOMER_ACCESS, CustomerAccessConfig)
+
+    @property
     def llm(self) -> LlmGateway:
         """The local mock. In Azure the LLM component is ``azure_openai``."""
         return self._get(Component.LLM, MockLlmGateway)
@@ -417,6 +479,9 @@ def _local(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
             raise ConfigurationError(
                 "the live Azure cost feed runs in Azure only; use --fixtures locally"
             )
+        elif c is Component.CUSTOMER_ACCESS:
+            # From a laptop the customer's secret is in .env.local (ADR 0003, 2).
+            components[c] = _customer_access(environ, Environment.LOCAL)
     return Settings(Environment.LOCAL, store, None, components)
 
 
@@ -469,6 +534,8 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
             components[c] = _servicenow(environ, store)
         elif c is Component.AZURE_COST:
             components[c] = _azure_cost(environ)
+        elif c is Component.CUSTOMER_ACCESS:
+            components[c] = _customer_access(environ, Environment.AZURE)
         elif c is Component.LLM:
             components[c] = _azure_openai(environ)
     return Settings(Environment.AZURE, store, identity, components)

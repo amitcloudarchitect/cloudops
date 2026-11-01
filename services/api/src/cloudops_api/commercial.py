@@ -143,6 +143,9 @@ class AccountCheck(ApiModel):
     ledger: Metric[Decimal]
     reference: Metric[Decimal] | None
     drift: Metric[Decimal] | None
+    # Provenance (ADR 0027): the platform's own subscription, also this customer's.
+    # Its cost is in both tenants, each reconciled on its own rows.
+    shared_with_platform: bool
 
 
 class Unallocated(ApiModel):
@@ -215,7 +218,8 @@ _CHARGES: Final = text(
 _CHECKS: Final = text(
     "SELECT DISTINCT ON (r.account_id) r.tenant_id, r.account_id, a.display_name, r.kind,"
     "   r.status, r.reason, r.checked_on, r.ledger_amount, r.ledger_currency,"
-    "   r.reference_amount, r.reference_currency, r.drift, r.created_at"
+    "   r.reference_amount, r.reference_currency, r.drift, r.created_at,"
+    "   a.shared_with_platform"
     " FROM cloudops.cost_reconciliation r"
     " JOIN cloudops.cloud_account a ON a.id = r.account_id"
     " WHERE r.invoice_period = :period"
@@ -287,14 +291,15 @@ async def _customer_costs(conn: ScopedConnection, period: str, rep: str | None,
     checked_accounts: set[UUID] = set()
     rref = query_ref("finops.reconciliation", 1, period=period)
     for (t, acct, name, kind, status, reason, on, ledger, l_ccy, refamt, r_ccy, drift,
-         created) in checks:
+         created, shared) in checks:
         checked_accounts.add(UUID(str(acct)))
         checks_by[UUID(str(t))].append(AccountCheck(
             account_id=acct, account_name=name, kind=kind, status=status, reason=reason,
             checked_on=on,
             ledger=_money(ledger, l_ccy or r_ccy or "XXX", COST_SOURCE, created, rref),
             reference=_opt(refamt, r_ccy, "provider_billing", created, rref),
-            drift=_opt(drift, RATIO, RECON_SOURCE, created, rref)))
+            drift=_opt(drift, RATIO, RECON_SOURCE, created, rref),
+            shared_with_platform=bool(shared)))
     unchecked = {UUID(str(t)) for t, a in with_cost if UUID(str(a)) not in checked_accounts}
     out: list[CustomerCost] = []
     aref = query_ref("finops.unallocated", 1, period=period)

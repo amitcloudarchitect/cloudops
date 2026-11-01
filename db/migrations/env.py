@@ -90,6 +90,7 @@ def run_migrations_online() -> None:
         with context.begin_transaction():
             context.run_migrations()
         _apply_mapping_approvers(connection)
+        _sync_help(connection)
     engine.dispose()
 
 
@@ -111,6 +112,21 @@ def _apply_mapping_approvers(connection: Connection) -> None:
                  " jsonb_build_object('approvers', CAST(:n AS integer)))"),
             {"n": int(value)},
         )
+    connection.commit()
+
+
+def _sync_help(connection: Connection) -> None:
+    """The assistant's help pages into global knowledge (ADR 0029), at head only:
+    a downgrade or a partial upgrade leaves the table as its revision had it."""
+    from alembic.script import ScriptDirectory
+
+    from cloudops_agents.help_corpus import sync
+
+    current = connection.execute(
+        text(f"SELECT version_num FROM {VERSION_SCHEMA}.alembic_version")).scalars().all()
+    if list(current) != [ScriptDirectory.from_config(context.config).get_current_head()]:
+        return
+    sync(connection)
     connection.commit()
 
 

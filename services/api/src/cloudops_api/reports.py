@@ -23,7 +23,7 @@ in the reporting currency the viewer picks, from the same cost rows.
 
 **Access.** ``reports.read`` covers reading, and customers see only published
 packs (row-level security, migration 0013). The customer roles CXO and VP or
-director hold it (migration 0025, ADR 0030): a customer scope runs as
+director hold it (migration 0027, ADR 0030): a customer scope runs as
 ``cloudops_customer``, granted the pack's snapshot, its price and a section's
 published text, so its queries name only those columns. Never the commercial
 sections, the AI drafts, or who generated, approved or edited a pack. The
@@ -193,7 +193,7 @@ _COMMERCIAL: Final = (
     " || coalesce((SELECT c.sections FROM cloudops.report_pack_commercial c"
     "  WHERE c.pack_id = p.id AND c.tenant_id = p.tenant_id), '{}'::jsonb)"
 )
-# A customer scope is granted nothing on report_pack_commercial (migration 0025):
+# A customer scope is granted nothing on report_pack_commercial (migration 0027):
 # naming it would fail, so its query never does.
 _PACK_COLS: Final = _PRICED + _COMMERCIAL
 

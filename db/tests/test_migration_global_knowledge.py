@@ -79,6 +79,8 @@ def test_global_rows_move_and_tenant_becomes_required(at_0001: tuple[Config, str
     with psycopg.connect(admin) as cx:
         moved: list[Any] = cx.execute(
             "SELECT id, body, embedding IS NOT NULL FROM cloudops.global_knowledge_chunk"
+            # Not the assistant's help pages, which the migrate step loads (ADR 0029).
+            " WHERE source_kind NOT LIKE 'platform_help%'"
         ).fetchall()
         remaining = cx.execute("SELECT id, tenant_id FROM cloudops.knowledge_chunk").fetchall()
         not_null = cx.execute(

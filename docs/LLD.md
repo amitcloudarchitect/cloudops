@@ -438,7 +438,7 @@ Application code names a tier, never a model. Which published model fills each t
 
 Each customer chunk carries its citation: the source `document`, its ordinal and the page it starts on. Connectors write chunks with their tenant and no embedding; the knowledge indexer embeds them one tenant's scope at a time and fills only an embedding that is still empty (ADR 0020).
 
-Getronics-wide content (shared runbooks, best practice) lives in `cloudops.global_knowledge_chunk`, which has no `tenant_id`. Every scope can read it, and no application role can write it (ADR 0001). Customer content is never tenant-less.
+Getronics-wide content (shared runbooks, best practice) lives in `cloudops.global_knowledge_chunk`, which has no `tenant_id`. Every scope can read it, and no application role can write it (ADR 0001). Customer content is never tenant-less. The assistant's user-facing help pages live there too, as `platform_help` (every scope) and `platform_help_staff`; a row-level policy keeps everything but `platform_help` from a customer scope (ADR 0029).
 
 The retrieval query carries the tenant predicate **inside** the SQL, so RLS applies to retrieval exactly as to any other read. Each branch is ordered and limited so it can use its own HNSW index:
 
@@ -463,6 +463,8 @@ ORDER BY distance LIMIT 20;
 ### Gateway controls
 
 Model routing by task; per-user daily and per-tenant monthly token budgets with alert at 80% and throttle at 100%; 20-turn conversation ceiling; **10 tool-call iterations then escalate to a human**; semantic response cache with 1-hour TTL for live-state and 24-hour for static knowledge; rolling context summarisation; and a spend circuit breaker when the rate exceeds a multiple of the trailing average. The loop ceiling and circuit breaker together are what prevent a looping agent producing a five-figure bill over a weekend.
+
+The assistant (ADR 0029) has its own sub-budget inside these: 40% of the tenant's month and a per-user daily cap. Its conversations are kept 90 days, visible to their author only by a restrictive policy on `app.principal_id`, which the `tenancy` package sets with `SET LOCAL` like the tenant ids.
 
 Each tool declares its required role, read or write nature, and tenant scope requirement. The gateway refuses a call whose declared role is not held by the calling principal before it reaches any service. Arguments are JSON Schema validated — an invalid argument is a refusal, not a best-effort call. Tenant scope is resolved server-side, never from a model-supplied argument. Write tools declare their action class, route through the approval machine, and take an idempotency key.
 

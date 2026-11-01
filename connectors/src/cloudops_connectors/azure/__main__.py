@@ -14,7 +14,8 @@ cost (``cost_daily``), as ``CLOUDOPS_AZURE_COST_LINES`` says. Read with the pod'
 workload identity (``azure/auth.py``). What it can reach is what stack 04b grants the
 ingest identity; which tenant a subscription's cost lands in is the alias
 mapping's (ADR 0016), as for every other source. ``resource`` and ``invoice``
-stay fixtures-only until customer access exists (ADR 0003).
+stay fixtures-only here; a customer's subscriptions, read with its own stored
+credential (ADR 0003, ADR 0027), are ``cloudops_connectors.customer``'s.
 """
 
 from __future__ import annotations

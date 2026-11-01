@@ -60,6 +60,10 @@
               }
             ]
           },
+          "shared_with_platform": {
+            "title": "Shared With Platform",
+            "type": "boolean"
+          },
           "status": {
             "enum": [
               "verified",
@@ -78,7 +82,8 @@
           "checked_on",
           "ledger",
           "reference",
-          "drift"
+          "drift",
+          "shared_with_platform"
         ],
         "title": "AccountCheck",
         "type": "object"
@@ -358,6 +363,36 @@
         "title": "AnomalyView",
         "type": "object"
       },
+      "AnswerView": {
+        "additionalProperties": false,
+        "properties": {
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ClaimView"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceView"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "claims",
+          "sources"
+        ],
+        "title": "AnswerView",
+        "type": "object"
+      },
       "Approval": {
         "additionalProperties": false,
         "properties": {
@@ -429,6 +464,49 @@
           "count"
         ],
         "title": "Approvals",
+        "type": "object"
+      },
+      "AskRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/ScreenContext"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "question": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "AskRequest",
         "type": "object"
       },
       "AssessmentDetail": {
@@ -571,6 +649,161 @@
           "score"
         ],
         "title": "AssessmentSummary",
+        "type": "object"
+      },
+      "AssistantSession": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "mode": {
+            "enum": [
+              "account",
+              "help"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenantOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenants": {
+            "items": {
+              "$ref": "#/components/schemas/TenantOption"
+            },
+            "title": "Tenants",
+            "type": "array"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_enabled",
+                  "not_configured"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          }
+        },
+        "required": [
+          "available",
+          "unavailable_reason",
+          "mode",
+          "tenant",
+          "tenants",
+          "suggestions"
+        ],
+        "title": "AssistantSession",
+        "type": "object"
+      },
+      "AwsCredentialRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "access_key_id": {
+            "pattern": "^AKIA[A-Z0-9]{16}$",
+            "title": "Access Key Id",
+            "type": "string"
+          },
+          "account_id": {
+            "pattern": "^[0-9]{12}$",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "provider": {
+            "const": "aws",
+            "title": "Provider",
+            "type": "string"
+          },
+          "secret_expires_at": {
+            "format": "date-time",
+            "title": "Secret Expires At",
+            "type": "string"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "tenant_id",
+          "account_id",
+          "access_key_id",
+          "secret_expires_at"
+        ],
+        "title": "AwsCredentialRequest",
+        "type": "object"
+      },
+      "AzureCredentialRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "format": "uuid",
+            "title": "Client Id",
+            "type": "string"
+          },
+          "directory_id": {
+            "format": "uuid",
+            "title": "Directory Id",
+            "type": "string"
+          },
+          "provider": {
+            "const": "azure",
+            "title": "Provider",
+            "type": "string"
+          },
+          "secret_expires_at": {
+            "format": "date-time",
+            "title": "Secret Expires At",
+            "type": "string"
+          },
+          "subscription_ids": {
+            "items": {
+              "pattern": "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$",
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Subscription Ids",
+            "type": "array"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "tenant_id",
+          "directory_id",
+          "client_id",
+          "subscription_ids",
+          "secret_expires_at"
+        ],
+        "title": "AzureCredentialRequest",
         "type": "object"
       },
       "BandRules": {
@@ -786,6 +1019,106 @@
         "title": "ChargeLine",
         "type": "object"
       },
+      "CheckRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "secret_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Expires At"
+          }
+        },
+        "title": "CheckRequest",
+        "type": "object"
+      },
+      "CheckView": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "reason": {
+            "enum": [
+              "onboard",
+              "rotation",
+              "recheck"
+            ],
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_at": {
+            "format": "date-time",
+            "title": "Requested At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "requested",
+              "running",
+              "passed",
+              "refused",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "reason",
+          "status",
+          "requested_at",
+          "finished_at",
+          "outcome",
+          "detail"
+        ],
+        "title": "CheckView",
+        "type": "object"
+      },
       "CitationView": {
         "additionalProperties": false,
         "properties": {
@@ -870,6 +1203,28 @@
           "page"
         ],
         "title": "CitationView",
+        "type": "object"
+      },
+      "ClaimView": {
+        "additionalProperties": false,
+        "properties": {
+          "sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "sources"
+        ],
+        "title": "ClaimView",
         "type": "object"
       },
       "ClosestItem": {
@@ -1439,6 +1794,106 @@
         "title": "ControlView",
         "type": "object"
       },
+      "ConversationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "account",
+              "help"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenantOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "mode",
+          "tenant",
+          "updated_at"
+        ],
+        "title": "ConversationSummary",
+        "type": "object"
+      },
+      "ConversationView": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "account",
+              "help"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenantOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/TurnView"
+            },
+            "title": "Turns",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "mode",
+          "tenant",
+          "updated_at",
+          "turns"
+        ],
+        "title": "ConversationView",
+        "type": "object"
+      },
       "CostHome": {
         "additionalProperties": false,
         "properties": {
@@ -1488,6 +1943,16 @@
           "provider": {
             "title": "Provider",
             "type": "string"
+          },
+          "shared_with_platform": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -1606,6 +2071,177 @@
           "has_gap"
         ],
         "title": "CoverageView",
+        "type": "object"
+      },
+      "CredentialView": {
+        "additionalProperties": false,
+        "properties": {
+          "access_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Access Key Id"
+          },
+          "account_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Account Ids",
+            "type": "array"
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credential_source": {
+            "const": "stored_key",
+            "title": "Credential Source",
+            "type": "string"
+          },
+          "days_to_expiry": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "directory_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directory Id"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "latest_check": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheckView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "owned_by_me": {
+            "title": "Owned By Me",
+            "type": "boolean"
+          },
+          "provider": {
+            "enum": [
+              "azure",
+              "aws"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "secret_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Secret Names",
+            "type": "array"
+          },
+          "secret_set_at": {
+            "format": "date-time",
+            "title": "Secret Set At",
+            "type": "string"
+          },
+          "shared_with_platform": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shared With Platform",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "active",
+              "refused",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "validated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validated At"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "provider",
+          "credential_source",
+          "directory_id",
+          "client_id",
+          "access_key_id",
+          "account_ids",
+          "secret_names",
+          "owned_by_me",
+          "created_at",
+          "secret_set_at",
+          "expires_at",
+          "days_to_expiry",
+          "status",
+          "validated_at",
+          "revoked_at",
+          "shared_with_platform",
+          "latest_check"
+        ],
+        "title": "CredentialView",
         "type": "object"
       },
       "CurrencyTrend": {
@@ -2235,6 +2871,40 @@
           "complete"
         ],
         "title": "Effort",
+        "type": "object"
+      },
+      "EnabledRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "EnabledRequest",
+        "type": "object"
+      },
+      "EnabledView": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "tenant_id": {
+            "format": "uuid",
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "enabled"
+        ],
+        "title": "EnabledView",
         "type": "object"
       },
       "EvidencePackSummary": {
@@ -3515,6 +4185,10 @@
             "title": "Agreed Roles",
             "type": "array"
           },
+          "assistant_enabled": {
+            "title": "Assistant Enabled",
+            "type": "boolean"
+          },
           "domains": {
             "items": {
               "type": "string"
@@ -3659,7 +4333,8 @@
           "first_admin_oid",
           "first_admin_at",
           "live_at",
-          "suspended_at"
+          "suspended_at",
+          "assistant_enabled"
         ],
         "title": "Onboarding",
         "type": "object"
@@ -5742,6 +6417,69 @@
         "title": "ScoreView",
         "type": "object"
       },
+      "ScreenContext": {
+        "additionalProperties": false,
+        "description": "Where the panel was opened. A hint, re-checked under the resolved scope.",
+        "properties": {
+          "record_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Id"
+          },
+          "record_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ticket",
+                  "resource"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Record Type"
+          },
+          "screen": {
+            "default": "other",
+            "enum": [
+              "home",
+              "customers",
+              "customer",
+              "work",
+              "ticket",
+              "resources",
+              "resource",
+              "finops",
+              "finops_customer",
+              "margin",
+              "margin_customer",
+              "pricing",
+              "posture",
+              "performance",
+              "approvals",
+              "reports",
+              "report",
+              "knowledge",
+              "assurance",
+              "users",
+              "other"
+            ],
+            "title": "Screen",
+            "type": "string"
+          }
+        },
+        "title": "ScreenContext",
+        "type": "object"
+      },
       "SectionNarrativeEdit": {
         "additionalProperties": false,
         "properties": {
@@ -5833,6 +6571,60 @@
           "open"
         ],
         "title": "SeverityCount",
+        "type": "object"
+      },
+      "SourceView": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "is_modelled": {
+            "title": "Is Modelled",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ref": {
+            "title": "Ref",
+            "type": "string"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "ref",
+          "label",
+          "source_system",
+          "as_of",
+          "is_modelled",
+          "url"
+        ],
+        "title": "SourceView",
         "type": "object"
       },
       "SowView": {
@@ -6037,6 +6829,26 @@
           "tenant"
         ],
         "title": "TenantBacklog",
+        "type": "object"
+      },
+      "TenantOption": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "TenantOption",
         "type": "object"
       },
       "TenantUser": {
@@ -6497,6 +7309,105 @@
           "reviews"
         ],
         "title": "TriageView",
+        "type": "object"
+      },
+      "TurnView": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AnswerView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "answered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "understanding",
+                  "retrieving",
+                  "looking_up",
+                  "composing",
+                  "checking"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "answered",
+              "dont_know",
+              "refused",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "question",
+          "status",
+          "stage",
+          "answer",
+          "reason",
+          "created_at",
+          "answered_at"
+        ],
+        "title": "TurnView",
         "type": "object"
       },
       "Unallocated": {
@@ -7198,6 +8109,313 @@
         "summary": "Approvals"
       }
     },
+    "/v1/assistant/conversations": {
+      "get": {
+        "operationId": "list_conversations_v1_assistant_conversations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ConversationSummary"
+                  },
+                  "title": "Response List Conversations V1 Assistant Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Conversations"
+      }
+    },
+    "/v1/assistant/conversations/{conversation_id}": {
+      "get": {
+        "operationId": "get_conversation_v1_assistant_conversations__conversation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Conversation"
+      }
+    },
+    "/v1/assistant/conversations/{conversation_id}/delete": {
+      "post": {
+        "description": "Delete one of the caller's conversations, and clear the prompt text and\nagent output the gateway recorded for it.",
+        "operationId": "delete_conversation_v1_assistant_conversations__conversation_id__delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Conversation"
+      }
+    },
+    "/v1/assistant/questions": {
+      "post": {
+        "description": "Ask a question, in a new conversation or a running one. Answered in the\nbackground; poll the turn.",
+        "operationId": "ask_v1_assistant_questions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ask"
+      }
+    },
+    "/v1/assistant/session": {
+      "get": {
+        "description": "What the panel offers here: whether it is available, which account it is\nabout, and suggested questions for the screen and the caller's permissions.",
+        "operationId": "session_v1_assistant_session_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "screen",
+            "required": false,
+            "schema": {
+              "default": "other",
+              "enum": [
+                "home",
+                "customers",
+                "customer",
+                "work",
+                "ticket",
+                "resources",
+                "resource",
+                "finops",
+                "finops_customer",
+                "margin",
+                "margin_customer",
+                "pricing",
+                "posture",
+                "performance",
+                "approvals",
+                "reports",
+                "report",
+                "knowledge",
+                "assurance",
+                "users",
+                "other"
+              ],
+              "title": "Screen",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Session"
+      }
+    },
+    "/v1/assistant/tenants/{tenant_id}/enabled": {
+      "post": {
+        "description": "Switch the assistant on or off for a customer's portal users. Staff always\nhave it. Off by default until the customer-role evaluation cases pass.",
+        "operationId": "set_enabled_v1_assistant_tenants__tenant_id__enabled_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnabledView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Enabled"
+      }
+    },
+    "/v1/assistant/turns/{turn_id}": {
+      "get": {
+        "operationId": "get_turn_v1_assistant_turns__turn_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "turn_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Turn Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Turn"
+      }
+    },
     "/v1/assurance/assessments": {
       "get": {
         "operationId": "list_assessments_v1_assurance_assessments_get",
@@ -7768,6 +8986,173 @@
           }
         },
         "summary": "Load Library"
+      }
+    },
+    "/v1/cloud-onboarding/credentials": {
+      "get": {
+        "description": "The inventory (ADR 0003, guardrail 6): every stored credential in scope,\nrevoked ones included, soonest expiry first.",
+        "operationId": "list_credentials_v1_cloud_onboarding_credentials_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CredentialView"
+                  },
+                  "title": "Response List Credentials V1 Cloud Onboarding Credentials Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Credentials"
+      },
+      "post": {
+        "description": "Record a credential's identifiers and queue its check. The secret goes into\nKey Vault under the returned ``secret_names``, never here.",
+        "operationId": "onboard_v1_cloud_onboarding_credentials_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "aws": "#/components/schemas/AwsCredentialRequest",
+                    "azure": "#/components/schemas/AzureCredentialRequest"
+                  },
+                  "propertyName": "provider"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AzureCredentialRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AwsCredentialRequest"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Onboard"
+      }
+    },
+    "/v1/cloud-onboarding/credentials/{credential_id}/checks": {
+      "post": {
+        "description": "Check again: after creating the secret, after fixing a role, or with a new\nexpiry after rotating the secret under the same name.",
+        "operationId": "request_check_v1_cloud_onboarding_credentials__credential_id__checks_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Check"
+      }
+    },
+    "/v1/cloud-onboarding/credentials/{credential_id}/revoke": {
+      "post": {
+        "description": "Stop using it now. Delete the Key Vault secret and the app registration's\nsecret (or deactivate the access key) out of band; the row stays as the record.",
+        "operationId": "revoke_v1_cloud_onboarding_credentials__credential_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "credential_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Credential Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CredentialView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke"
       }
     },
     "/v1/commercial/margin": {

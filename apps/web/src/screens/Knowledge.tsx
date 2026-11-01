@@ -13,6 +13,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { count, date, safeHttps } from "@/lib/format";
 import type { Band } from "@/lib/health";
 import { useMe } from "@/lib/session";
@@ -50,6 +51,7 @@ function CoverageBadge({ value, kind }: { value: Coverage; kind: string }) {
 }
 
 export function Knowledge() {
+  useAssistantContext({ screen: "knowledge" });
   const me = useMe();
   const loaded = useApi(load, "knowledge");
   if (loaded.status === "loading") return <Loading what="knowledge" />;

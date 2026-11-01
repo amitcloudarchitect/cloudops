@@ -147,7 +147,7 @@ async def test_a_tampered_admin_claim_does_not_make_an_administrator(
     "SELECT reason FROM cloudops.triage_review",
     "SELECT output FROM cloudops.agent_run",
     "SELECT prompt_redacted FROM cloudops.llm_call",
-    "SELECT response FROM cloudops.llm_cache",
+    "SELECT prompt_hash FROM cloudops.llm_cache",  # 0023: only what a cache lookup reads
     "SELECT status FROM cloudops.portal_onboarding",
     "SELECT role_id FROM cloudops.portal_role_agreement",
     "SELECT alias FROM cloudops.alias_proposal",
@@ -155,7 +155,7 @@ async def test_a_tampered_admin_claim_does_not_make_an_administrator(
     "SELECT actor FROM audit.action_log",
     "SELECT name FROM staging.resource_quarantine",
     "SELECT * FROM access.principal",
-    # Report packs (migration 0025, ADR 0030): the snapshot, price and published
+    # Report packs (migration 0027, ADR 0030): the snapshot, price and published
     # text only. Never who generated, approved, published or edited a pack, the AI
     # drafts, or the commercial sections.
     "SELECT generated_by FROM cloudops.report_pack",

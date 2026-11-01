@@ -514,7 +514,7 @@ async def test_the_portfolio_consolidates_the_same_rows_in_the_reporting_currenc
 async def test_a_customer_scope_reads_the_granted_report_columns_only(
     step17: Step17, month: Month
 ) -> None:
-    """Customer scopes run as cloudops_customer (migration 0011). Migration 0025
+    """Customer scopes run as cloudops_customer (migration 0011). Migration 0027
     grants it a pack's snapshot, its price and a section's published text, and
     nothing else: naming who generated or edited a pack, an AI draft or the
     commercial sections is refused, not hidden. Assurance stays ungranted."""
@@ -552,7 +552,7 @@ async def test_a_customer_scope_reads_the_granted_report_columns_only(
         roles = cx.execute(
             "SELECT DISTINCT unnest(array(SELECT rolname FROM pg_roles WHERE oid = ANY(polroles)))"
             " FROM pg_policy WHERE polname = 'published_only_for_customers' ORDER BY 1").fetchall()
-        # The default roles that read packs (0025), and only those.
+        # The default roles that read packs (0027), and only those.
         holders = cx.execute(
             "SELECT r.name FROM access.role_definition r JOIN access.role_permission p"
             " ON p.role_id = r.id WHERE r.role_class = 'customer'"
@@ -639,7 +639,7 @@ async def test_an_open_month_has_no_price_so_no_day_can_be_isolated(
     assert _figure(pack, "executive_summary", "cloud_cost")["kind"] == "money"
 
 
-# --- the portal: customers read their published packs (migration 0025, ADR 0030) ---
+# --- the portal: customers read their published packs (migration 0027, ADR 0030) ---
 
 
 @dataclass(frozen=True)

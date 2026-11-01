@@ -5,7 +5,7 @@
 - **Implements:** HLD UI patterns and role-driven navigation (M7, M22).
   `apps/web/src/screens/Home.tsx`, `HomeWidgets.tsx`, `src/lib/dashboard.ts`,
   `src/components/Widget.tsx`, `BarTable.tsx`; `services/api/src/cloudops_api/home.py`;
-  `role_class` on `/v1/me`; migration `0025_customer_report_packs`; the customer path in
+  `role_class` on `/v1/me`; migration `0027_customer_report_packs`; the customer path in
   `cloudops_api.reports`.
 - **Amends:** ADR 0018 D4 (where a customer role lands), ADR 0020 (customers read
   published report packs).
@@ -70,7 +70,7 @@ to report packs, SLA due times (the platform holds none), and where a role lands
    granted columns. It gets no workgroup breakdown (`by_workgroup` is null). AI spend is
    Getronics' cost, so it follows `cost.read` and is staff only. No new permission is
    added.
-5. **Customers read their published report packs** (user). Migration 0025 grants
+5. **Customers read their published report packs** (user). Migration 0027 grants
    `reports.read` to CXO and VP or director only. It also grants column `SELECT` to
    `cloudops_customer`:
    - `report_pack`: snapshot, dates, status;
@@ -81,8 +81,7 @@ to report packs, SLA due times (the platform holds none), and where a role lands
    draft or its state, and nothing on `report_pack_commercial`. The existing policies
    already limit rows to published packs of the tenant, and none for a
    subscription-limited scope. The API's customer queries name only those columns. The
-   portfolio and every write refuse customers. 0025 is numbered after 0021–0024 (open
-   pull requests); whichever merges later rebases `down_revision`.
+   portfolio and every write refuse customers.
 6. **Same design system.**
    - Metric cards carry value, label, band, source and as-of, and link to their evidence.
    - Charts are bar tables: a real `<table>` whose rows name label and value in text,

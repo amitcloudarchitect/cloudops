@@ -9,6 +9,7 @@ import { DataTable, type Column } from "@/components/DataTable";
 import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { date } from "@/lib/format";
 import { useMe } from "@/lib/session";
@@ -129,6 +130,7 @@ function UserForm({
 // administer customer user lists; the database confines this to the caller's
 // organisation and to the roles agreed with it.
 export function TenantUsers() {
+  useAssistantContext({ screen: "users" });
   const me = useMe();
   const { token } = useAuth();
   const loaded = useApi(async (t) => {

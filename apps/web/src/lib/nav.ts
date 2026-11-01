@@ -32,6 +32,8 @@ export const MODULES: readonly Module[] = [
   { href: "/mapping", label: "Customer mapping", permission: "mapping.manage" },
   // Step 18: onboarding a customer to the portal (HLD M2), platform administrators only.
   { href: "/onboarding", label: "Portal onboarding", permission: "access.manage" },
+  // ADR 0027: a customer's cloud estate, read-only, from a stored credential (ADR 0003).
+  { href: "/cloud-onboarding", label: "Cloud onboarding", permission: "access.manage", staff: true },
   // Step 15: ingest health per source and entity, and schema drift (staff only).
   { href: "/connectors", label: "Connectors", permission: "connectors.read" },
   // Step 16: cost reconciliation and allocation, margin, and the pricing engine.

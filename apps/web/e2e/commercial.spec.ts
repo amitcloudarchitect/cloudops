@@ -2,7 +2,10 @@
 // a month of cost with reconciliation checks, one AWS account drifting from the
 // provider's total (Fabrikam), a cost spike on Northwind, closed and provisional
 // margin snapshots, and Woodgrove Financial without a SOW. Journeys use the API's
-// default month, which follows the seed's anchor, never a hard-coded period.
+// default month, which follows the seed's anchor, never a hard-coded period. The
+// synthetic series dips at weekends and the detector records drops (and, early in
+// a month, a month-over-month move), so anomaly counts depend on the day: journeys
+// assert the seeded day spike, never a total.
 import type { Page } from "@playwright/test";
 
 import { expect, navLabels, test } from "./fixtures";
@@ -34,7 +37,7 @@ test.describe("finops", () => {
     await expect(northwind.locator("[data-band]").first()).toHaveAttribute("data-band", "healthy");
     await expect(northwind).toContainText("Verified");
     await expect(northwind.getByText("Unverified", { exact: true })).toHaveCount(0);
-    await expect(northwind).toContainText("1 anomaly");
+    await expect(northwind).toContainText(/[1-9]\d* anomal(y|ies)/);
     // Unverified customers sort first.
     await expect(page.getByRole("table", { name: "Cost by customer" }).locator("tbody tr").first()).toContainText("Fabrikam");
   });
@@ -62,9 +65,16 @@ test.describe("finops", () => {
     await expect(row(page, "Allocation by cost centre", "Unallocated")).toHaveCount(1);
 
     await page.getByRole("link", { name: "All customers" }).click();
+    const listed = row(page, "Cost by customer", "Northwind Logistics B.V.");
+    await expect(listed).toContainText(/[1-9]\d* anomal(y|ies)/);
+    const counted = Number(/(\d+) anomal(?:y|ies)/.exec(await listed.innerText())?.[1]);
     await page.getByRole("link", { name: "Northwind Logistics B.V." }).click();
     await expect(page.getByText("Every account matches the provider’s own total.")).toBeVisible();
-    await expect(row(page, "Cost anomalies", "Spike")).toHaveCount(1);
+    // Every anomaly the overview counts is listed, and exactly one is the seeded day
+    // spike (matched by its Window cell: a row's text runs its cells together).
+    await expect(page.getByRole("table", { name: "Cost anomalies" }).locator("tbody tr")).toHaveCount(counted);
+    const daySpikes = row(page, "Cost anomalies", "Spike").filter({ has: page.getByRole("cell", { name: "Day", exact: true }) });
+    await expect(daySpikes).toHaveCount(1);
   });
 
   test("records an FX correction with its reason, and it is listed", async ({ signedIn: page }) => {

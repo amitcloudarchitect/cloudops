@@ -64,7 +64,8 @@ commercial rules open; the user decided them before the build.
    currency at the rate in force). Day over day: a day against the mean of the seven
    before it, above +30% and 100 EUR. Month over month: the month-to-date run rate
    against last month, above +20% and 1,000 EUR. Both directions recorded; spikes
-   alert; a recomputed day that no longer crosses (billing restated) is removed.
+   alert; a recomputed day that no longer crosses (billing restated) is removed. On
+   consumption cost only (amendment, 2026-11-01).
 
 7. **The pricing engine is a port, wrapped in a versioned rate card.** `pricing.py`
    keeps the reference's functions, names and order of operations, in `Decimal`; the
@@ -151,3 +152,15 @@ Decided with the user after the step 16 review:
 - From review: a month with no work items or no hours is incomplete (modelled basis);
   invoice references sum every document in the period; one customer's margin failure
   stops only that customer.
+
+## Amendment: anomalies on consumption only (2026-11-01)
+
+Decided by the user, after the console journeys failed on 1 November:
+
+- **Anomaly detection reads consumption only** (`charge_class = 'consumption'`), not
+  every charge on the account (decision 6). Licence, support, marketplace, savings
+  plan, tax and credit are booked once a month, on the 1st. Counted as daily cost they
+  raised a day-over-day spike on every 1st, for every customer, and month over month
+  projected a whole month of fixed charges from a single day. Fixed charges stay in
+  reconciliation and margin as before; a change in them is a billing question, not a
+  run-rate anomaly.

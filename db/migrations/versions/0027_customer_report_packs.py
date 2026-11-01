@@ -1,13 +1,12 @@
 """Customers read their published report packs (expand).
 
-Revision ID: 0025
-Revises: 0020
+Revision ID: 0027
+Revises: 0026
 Create Date: 2026-11-01
 
 ADR 0030 (user decision, 2026-11-01). The portal's home shows the customer its
 latest report pack, so the portal now decides what ADR 0020 left to it: which
-report columns a customer reads. Numbered 0025 because 0021-0024 are taken by
-open pull requests; whichever merges after them rebases ``down_revision``.
+report columns a customer reads.
 
 - ``reports.read`` for the default customer roles CXO and VP or director (0011).
   No other customer role gains it; administrators may still edit the matrix.
@@ -28,8 +27,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0025"
-down_revision = "0020"
+revision = "0027"
+down_revision = "0026"
 branch_labels = None
 depends_on = None
 

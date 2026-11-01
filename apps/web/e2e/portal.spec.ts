@@ -9,7 +9,7 @@ import { api, apiPost, expect, navLabels, test, token } from "./fixtures";
 import type { RoleName } from "./roles";
 
 const API = process.env.CLOUDOPS_E2E_API ?? "http://127.0.0.1:8000";
-const STAFF_ONLY = ["Customer mapping", "Portal onboarding", "Connectors"];
+const STAFF_ONLY = ["Customer mapping", "Portal onboarding", "Cloud onboarding", "Connectors"];
 
 async function post<T>(role: RoleName, path: string, body: unknown): Promise<T> {
   const response = await fetch(`${API}${path}`, {

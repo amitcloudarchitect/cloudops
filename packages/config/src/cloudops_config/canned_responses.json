@@ -28,6 +28,47 @@
       "text": "Canned mock commentary: no model has read this section.",
       "figures_cited": [],
       "confidence": 0.6
+    },
+    "assistant.classify": {
+      "intent": "account",
+      "other_customer": false,
+      "confidence": 0.9
+    },
+    "assistant.rerank": {
+      "order": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "confidence": 0.8
+    },
+    "assistant.answer": {
+      "status": "answered",
+      "answer": "This is the local mock model: no real model is connected, so this canned answer only points at the most relevant help page.",
+      "claims": [
+        {
+          "text": "The most relevant help page is cited as the source.",
+          "sources": [
+            "P1"
+          ]
+        }
+      ],
+      "confidence": 0.6
+    },
+    "assistant.help": {
+      "status": "answered",
+      "answer": "This is the local mock model: no real model is connected, so this canned answer only points at the most relevant help page.",
+      "claims": [
+        {
+          "text": "The most relevant help page is cited as the source.",
+          "sources": [
+            "P1"
+          ]
+        }
+      ],
+      "confidence": 0.6
     }
   }
 }

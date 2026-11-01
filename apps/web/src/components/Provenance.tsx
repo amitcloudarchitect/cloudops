@@ -44,11 +44,16 @@ export function Provenance({ metric }: { metric: AnyMetric }) {
         <span className="sr-only">As of </span>
         <time dateTime={metric.as_of}>{dateTime(metric.as_of)}</time>
       </span>
-      {metric.is_modelled ? (
-        <span className="rounded-full border border-dashed border-modelled bg-modelled-bg px-2 font-semibold text-modelled">
-          Modelled
-        </span>
-      ) : null}
+      {metric.is_modelled ? <ModelledMark /> : null}
+    </span>
+  );
+}
+
+/** The one marker for a modelled value, in words as well as colour. */
+export function ModelledMark() {
+  return (
+    <span className="rounded-full border border-dashed border-modelled bg-modelled-bg px-2 font-semibold text-modelled">
+      Modelled
     </span>
   );
 }

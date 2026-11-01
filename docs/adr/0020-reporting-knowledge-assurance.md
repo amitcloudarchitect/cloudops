@@ -1,7 +1,7 @@
 # ADR 0020: Reporting, knowledge and assurance
 
 - **Status:** Accepted, 2026-10-31
-- **Amended by:** ADR 0030: customers (CXO, VP or director) read published packs, by column grant (migration 0025).
+- **Amended by:** ADR 0030: customers (CXO, VP or director) read published packs, by column grant (migration 0027).
 - **Decided by:** Amit Kumar (the library and the acceptance pack); the rest is step 17
   carried out on this design
 - **Implements:** step 17; HLD modules M14, M15, M19 and M20; LLD Vector store,

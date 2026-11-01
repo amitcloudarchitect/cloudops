@@ -16,10 +16,13 @@ unverified and alerts once per account, period, kind and day. An account with
 cost and no reference is unverified (``no_reference``) and does not page.
 
 **Anomalies** (daily). Day over day for the last ``RECENT_DAYS`` days and month
-over month through the latest one, on amortized cost per account and currency,
-against the tenant's thresholds or the platform default, the absolute floor
-converted into the account's currency at the rate in force. A day that no longer
-crosses (billing restated) is removed. Spikes alert.
+over month through the latest one, on amortized consumption cost per account and
+currency, against the tenant's thresholds or the platform default, the absolute
+floor converted into the account's currency at the rate in force. A day that no
+longer crosses (billing restated) is removed. Spikes alert. Only consumption
+counts (user decision, 2026-11-01): licence, support, marketplace, savings plan,
+tax and credit are booked once a month, on the 1st, so counting them would raise
+a day-over-day spike every month and project a month's fixed charges from one day.
 
 **Margin** (daily, closed at month end). One transaction per customer: one
 customer's failure stops only theirs, and the run then fails so it retries. The
@@ -262,6 +265,7 @@ def _check(tenant: UUID, account: UUID, period: str, kind: str, on: date, as_of:
 _DAILY: Final = text(
     "SELECT c.tenant_id, c.account_id, c.currency, c.usage_date, sum(c.amortized_cost)"
     " FROM cloudops.cost_fact c WHERE c.usage_date BETWEEN :a AND :b"
+    "   AND c.charge_class = 'consumption'"
     " GROUP BY c.tenant_id, c.account_id, c.currency, c.usage_date"
 )
 _THRESHOLDS: Final = text(

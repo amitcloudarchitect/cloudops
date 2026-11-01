@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
 import { FrameContext, WidgetCache } from "@/components/Widget";
+import { useAssistantContext } from "@/lib/assistant";
 import { defaultLayout, loadLayout, place, saveLayout, WIDGETS, type Layout, type Role, type WidgetId } from "@/lib/dashboard";
 import { can, useMe } from "@/lib/session";
 
@@ -15,6 +16,7 @@ import { WIDGET_COMPONENTS } from "./HomeWidgets";
 // view (ADR 0018, D4) first. The user may hide and reorder widgets; the layout is
 // kept in this browser, per role.
 export function Home() {
+  useAssistantContext({ screen: "home" });
   const me = useMe();
   const role: Role = useMemo(
     () => ({ kind: me.kind, roleClass: me.role_class, landing: me.landing, can: (p: string) => can(me, p) }),

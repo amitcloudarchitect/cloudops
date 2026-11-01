@@ -239,6 +239,63 @@ function Steps({ item, catalogue, onChanged }: { item: Onboarding; catalogue: Ca
   );
 }
 
+// AMARA for the customer's portal users (ADR 0029): off until switched on here.
+// Getronics staff always have it. The API does not report the current setting, so
+// the switch shows what was last set from this page, and off before that.
+function AssistantSwitch({ tenantId, enabled, onChanged }: { tenantId: string; enabled: boolean; onChanged: (enabled: boolean) => void }) {
+  const { token } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<Message>(null);
+
+  async function set(next: boolean) {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const view = await apiPost(await token(), "/v1/assistant/tenants/{tenant_id}/enabled", { tenant_id: tenantId }, { enabled: next });
+      onChanged(view.enabled);
+      setMessage({ kind: "ok", text: view.enabled ? "AMARA is on for this customer’s portal users." : "AMARA is off for this customer’s portal users." });
+    } catch (error) {
+      setMessage({ kind: "error", text: failure(error, "The AMARA setting") });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section aria-labelledby="assistant-switch" className="space-y-2 card p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 id="assistant-switch" className="text-base font-semibold text-ink">
+            AMARA assistant for portal users
+          </h3>
+          <p id="assistant-switch-hint" className="text-sm text-muted">
+            Read-only answers about this customer’s own account. Off by default; Getronics staff always have it.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          aria-labelledby="assistant-switch"
+          aria-describedby="assistant-switch-hint"
+          disabled={busy}
+          onClick={() => void set(!enabled)}
+          className="inline-flex items-center gap-2 rounded-control text-sm font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          <span
+            aria-hidden="true"
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border transition-colors ${enabled ? "border-accent bg-accent" : "border-line bg-surface-raised"}`}
+          >
+            <span className={`inline-block size-4 rounded-full bg-ink transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
+          </span>
+          {enabled ? "On" : "Off"}
+        </button>
+      </div>
+      <Feedback message={message} />
+    </section>
+  );
+}
+
 // Portal onboarding (HLD M2, ADR 0018): a platform administrator records the
 // customer's federation, the role set agreed with it and its first
 // administrator, then opens the portal. The database enforces the order.
@@ -251,6 +308,7 @@ export function PortalOnboarding() {
   const [items, setItems] = useState<Onboarding[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [message, setMessage] = useState<Message>(null);
+  const [assistant, setAssistant] = useState<Record<string, boolean>>({});
 
   if (loaded.status === "loading") return <Loading what="portal onboarding" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="portal onboarding" />;
@@ -300,6 +358,12 @@ export function PortalOnboarding() {
                 Close
               </button>
             </div>
+            <AssistantSwitch
+              key={`assistant:${current.tenant.id}`}
+              tenantId={current.tenant.id}
+              enabled={assistant[current.tenant.id] ?? current.assistant_enabled}
+              onChanged={(enabled) => setAssistant((now) => ({ ...now, [current.tenant.id]: enabled }))}
+            />
             <Steps
               key={`${current.tenant.id}:${current.status}:${current.agreed_roles.join(",")}`}
               item={current}
