@@ -318,3 +318,23 @@ async def test_a_platform_administrator_chooses_internal_at_onboarding_and_later
             " ORDER BY id", (tid,)).fetchall()]
     assert logged == ["onboard_tenant", "set_tenant_internal", "set_platform_host",
                       "set_tenant_internal"]
+
+
+async def test_the_tenant_list_says_which_accounts_each_holds(
+    api: Api, principals: Principals, seeded: Seeded,
+) -> None:
+    """Cloud onboarding labels each customer with what it holds (ADR 0031)."""
+    code = f"H{uuid4().hex[:6].upper()}"
+    created = await _send(api, "POST", "/v1/mapping/tenants", principals.admin,
+                          {"canonical_name": f"Holds Nothing {code}", "short_code": code,
+                           "internal": False})
+    assert created.status_code == 201, created.text
+    tenants = {t["tenant"]["id"]: t for t in
+               (await _send(api, "GET", "/v1/mapping/tenants", principals.admin)).json()}
+    assert tenants[created.json()["tenant"]["id"]]["accounts"] == {}
+    a_azure = tenants[str(seeded.a.id)]["accounts"]["azure"]
+    assert a_azure["value"] >= 1
+    assert a_azure["unit"] == "accounts"
+    c_held = tenants[str(seeded.c.id)]["accounts"]
+    assert set(c_held) <= {"azure", "aws"}
+    assert sum(m["value"] for m in c_held.values()) >= 2

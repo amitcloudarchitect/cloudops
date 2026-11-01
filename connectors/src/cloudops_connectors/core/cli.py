@@ -133,9 +133,13 @@ def _entities(args: argparse.Namespace, entities: Mapping[str, timedelta],
     return wanted
 
 
-async def upsert_schedule(temporal: Client, schedule_id: str, wanted: Schedule) -> str:
+async def upsert_schedule(temporal: Client, schedule_id: str, wanted: Schedule, *,
+                          trigger_on_create: bool = False) -> str:
+    """Create the schedule, or update it to ``wanted``. ``trigger_on_create`` runs a
+    new schedule once now, so a new deployment's first sync is not left to the
+    first interval; an update never triggers."""
     try:
-        await temporal.create_schedule(schedule_id, wanted)
+        await temporal.create_schedule(schedule_id, wanted, trigger_immediately=trigger_on_create)
     except ScheduleAlreadyRunningError:
         def update(_: ScheduleUpdateInput) -> ScheduleUpdate:
             return ScheduleUpdate(schedule=wanted)
@@ -164,8 +168,9 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
                     id=f"{name}-{entity}", task_queue=queue),
                 spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=entities[entity])]),
             )
-            print(f"{await upsert_schedule(temporal, f'{name}-{entity}', wanted)}: every "
-                  f"{entities[entity]}")
+            done = await upsert_schedule(temporal, f"{name}-{entity}", wanted,
+                                         trigger_on_create=True)
+            print(f"{done}: every {entities[entity]}")
         return 0
     live = None if args.fixtures else live
     settings = load_settings(os.environ, require={

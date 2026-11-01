@@ -26,6 +26,7 @@ from sqlalchemy import text
 from cloudops_api.access import Access
 from cloudops_api.bff import (
     _RESOURCE_COLUMNS,
+    _RESOURCE_FROM,
     CustomerPrice,
     ResourceStaffView,
     ResourceView,
@@ -393,7 +394,7 @@ async def resource_context(
     incidents: list[WorkItemSummary] | None = None
     async with platform(request).db.transaction(access.scope) as conn:
         found = (await conn.execute(text(
-            f"SELECT {_RESOURCE_COLUMNS} FROM cloudops.resource r WHERE r.id = :id"),  # noqa: S608
+            f"SELECT {_RESOURCE_COLUMNS} FROM {_RESOURCE_FROM} WHERE r.id = :id"),  # noqa: S608
             {"id": resource_id})).one_or_none()
         if found is None:
             raise ApiError(404, "not_found")

@@ -3332,11 +3332,18 @@ export interface components {
             /** Vulnerabilities */
             vulnerabilities: components["schemas"]["VulnerabilityView"][] | null;
         };
-        /** ResourceList */
+        /**
+         * ResourceList
+         * @description One page, ordered by name. ``count`` is every resource in scope, so a
+         *     caller can tell a page from the whole. ``next_cursor`` asks for the next
+         *     page, and is None on the last; it is opaque, not a figure.
+         */
         ResourceList: {
             count: components["schemas"]["Metric_int_"];
             /** Items */
             items: (components["schemas"]["ResourceStaffView"] | components["schemas"]["ResourceView"])[];
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * ResourceStaffView
@@ -3348,6 +3355,8 @@ export interface components {
              * Format: uuid
              */
             account_id: string;
+            /** Customer */
+            customer: string;
             /**
              * Id
              * Format: uuid
@@ -3618,6 +3627,10 @@ export interface components {
         };
         /** TenantAliases */
         TenantAliases: {
+            /** Accounts */
+            accounts: {
+                [key: string]: components["schemas"]["Metric_int_"];
+            };
             /** Aliases */
             aliases: components["schemas"]["AliasView"][];
             /** Hosts Platform */
@@ -6265,6 +6278,8 @@ export interface operations {
     list_resources_v1_resources_get: {
         parameters: {
             query?: {
+                cursor?: string;
+                limit?: number;
                 /** @description One customer in the caller's scope; omitted: every customer in it. */
                 tenant_id?: string | null;
             };

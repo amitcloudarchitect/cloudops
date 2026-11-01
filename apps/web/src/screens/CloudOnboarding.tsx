@@ -221,6 +221,22 @@ function Detail({ item, onChanged }: { item: CloudCredential; onChanged: (next: 
   );
 }
 
+const HELD: Record<string, [string, string]> = { azure: ["Azure subscription", "Azure subscriptions"], aws: ["AWS account", "AWS accounts"] };
+
+/** "Azure Sponsorship (AZSPONSOR) · 1 Azure subscription": a customer may hold several
+ * accounts, so the list says what each already holds. */
+function tenantLabel(t: TenantAliases): string {
+  const held = Object.entries(t.accounts)
+    .map(([provider, held]) => [provider, held.value] as const)
+    .filter(([, n]) => n > 0)
+    .map(([provider, n]) => {
+      const [one, many] = HELD[provider] ?? [`${provider} account`, `${provider} accounts`];
+      return `${n} ${n === 1 ? one : many}`;
+    });
+  const name = `${t.tenant.name} (${t.short_code})`;
+  return held.length ? `${name} · ${held.join(", ")}` : name;
+}
+
 function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (item: CloudCredential) => void }) {
   const { token } = useAuth();
   const [tenantId, setTenantId] = useState("");
@@ -287,7 +303,7 @@ function OnboardForm({ tenants, onDone }: { tenants: TenantAliases[]; onDone: (i
             <option value="">Choose…</option>
             {tenants.map((t) => (
               <option key={t.tenant.id} value={t.tenant.id}>
-                {t.tenant.name} ({t.short_code})
+                {tenantLabel(t)}
               </option>
             ))}
             <option value="new">A new tenant…</option>
