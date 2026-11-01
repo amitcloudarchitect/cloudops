@@ -332,6 +332,9 @@ async def test_the_tenant_list_says_which_accounts_each_holds(
     tenants = {t["tenant"]["id"]: t for t in
                (await _send(api, "GET", "/v1/mapping/tenants", principals.admin)).json()}
     assert tenants[created.json()["tenant"]["id"]]["accounts"] == {}
-    assert tenants[str(seeded.a.id)]["accounts"].get("azure", 0) >= 1
-    assert set(tenants[str(seeded.c.id)]["accounts"]) <= {"azure", "aws"}
-    assert sum(tenants[str(seeded.c.id)]["accounts"].values()) >= 2
+    a_azure = tenants[str(seeded.a.id)]["accounts"]["azure"]
+    assert a_azure["value"] >= 1
+    assert a_azure["unit"] == "accounts"
+    c_held = tenants[str(seeded.c.id)]["accounts"]
+    assert set(c_held) <= {"azure", "aws"}
+    assert sum(m["value"] for m in c_held.values()) >= 2

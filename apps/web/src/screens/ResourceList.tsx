@@ -23,13 +23,13 @@ async function allResources(token: string, tenantId: string | null): Promise<Pag
   const narrowed = customerQuery(tenantId);
   const first = await apiGet(token, "/v1/resources", {}, narrowed);
   const items = [...first.items];
-  let next = first.next_offset;
+  let next = first.next_cursor;
   while (next !== null && next !== undefined) {
-    const page = await apiGet(token, "/v1/resources", {}, { ...narrowed, offset: String(next) });
+    const page = await apiGet(token, "/v1/resources", {}, { ...narrowed, cursor: next });
     items.push(...page.items);
-    next = page.next_offset;
+    next = page.next_cursor;
   }
-  return { ...first, items, next_offset: null };
+  return { ...first, items, next_cursor: null };
 }
 
 function customer(r: Resource): string | null {

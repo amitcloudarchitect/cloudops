@@ -13,8 +13,8 @@ async function everyResource(): Promise<{ total: number; items: ResourceStaffVie
   let page = await api<ResourceList>("engineer", "/v1/resources");
   const total = page.count.value;
   const items = [...page.items];
-  while (page.next_offset !== null) {
-    page = await api<ResourceList>("engineer", `/v1/resources?offset=${page.next_offset}`);
+  while (page.next_cursor !== null) {
+    page = await api<ResourceList>("engineer", `/v1/resources?cursor=${page.next_cursor}`);
     items.push(...page.items);
   }
   return { total, items: items.filter((r): r is ResourceStaffView => "customer" in r) };
@@ -64,12 +64,12 @@ function resource(n: number, name: string, type: string, typeNative: string, cus
 async function twoPages(page: Page): Promise<string[]> {
   const asked: string[] = [];
   await page.route(/\/v1\/resources(\?.*)?$/, async (route, request) => {
-    const offset = new URL(request.url()).searchParams.get("offset") ?? "0";
-    asked.push(offset);
+    const cursor = new URL(request.url()).searchParams.get("cursor") ?? "0";
+    asked.push(cursor);
     const body: ResourceList =
-      offset === "0"
-        ? { items: [resource(1, "alpha-vm", "compute.vm", "Microsoft.Compute/virtualMachines", "Alpha"), resource(2, "alpha-key", "other", "Microsoft.Compute/sshPublicKeys", "Alpha")], count: COUNT, offset: 0, next_offset: 2 }
-        : { items: [resource(3, "beta-disk", "storage.disk", "Microsoft.Compute/disks", "Beta")], count: COUNT, offset: 2, next_offset: null };
+      cursor === "0"
+        ? { items: [resource(1, "alpha-vm", "compute.vm", "Microsoft.Compute/virtualMachines", "Alpha"), resource(2, "alpha-key", "other", "Microsoft.Compute/sshPublicKeys", "Alpha")], count: COUNT, next_cursor: "2" }
+        : { items: [resource(3, "beta-disk", "storage.disk", "Microsoft.Compute/disks", "Beta")], count: COUNT, next_cursor: null };
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
   });
   return asked;

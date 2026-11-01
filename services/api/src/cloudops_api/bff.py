@@ -91,12 +91,12 @@ class ResourceStaffView(ApiModel):
 
 class ResourceList(ApiModel):
     """One page, ordered by name. ``count`` is every resource in scope, so a
-    caller can tell a page from the whole; ``next_offset`` is None on the last."""
+    caller can tell a page from the whole. ``next_cursor`` asks for the next
+    page, and is None on the last; it is opaque, not a figure."""
 
     items: list[ResourceStaffView | ResourceView]
     count: Metric[int]
-    offset: int
-    next_offset: int | None
+    next_cursor: str | None
 
 
 class CostLine(ApiModel):
@@ -207,8 +207,9 @@ async def list_resources(
     access: AccessDep,
     scope: ScopeDep,
     limit: Annotated[int, Query(ge=1, le=MAX_LIST)] = MAX_LIST,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    cursor: Annotated[str, Query(pattern=r"^[0-9]{1,9}$")] = "0",
 ) -> ResourceList:
+    offset = int(cursor)
     async with platform(request).db.transaction(scope) as conn:
         rows = (
             await conn.execute(
@@ -226,8 +227,7 @@ async def list_resources(
     following = offset + len(rows)
     return ResourceList(
         items=[_resource(tuple(r), access) for r in rows],
-        offset=offset,
-        next_offset=following if len(rows) == limit and following < total else None,
+        next_cursor=str(following) if len(rows) == limit and following < total else None,
         count=Metric[int](
             value=total,
             unit="resources",

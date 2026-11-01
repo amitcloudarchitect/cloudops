@@ -3335,16 +3335,15 @@ export interface components {
         /**
          * ResourceList
          * @description One page, ordered by name. ``count`` is every resource in scope, so a
-         *     caller can tell a page from the whole; ``next_offset`` is None on the last.
+         *     caller can tell a page from the whole. ``next_cursor`` asks for the next
+         *     page, and is None on the last; it is opaque, not a figure.
          */
         ResourceList: {
             count: components["schemas"]["Metric_int_"];
             /** Items */
             items: (components["schemas"]["ResourceStaffView"] | components["schemas"]["ResourceView"])[];
-            /** Next Offset */
-            next_offset: number | null;
-            /** Offset */
-            offset: number;
+            /** Next Cursor */
+            next_cursor: string | null;
         };
         /**
          * ResourceStaffView
@@ -3630,7 +3629,7 @@ export interface components {
         TenantAliases: {
             /** Accounts */
             accounts: {
-                [key: string]: number;
+                [key: string]: components["schemas"]["Metric_int_"];
             };
             /** Aliases */
             aliases: components["schemas"]["AliasView"][];
@@ -6279,8 +6278,8 @@ export interface operations {
     list_resources_v1_resources_get: {
         parameters: {
             query?: {
+                cursor?: string;
                 limit?: number;
-                offset?: number;
                 /** @description One customer in the caller's scope; omitted: every customer in it. */
                 tenant_id?: string | null;
             };

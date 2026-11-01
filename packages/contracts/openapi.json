@@ -5863,7 +5863,7 @@
       },
       "ResourceList": {
         "additionalProperties": false,
-        "description": "One page, ordered by name. ``count`` is every resource in scope, so a\ncaller can tell a page from the whole; ``next_offset`` is None on the last.",
+        "description": "One page, ordered by name. ``count`` is every resource in scope, so a\ncaller can tell a page from the whole. ``next_cursor`` asks for the next\npage, and is None on the last; it is opaque, not a figure.",
         "properties": {
           "count": {
             "$ref": "#/components/schemas/Metric_int_"
@@ -5882,27 +5882,22 @@
             "title": "Items",
             "type": "array"
           },
-          "next_offset": {
+          "next_cursor": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Next Offset"
-          },
-          "offset": {
-            "title": "Offset",
-            "type": "integer"
+            "title": "Next Cursor"
           }
         },
         "required": [
           "items",
           "count",
-          "offset",
-          "next_offset"
+          "next_cursor"
         ],
         "title": "ResourceList",
         "type": "object"
@@ -6840,7 +6835,7 @@
         "properties": {
           "accounts": {
             "additionalProperties": {
-              "type": "integer"
+              "$ref": "#/components/schemas/Metric_int_"
             },
             "title": "Accounts",
             "type": "object"
@@ -11430,13 +11425,13 @@
           },
           {
             "in": "query",
-            "name": "offset",
+            "name": "cursor",
             "required": false,
             "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
+              "default": "0",
+              "pattern": "^[0-9]{1,9}$",
+              "title": "Cursor",
+              "type": "string"
             }
           },
           {

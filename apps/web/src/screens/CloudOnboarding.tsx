@@ -227,6 +227,7 @@ const HELD: Record<string, [string, string]> = { azure: ["Azure subscription", "
  * accounts, so the list says what each already holds. */
 function tenantLabel(t: TenantAliases): string {
   const held = Object.entries(t.accounts)
+    .map(([provider, held]) => [provider, held.value] as const)
     .filter(([, n]) => n > 0)
     .map(([provider, n]) => {
       const [one, many] = HELD[provider] ?? [`${provider} account`, `${provider} accounts`];

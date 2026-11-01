@@ -128,7 +128,7 @@ class TenantAliases(ApiModel):
     aliases: list[AliasView]
     # Cloud accounts it already holds, by provider ("azure": 1): a customer may hold
     # several, and onboarding refuses one another tenant holds (ADR 0031).
-    accounts: dict[str, int]
+    accounts: dict[str, Metric[int]]
 
 
 class OnboardRequest(ApiModel):
@@ -290,9 +290,12 @@ async def list_tenants(request: Request, access: AccessDep) -> list[TenantAliase
     for tid, source, alias, confirmed in aliases:
         by_tenant.setdefault(tid, []).append(
             AliasView(source_system=source, alias=alias, confirmed_at=confirmed))
-    accounts: dict[UUID, dict[str, int]] = {}
+    accounts: dict[UUID, dict[str, Metric[int]]] = {}
     for tid, provider, count in held:
-        accounts.setdefault(tid, {})[provider] = int(count)
+        accounts.setdefault(tid, {})[provider] = Metric[int](
+            value=int(count), unit="accounts", source_system="platform_inventory",
+            as_of=datetime.now(UTC), query_ref=query_ref("mapping.accounts_held", 1, live=True),
+            is_modelled=False)
     return [TenantAliases(tenant=TenantView(id=t[0], name=t[1]), short_code=t[2], status=t[3],
                           internal=t[4], hosts_platform=t[5], aliases=by_tenant.get(t[0], []),
                           accounts=accounts.get(t[0], {})) for t in tenants]

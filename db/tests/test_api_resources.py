@@ -17,15 +17,15 @@ pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 async def _pages(api: Api, oid: UUID, limit: int) -> tuple[list[dict[str, Any]], list[Any]]:
     items: list[dict[str, Any]] = []
     bodies: list[Any] = []
-    offset: int | None = 0
-    while offset is not None:
+    cursor: str | None = "0"
+    while cursor is not None:
         response = await api.get("/v1/resources", oid,
-                                 params={"limit": str(limit), "offset": str(offset)})
+                                 params={"limit": str(limit), "cursor": cursor})
         assert response.status_code == 200, response.text
         body = response.json()
         bodies.append(body)
         items += body["items"]
-        offset = body["next_offset"]
+        cursor = body["next_cursor"]
         assert len(bodies) < 1000
     return items, bodies
 
@@ -38,12 +38,11 @@ async def test_paging_returns_everything_once_and_the_true_total(
     assert total >= 2
     assert len(bodies) == total
     assert len(items) == len({i["id"] for i in items}) == total
-    assert [b["offset"] for b in bodies] == list(range(total))
-    assert bodies[-1]["next_offset"] is None
+    assert [b["next_cursor"] for b in bodies] == [str(n) for n in range(1, total)] + [None]
     names = [(i["name"], i["id"]) for i in items]
     assert names == sorted(names)
     whole = (await api.get("/v1/resources", principals.finops_all)).json()
-    assert whole["next_offset"] is None
+    assert whole["next_cursor"] is None
     assert {i["id"] for i in whole["items"]} == {i["id"] for i in items}
 
 
@@ -66,7 +65,8 @@ async def test_a_customer_pages_through_its_own_tenant_only(
     assert all("customer" not in i for i in items)
 
 
-@pytest.mark.parametrize("params", [{"limit": "0"}, {"limit": "501"}, {"offset": "-1"}])
+@pytest.mark.parametrize("params", [
+    {"limit": "0"}, {"limit": "501"}, {"cursor": "-1"}, {"cursor": "abc"}])
 async def test_a_page_outside_the_bounds_is_refused(
     api: Api, principals: Principals, params: dict[str, str],
 ) -> None:
