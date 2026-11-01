@@ -19,7 +19,7 @@ resource "azurerm_dashboard_grafana" "this" {
   name                          = module.names.grafana
   resource_group_name           = azurerm_resource_group.obs.name
   location                      = var.location
-  grafana_major_version         = "11"
+  grafana_major_version         = "12" # Standard accepts 12 and 13 (11 refused, Nov 2026)
   sku                           = "Standard"
   api_key_enabled               = false # Entra ID only
   public_network_access_enabled = var.network_mode == "public"
