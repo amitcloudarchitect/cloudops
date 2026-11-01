@@ -172,6 +172,10 @@ rounding. This ADR uses the book's values.
 - On the data screens, the circle and the Mint selection are the only decoration.
   There is no icon set: the book allows only its own icon library, and we do not
   have it. Background images appear only as decision 8 describes.
+  *Amended 2026-11-01 (ADR 0032, decision 6):* the navigation alone carries simple
+  line icons, inline SVG in the text colour, so the icon rail can work. They are a
+  stand-in until the book's icon library is available, and replacing them is a
+  one-file change (`components/NavIcon.tsx`).
 - Open:
   - brand team confirmation that the open stand-in fonts are acceptable;
   - vector logo masters, if brand wants them to replace the PNGs.

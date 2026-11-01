@@ -11,7 +11,6 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
     "Approvals",
     "Performance",
     "Customers",
-    "Observability",
     "Security posture",
     "SecOps",
     "FinOps",
@@ -25,8 +24,9 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
     "Customer mapping",
     "Connectors",
     "Commercial setup",
+    "Observability",
   ]);
-  expect(await navAreas(page)).toEqual(["Operations", "Security", "Commercial", "Assurance & Reports", "Knowledge", "Settings"]);
+  expect(await navAreas(page)).toEqual(["Operations", "Security", "Commercial", "Assurance & Reports", "Knowledge", "Settings", "Observability"]);
   const settings = page.getByRole("list", { name: "Settings" });
   await expect(settings.getByRole("link")).toHaveText(["Cloud onboarding", "Portal onboarding", "Customer mapping", "Connectors", "Commercial setup"]);
   await page.goto("/mapping");

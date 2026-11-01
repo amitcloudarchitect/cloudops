@@ -48,6 +48,18 @@ session as a binding), each in its own way.
    permission itself. Observability, SecOps and Commercial setup have their places,
    reserved until their pages exist.
 
+6. **Collapsible navigation** (amended 2026-11-01). Observability is now an area of
+   its own, after Settings. Each area has an icon and collapses on its own; the
+   whole sidebar collapses to an icon rail, with a tooltip and an accessible name on
+   every link. The rail is the default below desktop width (1024 px), so the page
+   never scrolls sideways at tablet width. Both choices are kept per user in the
+   browser (`localStorage`, `cloudops.nav.<object id>`); a blocked store falls back
+   to the defaults. Collapsing is presentation only: the list is already filtered by
+   the role's permissions, and the rail shows exactly the same modules. Every module
+   and area names an icon (`components/NavIcon.tsx`, inline SVG): a new entry adds
+   one there if none fits (`cloud` and `trend` are spare for Cloud Services and
+   Revenue & margin).
+
 ## Consequences
 
 - A client-supplied tenant id can only ever reduce what a request reads. Hiding the
