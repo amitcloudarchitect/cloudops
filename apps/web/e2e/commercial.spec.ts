@@ -21,7 +21,7 @@ test.describe("finops", () => {
 
   test("lists FinOps, Margin and Pricing", async ({ signedIn: page }) => {
     await page.goto("/");
-    expect(await navLabels(page)).toEqual(["Home", "Resources", "Customers", ...COMMERCIAL, "Commercial setup"]);
+    expect(await navLabels(page)).toEqual(["Home", "Resources", "Customers", "Overview", "Findings", ...COMMERCIAL, "Commercial setup"]);
   });
 
   test("an unverified reconciliation is marked with its reason, not shown as a normal figure", async ({ signedIn: page }) => {

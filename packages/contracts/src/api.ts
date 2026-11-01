@@ -449,6 +449,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/cloud-services/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Account */
+        get: operations["account_v1_cloud_services_accounts__account_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-services/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Findings */
+        get: operations["findings_v1_cloud_services_findings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-services/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Overview */
+        get: operations["overview_v1_cloud_services_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-services/resources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resources */
+        get: operations["resources_v1_cloud_services_resources_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-services/resources/{resource_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resource */
+        get: operations["resource_v1_cloud_services_resources__resource_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/customers/{tenant_id}/margin-recompute": {
         parameters: {
             query?: never;
@@ -2235,6 +2320,316 @@ export interface components {
             short_description: string | null;
             target_hours: components["schemas"]["Metric_int_"] | null;
             tenant: components["schemas"]["TenantView"];
+        };
+        /** CloudAccount */
+        CloudAccount: {
+            account: components["schemas"]["CloudAccountView"];
+            /** Cost Visible */
+            cost_visible: boolean;
+            /**
+             * Group By
+             * @enum {string}
+             */
+            group_by: "resource_group" | "region";
+            /** Groups */
+            groups: components["schemas"]["CloudNode"][];
+            period: components["schemas"]["CloudPeriod"];
+            summary: components["schemas"]["CloudNode"];
+        };
+        /** CloudAccountSummary */
+        CloudAccountSummary: {
+            account: components["schemas"]["CloudAccountView"];
+            summary: components["schemas"]["CloudNode"];
+        };
+        /** CloudAccountView */
+        CloudAccountView: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Native Id */
+            native_id: string;
+            /** Provider */
+            provider: string;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** CloudBackup */
+        CloudBackup: {
+            failing: components["schemas"]["Metric_int_"];
+            protected: components["schemas"]["Metric_int_"];
+            unprotected: components["schemas"]["Metric_int_"];
+        };
+        /** CloudCheckView */
+        CloudCheckView: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Category */
+            category: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * First Seen
+             * Format: date-time
+             */
+            first_seen: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "backup" | "policy" | "advisor" | "defender" | "config";
+            /**
+             * Last Seen
+             * Format: date-time
+             */
+            last_seen: string;
+            /** Observed At */
+            observed_at: string | null;
+            /** Region */
+            region: string | null;
+            /** Resolved At */
+            resolved_at: string | null;
+            /** Resource Group */
+            resource_group: string | null;
+            /** Resource Id */
+            resource_id: string | null;
+            /** Resource Native Id */
+            resource_native_id: string | null;
+            /** Resource Type */
+            resource_type: string | null;
+            /** Rule */
+            rule: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "high" | "medium" | "low" | "info";
+            /** Source Status */
+            source_status: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "ok" | "issue" | "not_applicable";
+            tenant: components["schemas"]["TenantView"];
+            /** Title */
+            title: string;
+        };
+        /** CloudCostFigure */
+        CloudCostFigure: {
+            amount: components["schemas"]["Metric_Decimal_"];
+            /** Currency */
+            currency: string;
+            previous: components["schemas"]["Metric_Decimal_"];
+        };
+        /** CloudDailyCost */
+        CloudDailyCost: {
+            amount: components["schemas"]["Metric_Decimal_"];
+            /** Currency */
+            currency: string;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+        };
+        /** CloudEventView */
+        CloudEventView: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Change
+             * @enum {string}
+             */
+            change: "opened" | "changed" | "resolved" | "reopened";
+            /** Changed */
+            changed: string[];
+            /**
+             * Check Id
+             * Format: uuid
+             */
+            check_id: string;
+            /** Rule */
+            rule: string;
+            /** Severity From */
+            severity_from: string | null;
+            /** Severity To */
+            severity_to: string | null;
+            /** State From */
+            state_from: string | null;
+            /** State To */
+            state_to: string | null;
+            /** Title */
+            title: string;
+        };
+        /** CloudFindings */
+        CloudFindings: {
+            count: components["schemas"]["Metric_int_"];
+            /** Items */
+            items: components["schemas"]["CloudCheckView"][];
+            period: components["schemas"]["CloudPeriod"];
+            trend: components["schemas"]["CloudTrend"];
+        };
+        /**
+         * CloudIssues
+         * @description Open checks in the ``issue`` state.
+         */
+        CloudIssues: {
+            /** By Kind */
+            by_kind: components["schemas"]["CloudKindIssues"][];
+            high: components["schemas"]["Metric_int_"];
+            low: components["schemas"]["Metric_int_"];
+            medium: components["schemas"]["Metric_int_"];
+            total: components["schemas"]["Metric_int_"];
+        };
+        /** CloudKindIssues */
+        CloudKindIssues: {
+            issues: components["schemas"]["Metric_int_"];
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "backup" | "policy" | "advisor" | "defender" | "config";
+        };
+        /**
+         * CloudNode
+         * @description One level of the drill-down, and its figures.
+         */
+        CloudNode: {
+            backup: components["schemas"]["CloudBackup"];
+            /** Cost */
+            cost: components["schemas"]["CloudCostFigure"][];
+            issues: components["schemas"]["CloudIssues"];
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "customer" | "account" | "resource_group" | "region" | "resource";
+            policy: components["schemas"]["CloudPolicy"];
+            resources: components["schemas"]["Metric_int_"];
+        };
+        /** CloudOverview */
+        CloudOverview: {
+            /** Accounts */
+            accounts: components["schemas"]["CloudAccountSummary"][];
+            /** Cost Visible */
+            cost_visible: boolean;
+            /** Customers */
+            customers: components["schemas"]["CloudNode"][];
+            /** Highlights */
+            highlights: components["schemas"]["CloudCheckView"][];
+            period: components["schemas"]["CloudPeriod"];
+            total: components["schemas"]["CloudNode"];
+            trend: components["schemas"]["CloudTrend"];
+        };
+        /** CloudPeriod */
+        CloudPeriod: {
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /**
+             * Previous End
+             * Format: date
+             */
+            previous_end: string;
+            /**
+             * Previous Start
+             * Format: date
+             */
+            previous_start: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
+        /** CloudPolicy */
+        CloudPolicy: {
+            compliant: components["schemas"]["Metric_int_"];
+            non_compliant: components["schemas"]["Metric_int_"];
+        };
+        /** CloudResource */
+        CloudResource: {
+            /** Checks */
+            checks: components["schemas"]["CloudCheckView"][];
+            /** Cost Visible */
+            cost_visible: boolean;
+            /** Daily Cost */
+            daily_cost: components["schemas"]["CloudDailyCost"][];
+            /** History */
+            history: components["schemas"]["CloudEventView"][];
+            period: components["schemas"]["CloudPeriod"];
+            resource: components["schemas"]["CloudResourceDetail"];
+            summary: components["schemas"]["CloudNode"];
+        };
+        /** CloudResourceDetail */
+        CloudResourceDetail: {
+            account: components["schemas"]["CloudAccountView"];
+            /** Ci Sys Id */
+            ci_sys_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Native Id */
+            native_id: string;
+            /** Region */
+            region: string | null;
+            /** Resource Group */
+            resource_group: string | null;
+            /** Settings */
+            settings: {
+                [key: string]: unknown;
+            };
+            /** Settings Seen */
+            settings_seen: string | null;
+            /** State */
+            state: string | null;
+            tenant: components["schemas"]["TenantView"];
+            /** Type */
+            type: string;
+            /** Type Native */
+            type_native: string;
+        };
+        /** CloudResourceList */
+        CloudResourceList: {
+            /** Cost Visible */
+            cost_visible: boolean;
+            count: components["schemas"]["Metric_int_"];
+            /** Items */
+            items: components["schemas"]["CloudNode"][];
+            period: components["schemas"]["CloudPeriod"];
+        };
+        /** CloudTrend */
+        CloudTrend: {
+            opened: components["schemas"]["Metric_int_"];
+            previous_opened: components["schemas"]["Metric_int_"];
+            previous_resolved: components["schemas"]["Metric_int_"];
+            resolved: components["schemas"]["Metric_int_"];
         };
         /** CollectedView */
         CollectedView: {
@@ -5780,6 +6175,185 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    account_v1_cloud_services_accounts__account_id__get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                group_by?: "resource_group" | "region";
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudAccount"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    findings_v1_cloud_services_findings_get: {
+        parameters: {
+            query?: {
+                account_id?: string | null;
+                category?: string | null;
+                from?: string | null;
+                kind?: ("backup" | "policy" | "advisor" | "defender" | "config") | null;
+                region?: string | null;
+                resource_group?: string | null;
+                severity?: ("high" | "medium" | "low" | "info") | null;
+                status?: "open" | "resolved" | "all";
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudFindings"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_v1_cloud_services_overview_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudOverview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resources_v1_cloud_services_resources_get: {
+        parameters: {
+            query: {
+                account_id: string;
+                from?: string | null;
+                region?: string | null;
+                resource_group?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudResourceList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resource_v1_cloud_services_resources__resource_id__get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path: {
+                resource_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudResource"];
                 };
             };
             /** @description Validation Error */

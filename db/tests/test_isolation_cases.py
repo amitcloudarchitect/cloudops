@@ -115,6 +115,9 @@ TENANT_TABLES = (
     "cloudops.security_finding",
     # ADR 0035.
     "cloudops.margin_recompute",
+    # ADR 0038.
+    "cloudops.cloud_check",
+    "cloudops.cloud_check_event",
 )
 # Written by people and the drafting worker through the application login only.
 NOT_INGESTED = frozenset({
@@ -602,13 +605,20 @@ WRITES = {
         " updated_at) VALUES (:t, 'corestack', 's', :u, 'security', 'high', 'x', 'open',"
         " 'x', now(), now())"
     ),
+    # ADR 0038: the customer-credential worker only.
+    "cloudops.cloud_check": (
+        "INSERT INTO cloudops.cloud_check (tenant_id, account_id, kind, native_id, category,"
+        " rule, title, state, severity, fingerprint, first_seen, last_seen, source_system,"
+        " raw_ref) SELECT :t, a.id, 'advisor', :u, 'cost', 'r', 'x', 'issue', 'low', 'f', now(),"
+        " now(), 'azure', 'r' FROM cloudops.cloud_account a LIMIT 1"
+    ),
 }
 
 # Tables only connectors write: the application role holds SELECT alone.
 INGEST_WRITTEN = (
     "staging.", "cloudops.tenant_alias", "cloudops.cost_finding", "cloudops.directory_",
     "cloudops.sharepoint_site", "cloudops.document", "cloudops.sharepoint_folder",
-    "cloudops.security_finding",
+    "cloudops.security_finding", "cloudops.cloud_check",
 )
 
 

@@ -193,7 +193,9 @@ async def test_the_platforms_feed_keeps_the_cost_of_its_owners_subscription(
         assert found is not None
         fed = await worker._fed(found)
         assert fed.cost_binding is None
-        assert set(sources.entities(fed)) == {"resource"}
+        # Resources and the Cloud Services audit (ADR 0038), no cost entity.
+        assert set(sources.entities(fed)) == {"resource", "backup_item", "policy_state",
+                                              "advisor", "defender", "resource_config"}
     finally:
         with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
             cx.execute("DELETE FROM cloudops.cloud_account WHERE native_id = %s", (sub,))

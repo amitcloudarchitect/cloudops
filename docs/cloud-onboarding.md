@@ -47,6 +47,9 @@ done
 - **These three roles only**, on this subscription only. The check refuses any other
   role on the subscription (inherited from a group or a management group too), and
   refuses the credential if it can see any subscription besides the onboarded ones.
+- Reader is all the Cloud Services audit needs (ADR 0038): backup items, policy
+  states, Advisor recommendations, Defender for Cloud assessments and resource
+  settings are all reads. Grant nothing more for it.
 - Give the app registration **no API permissions** and no directory roles. The check
   cannot see those with read roles, so this is on you.
 

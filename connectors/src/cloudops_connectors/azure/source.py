@@ -1,4 +1,5 @@
-"""Azure through the connector contract (``core/ingest.py``): five entities.
+"""Azure through the connector contract (``core/ingest.py``): five entities, and
+five more for a customer credential's run.
 
 - ``resource``: Resource Graph, below.
 - ``cost_export``: Cost Management FOCUS exports -> cost_fact (``cost_source.py``),
@@ -8,6 +9,9 @@
 - ``cost_daily``: the query API's daily cost -> cost_fact, for a subscription that
   cannot have an export (``daily_source.py``). An account's period comes from one
   of ``cost_export`` and ``cost_daily``, never both: each swap replaces the period.
+- ``backup_item``, ``policy_state``, ``advisor``, ``defender``, ``resource_config``:
+  the Cloud Services audit -> cloud_check (``audit_source.py``, ADR 0038). Bound
+  sources only: they read a customer's subscriptions with its own credential.
 
 **A customer's own credential** (ADR 0003, ADR 0027). Built with a ``binding``,
 the source serves one stored credential: its subscriptions resolve to its tenant
@@ -69,6 +73,7 @@ from uuid import UUID
 from sqlalchemy import text
 
 from cloudops_connectors.azure import cost_source, focus, mapping
+from cloudops_connectors.azure.audit_source import AzureAudit
 from cloudops_connectors.azure.billing_source import AzureBilling
 from cloudops_connectors.azure.blob import BlobClient
 from cloudops_connectors.azure.client import AzureClient
@@ -141,8 +146,10 @@ class AzureSource(Source):
         ``credential`` (its inventory id): a customer credential's run.
         ``cost_binding``: the part of the binding whose cost this run reads, when the
         platform's own feed reads the rest (ADR 0031); the whole binding by default."""
-        if not entities or not entities <= mapping.ENTITIES:
+        if not entities or not entities <= mapping.ALL_ENTITIES:
             raise ValueError("entities must be among the Azure entities")
+        if entities & mapping.AUDIT and binding is None:
+            raise ValueError("the audit entities read a customer's own credential")
         if batch_size < 1:
             raise ValueError("batch_size must be at least 1")
         for root in export_roots:
@@ -166,6 +173,7 @@ class AzureSource(Source):
         cost = cost_binding or binding
         self._billing = AzureBilling(client, billing_account, day, cost)
         self._daily = AzureDaily(client, day, cost)
+        self._audit = AzureAudit(client, binding, batch_size=batch_size)
         self.instance = (client.base_url if credential is None
                          else f"{client.base_url}#credential={credential}")
         self.entities = entities
@@ -193,6 +201,8 @@ class AzureSource(Source):
             return await self._billing.fetch(entity, cursor)
         if entity == mapping.COST_DAILY:
             return await self._daily.fetch(cursor)
+        if entity in mapping.AUDIT:
+            return await self._audit.fetch(entity, cursor)
         at = json.loads(cursor) if cursor else {}
         if not at or "next" in at:
             body = await self._client.subscriptions(at.get("next"))
@@ -211,6 +221,8 @@ class AzureSource(Source):
             return await self._billing.inspect(raw, entity, ref, body, cursor)
         if entity == mapping.COST_DAILY:
             return await self._daily.inspect(raw, ref, body, cursor)
+        if entity in mapping.AUDIT:
+            return await self._audit.inspect(entity, body, cursor)
         at = json.loads(cursor) if cursor else {}
         subs: list[str] = list(at.get("subs", []))
         if ref.endswith(SUBS_SUFFIX):
@@ -245,6 +257,8 @@ class AzureSource(Source):
             return await self._billing.process(db, raw, entity, ref, ctx)
         if entity == mapping.COST_DAILY:
             return await self._daily.process(db, raw, ref, ctx)
+        if entity in mapping.AUDIT:
+            return await self._audit.process(db, raw, entity, ref, ctx)
         body = await raw.get(ref)
         if ref.endswith(SUBS_SUFFIX):
             return await self._listing(db, raw, ref, ctx, body)

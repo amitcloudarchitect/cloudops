@@ -6,7 +6,10 @@ only them, its ``instance`` names the credential (its own watermarks; a replay
 skips other instances' pages), and nothing outside its accounts is read.
 
 - Azure: ``resource`` (Resource Graph), ``cost_daily`` (the query API's daily
-  cost; the Sponsorship offer allows no export, ADR 0023) and ``cost_total``.
+  cost; the Sponsorship offer allows no export, ADR 0023) and ``cost_total``; and
+  the Cloud Services audit every six hours (ADR 0038, ADR 0037): ``backup_item``,
+  ``policy_state``, ``advisor``, ``defender`` and ``resource_config``, all read
+  with Reader.
   ``cost_export`` needs an export into Getronics' storage and ``invoice`` a billing
   account: neither is something a customer's read-only app registration gives.
 - AWS: ``cost_total`` (Cost Explorer) for the bound account only (user decision,
@@ -35,6 +38,7 @@ from cloudops_connectors.azure.source import AzureSource
 from cloudops_connectors.core import identity, state
 from cloudops_connectors.core.ingest import Fetched, PageContext, PageInfo, PageOutcome, Source
 from cloudops_connectors.core.raw import RawStore
+from cloudops_connectors.core.sync import CUSTOMER_SYNC
 from cloudops_connectors.customer.credentials import (
     AWS,
     AZURE,
@@ -52,7 +56,8 @@ AWS_REGION: Final = "us-east-1"  # Cost Explorer, STS and IAM answer here
 CADENCE: Final[Mapping[str, Mapping[str, timedelta]]] = {
     AZURE: {azure_mapping.ENTITY: timedelta(minutes=15),
             azure_mapping.COST_DAILY: timedelta(days=1),
-            azure_mapping.COST_TOTAL: timedelta(days=1)},
+            azure_mapping.COST_TOTAL: timedelta(days=1),
+            **dict.fromkeys(sorted(azure_mapping.AUDIT), CUSTOMER_SYNC)},
     AWS: {aws_mapping.COST_TOTAL: timedelta(days=1)},
 }
 

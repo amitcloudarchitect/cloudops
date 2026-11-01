@@ -27,6 +27,8 @@ const SOURCE_LABEL: Record<string, string> = {
   customer_price: "Price charged",
   audit_log: "Action log",
   triage_review: "Triage reviews",
+  cloud_audit: "Cloud audit",
+  cost_fact: "Cost facts",
 };
 
 export function sourceLabel(source: string): string {

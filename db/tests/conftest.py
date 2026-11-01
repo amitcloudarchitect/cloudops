@@ -316,6 +316,23 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             " 'security', 'high', 'Storage allows public access', 'open', %s, now(), now())",
             (t.id, t.account_id, f"s-{t.name}", t.name),
         )
+        # ADR 0038: a Cloud Services check on the tenant's VM, and its history.
+        check = cx.execute(
+            "INSERT INTO cloudops.cloud_check (tenant_id, account_id, kind, native_id,"
+            " resource_id, resource_native_id, category, rule, title, state, severity,"
+            " fingerprint, first_seen, last_seen, source_system, raw_ref)"
+            " VALUES (%s, %s, 'config', %s, %s, %s, 'security', 'vm.public_ip',"
+            " 'Virtual machine has a public IP address', 'issue', 'high', 'f', now(), now(),"
+            " 'azure', 'azure/resource_config/x') RETURNING id",
+            (t.id, t.account_id, f"/vm/{t.name}#vm.public_ip", t.resource_id, f"/vm/{t.name}"),
+        ).fetchone()
+        assert check is not None
+        cx.execute(
+            "INSERT INTO cloudops.cloud_check_event (tenant_id, account_id, check_id, at,"
+            " change, state_to, severity_to, raw_ref)"
+            " VALUES (%s, %s, %s, now(), 'opened', 'issue', 'high', 'azure/resource_config/x')",
+            (t.id, t.account_id, check[0]),
+        )
         cx.execute(
             "INSERT INTO staging.cost_fact_load (tenant_id, account_id, assembly_id, object_key,"
             " usage_date, invoice_period, charge_class, unblended_cost, amortized_cost,"

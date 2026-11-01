@@ -370,6 +370,15 @@ async def finops(ingest: Database, anchor: date) -> str:
             f" ({margins.not_captured} not captured)")
 
 
+async def cloud_checks(ingest: Database, ds: Dataset) -> int:
+    """The audit connector over its made-up fixtures, for the subscription they name."""
+    from cloudops_devdata import cloud_audit
+
+    tenant = next((a.tenant_id for a in ds.accounts
+                   if a.native_id == cloud_audit.SUBSCRIPTION), None)
+    return 0 if tenant is None else await cloud_audit.seed(ingest, tenant)
+
+
 async def run(anchor: date, seed: int) -> None:
     settings = load_settings(
         os.environ, require={Component.DATABASE_INGEST, Component.DATABASE_APP}
@@ -390,6 +399,7 @@ async def run(anchor: date, seed: int) -> None:
         print(f"  triage results for the console: {await triage(app, ds)}")
         print(f"  connector runs for the console: {await ingest_health.record(ingest)}")
         print(f"  finops (step 16): {await finops(ingest, anchor)}")
+        print(f"  cloud services checks (ADR 0038): {await cloud_checks(ingest, ds)}")
         print("  principals (mint a token: make token OID=<oid>):")
         for label, oid in await principals(app, ds, admin):
             print(f"    {label:<22} {oid}")

@@ -20,6 +20,7 @@ from cloudops_api import (
     assurance,
     bff,
     cloud_onboarding,
+    cloud_services,
     commercial,
     commercial_setup,
     connectors,
@@ -106,7 +107,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
     commercial.router, knowledge.router, assurance.router, reports.router, assistant.router,
     cloud_onboarding.router, home.router, observability.router, commercial_setup.router,
-    secops.router,
+    secops.router, cloud_services.router,
 )
 
 

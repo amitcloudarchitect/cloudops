@@ -7,7 +7,7 @@
 export const TENANT_ADMIN = "tenant_admin";
 
 /** The navigation's areas, in order. An area with no module the role can use is not shown. */
-export const AREAS = ["Operations", "Security", "Commercial", "Assurance & Reports", "Knowledge", "Settings"] as const;
+export const AREAS = ["Operations", "Cloud Services", "Security", "Commercial", "Assurance & Reports", "Knowledge", "Settings"] as const;
 export type Area = (typeof AREAS)[number];
 
 export interface Module {
@@ -32,6 +32,10 @@ export const MODULES: readonly Module[] = [
   { href: "/customers", label: "Customers", area: "Operations", permission: "authenticated" },
   // The platform's own usage and health (ADR 0034).
   { href: "/observability", label: "Observability", area: "Operations", permission: "platform.observe", staff: true },
+  // Cloud Services (ADR 0038): the read-only audit of customers' cloud accounts.
+  // Staff, and the customer roles granted cloud_services.read (Architect, Security officer).
+  { href: "/cloud-services", label: "Overview", area: "Cloud Services", permission: "cloud_services.read" },
+  { href: "/cloud-services/findings", label: "Findings", area: "Cloud Services", permission: "cloud_services.read" },
   { href: "/posture", label: "Security posture", area: "Security", permission: "vulnerabilities.read" },
   // The SecOps workspace (HLD M13, ADR 0036): ageing, scanner coverage, posture score.
   { href: "/secops", label: "SecOps", area: "Security", permission: "vulnerabilities.read", staff: true },

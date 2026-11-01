@@ -1613,6 +1613,914 @@
         "title": "ClosestItem",
         "type": "object"
       },
+      "CloudAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/CloudAccountView"
+          },
+          "cost_visible": {
+            "title": "Cost Visible",
+            "type": "boolean"
+          },
+          "group_by": {
+            "enum": [
+              "resource_group",
+              "region"
+            ],
+            "title": "Group By",
+            "type": "string"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/CloudNode"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/CloudPeriod"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CloudNode"
+          }
+        },
+        "required": [
+          "period",
+          "cost_visible",
+          "account",
+          "summary",
+          "group_by",
+          "groups"
+        ],
+        "title": "CloudAccount",
+        "type": "object"
+      },
+      "CloudAccountSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/CloudAccountView"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CloudNode"
+          }
+        },
+        "required": [
+          "account",
+          "summary"
+        ],
+        "title": "CloudAccountSummary",
+        "type": "object"
+      },
+      "CloudAccountView": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "native_id": {
+            "title": "Native Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "provider",
+          "native_id",
+          "display_name"
+        ],
+        "title": "CloudAccountView",
+        "type": "object"
+      },
+      "CloudBackup": {
+        "additionalProperties": false,
+        "properties": {
+          "failing": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "protected": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "unprotected": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "protected",
+          "failing",
+          "unprotected"
+        ],
+        "title": "CloudBackup",
+        "type": "object"
+      },
+      "CloudCheckView": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "first_seen": {
+            "format": "date-time",
+            "title": "First Seen",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "backup",
+              "policy",
+              "advisor",
+              "defender",
+              "config"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resource_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Group"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "resource_native_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Native Id"
+          },
+          "resource_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Type"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "high",
+              "medium",
+              "low",
+              "info"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "source_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Status"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "issue",
+              "not_applicable"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "account_id",
+          "kind",
+          "rule",
+          "category",
+          "title",
+          "state",
+          "severity",
+          "source_status",
+          "resource_id",
+          "resource_native_id",
+          "resource_type",
+          "resource_group",
+          "region",
+          "detail",
+          "observed_at",
+          "first_seen",
+          "last_seen",
+          "resolved_at"
+        ],
+        "title": "CloudCheckView",
+        "type": "object"
+      },
+      "CloudCostFigure": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "currency",
+          "amount",
+          "previous"
+        ],
+        "title": "CloudCostFigure",
+        "type": "object"
+      },
+      "CloudDailyCost": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "currency",
+          "amount"
+        ],
+        "title": "CloudDailyCost",
+        "type": "object"
+      },
+      "CloudEventView": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "change": {
+            "enum": [
+              "opened",
+              "changed",
+              "resolved",
+              "reopened"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "changed": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed",
+            "type": "array"
+          },
+          "check_id": {
+            "format": "uuid",
+            "title": "Check Id",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity From"
+          },
+          "severity_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity To"
+          },
+          "state_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State From"
+          },
+          "state_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State To"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "check_id",
+          "rule",
+          "title",
+          "at",
+          "change",
+          "state_from",
+          "state_to",
+          "severity_from",
+          "severity_to",
+          "changed"
+        ],
+        "title": "CloudEventView",
+        "type": "object"
+      },
+      "CloudFindings": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CloudCheckView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/CloudPeriod"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/CloudTrend"
+          }
+        },
+        "required": [
+          "period",
+          "items",
+          "count",
+          "trend"
+        ],
+        "title": "CloudFindings",
+        "type": "object"
+      },
+      "CloudIssues": {
+        "additionalProperties": false,
+        "description": "Open checks in the ``issue`` state.",
+        "properties": {
+          "by_kind": {
+            "items": {
+              "$ref": "#/components/schemas/CloudKindIssues"
+            },
+            "title": "By Kind",
+            "type": "array"
+          },
+          "high": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "low": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "medium": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "total",
+          "high",
+          "medium",
+          "low",
+          "by_kind"
+        ],
+        "title": "CloudIssues",
+        "type": "object"
+      },
+      "CloudKindIssues": {
+        "additionalProperties": false,
+        "properties": {
+          "issues": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "kind": {
+            "enum": [
+              "backup",
+              "policy",
+              "advisor",
+              "defender",
+              "config"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "issues"
+        ],
+        "title": "CloudKindIssues",
+        "type": "object"
+      },
+      "CloudNode": {
+        "additionalProperties": false,
+        "description": "One level of the drill-down, and its figures.",
+        "properties": {
+          "backup": {
+            "$ref": "#/components/schemas/CloudBackup"
+          },
+          "cost": {
+            "items": {
+              "$ref": "#/components/schemas/CloudCostFigure"
+            },
+            "title": "Cost",
+            "type": "array"
+          },
+          "issues": {
+            "$ref": "#/components/schemas/CloudIssues"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "customer",
+              "account",
+              "resource_group",
+              "region",
+              "resource"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/CloudPolicy"
+          },
+          "resources": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "level",
+          "key",
+          "label",
+          "issues",
+          "backup",
+          "policy",
+          "cost",
+          "resources"
+        ],
+        "title": "CloudNode",
+        "type": "object"
+      },
+      "CloudOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/CloudAccountSummary"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "cost_visible": {
+            "title": "Cost Visible",
+            "type": "boolean"
+          },
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/CloudNode"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "highlights": {
+            "items": {
+              "$ref": "#/components/schemas/CloudCheckView"
+            },
+            "title": "Highlights",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/CloudPeriod"
+          },
+          "total": {
+            "$ref": "#/components/schemas/CloudNode"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/CloudTrend"
+          }
+        },
+        "required": [
+          "period",
+          "cost_visible",
+          "total",
+          "customers",
+          "accounts",
+          "highlights",
+          "trend"
+        ],
+        "title": "CloudOverview",
+        "type": "object"
+      },
+      "CloudPeriod": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "previous_end": {
+            "format": "date",
+            "title": "Previous End",
+            "type": "string"
+          },
+          "previous_start": {
+            "format": "date",
+            "title": "Previous Start",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "previous_start",
+          "previous_end"
+        ],
+        "title": "CloudPeriod",
+        "type": "object"
+      },
+      "CloudPolicy": {
+        "additionalProperties": false,
+        "properties": {
+          "compliant": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "non_compliant": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "compliant",
+          "non_compliant"
+        ],
+        "title": "CloudPolicy",
+        "type": "object"
+      },
+      "CloudResource": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/CloudCheckView"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "cost_visible": {
+            "title": "Cost Visible",
+            "type": "boolean"
+          },
+          "daily_cost": {
+            "items": {
+              "$ref": "#/components/schemas/CloudDailyCost"
+            },
+            "title": "Daily Cost",
+            "type": "array"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/CloudEventView"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/CloudPeriod"
+          },
+          "resource": {
+            "$ref": "#/components/schemas/CloudResourceDetail"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/CloudNode"
+          }
+        },
+        "required": [
+          "period",
+          "cost_visible",
+          "resource",
+          "summary",
+          "checks",
+          "daily_cost",
+          "history"
+        ],
+        "title": "CloudResource",
+        "type": "object"
+      },
+      "CloudResourceDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/CloudAccountView"
+          },
+          "ci_sys_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci Sys Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "native_id": {
+            "title": "Native Id",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "resource_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Group"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "title": "Settings",
+            "type": "object"
+          },
+          "settings_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings Seen"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          },
+          "type_native": {
+            "title": "Type Native",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "account",
+          "native_id",
+          "name",
+          "type",
+          "type_native",
+          "region",
+          "resource_group",
+          "state",
+          "ci_sys_id",
+          "settings",
+          "settings_seen"
+        ],
+        "title": "CloudResourceDetail",
+        "type": "object"
+      },
+      "CloudResourceList": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_visible": {
+            "title": "Cost Visible",
+            "type": "boolean"
+          },
+          "count": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CloudNode"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/CloudPeriod"
+          }
+        },
+        "required": [
+          "period",
+          "cost_visible",
+          "items",
+          "count"
+        ],
+        "title": "CloudResourceList",
+        "type": "object"
+      },
+      "CloudTrend": {
+        "additionalProperties": false,
+        "properties": {
+          "opened": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "previous_opened": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "previous_resolved": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "resolved": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "opened",
+          "resolved",
+          "previous_opened",
+          "previous_resolved"
+        ],
+        "title": "CloudTrend",
+        "type": "object"
+      },
       "CollectedView": {
         "additionalProperties": false,
         "properties": {
@@ -11943,6 +12851,570 @@
           }
         },
         "summary": "Revoke"
+      }
+    },
+    "/v1/cloud-services/accounts/{account_id}": {
+      "get": {
+        "operationId": "account_v1_cloud_services_accounts__account_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "group_by",
+            "required": false,
+            "schema": {
+              "default": "resource_group",
+              "enum": [
+                "resource_group",
+                "region"
+              ],
+              "title": "Group By",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Account"
+      }
+    },
+    "/v1/cloud-services/findings": {
+      "get": {
+        "operationId": "findings_v1_cloud_services_findings_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "backup",
+                    "policy",
+                    "advisor",
+                    "defender",
+                    "config"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "high",
+                    "medium",
+                    "low",
+                    "info"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Group"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "resolved",
+                "all"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudFindings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Findings"
+      }
+    },
+    "/v1/cloud-services/overview": {
+      "get": {
+        "operationId": "overview_v1_cloud_services_overview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Overview"
+      }
+    },
+    "/v1/cloud-services/resources": {
+      "get": {
+        "operationId": "resources_v1_cloud_services_resources_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_group",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Group"
+            }
+          },
+          {
+            "in": "query",
+            "name": "region",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Region"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudResourceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resources"
+      }
+    },
+    "/v1/cloud-services/resources/{resource_id}": {
+      "get": {
+        "operationId": "resource_v1_cloud_services_resources__resource_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "resource_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resource Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudResource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resource"
       }
     },
     "/v1/commercial/customers/{tenant_id}/margin-recompute": {

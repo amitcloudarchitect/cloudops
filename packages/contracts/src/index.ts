@@ -179,3 +179,16 @@ export type SecOpsPostureScores = Schemas["SecOpsPostureScores"];
 export type CustomerPostureScore = Schemas["CustomerPostureScore"];
 export type FindingDetail = Schemas["FindingDetail"];
 export type SlaBand = SecOpsFinding["sla"];
+// Cloud Services (ADR 0038). CloudCheck above is cloud onboarding's credential check.
+export type CloudOverview = Schemas["CloudOverview"];
+export type CloudAccount = Schemas["CloudAccount"];
+export type CloudResourceList = Schemas["CloudResourceList"];
+export type CloudResource = Schemas["CloudResource"];
+export type CloudFindings = Schemas["CloudFindings"];
+export type CloudNode = Schemas["CloudNode"];
+export type CloudFinding = Schemas["CloudCheckView"];
+export type CloudEvent = Schemas["CloudEventView"];
+export type CloudPeriod = Schemas["CloudPeriod"];
+export type CloudTrend = Schemas["CloudTrend"];
+export type CloudKind = CloudFinding["kind"];
+export type CloudSeverity = CloudFinding["severity"];

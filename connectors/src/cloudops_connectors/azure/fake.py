@@ -24,6 +24,12 @@ markers) and Get Blob with ``Last-Modified``, 404 ``BlobNotFound`` for a blob
 not delivered yet, and 503 ``ServerBusy`` on demand. Parts are committed as
 plain CSV (reviewable) and served gzip-compressed, as the export writes them.
 
+The Cloud Services audit (ADR 0038): a Resource Graph request whose query is one
+of ``audit.QUERIES`` gets that entity's rows (``audit/<entity>.json``), with the
+same subscription filter and paging; Defender for Cloud's assessments listing
+gets ``audit/defender.json``'s assessments of the subscription asked for, paged by
+``nextLink``.
+
 Both check the bearer token when ``bearer`` is set (the live path's contract,
 ADR 0023): a request without exactly that token gets the service's own 401,
 ``AuthenticationFailed`` from ARM, ``NoAuthenticationInformation`` from Storage.
@@ -46,6 +52,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 
 import httpx
 
+from cloudops_connectors.azure import audit
 from cloudops_connectors.azure.client import GRAPH_PATH, SUBSCRIPTIONS_PATH
 
 FIXTURE_HOST: Final = "https://management.azure.fixture.example"
@@ -57,6 +64,8 @@ _COST_QUERY: Final = re.compile(
 _INVOICES: Final = re.compile(
     r"/providers/Microsoft\.Billing/billingAccounts/([^/]+)/billingSubscriptions/"
     r"([0-9a-f-]{36})/invoices")
+_ASSESSMENTS: Final = re.compile(
+    r"/subscriptions/([0-9a-f-]{36})/providers/Microsoft\.Security/assessments")
 _EMPTY_QUERY: Final = (b'{"properties": {"nextLink": null, "columns": [{"name": "totalCost",'
                        b' "type": "Number"}, {"name": "Currency", "type": "String"}],'
                        b' "rows": []}}')
@@ -97,7 +106,15 @@ class FakeAzure:
     def __init__(self, subscriptions: bytes, resources_: bytes, *, quota: int = 15,
                  subs_page: int = 100, queries: dict[str, bytes] | None = None,
                  invoices: dict[str, bytes] | None = None,
-                 daily: dict[str, bytes] | None = None, daily_page: int = 1000) -> None:
+                 daily: dict[str, bytes] | None = None, daily_page: int = 1000,
+                 audit_rows: dict[str, bytes] | None = None, assessments_page: int = 1000,
+                 ) -> None:
+        # entity -> rows; Defender's are an ARM listing's ``value``
+        self.audit: dict[str, list[Any]] = {
+            entity: (json.loads(body).get("value") if entity == audit.DEFENDER
+                     else json.loads(body).get("data")) or []
+            for entity, body in (audit_rows or {}).items()}
+        self.assessments_page = assessments_page
         self.queries = dict(queries or {})  # subscription -> recorded query response
         self.daily = dict(daily or {})  # subscription -> recorded daily response
         self.daily_page = daily_page
@@ -117,7 +134,8 @@ class FakeAzure:
         return cls(load_fixture("subscriptions.json"), load_fixture("resources.json"),
                    queries=_fixtures_in("billing/query"),
                    invoices=_fixtures_in("billing/invoices"),
-                   daily=_fixtures_in("billing/daily"), **kwargs)
+                   daily=_fixtures_in("billing/daily"), audit_rows=_fixtures_in("audit"),
+                   **kwargs)
 
     def remove(self, native_id: str) -> dict[str, Any]:
         """The resource is gone from Azure."""
@@ -168,6 +186,9 @@ class FakeAzure:
             self.remaining -= 1
             return httpx.Response(200, headers=self._quota(),
                                   content=self._graph(json.loads(request.content)))
+        assessments = _ASSESSMENTS.fullmatch(path)
+        if assessments and request.method == "GET":
+            return self._assessments(request, assessments.group(1))
         query = _COST_QUERY.fullmatch(path)
         if query and request.method == "POST":
             body = json.loads(request.content)
@@ -230,13 +251,30 @@ class FakeAzure:
                                f"&$skiptoken={_token(start + self.subs_page)}")
         return out
 
+    def _assessments(self, request: httpx.Request, sub: str) -> httpx.Response:
+        if request.url.params.get("$expand") != "metadata" and "$skiptoken" not in \
+                request.url.params:
+            return httpx.Response(400, json={"error": {"code": "BadRequest"}})
+        rows = [r for r in self.audit.get(audit.DEFENDER, [])
+                if isinstance(r, dict)
+                and str(r.get("id") or "").lower().startswith(f"/subscriptions/{sub}/")]
+        offset = _offset(request.url.params.get("$skiptoken"))
+        out: dict[str, Any] = {"value": rows[offset:offset + self.assessments_page]}
+        if offset + self.assessments_page < len(rows):
+            out["nextLink"] = (f"{FIXTURE_HOST}/subscriptions/{sub}/providers/"
+                               "Microsoft.Security/assessments?api-version=2021-06-01"
+                               f"&$skiptoken={_token(offset + self.assessments_page)}")
+        return httpx.Response(200, json=out)
+
     def _graph(self, body: dict[str, Any]) -> bytes:
         wanted = {str(s).lower() for s in body.get("subscriptions", [])}
         options = body.get("options") or {}
         top = int(options.get("$top", 1000))
         start = _offset(options.get("$skipToken"))
+        entity = next((e for e, q in audit.QUERIES.items() if q == body.get("query")), None)
+        table = self.rows if entity is None else self.audit.get(entity, [])
         matching = sorted(
-            (r for r in self.rows if isinstance(r, dict)
+            (r for r in table if isinstance(r, dict)
              and str(r.get("subscriptionId") or "").lower() in wanted),
             key=_id,
         )

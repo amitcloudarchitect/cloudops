@@ -1,0 +1,109 @@
+{
+ "totalRecords": 6,
+ "count": 6,
+ "data": [
+  {
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/app02",
+   "name": "app02",
+   "type": "microsoft.compute/virtualmachines",
+   "location": "westeurope",
+   "subscriptionId": "713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "resourceGroup": "rg-fab-prod",
+   "settings": {
+    "vmSize": "Standard_D4s_v5",
+    "osType": "Linux",
+    "osName": "ubuntu",
+    "osVersion": "22.04",
+    "powerState": "PowerState/running",
+    "encryptionAtHost": true,
+    "securityType": "TrustedLaunch",
+    "diskEncryptionSet": false,
+    "bootDiagnostics": true,
+    "priority": null,
+    "zones": [
+     "1"
+    ],
+    "publicIps": 0
+   }
+  },
+  {
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/app03",
+   "name": "app03",
+   "type": "microsoft.compute/virtualmachines",
+   "location": "westeurope",
+   "subscriptionId": "713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "resourceGroup": "rg-fab-prod",
+   "settings": {
+    "vmSize": "Standard_D2s_v5",
+    "osType": "Windows",
+    "osName": "Windows Server 2019 Datacenter",
+    "osVersion": "10.0.17763",
+    "powerState": "PowerState/running",
+    "encryptionAtHost": null,
+    "securityType": null,
+    "diskEncryptionSet": false,
+    "bootDiagnostics": false,
+    "priority": null,
+    "zones": null,
+    "publicIps": 1
+   }
+  },
+  {
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Storage/storageAccounts/stfabbackup01",
+   "name": "stfabbackup01",
+   "type": "microsoft.storage/storageaccounts",
+   "location": "westeurope",
+   "subscriptionId": "713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "resourceGroup": "rg-fab-prod",
+   "settings": {
+    "sku": "Standard_LRS",
+    "kind": "StorageV2",
+    "allowBlobPublicAccess": true,
+    "minimumTlsVersion": "TLS1_0",
+    "supportsHttpsTrafficOnly": false,
+    "publicNetworkAccess": "Enabled",
+    "networkDefaultAction": "Allow",
+    "allowSharedKeyAccess": null,
+    "infrastructureEncryption": null,
+    "keySource": "Microsoft.Storage"
+   }
+  },
+  {
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Sql/servers/databases/crm01",
+   "name": "crm01",
+   "type": "microsoft.sql/servers/databases",
+   "location": "westeurope",
+   "subscriptionId": "713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "resourceGroup": "rg-fab-prod",
+   "settings": {
+    "sku": "S1",
+    "tier": "Standard",
+    "zoneRedundant": false,
+    "backupStorageRedundancy": "Local",
+    "status": "Online"
+   }
+  },
+  {
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/disks/app03-data-orphan",
+   "name": "app03-data-orphan",
+   "type": "microsoft.compute/disks",
+   "location": "westeurope",
+   "subscriptionId": "713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "resourceGroup": "rg-fab-prod",
+   "settings": {
+    "sku": "Premium_LRS",
+    "diskSizeGb": 128,
+    "diskState": "Unattached",
+    "encryptionType": "EncryptionAtRestWithPlatformKey",
+    "networkAccessPolicy": "DenyAll",
+    "publicNetworkAccess": "Disabled"
+   }
+  },
+  {
+   "name": "no-id",
+   "type": "microsoft.compute/disks",
+   "subscriptionId": "713eb261-d613-543b-bfa9-f71bb3e74b14",
+   "settings": {}
+  }
+ ]
+}

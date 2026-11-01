@@ -62,9 +62,9 @@ interface Journey {
 const JOURNEYS: Journey[] = [
   { role: "cxo", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Security posture", "Reports", "Users"], roleName: "CXO" },
   { role: "vp", lead: "SLA attainment", landing: /\/performance$/, heading: "Performance", nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Reports"], roleName: "VP or director" },
-  { role: "architect", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Resources", "Customers"], roleName: "Architect" },
+  { role: "architect", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Resources", "Customers", "Overview", "Findings"], roleName: "Architect" },
   { role: "customerEngineer", lead: "Open incidents and SLA risk", landing: /\/work\?kind=Incident$/, heading: "Work queue", nav: ["Home", "Work queue", "Resources", "Performance", "Customers"], roleName: "Customer engineer" },
-  { role: "security", lead: "Vulnerabilities", landing: /\/posture$/, heading: "Security posture", nav: ["Home", "Resources", "Customers", "Security posture"], roleName: "Security officer" },
+  { role: "security", lead: "Vulnerabilities", landing: /\/posture$/, heading: "Security posture", nav: ["Home", "Resources", "Customers", "Overview", "Findings", "Security posture"], roleName: "Security officer" },
   { role: "approver", lead: "Changes awaiting approval", landing: /\/approvals$/, heading: "Approvals", nav: ["Home", "Resources", "Approvals", "Customers"], roleName: "Approver" },
 ];
 

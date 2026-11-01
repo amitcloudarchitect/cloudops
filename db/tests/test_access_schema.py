@@ -50,6 +50,8 @@ ACCOUNT_SCOPED = (
     "cloudops.report_pack_price",  # 0017, with its pack
     "cloudops.sharepoint_folder",  # 0028: tenant-wide, so all-accounts scopes only
     "cloudops.security_finding",  # 0028, by account
+    "cloudops.cloud_check",  # 0036, by account
+    "cloudops.cloud_check_event",  # 0036, likewise
 )
 GROUP_ROLES = ("cloudops_app", "cloudops_ingest")
 

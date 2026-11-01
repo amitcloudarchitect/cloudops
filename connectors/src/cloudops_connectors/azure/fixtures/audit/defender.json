@@ -1,0 +1,120 @@
+{
+ "value": [
+  {
+   "type": "Microsoft.Security/assessments",
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/app03/providers/Microsoft.Security/assessments/00000001-def0-4000-8000-000000000000",
+   "name": "00000001-def0-4000-8000-000000000000",
+   "properties": {
+    "resourceDetails": {
+     "Source": "Azure",
+     "Id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/app03"
+    },
+    "displayName": "Machines should have vulnerability findings resolved",
+    "status": {
+     "code": "Unhealthy",
+     "cause": "",
+     "description": ""
+    },
+    "metadata": {
+     "displayName": "Machines should have vulnerability findings resolved",
+     "severity": "High",
+     "categories": [
+      "Compute"
+     ],
+     "threats": [
+      "DataExfiltration"
+     ],
+     "assessmentType": "BuiltIn"
+    }
+   }
+  },
+  {
+   "type": "Microsoft.Security/assessments",
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/app02/providers/Microsoft.Security/assessments/00000002-def0-4000-8000-000000000000",
+   "name": "00000002-def0-4000-8000-000000000000",
+   "properties": {
+    "resourceDetails": {
+     "Source": "Azure",
+     "Id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/app02"
+    },
+    "displayName": "Machines should have vulnerability findings resolved",
+    "status": {
+     "code": "Healthy",
+     "cause": "",
+     "description": ""
+    },
+    "metadata": {
+     "displayName": "Machines should have vulnerability findings resolved",
+     "severity": "High",
+     "categories": [
+      "Compute"
+     ],
+     "threats": [
+      "DataExfiltration"
+     ],
+     "assessmentType": "BuiltIn"
+    }
+   }
+  },
+  {
+   "type": "Microsoft.Security/assessments",
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Storage/storageAccounts/stfabbackup01/providers/Microsoft.Security/assessments/00000003-def0-4000-8000-000000000000",
+   "name": "00000003-def0-4000-8000-000000000000",
+   "properties": {
+    "resourceDetails": {
+     "Source": "Azure",
+     "Id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Storage/storageAccounts/stfabbackup01"
+    },
+    "displayName": "Storage account public access should be disallowed",
+    "status": {
+     "code": "Unhealthy",
+     "cause": "",
+     "description": ""
+    },
+    "metadata": {
+     "displayName": "Storage account public access should be disallowed",
+     "severity": "Medium",
+     "categories": [
+      "Data"
+     ],
+     "threats": [
+      "DataExfiltration"
+     ],
+     "assessmentType": "BuiltIn"
+    }
+   }
+  },
+  {
+   "type": "Microsoft.Security/assessments",
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/jump01/providers/Microsoft.Security/assessments/00000004-def0-4000-8000-000000000000",
+   "name": "00000004-def0-4000-8000-000000000000",
+   "properties": {
+    "resourceDetails": {
+     "Source": "Azure",
+     "Id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/resourceGroups/rg-fab-prod/providers/Microsoft.Compute/virtualMachines/jump01"
+    },
+    "displayName": "Management ports should be closed on your virtual machines",
+    "status": {
+     "code": "NotApplicable",
+     "cause": "OffByPolicy",
+     "description": ""
+    },
+    "metadata": {
+     "displayName": "Management ports should be closed on your virtual machines",
+     "severity": "Medium",
+     "categories": [
+      "Networking"
+     ],
+     "threats": [
+      "DataExfiltration"
+     ],
+     "assessmentType": "BuiltIn"
+    }
+   }
+  },
+  {
+   "id": "/subscriptions/713eb261-d613-543b-bfa9-f71bb3e74b14/providers/Microsoft.Security/assessments/broken",
+   "name": "broken"
+  }
+ ]
+}

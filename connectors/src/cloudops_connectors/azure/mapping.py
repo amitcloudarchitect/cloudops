@@ -30,7 +30,16 @@ COST_EXPORT: Final = "cost_export"  # FOCUS exports -> cost_fact (cost_source.py
 COST_TOTAL: Final = "cost_total"  # month-to-date totals -> billing_total (billing_source.py)
 INVOICE: Final = "invoice"  # issued invoices -> billing_total (billing_source.py)
 COST_DAILY: Final = "cost_daily"  # query API, daily -> cost_fact (daily_source.py)
+# Cloud Services audit (ADR 0038) -> cloud_check (audit.py, audit_source.py)
+BACKUP_ITEM: Final = "backup_item"
+POLICY_STATE: Final = "policy_state"
+ADVISOR: Final = "advisor"
+DEFENDER: Final = "defender"
+RESOURCE_CONFIG: Final = "resource_config"
+AUDIT: Final = frozenset({BACKUP_ITEM, POLICY_STATE, ADVISOR, DEFENDER, RESOURCE_CONFIG})
 ENTITIES: Final = frozenset({ENTITY, COST_EXPORT, COST_TOTAL, INVOICE, COST_DAILY})
+# A customer credential's source may also run the audit (a binding is required).
+ALL_ENTITIES: Final = ENTITIES | AUDIT
 OTHER: Final = "other"
 
 # Fixed: the connector asks for exactly these columns. ``id`` must be projected

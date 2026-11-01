@@ -32,6 +32,10 @@ parses them. The same code runs against ARM and ``FakeAzure``.
   {id}/providers/Microsoft.Authorization/roleAssignments`` filtered to what is
   ``assignedTo`` the credential's own principal (its groups included), and a role
   definition by its id, both under one subscription.
+- Cloud Services audit (ADR 0038): the same Resource Graph endpoint with one of
+  ``audit.QUERIES`` (``graph``), and Defender for Cloud's assessments,
+  ``GET /subscriptions/{id}/providers/Microsoft.Security/assessments`` with their
+  metadata, ``nextLink`` followed only on this client's own host and subscription.
 - Anything else non-2xx raises; Temporal's retry policy owns those retries.
 
 **Target scope** (ADR 0003, guardrail 5). A client built with ``allowed`` (a
@@ -67,6 +71,7 @@ DEFAULT_WAIT: Final = 5.0  # Resource Graph's quota window is five seconds
 COST_QUERY_API: Final = "2023-11-01"
 BILLING_API: Final = "2024-04-01"
 AUTHORIZATION_API: Final = "2022-04-01"
+SECURITY_API: Final = "2021-06-01"
 # Fixed: the connector asks for exactly this. The total cost of the month so
 # far, as billed (ActualCost), with its currency.
 COST_QUERY: Final[dict[str, Any]] = {
@@ -230,6 +235,10 @@ class AzureClient:
         return subscription
 
     async def resources(self, subscriptions: list[str], skip_token: str | None) -> bytes:
+        return await self.graph(subscriptions, QUERY, skip_token)
+
+    async def graph(self, subscriptions: list[str], query: str, skip_token: str | None) -> bytes:
+        """A fixed Resource Graph query (``QUERY`` or one of ``audit.QUERIES``)."""
         for sub in subscriptions:
             self._target(sub)
         options: dict[str, Any] = {"$top": self.page_size, "resultFormat": "objectArray"}
@@ -237,8 +246,22 @@ class AzureClient:
             options["$skipToken"] = skip_token
         return await self._send(
             "POST", GRAPH_PATH, {"api-version": GRAPH_API},
-            {"subscriptions": subscriptions, "query": QUERY, "options": options},
+            {"subscriptions": subscriptions, "query": query, "options": options},
         )
+
+    async def assessments(self, subscription: str, next_link: str | None = None) -> bytes:
+        """Defender for Cloud's assessments of one subscription, with their metadata."""
+        self._target(subscription)
+        if next_link is not None:
+            link = httpx.URL(next_link)
+            if f"{link.scheme}://{link.netloc.decode()}" != self.base_url:
+                raise ValueError("nextLink points away from the management endpoint")
+            if not link.path.lower().startswith(f"/subscriptions/{subscription}/"):
+                raise TargetOutOfScopeError("nextLink names another subscription")
+            return await self._send("GET", str(link), None, None)
+        return await self._send(
+            "GET", f"/subscriptions/{subscription}/providers/Microsoft.Security/assessments",
+            {"api-version": SECURITY_API, "$expand": "metadata"}, None)
 
     async def cost_query(self, subscription: str) -> bytes:
         return await self._send("POST", cost_query_path(self._target(subscription)),
