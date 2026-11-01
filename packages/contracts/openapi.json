@@ -2645,6 +2645,35 @@
         "title": "CurrencyTrend",
         "type": "object"
       },
+      "CustomerAgeing": {
+        "additionalProperties": false,
+        "properties": {
+          "at_risk": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "breached": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "urgent_or_critical": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "tenant",
+          "open",
+          "urgent_or_critical",
+          "at_risk",
+          "breached"
+        ],
+        "title": "CustomerAgeing",
+        "type": "object"
+      },
       "CustomerCost": {
         "additionalProperties": false,
         "properties": {
@@ -2754,6 +2783,54 @@
           "reconciliation"
         ],
         "title": "CustomerCostHome",
+        "type": "object"
+      },
+      "CustomerCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "asset_id_only": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "coverage_percent": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detected": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "quarantined_hosts": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "scannable": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "unlinked_open_findings": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "unmatched": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "tenant",
+          "scannable",
+          "detected",
+          "asset_id_only",
+          "unmatched",
+          "coverage_percent",
+          "quarantined_hosts",
+          "unlinked_open_findings"
+        ],
+        "title": "CustomerCoverage",
         "type": "object"
       },
       "CustomerFinOps": {
@@ -2870,6 +2947,71 @@
           "price_last_month"
         ],
         "title": "CustomerOverview",
+        "type": "object"
+      },
+      "CustomerPostureScore": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exposure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hosts": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_findings": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sla_compliance": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "score",
+          "sla_compliance",
+          "coverage",
+          "exposure",
+          "hosts",
+          "open_findings"
+        ],
+        "title": "CustomerPostureScore",
         "type": "object"
       },
       "CustomerPrice": {
@@ -3558,6 +3700,115 @@
           "customers"
         ],
         "title": "FinOpsOverview",
+        "type": "object"
+      },
+      "FindingDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "detection_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detection Type"
+          },
+          "finding": {
+            "$ref": "#/components/schemas/SecOpsFinding"
+          },
+          "operating_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operating System"
+          },
+          "other_open_on_asset": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "remediated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediated At"
+          },
+          "resource": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResourceStaffView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "solution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solution"
+          },
+          "threat": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threat"
+          },
+          "tickets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkItemSummary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tickets"
+          }
+        },
+        "required": [
+          "finding",
+          "scope",
+          "detection_type",
+          "operating_system",
+          "threat",
+          "solution",
+          "remediated_at",
+          "resource",
+          "other_open_on_asset",
+          "tickets"
+        ],
+        "title": "FindingDetail",
         "type": "object"
       },
       "FirstAdminRequest": {
@@ -5714,6 +5965,77 @@
         "title": "QuarantinedAlias",
         "type": "object"
       },
+      "QuarantinedHost": {
+        "additionalProperties": false,
+        "properties": {
+          "external_key": {
+            "title": "External Key",
+            "type": "string"
+          },
+          "first_seen": {
+            "format": "date-time",
+            "title": "First Seen",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "ip_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ip Address"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "occurrences": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_findings": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "possible_resources": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "external_key",
+          "name",
+          "ip_address",
+          "first_seen",
+          "last_seen",
+          "occurrences",
+          "open_findings",
+          "possible_resources"
+        ],
+        "title": "QuarantinedHost",
+        "type": "object"
+      },
       "QuoteRequest": {
         "additionalProperties": false,
         "properties": {
@@ -7394,6 +7716,29 @@
         "title": "ScoreView",
         "type": "object"
       },
+      "ScoreWeight": {
+        "additionalProperties": false,
+        "properties": {
+          "part": {
+            "enum": [
+              "sla_compliance",
+              "coverage",
+              "exposure"
+            ],
+            "title": "Part",
+            "type": "string"
+          },
+          "weight": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          }
+        },
+        "required": [
+          "part",
+          "weight"
+        ],
+        "title": "ScoreWeight",
+        "type": "object"
+      },
       "ScreenContext": {
         "additionalProperties": false,
         "description": "Where the panel was opened. A hint, re-checked under the resolved scope.",
@@ -7455,6 +7800,270 @@
           }
         },
         "title": "ScreenContext",
+        "type": "object"
+      },
+      "SecOpsCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "by_customer": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerCoverage"
+            },
+            "title": "By Customer",
+            "type": "array"
+          },
+          "quarantined_hosts": {
+            "items": {
+              "$ref": "#/components/schemas/QuarantinedHost"
+            },
+            "title": "Quarantined Hosts",
+            "type": "array"
+          },
+          "quarantined_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "scannable_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "scannable_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scannable Types",
+            "type": "array"
+          },
+          "unmatched_resources": {
+            "items": {
+              "$ref": "#/components/schemas/UnmatchedResource"
+            },
+            "title": "Unmatched Resources",
+            "type": "array"
+          },
+          "unmatched_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "scannable_types",
+          "scannable_total",
+          "unmatched_total",
+          "quarantined_total",
+          "by_customer",
+          "unmatched_resources",
+          "quarantined_hosts"
+        ],
+        "title": "SecOpsCoverage",
+        "type": "object"
+      },
+      "SecOpsFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "age": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "asset_ipv4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Ipv4"
+          },
+          "asset_name": {
+            "title": "Asset Name",
+            "type": "string"
+          },
+          "first_detected": {
+            "format": "date-time",
+            "title": "First Detected",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_detected": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Detected"
+          },
+          "qid": {
+            "title": "Qid",
+            "type": "string"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "severity": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "title": "Severity",
+            "type": "integer"
+          },
+          "sla": {
+            "enum": [
+              "breached",
+              "at_risk",
+              "within",
+              "no_target"
+            ],
+            "title": "Sla",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "target_days": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "qid",
+          "title",
+          "severity",
+          "asset_name",
+          "asset_ipv4",
+          "resource_id",
+          "first_detected",
+          "last_detected",
+          "status",
+          "age",
+          "sla",
+          "target_days"
+        ],
+        "title": "SecOpsFinding",
+        "type": "object"
+      },
+      "SecOpsPostureScores": {
+        "additionalProperties": false,
+        "properties": {
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerPostureScore"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "formula": {
+            "title": "Formula",
+            "type": "string"
+          },
+          "weights": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreWeight"
+            },
+            "title": "Weights",
+            "type": "array"
+          }
+        },
+        "required": [
+          "formula",
+          "weights",
+          "customers"
+        ],
+        "title": "SecOpsPostureScores",
+        "type": "object"
+      },
+      "SecOpsVulnerabilities": {
+        "additionalProperties": false,
+        "properties": {
+          "at_risk_fraction": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "at_risk_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "breached_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "by_customer": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerAgeing"
+            },
+            "title": "By Customer",
+            "type": "array"
+          },
+          "by_severity": {
+            "items": {
+              "$ref": "#/components/schemas/SeverityAgeing"
+            },
+            "title": "By Severity",
+            "type": "array"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/SecOpsFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "listed": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "at_risk_fraction",
+          "open_total",
+          "breached_total",
+          "at_risk_total",
+          "by_severity",
+          "by_customer",
+          "findings",
+          "listed"
+        ],
+        "title": "SecOpsVulnerabilities",
         "type": "object"
       },
       "SectionNarrativeEdit": {
@@ -7523,6 +8132,94 @@
           "tables"
         ],
         "title": "SectionSnapshot",
+        "type": "object"
+      },
+      "SeverityAgeing": {
+        "additionalProperties": false,
+        "properties": {
+          "at_risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "breached": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "by_age": {
+            "items": {
+              "$ref": "#/components/schemas/AgeBand"
+            },
+            "title": "By Age",
+            "type": "array"
+          },
+          "oldest_days": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "severity": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "title": "Severity",
+            "type": "integer"
+          },
+          "target_days": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "within": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "severity",
+          "target_days",
+          "open",
+          "within",
+          "at_risk",
+          "breached",
+          "by_age",
+          "oldest_days"
+        ],
+        "title": "SeverityAgeing",
         "type": "object"
       },
       "SeverityCount": {
@@ -9273,6 +9970,77 @@
           "share"
         ],
         "title": "Unallocated",
+        "type": "object"
+      },
+      "UnmatchedResource": {
+        "additionalProperties": false,
+        "properties": {
+          "fqdn": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fqdn"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ip_addresses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ip Addresses",
+            "type": "array"
+          },
+          "last_seen": {
+            "format": "date-time",
+            "title": "Last Seen",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "possible_hosts": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Region"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenant",
+          "name",
+          "fqdn",
+          "type",
+          "region",
+          "ip_addresses",
+          "last_seen",
+          "possible_hosts"
+        ],
+        "title": "UnmatchedResource",
         "type": "object"
       },
       "UsageDay": {
@@ -13873,6 +14641,233 @@
           }
         },
         "summary": "Resource Context"
+      }
+    },
+    "/v1/secops/coverage": {
+      "get": {
+        "operationId": "coverage_v1_secops_coverage_get",
+        "parameters": [
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecOpsCoverage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Coverage"
+      }
+    },
+    "/v1/secops/findings/{finding_id}": {
+      "get": {
+        "operationId": "finding_v1_secops_findings__finding_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finding_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Finding Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Finding"
+      }
+    },
+    "/v1/secops/posture-score": {
+      "get": {
+        "operationId": "posture_scores_v1_secops_posture_score_get",
+        "parameters": [
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecOpsPostureScores"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Posture Scores"
+      }
+    },
+    "/v1/secops/vulnerabilities": {
+      "get": {
+        "operationId": "vulnerabilities_v1_secops_vulnerabilities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 5,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sla",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "breached",
+                    "at_risk",
+                    "within",
+                    "no_target"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sla"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecOpsVulnerabilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vulnerabilities"
       }
     },
     "/v1/tenant/roles": {

@@ -33,8 +33,8 @@ export const MODULES: readonly Module[] = [
   // The platform's own usage and health (ADR 0034).
   { href: "/observability", label: "Observability", area: "Operations", permission: "platform.observe", staff: true },
   { href: "/posture", label: "Security posture", area: "Security", permission: "vulnerabilities.read" },
-  // The SecOps workspace: built separately; shown once its page exists.
-  { href: "/secops", label: "SecOps", area: "Security", permission: "vulnerabilities.read", staff: true, reserved: true },
+  // The SecOps workspace (HLD M13, ADR 0036): ageing, scanner coverage, posture score.
+  { href: "/secops", label: "SecOps", area: "Security", permission: "vulnerabilities.read", staff: true },
   // Step 16: cost reconciliation and allocation, margin, and the pricing engine.
   // Customer viewers hold cost.read for their own cost; the FinOps module is staff work.
   { href: "/finops", label: "FinOps", area: "Commercial", permission: "cost.read", staff: true },

@@ -155,6 +155,8 @@ DEMO_PRINCIPALS: Final[tuple[tuple[str, str, str, tuple[str, ...], bool, bool], 
     ("customer-fab-one-sub", "customer", "Customer viewer", ("FAB",), False, True),
     # Delivery's customer master: onboards tenants and maps source names (ADR 0015).
     ("customer-master", "staff", "Customer master", (), True, False),
+    # The SecOps workspace's own role (HLD M13, ADR 0036): findings, coverage, posture.
+    ("secops-all", "staff", "SecOps", (), True, False),
 )
 
 
