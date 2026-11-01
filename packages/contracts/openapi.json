@@ -134,6 +134,212 @@
         "title": "AgeBand",
         "type": "object"
       },
+      "AiAgent": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "enum": [
+              "classifier",
+              "enricher",
+              "drafter",
+              "assistant",
+              "other"
+            ],
+            "title": "Agent",
+            "type": "string"
+          },
+          "calls": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "failed": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "refused": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "spend": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AiSpend"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "calls",
+          "refused",
+          "failed",
+          "tokens",
+          "spend",
+          "agent"
+        ],
+        "title": "AiAgent",
+        "type": "object"
+      },
+      "AiCustomer": {
+        "additionalProperties": false,
+        "properties": {
+          "assistant_budget": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "assistant_budget_used": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "assistant_month_tokens": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "calls": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "failed": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "month_tokens": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "quota_used": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "refused": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "spend": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AiSpend"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "calls",
+          "refused",
+          "failed",
+          "tokens",
+          "spend",
+          "tenant",
+          "month_tokens",
+          "quota",
+          "quota_used",
+          "assistant_month_tokens",
+          "assistant_budget",
+          "assistant_budget_used"
+        ],
+        "title": "AiCustomer",
+        "type": "object"
+      },
+      "AiDay": {
+        "additionalProperties": false,
+        "properties": {
+          "calls": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "failed": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "refused": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "spend": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AiSpend"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "calls",
+          "refused",
+          "failed",
+          "tokens",
+          "spend",
+          "day"
+        ],
+        "title": "AiDay",
+        "type": "object"
+      },
+      "AiFigures": {
+        "additionalProperties": false,
+        "properties": {
+          "calls": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "failed": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "refused": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "spend": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AiSpend"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend"
+          },
+          "tokens": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "calls",
+          "refused",
+          "failed",
+          "tokens",
+          "spend"
+        ],
+        "title": "AiFigures",
+        "type": "object"
+      },
       "AiSpend": {
         "additionalProperties": false,
         "properties": {
@@ -217,6 +423,61 @@
           "tenants"
         ],
         "title": "AiUsageHome",
+        "type": "object"
+      },
+      "AiView": {
+        "additionalProperties": false,
+        "properties": {
+          "alert_share": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "by_agent": {
+            "items": {
+              "$ref": "#/components/schemas/AiAgent"
+            },
+            "title": "By Agent",
+            "type": "array"
+          },
+          "by_customer": {
+            "items": {
+              "$ref": "#/components/schemas/AiCustomer"
+            },
+            "title": "By Customer",
+            "type": "array"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/AiDay"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "spend_visible": {
+            "title": "Spend Visible",
+            "type": "boolean"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/AiFigures"
+          },
+          "window": {
+            "$ref": "#/components/schemas/Window"
+          }
+        },
+        "required": [
+          "window",
+          "month",
+          "spend_visible",
+          "totals",
+          "alert_share",
+          "daily",
+          "by_agent",
+          "by_customer"
+        ],
+        "title": "AiView",
         "type": "object"
       },
       "AliasView": {
@@ -1664,6 +1925,34 @@
         "title": "ConnectorHealthList",
         "type": "object"
       },
+      "ConnectorSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceHealth"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "as_of",
+          "visible",
+          "sources"
+        ],
+        "title": "ConnectorSummary",
+        "type": "object"
+      },
       "ControlDefinition": {
         "additionalProperties": false,
         "properties": {
@@ -3000,6 +3289,28 @@
           "enabled"
         ],
         "title": "EnabledView",
+        "type": "object"
+      },
+      "EndpointUse": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "requests": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "users": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "action",
+          "requests",
+          "users"
+        ],
+        "title": "EndpointUse",
         "type": "object"
       },
       "EvidencePackSummary": {
@@ -4793,6 +5104,52 @@
           "sla_breached_open"
         ],
         "title": "Performance",
+        "type": "object"
+      },
+      "PlatformCost": {
+        "additionalProperties": false,
+        "properties": {
+          "captured": {
+            "title": "Captured",
+            "type": "boolean"
+          },
+          "currencies": {
+            "items": {
+              "$ref": "#/components/schemas/CurrencyTrend"
+            },
+            "title": "Currencies",
+            "type": "array"
+          },
+          "host": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenantView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "months": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "visible": {
+            "title": "Visible",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "visible",
+          "months",
+          "host",
+          "captured",
+          "currencies"
+        ],
+        "title": "PlatformCost",
         "type": "object"
       },
       "PlatformCostHome": {
@@ -6897,6 +7254,24 @@
         "title": "RoleRow",
         "type": "object"
       },
+      "RoleUsers": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "users": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "role",
+          "users"
+        ],
+        "title": "RoleUsers",
+        "type": "object"
+      },
       "RoutingView": {
         "additionalProperties": false,
         "properties": {
@@ -7162,6 +7537,76 @@
           "transition_weeks"
         ],
         "title": "SlabRow",
+        "type": "object"
+      },
+      "SourceHealth": {
+        "additionalProperties": false,
+        "properties": {
+          "band": {
+            "enum": [
+              "healthy",
+              "watch",
+              "at-risk",
+              "critical",
+              "unknown"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "drift_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "entities": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "failed_run_rate_24h": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failed_runs_24h": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "quarantine_depth": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "runs_24h": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_system",
+          "band",
+          "entities",
+          "last_success_at",
+          "runs_24h",
+          "failed_runs_24h",
+          "failed_run_rate_24h",
+          "quarantine_depth",
+          "drift_open"
+        ],
+        "title": "SourceHealth",
         "type": "object"
       },
       "SourceView": {
@@ -7678,6 +8123,136 @@
         "title": "TrendPoint",
         "type": "object"
       },
+      "TriageCustomer": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "human": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "overridden": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "override_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready_for_planning": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "triaged": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "triaged",
+          "ready_for_planning",
+          "human",
+          "accepted",
+          "overridden",
+          "override_rate",
+          "tenant"
+        ],
+        "title": "TriageCustomer",
+        "type": "object"
+      },
+      "TriageDay": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "human": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "overridden": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "override_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready_for_planning": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "triaged": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "triaged",
+          "ready_for_planning",
+          "human",
+          "accepted",
+          "overridden",
+          "override_rate",
+          "day"
+        ],
+        "title": "TriageDay",
+        "type": "object"
+      },
+      "TriageFigures": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "human": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "overridden": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "override_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready_for_planning": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "triaged": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "triaged",
+          "ready_for_planning",
+          "human",
+          "accepted",
+          "overridden",
+          "override_rate"
+        ],
+        "title": "TriageFigures",
+        "type": "object"
+      },
       "TriageHome": {
         "additionalProperties": false,
         "properties": {
@@ -7888,6 +8463,39 @@
           "triaged_at"
         ],
         "title": "TriageQueueItem",
+        "type": "object"
+      },
+      "TriageThroughput": {
+        "additionalProperties": false,
+        "properties": {
+          "by_customer": {
+            "items": {
+              "$ref": "#/components/schemas/TriageCustomer"
+            },
+            "title": "By Customer",
+            "type": "array"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/TriageDay"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/TriageFigures"
+          },
+          "window": {
+            "$ref": "#/components/schemas/Window"
+          }
+        },
+        "required": [
+          "window",
+          "totals",
+          "daily",
+          "by_customer"
+        ],
+        "title": "TriageThroughput",
         "type": "object"
       },
       "TriageView": {
@@ -8148,6 +8756,142 @@
         "title": "Unallocated",
         "type": "object"
       },
+      "UsageDay": {
+        "additionalProperties": false,
+        "properties": {
+          "active_users": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "by_role": {
+            "items": {
+              "$ref": "#/components/schemas/RoleUsers"
+            },
+            "title": "By Role",
+            "type": "array"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "requests": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "sessions": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "day",
+          "active_users",
+          "sessions",
+          "requests",
+          "by_role"
+        ],
+        "title": "UsageDay",
+        "type": "object"
+      },
+      "UsageView": {
+        "additionalProperties": false,
+        "properties": {
+          "active_users": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "blocked": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "by_role": {
+            "items": {
+              "$ref": "#/components/schemas/RoleUsers"
+            },
+            "title": "By Role",
+            "type": "array"
+          },
+          "customer_users": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/UsageDay"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "requests": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "sessions": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "staff_users": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "top_endpoints": {
+            "items": {
+              "$ref": "#/components/schemas/EndpointUse"
+            },
+            "title": "Top Endpoints",
+            "type": "array"
+          },
+          "weekly": {
+            "items": {
+              "$ref": "#/components/schemas/UsageWeek"
+            },
+            "title": "Weekly",
+            "type": "array"
+          },
+          "window": {
+            "$ref": "#/components/schemas/Window"
+          }
+        },
+        "required": [
+          "window",
+          "active_users",
+          "staff_users",
+          "customer_users",
+          "sessions",
+          "requests",
+          "blocked",
+          "by_role",
+          "daily",
+          "weekly",
+          "top_endpoints"
+        ],
+        "title": "UsageView",
+        "type": "object"
+      },
+      "UsageWeek": {
+        "additionalProperties": false,
+        "properties": {
+          "active_users": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "by_role": {
+            "items": {
+              "$ref": "#/components/schemas/RoleUsers"
+            },
+            "title": "By Role",
+            "type": "array"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week_start",
+          "partial",
+          "active_users",
+          "by_role"
+        ],
+        "title": "UsageWeek",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -8354,6 +9098,38 @@
           "solution"
         ],
         "title": "VulnerabilityView",
+        "type": "object"
+      },
+      "Window": {
+        "additionalProperties": false,
+        "properties": {
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TenantView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "since",
+          "until",
+          "tenant"
+        ],
+        "title": "Window",
         "type": "object"
       },
       "WorkItemDetail": {
@@ -11216,6 +11992,257 @@
           }
         },
         "summary": "Me"
+      }
+    },
+    "/v1/observability/ai": {
+      "get": {
+        "operationId": "ai_v1_observability_ai_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai"
+      }
+    },
+    "/v1/observability/connectors": {
+      "get": {
+        "description": "Per source, not per tenant: the run log is the platform's own.",
+        "operationId": "connector_summary_v1_observability_connectors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectorSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Connector Summary"
+      }
+    },
+    "/v1/observability/platform-cost": {
+      "get": {
+        "operationId": "platform_cost_v1_observability_platform_cost_get",
+        "parameters": [
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformCost"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Platform Cost"
+      }
+    },
+    "/v1/observability/triage": {
+      "get": {
+        "operationId": "triage_v1_observability_triage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TriageThroughput"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Triage"
+      }
+    },
+    "/v1/observability/usage": {
+      "get": {
+        "operationId": "usage_v1_observability_usage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 90,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Usage"
       }
     },
     "/v1/onboarding": {

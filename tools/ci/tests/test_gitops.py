@@ -581,8 +581,12 @@ def test_the_console_is_reached_from_the_ingress_and_reaches_nothing() -> None:
 def test_the_console_reads_only_identifiers() -> None:
     (cm,) = [d for d in WEB if d["kind"] == "ConfigMap"]
     assert set(cm["data"]) == {"CLOUDOPS_WEB_API_BASE", "CLOUDOPS_WEB_ENTRA_CLIENT_ID",
-                               "CLOUDOPS_WEB_ENTRA_TENANT_ID", "CLOUDOPS_WEB_API_SCOPE"}
+                               "CLOUDOPS_WEB_ENTRA_TENANT_ID", "CLOUDOPS_WEB_API_SCOPE",
+                               "CLOUDOPS_WEB_GRAFANA_URL", "CLOUDOPS_WEB_APP_INSIGHTS_URL"}
     data = cm["data"]
+    # Monitoring links (ADR 0034): empty until stack 03-observability is applied, then https.
+    for link in ("CLOUDOPS_WEB_GRAFANA_URL", "CLOUDOPS_WEB_APP_INSIGHTS_URL"):
+        assert data[link] == "" or data[link].startswith("https://")
     assert data["CLOUDOPS_WEB_API_BASE"].startswith("https://")
     assert re.fullmatch(r"api://[0-9a-f-]{36}/access_as_user", data["CLOUDOPS_WEB_API_SCOPE"])
 

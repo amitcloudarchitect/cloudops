@@ -10,6 +10,9 @@ export type AuthMode = "entra" | "local";
 export interface RuntimeConfig {
   apiBase: string;
   entra: { clientId: string; tenantId: string; apiScope: string };
+  /** The platform's own monitoring (Terraform stack 03-observability). Empty until
+   * the stack is applied and its outputs are set in the overlay: "not yet applied". */
+  observability?: { grafanaUrl: string; appInsightsUrl: string };
 }
 
 export interface ConsoleConfig extends RuntimeConfig {
@@ -41,7 +44,11 @@ function validated(raw: RuntimeConfig, mode: AuthMode): RuntimeConfig {
   if (mode === "entra" && !(clientId && tenantId && apiScope)) {
     throw new Error("entra mode needs the client id, tenant id and API scope");
   }
-  return { apiBase, entra: { clientId, tenantId, apiScope } };
+  const { grafanaUrl = "", appInsightsUrl = "" } = raw.observability ?? {};
+  for (const link of [grafanaUrl, appInsightsUrl]) {
+    if (link && !/^https:\/\/[^\s"'<>]+$/.test(link)) throw new Error("a monitoring link must be an https URL");
+  }
+  return { apiBase, entra: { clientId, tenantId, apiScope }, observability: { grafanaUrl, appInsightsUrl } };
 }
 
 /** Server only: the runtime values, from the process environment. */
@@ -53,6 +60,10 @@ export function runtimeFromEnv(env: Record<string, string | undefined> = process
         clientId: env.CLOUDOPS_WEB_ENTRA_CLIENT_ID ?? "",
         tenantId: env.CLOUDOPS_WEB_ENTRA_TENANT_ID ?? "",
         apiScope: env.CLOUDOPS_WEB_API_SCOPE ?? "",
+      },
+      observability: {
+        grafanaUrl: env.CLOUDOPS_WEB_GRAFANA_URL ?? "",
+        appInsightsUrl: env.CLOUDOPS_WEB_APP_INSIGHTS_URL ?? "",
       },
     },
     authMode(),

@@ -80,7 +80,7 @@ Reason = Literal[
 ]
 RunStatus = Literal["running", "succeeded", "dead_lettered", "failed"]
 
-_RANK: Final[dict[Band, int]] = {"unknown": -1, "healthy": 0, "watch": 1, "at-risk": 2,
+RANK: Final[dict[Band, int]] = {"unknown": -1, "healthy": 0, "watch": 1, "at-risk": 2,
                                  "critical": 3}
 _FAILED: Final = frozenset({"failed", "dead_lettered"})
 
@@ -143,7 +143,7 @@ def rate(part: int, whole: int) -> Decimal | None:
 
 
 def _worst(a: Band, b: Band) -> Band:
-    return a if _RANK[a] >= _RANK[b] else b
+    return a if RANK[a] >= RANK[b] else b
 
 
 def assess(f: Figures, now: datetime) -> Assessment:
@@ -279,7 +279,7 @@ def _ratio(value: Decimal | None, unit: str, name: str, as_of: datetime,
                            query_ref=query_ref(name, 1, **params), is_modelled=False)
 
 
-_HEALTH: Final = text(
+HEALTH_QUERY: Final = text(
     "SELECT h.source_system, h.entity, h.expected_every_seconds, h.last_success_at,"
     " h.last_run_at, h.last_status, h.last_lag_seconds, h.runs_24h, h.failed_runs_24h,"
     " h.records_24h, h.rejected_24h, h.quarantined_24h, h.dead_letters_open,"
@@ -288,7 +288,7 @@ _HEALTH: Final = text(
 )
 
 
-def _health(row: tuple[Any, ...]) -> ConnectorHealth:
+def health_row(row: tuple[Any, ...]) -> ConnectorHealth:
     (source, entity, every, last_success, last_run, last_status, lag, runs, failed, records,
      rejected, quarantined, dead, alias_depth, resource_depth, drift, now) = row
     figures = Figures(
@@ -357,10 +357,11 @@ async def connector_health(request: Request, access: AccessDep) -> ConnectorHeal
     """Every scheduled connector, worst first, with its band and why."""
     _staff(access)
     async with _guarded(request, access) as conn:
-        rows = [tuple(r) for r in await conn.execute(_HEALTH, {"actor": access.identity.oid})]
+        rows = [tuple(r) for r in await conn.execute(HEALTH_QUERY,
+                                                    {"actor": access.identity.oid})]
         now: datetime = await conn.scalar(text("SELECT now()"))
-    items = sorted((_health(r) for r in rows),
-                   key=lambda h: (-_RANK[h.band], h.source_system, h.entity))
+    items = sorted((health_row(r) for r in rows),
+                   key=lambda h: (-RANK[h.band], h.source_system, h.entity))
 
     def total(band: Band, name: str) -> Metric[int]:
         return _metric(sum(1 for h in items if h.band == band), "connectors",
