@@ -303,6 +303,19 @@ def _seed(cx: psycopg.Connection[Any], tenants: tuple[Tenant, ...], global_axis:
             " extraction) VALUES (%s, 'sharepoint', %s, %s, 'design.md', 'text')",
             (t.id, f"site-{t.name}", f"item-{t.name}"),
         )
+        # ADR 0028 tables, likewise.
+        cx.execute(
+            "INSERT INTO cloudops.sharepoint_folder (tenant_id, drive_id, item_id, name)"
+            " VALUES (%s, 'b!drive', %s, %s)",
+            (t.id, f"folder-{t.name}", t.name),
+        )
+        cx.execute(
+            "INSERT INTO cloudops.security_finding (tenant_id, account_id, source_system,"
+            " source_scope, finding_id, category, severity, title, status, customer_raw,"
+            " detected_at, updated_at) VALUES (%s, %s, 'corestack', 'cs-tenant', %s,"
+            " 'security', 'high', 'Storage allows public access', 'open', %s, now(), now())",
+            (t.id, t.account_id, f"s-{t.name}", t.name),
+        )
         cx.execute(
             "INSERT INTO staging.cost_fact_load (tenant_id, account_id, assembly_id, object_key,"
             " usage_date, invoice_period, charge_class, unblended_cost, amortized_cost,"

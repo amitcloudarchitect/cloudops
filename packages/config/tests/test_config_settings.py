@@ -21,6 +21,7 @@ from cloudops_config import (
     MissingSecretError,
     MockLlmGateway,
     NotBuiltError,
+    QualysSource,
     load_settings,
 )
 
@@ -256,7 +257,8 @@ def test_local_resolves_the_compose_containers(local_env: dict[str, str]) -> Non
     # live Azure cost feed is Azure-only (all tested below).
     s = load_settings(local_env,
                       require=set(Component) - {Component.SERVICENOW, Component.AZURE_COST,
-                                                Component.CUSTOMER_ACCESS})
+                                                Component.CUSTOMER_ACCESS, Component.SHAREPOINT,
+                                                Component.QUALYS, Component.CORESTACK})
     assert s.environment is Environment.LOCAL
     assert s.workload_identity is None
     assert s.database_dsn(DbLogin.INGEST).startswith("postgresql://cloudops_ingest_local")
@@ -536,3 +538,108 @@ def test_a_laptop_may_use_a_stored_key(local_env: dict[str, str]) -> None:
     local_env["CLOUDOPS_CUSTOMER_CREDENTIALS"] = "stored_key"
     access = load_settings(local_env, require={Component.CUSTOMER_ACCESS}).customer_access
     assert (access.source, access.deployment) == (CredentialSource.STORED_KEY, "local")
+
+
+# The read-only sources of ADR 0028 --------------------------------------------------
+
+_DRIVE = "b!DT4Hk_BDiEimZVVWGYe2MPKvc43sJ"
+_SP_APP = "00000000-0000-4000-8000-00000000a5e1"
+
+
+def test_sharepoint_names_the_app_and_its_folders(azure_env: dict[str, str]) -> None:
+    azure_env["CLOUDOPS_SHAREPOINT_CLIENT_ID"] = _SP_APP.upper()
+    azure_env["CLOUDOPS_SHAREPOINT_FOLDERS"] = f"{_DRIVE}/01AAA, {_DRIVE}/01BBB"
+    sp = load_settings(azure_env, require={Component.SHAREPOINT}).sharepoint
+    assert sp.client_id == _SP_APP
+    assert sp.folders == (f"{_DRIVE}/01AAA", f"{_DRIVE}/01BBB")
+
+
+@pytest.mark.parametrize("folders", [
+    "01AAA", f"{_DRIVE}/", f"{_DRIVE}/01A/02B", f"{_DRIVE}/../x", f"{_DRIVE}/01A,{_DRIVE}/01A",
+    f"{_DRIVE}/01A?x=1",
+])
+def test_sharepoint_folders_are_drive_and_item_ids(azure_env: dict[str, str], folders: str) -> None:
+    azure_env["CLOUDOPS_SHAREPOINT_CLIENT_ID"] = _SP_APP
+    azure_env["CLOUDOPS_SHAREPOINT_FOLDERS"] = folders
+    with pytest.raises(ConfigurationError, match="CLOUDOPS_SHAREPOINT_FOLDERS"):
+        load_settings(azure_env, require={Component.SHAREPOINT})
+
+
+def test_sharepoint_client_id_is_an_application_id(azure_env: dict[str, str]) -> None:
+    azure_env["CLOUDOPS_SHAREPOINT_CLIENT_ID"] = "app-cloudops-sharepoint-dev"
+    azure_env["CLOUDOPS_SHAREPOINT_FOLDERS"] = f"{_DRIVE}/01A"
+    with pytest.raises(ConfigurationError, match="client"):
+        load_settings(azure_env, require={Component.SHAREPOINT})
+
+
+def test_sharepoint_live_is_azure_only(local_env: dict[str, str]) -> None:
+    with pytest.raises(ConfigurationError, match="Azure only"):
+        load_settings(local_env, require={Component.SHAREPOINT})
+
+
+@pytest.mark.parametrize("deployment", ["", "tst", "uat", "prd", "dev2"])
+def test_qualys_simulation_is_refused_outside_dev(
+    azure_env: dict[str, str], deployment: str
+) -> None:
+    azure_env["CLOUDOPS_QUALYS_SOURCE"] = "simulation"
+    azure_env["CLOUDOPS_DEPLOYMENT"] = deployment
+    with pytest.raises(ConfigurationError, match="outside dev"):
+        load_settings(azure_env, require={Component.QUALYS})
+
+
+def test_qualys_simulation_in_dev_needs_no_url_or_secret(azure_env: dict[str, str]) -> None:
+    azure_env["CLOUDOPS_QUALYS_SOURCE"] = "simulation"
+    azure_env["CLOUDOPS_DEPLOYMENT"] = "dev"
+    q = load_settings(azure_env, require={Component.QUALYS}).qualys
+    assert (q.source, q.api_url, q.username, q.password_secret) == (
+        QualysSource.SIMULATION, None, None, None)
+    azure_env["CLOUDOPS_QUALYS_URL"] = "https://qualysapi.qg2.apps.qualys.eu"
+    with pytest.raises(ConfigurationError, match="say live"):
+        load_settings(azure_env, require={Component.QUALYS})
+
+
+@pytest.mark.parametrize("value", ["", "fixtures", "LIVE"])
+def test_qualys_source_is_explicit(azure_env: dict[str, str], value: str) -> None:
+    azure_env["CLOUDOPS_QUALYS_SOURCE"] = value
+    with pytest.raises(ConfigurationError, match="explicitly"):
+        load_settings(azure_env, require={Component.QUALYS})
+
+
+def test_qualys_live_needs_a_qualys_server_a_user_and_the_password(
+    azure_env: dict[str, str], tmp_path: Path
+) -> None:
+    azure_env.update({"CLOUDOPS_QUALYS_SOURCE": "live",
+                      "CLOUDOPS_QUALYS_URL": "https://qualysapi.qg2.apps.qualys.eu/",
+                      "CLOUDOPS_QUALYS_USERNAME": "gtnps_ro"})
+    with pytest.raises(MissingSecretError, match="qualys-api-password"):
+        load_settings(azure_env, require={Component.QUALYS})
+    (tmp_path / "secrets" / "qualys-api-password").write_text("x\n", encoding="utf-8")
+    q = load_settings(azure_env, require={Component.QUALYS}).qualys
+    assert (q.api_url, q.username, q.password_secret) == (
+        "https://qualysapi.qg2.apps.qualys.eu", "gtnps_ro", "qualys-api-password")
+    for url in ("https://qualysapi.example.com", "http://qualysapi.qualys.eu",
+                "https://qualysapi.qualys.eu/api/2.0", "https://qualys.eu.example.net"):
+        azure_env["CLOUDOPS_QUALYS_URL"] = url
+        with pytest.raises(ConfigurationError, match="CLOUDOPS_QUALYS_URL"):
+            load_settings(azure_env, require={Component.QUALYS})
+
+
+def test_corestack_names_the_api_its_tenants_and_both_keys_by_name(
+    azure_env: dict[str, str], tmp_path: Path
+) -> None:
+    azure_env.update({"CLOUDOPS_CORESTACK_URL": "https://portal-api.corestack.io",
+                      "CLOUDOPS_CORESTACK_TENANTS": "69b664d0209f1144512cc400"})
+    for name in ("corestack-access-key", "corestack-secret-key"):
+        with pytest.raises(MissingSecretError, match=name):
+            load_settings(azure_env, require={Component.CORESTACK})
+        (tmp_path / "secrets" / name).write_text("x\n", encoding="utf-8")
+    c = load_settings(azure_env, require={Component.CORESTACK}).corestack
+    assert (c.api_url, c.tenants, c.access_key, c.secret_key) == (
+        "https://portal-api.corestack.io", ("69b664d0209f1144512cc400",),
+        "corestack-access-key", "corestack-secret-key")
+    for var, bad in (("CLOUDOPS_CORESTACK_URL", "https://portal-api.corestack.io/v1"),
+                     ("CLOUDOPS_CORESTACK_TENANTS", "a,a"),
+                     ("CLOUDOPS_CORESTACK_TENANTS", "../x")):
+        env = {**azure_env, var: bad}
+        with pytest.raises(ConfigurationError, match="CLOUDOPS_CORESTACK"):
+            load_settings(env, require={Component.CORESTACK})

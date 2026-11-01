@@ -116,6 +116,10 @@ class Live:
     requires: frozenset[Component]
     entities: Callable[[Settings], frozenset[str]]
     build: Callable[[Settings, AsyncExitStack], Source]
+    # What ``schedule`` loads to learn the entities. The schedule job mounts no
+    # secrets, so a source whose component checks one (CoreStack's secret key) says
+    # here that its entities need none of it.
+    schedule_requires: frozenset[Component] | None = None
 
 
 def _entities(args: argparse.Namespace, entities: Mapping[str, timedelta],
@@ -147,7 +151,9 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
     if args.command == "schedule":
         azure_live = live if environment_from(os.environ) is Environment.AZURE else None
         settings = load_settings(os.environ, require={
-            Component.TEMPORAL, *(azure_live.requires if azure_live is not None else ())})
+            Component.TEMPORAL, *(() if azure_live is None else azure_live.requires
+                                  if azure_live.schedule_requires is None
+                                  else azure_live.schedule_requires)})
         temporal = await connect(settings.temporal, **temporal_options())
         served = azure_live.entities(settings) if azure_live is not None else None
         for entity in _entities(args, entities, served):

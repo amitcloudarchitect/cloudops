@@ -1,0 +1,18 @@
+# The CoreStack connector's live path (ADR 0028): CoreStack recommendations (cost into
+# cost_finding, security and compliance into security_finding), read with an access
+# key pair. Read-only.
+# Its worker, KEDA scaling and schedule job; Temporal over mutual TLS (ADR 0010).
+# Deployed by the workers Application, after Temporal (applications/<env>/workers.yaml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: platform-ingest
+resources:
+  - connector-corestack.yaml
+configMapGenerator:
+  # Generated, so a changed setting renames it and rolls the pods (as connector-servicenow).
+  - name: connector-corestack
+    envs: [config.env]
+    options:
+      annotations:
+        argocd.argoproj.io/sync-options: Prune=false
+        argocd.argoproj.io/compare-options: IgnoreExtraneous
