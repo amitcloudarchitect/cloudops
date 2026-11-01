@@ -247,6 +247,16 @@ def test_injected_content_stays_inside_its_data_section() -> None:
     assert user.content.rstrip().endswith(f'</request id="{nonce}">')
 
 
+def test_a_section_id_is_never_all_digits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sixteen digits can pass for a card number, and the gateway's redaction
+    would rewrite every section tag (so a cassette or a citation finds no ref)."""
+    drawn = iter(["4111111111111111", "4111111111111111", "0a1b2c3d4e5f6a7b"])
+    monkeypatch.setattr("cloudops_agents.prompts.secrets.token_hex", lambda n: next(drawn))
+    _, user = build_messages("You classify tickets.", schema=None, request="Classify.",
+                             data=[DataItem("servicenow", {"x": 1}, "INC1")])
+    assert '<data id="0a1b2c3d4e5f6a7b"' in user.content
+
+
 async def test_a_model_that_obeys_injected_instructions_cannot_get_an_action_through() -> None:
     """Suppose the model follows the planted text and adds an action field. The
     closed schema refuses it twice, and nothing is returned to act on."""

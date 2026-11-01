@@ -5,10 +5,11 @@ from __future__ import annotations
 
 import asyncio
 import json
+import random
 from collections.abc import Mapping
 from decimal import Decimal
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -68,6 +69,47 @@ def test_secrets_and_personal_data_are_redacted(text: str, kind: str) -> None:
 )
 def test_operational_data_and_near_misses_are_left_alone(text: str) -> None:
     assert redact(text).text == text
+
+
+# Random UUIDs whose digit groups pass Luhn (the first was drafting eval's
+# drf-004 evidence in the flake on PR 86: its ref was rewritten, so the cited
+# evidence was "never given").
+LUHN_UUIDS = ("95532060-9248-4075-96b6-990629a1439c", "37575763-2375-4232-bfbf-e0d50629ec19",
+              "26902903-6679-4806-8C15-767566C3A4EA")
+
+
+@pytest.mark.parametrize("value", LUHN_UUIDS)
+def test_a_uuid_is_never_taken_for_a_card_number(value: str) -> None:
+    text = f'<data id="0a1b" index="2" source="evidence_store" ref="evidence:{value}">'
+    assert redact(text).text == text
+    assert redact(f"ids {value},{value}").text == f"ids {value},{value}"
+
+
+def test_no_random_uuid_is_rewritten() -> None:
+    rng = random.Random(20261101)  # noqa: S311 - reproducible test ids, not a secret
+    for _ in range(20_000):
+        value = str(UUID(int=rng.getrandbits(128), version=4))
+        assert redact(f"ref=\"evidence:{value}\"").text == f"ref=\"evidence:{value}\"", value
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        f"{LUHN_UUIDS[0]} card 4111 1111 1111 1111",
+        "00000000-0000-4000-8000-000000000000 4111 1111 1111 1111",  # digits up to the id
+        "4111 1111 1111 1111 00000000-0000-4000-8000-000000000000",
+        f"call +44 20 7946 0958 about {LUHN_UUIDS[1]}",
+    ],
+)
+def test_personal_data_beside_a_uuid_is_still_redacted(text: str) -> None:
+    out = redact(text)
+    assert out.count == 1, out.text
+    assert "4111" not in out.text
+    assert "7946" not in out.text
+
+
+def test_a_secret_whose_value_is_a_uuid_is_still_redacted() -> None:
+    assert redact(f"client_secret={LUHN_UUIDS[0]}").text == "[REDACTED:SECRET]"
 
 
 def test_known_personal_names_are_redacted_longest_first() -> None:
