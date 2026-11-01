@@ -58,7 +58,7 @@ def test_a_detection_maps_with_fqdn_naming_and_its_customer_tag() -> None:
     assert d.asset_name == "VMUKWEB01.NORTHWIND.LOCAL"  # the FQDN, as Qualys names it
     assert d.asset_id == "777"
     assert d.ip == "10.1.2.3"
-    assert d.customer_raw == "Northwind-Logistics"
+    assert d.customers == ("Northwind-Logistics",)  # the Customer: tag, alone
     assert d.tags == ("Customer:Northwind-Logistics", "Prod")
     assert d.detection_type == "Cloud Agent"
     assert (d.qid, d.severity, d.status) == (376190, 4, "Fixed")
@@ -85,20 +85,27 @@ def test_an_active_detection_is_not_remediated_even_with_a_fixed_time() -> None:
 
 @pytest.mark.parametrize(
     ("tags", "expected"),
-    [([], mapping.NO_CUSTOMER), (["Prod"], mapping.NO_CUSTOMER),
-     (["Customer:  Contoso Retail UK "], "Contoso Retail UK")],
+    [([], (mapping.NO_CUSTOMER,)),
+     (["Cloud Agent", "DEFAULT"], (mapping.NO_CUSTOMER,)),
+     # As the real subscription tags them (ADR 0028): the customer is a plain tag.
+     (["Cloud Agent", "Contoso Retail UK", "Default"], ("Contoso Retail UK",)),
+     (["Prod", "Contoso Retail UK"], ("Contoso Retail UK", "Prod")),
+     (["Customer:  Contoso Retail UK ", "Prod"], ("Contoso Retail UK",))],
 )
-def test_the_customer_comes_from_the_customer_tag_only(tags: list[str], expected: str) -> None:
+def test_the_customer_candidates_are_the_tags_less_the_generic_ones(
+    tags: list[str], expected: tuple[str, ...]
+) -> None:
     host = _host()
     host["TAGS"] = {"TAG": [{"TAG_ID": str(i), "NAME": t} for i, t in enumerate(tags)]}
     (d,), _ = mapping.normalise(host)
-    assert d.customer_raw == expected
+    assert d.customers == expected
 
 
-def test_two_customer_tags_reject_the_host_rather_than_guess() -> None:
+def test_two_customer_tags_are_both_candidates_and_resolution_decides() -> None:
     host = _host()
     host["TAGS"] = {"TAG": [{"NAME": "Customer:A"}, {"NAME": "Customer:B"}]}
-    assert mapping.normalise(host) == ([], 2)
+    (d,), bad = mapping.normalise(host)
+    assert (d.customers, bad) == (("A", "B"), 1)
 
 
 def test_a_host_without_an_id_or_any_name_is_rejected() -> None:

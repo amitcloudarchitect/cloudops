@@ -25,6 +25,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/assistant/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations_v1_assistant_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["get_conversation_v1_assistant_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/conversations/{conversation_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Conversation
+         * @description Delete one of the caller's conversations, and clear the prompt text and
+         *     agent output the gateway recorded for it.
+         */
+        post: operations["delete_conversation_v1_assistant_conversations__conversation_id__delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask
+         * @description Ask a question, in a new conversation or a running one. Answered in the
+         *     background; poll the turn.
+         */
+        post: operations["ask_v1_assistant_questions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Session
+         * @description What the panel offers here: whether it is available, which account it is
+         *     about, and suggested questions for the screen and the caller's permissions.
+         */
+        get: operations["session_v1_assistant_session_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/tenants/{tenant_id}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Enabled
+         * @description Switch the assistant on or off for a customer's portal users. Staff always
+         *     have it. Off by default until the customer-role evaluation cases pass.
+         */
+        post: operations["set_enabled_v1_assistant_tenants__tenant_id__enabled_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/turns/{turn_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Turn */
+        get: operations["get_turn_v1_assistant_turns__turn_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/assurance/assessments": {
         parameters: {
             query?: never;
@@ -240,6 +375,74 @@ export interface paths {
         put?: never;
         /** Load Library */
         post: operations["load_library_v1_assurance_library_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-onboarding/credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Credentials
+         * @description The inventory (ADR 0003, guardrail 6): every stored credential in scope,
+         *     revoked ones included, soonest expiry first.
+         */
+        get: operations["list_credentials_v1_cloud_onboarding_credentials_get"];
+        put?: never;
+        /**
+         * Onboard
+         * @description Record a credential's identifiers and queue its check. The secret goes into
+         *     Key Vault under the returned ``secret_names``, never here.
+         */
+        post: operations["onboard_v1_cloud_onboarding_credentials_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-onboarding/credentials/{credential_id}/checks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Check
+         * @description Check again: after creating the secret, after fixing a role, or with a new
+         *     expiry after rotating the secret under the same name.
+         */
+        post: operations["request_check_v1_cloud_onboarding_credentials__credential_id__checks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/cloud-onboarding/credentials/{credential_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revoke
+         * @description Stop using it now. Delete the Key Vault secret and the app registration's
+         *     secret (or deactivate the access key) out of band; the row stays as the record.
+         */
+        post: operations["revoke_v1_cloud_onboarding_credentials__credential_id__revoke_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -509,6 +712,78 @@ export interface paths {
          *     a customer reads its own cost through the portal (step 18).
          */
         get: operations["finops_overview_v1_finops_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/ai-usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ai Usage */
+        get: operations["ai_usage_v1_home_ai_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/cost": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Cost
+         * @description Getronics' cost per customer: staff only. A customer reads the price it is
+         *     charged through ``/v1/cost/summary`` (ADR 0021), never this.
+         */
+        get: operations["cost_v1_home_cost_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Operations */
+        get: operations["operations_v1_home_operations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/home/triage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Triage */
+        get: operations["triage_v1_home_triage_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1177,6 +1452,8 @@ export interface components {
             /** Reason */
             reason: string | null;
             reference: components["schemas"]["Metric_Decimal_"] | null;
+            /** Shared With Platform */
+            shared_with_platform: boolean;
             /**
              * Status
              * @enum {string}
@@ -1200,6 +1477,31 @@ export interface components {
              */
             band: "0-30" | "31-90" | "91+";
             open: components["schemas"]["Metric_int_"];
+        };
+        /** AiSpend */
+        AiSpend: {
+            /** Currency */
+            currency: string;
+            spend: components["schemas"]["Metric_Decimal_"];
+        };
+        /** AiTenantUsage */
+        AiTenantUsage: {
+            calls: components["schemas"]["Metric_int_"];
+            quota: components["schemas"]["Metric_int_"];
+            refused: components["schemas"]["Metric_int_"];
+            /** Spend */
+            spend: components["schemas"]["AiSpend"][];
+            tenant: components["schemas"]["TenantView"];
+            tokens: components["schemas"]["Metric_int_"];
+            used_share: components["schemas"]["Metric_Decimal_"];
+        };
+        /** AiUsageHome */
+        AiUsageHome: {
+            alert_share: components["schemas"]["Metric_Decimal_"];
+            /** Month */
+            month: string;
+            /** Tenants */
+            tenants: components["schemas"]["AiTenantUsage"][];
         };
         /** AliasView */
         AliasView: {
@@ -1253,6 +1555,15 @@ export interface components {
             observed_on: string;
             ratio: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /** AnswerView */
+        AnswerView: {
+            /** Claims */
+            claims: components["schemas"]["ClaimView"][];
+            /** Sources */
+            sources: components["schemas"]["SourceView"][];
+            /** Text */
+            text: string;
+        };
         /** Approval */
         Approval: {
             /** Narrative Seen */
@@ -1276,6 +1587,16 @@ export interface components {
             count: components["schemas"]["Metric_int_"];
             /** Items */
             items: components["schemas"]["PendingChange"][];
+        };
+        /** AskRequest */
+        AskRequest: {
+            context?: components["schemas"]["ScreenContext"];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Question */
+            question: string;
+            /** Tenant Id */
+            tenant_id?: string | null;
         };
         /** AssessmentDetail */
         AssessmentDetail: {
@@ -1343,6 +1664,75 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** AssistantSession */
+        AssistantSession: {
+            /** Available */
+            available: boolean;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "account" | "help";
+            /** Suggestions */
+            suggestions: string[];
+            tenant: components["schemas"]["TenantOption"] | null;
+            /** Tenants */
+            tenants: components["schemas"]["TenantOption"][];
+            /** Unavailable Reason */
+            unavailable_reason: ("not_enabled" | "not_configured") | null;
+        };
+        /** AwsCredentialRequest */
+        AwsCredentialRequest: {
+            /** Access Key Id */
+            access_key_id: string;
+            /** Account Id */
+            account_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "aws";
+            /**
+             * Secret Expires At
+             * Format: date-time
+             */
+            secret_expires_at: string;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
+        /** AzureCredentialRequest */
+        AzureCredentialRequest: {
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /**
+             * Directory Id
+             * Format: uuid
+             */
+            directory_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            provider: "azure";
+            /**
+             * Secret Expires At
+             * Format: date-time
+             */
+            secret_expires_at: string;
+            /** Subscription Ids */
+            subscription_ids: string[];
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
+        };
         /**
          * BandRules
          * @description The thresholds the bands were computed with, so a screen explains them
@@ -1364,6 +1754,33 @@ export interface components {
             /** Permissions */
             permissions: string[];
         };
+        /** ChangeRef */
+        ChangeRef: {
+            /** Closed At */
+            closed_at: string | null;
+            /** Configuration Item */
+            configuration_item: string | null;
+            /** Number */
+            number: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /** Short Description */
+            short_description: string | null;
+            /** State */
+            state: string | null;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** ChangeWeek */
+        ChangeWeek: {
+            closed: components["schemas"]["Metric_int_"];
+            open_now: components["schemas"]["Metric_int_"];
+            opened: components["schemas"]["Metric_int_"];
+            /** Recent */
+            recent: components["schemas"]["ChangeRef"][];
+        };
         /** ChargeLine */
         ChargeLine: {
             amortized: components["schemas"]["Metric_Decimal_"];
@@ -1375,6 +1792,42 @@ export interface components {
             /** Feeds Margin */
             feeds_margin: boolean;
             unblended: components["schemas"]["Metric_Decimal_"];
+        };
+        /** CheckRequest */
+        CheckRequest: {
+            /** Secret Expires At */
+            secret_expires_at?: string | null;
+        };
+        /** CheckView */
+        CheckView: {
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            } | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Outcome */
+            outcome: string | null;
+            /**
+             * Reason
+             * @enum {string}
+             */
+            reason: "onboard" | "rotation" | "recheck";
+            /**
+             * Requested At
+             * Format: date-time
+             */
+            requested_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "requested" | "running" | "passed" | "refused" | "failed";
         };
         /** CitationView */
         CitationView: {
@@ -1397,6 +1850,35 @@ export interface components {
             source_ref: string | null;
             /** Web Url */
             web_url: string | null;
+        };
+        /** ClaimView */
+        ClaimView: {
+            /** Sources */
+            sources: string[];
+            /** Text */
+            text: string;
+        };
+        /** ClosestItem */
+        ClosestItem: {
+            elapsed_hours: components["schemas"]["Metric_Decimal_"];
+            /** Number */
+            number: string;
+            /**
+             * Opened At
+             * Format: date-time
+             */
+            opened_at: string;
+            /** Priority */
+            priority: string | null;
+            /**
+             * Risk
+             * @enum {string}
+             */
+            risk: "breached" | "at_risk" | "within" | "no_target";
+            /** Short Description */
+            short_description: string | null;
+            target_hours: components["schemas"]["Metric_int_"] | null;
+            tenant: components["schemas"]["TenantView"];
         };
         /** CollectedView */
         CollectedView: {
@@ -1541,6 +2023,57 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** ConversationSummary */
+        ConversationSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "account" | "help";
+            tenant: components["schemas"]["TenantOption"] | null;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ConversationView */
+        ConversationView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "account" | "help";
+            tenant: components["schemas"]["TenantOption"] | null;
+            /** Title */
+            title: string;
+            /** Turns */
+            turns: components["schemas"]["TurnView"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CostHome */
+        CostHome: {
+            /** Customers */
+            customers: components["schemas"]["CustomerCostHome"][];
+            /** Months */
+            months: string[];
+        };
         /**
          * CostLine
          * @description What Getronics staff see: the provider's charge to Getronics.
@@ -1552,6 +2085,15 @@ export interface components {
             currency: string;
             /** Provider */
             provider: string;
+            shared_with_platform?: components["schemas"]["Metric_Decimal_"] | null;
+        };
+        /** CostPoint */
+        CostPoint: {
+            amortized: components["schemas"]["Metric_Decimal_"] | null;
+            /** Month To Date */
+            month_to_date: boolean;
+            /** Period */
+            period: string;
         };
         /** CostSummary */
         CostSummary: {
@@ -1586,6 +2128,72 @@ export interface components {
             has_gap: boolean;
             tenant: components["schemas"]["TenantView"];
         };
+        /** CredentialView */
+        CredentialView: {
+            /** Access Key Id */
+            access_key_id: string | null;
+            /** Account Ids */
+            account_ids: string[];
+            /** Client Id */
+            client_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Credential Source
+             * @constant
+             */
+            credential_source: "stored_key";
+            days_to_expiry: components["schemas"]["Metric_int_"];
+            /** Directory Id */
+            directory_id: string | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            latest_check: components["schemas"]["CheckView"] | null;
+            /** Owned By Me */
+            owned_by_me: boolean;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "azure" | "aws";
+            /** Revoked At */
+            revoked_at: string | null;
+            /** Secret Names */
+            secret_names: string[];
+            /**
+             * Secret Set At
+             * Format: date-time
+             */
+            secret_set_at: string;
+            /** Shared With Platform */
+            shared_with_platform: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "active" | "refused" | "revoked";
+            tenant: components["schemas"]["TenantView"];
+            /** Validated At */
+            validated_at: string | null;
+        };
+        /** CurrencyTrend */
+        CurrencyTrend: {
+            /** Currency */
+            currency: string;
+            /** Points */
+            points: components["schemas"]["CostPoint"][];
+        };
         /** CustomerCost */
         CustomerCost: {
             anomalies: components["schemas"]["Metric_int_"];
@@ -1603,6 +2211,19 @@ export interface components {
              * @enum {string}
              */
             verification: "verified" | "unverified";
+        };
+        /** CustomerCostHome */
+        CustomerCostHome: {
+            anomalies_30d: components["schemas"]["Metric_int_"];
+            /** Currencies */
+            currencies: components["schemas"]["CurrencyTrend"][];
+            /** Internal */
+            internal: boolean;
+            /** Last Anomaly On */
+            last_anomaly_on: string | null;
+            /** Reconciliation */
+            reconciliation: components["schemas"]["MonthReconciliation"][];
+            tenant: components["schemas"]["TenantView"];
         };
         /** CustomerFinOps */
         CustomerFinOps: {
@@ -1748,6 +2369,21 @@ export interface components {
             items: components["schemas"]["Metric_int_"];
             items_without_hours: components["schemas"]["Metric_int_"];
             modelled_hours: components["schemas"]["Metric_Decimal_"] | null;
+        };
+        /** EnabledRequest */
+        EnabledRequest: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** EnabledView */
+        EnabledView: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
         };
         /** EvidencePackSummary */
         EvidencePackSummary: {
@@ -2064,6 +2700,8 @@ export interface components {
             permissions: string[];
             /** Role */
             role: string;
+            /** Role Class */
+            role_class: string;
             /** Subscription Limited */
             subscription_limited: boolean;
             /** Tenant Admin */
@@ -2084,6 +2722,23 @@ export interface components {
             service_requests: components["schemas"]["Metric_int_"];
             sla_attainment: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /**
+         * MonthReconciliation
+         * @description ``final``: every account with cost checked against its invoice and verified.
+         *     ``provisional``: verified against the provider's running total, no invoice yet.
+         *     ``unverified``: a check failed. ``unchecked``: an account with cost has no check.
+         */
+        MonthReconciliation: {
+            accounts: components["schemas"]["Metric_int_"];
+            /** Period */
+            period: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "final" | "provisional" | "unverified" | "unchecked" | "no_cost";
+            verified: components["schemas"]["Metric_int_"];
+        };
         /** NarrativeView */
         NarrativeView: {
             /** Draft Note */
@@ -2103,6 +2758,15 @@ export interface components {
             /** Text */
             text: string | null;
         };
+        /** NoisyCi */
+        NoisyCi: {
+            /** Configuration Item */
+            configuration_item: string;
+            incidents: components["schemas"]["Metric_int_"];
+            /** Resource Id */
+            resource_id: string | null;
+            tenant: components["schemas"]["TenantView"];
+        };
         /** OnboardedTenant */
         OnboardedTenant: {
             /** Short Code */
@@ -2113,6 +2777,8 @@ export interface components {
         Onboarding: {
             /** Agreed Roles */
             agreed_roles: string[];
+            /** Assistant Enabled */
+            assistant_enabled: boolean;
             /** Domains */
             domains: string[];
             /** Federation Recorded At */
@@ -2168,6 +2834,29 @@ export interface components {
             severity: 1 | 2 | 3 | 4 | 5;
             /** Title */
             title: string;
+        };
+        /** OperationsHome */
+        OperationsHome: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            at_risk: components["schemas"]["Metric_int_"];
+            at_risk_fraction: components["schemas"]["Metric_Decimal_"];
+            breached_open: components["schemas"]["Metric_int_"];
+            /** By Customer */
+            by_customer: components["schemas"]["TenantBacklog"][];
+            /** By Priority */
+            by_priority: components["schemas"]["PriorityLine"][];
+            /** By Workgroup */
+            by_workgroup: components["schemas"]["WorkgroupBacklog"][] | null;
+            changes: components["schemas"]["ChangeWeek"];
+            /** Closest */
+            closest: components["schemas"]["ClosestItem"][];
+            /** Noisy Cis */
+            noisy_cis: components["schemas"]["NoisyCi"][];
+            open_incidents: components["schemas"]["Metric_int_"];
         };
         /** PendingChange */
         PendingChange: {
@@ -2264,6 +2953,15 @@ export interface components {
             period_start: string;
             /** Reporting Currency */
             reporting_currency: string | null;
+        };
+        /** PriorityLine */
+        PriorityLine: {
+            at_risk: components["schemas"]["Metric_int_"] | null;
+            breached: components["schemas"]["Metric_int_"];
+            open: components["schemas"]["Metric_int_"];
+            /** Priority */
+            priority: string;
+            target_hours: components["schemas"]["Metric_int_"] | null;
         };
         /** ProposalRequest */
         ProposalRequest: {
@@ -2755,6 +3453,22 @@ export interface components {
             percent: components["schemas"]["Metric_Decimal_"] | null;
             scorable: components["schemas"]["Metric_int_"];
         };
+        /**
+         * ScreenContext
+         * @description Where the panel was opened. A hint, re-checked under the resolved scope.
+         */
+        ScreenContext: {
+            /** Record Id */
+            record_id?: string | null;
+            /** Record Type */
+            record_type?: ("ticket" | "resource") | null;
+            /**
+             * Screen
+             * @default other
+             * @enum {string}
+             */
+            screen: "home" | "customers" | "customer" | "work" | "ticket" | "resources" | "resource" | "finops" | "finops_customer" | "margin" | "margin_customer" | "pricing" | "posture" | "performance" | "approvals" | "reports" | "report" | "knowledge" | "assurance" | "users" | "other";
+        };
         /** SectionNarrativeEdit */
         SectionNarrativeEdit: {
             /** Text */
@@ -2783,6 +3497,21 @@ export interface components {
              * @enum {integer}
              */
             severity: 1 | 2 | 3 | 4 | 5;
+        };
+        /** SourceView */
+        SourceView: {
+            /** As Of */
+            as_of: string | null;
+            /** Is Modelled */
+            is_modelled: boolean;
+            /** Label */
+            label: string;
+            /** Ref */
+            ref: string;
+            /** Source System */
+            source_system: string;
+            /** Url */
+            url: string | null;
         };
         /** SowView */
         SowView: {
@@ -2834,6 +3563,25 @@ export interface components {
             /** Status */
             status: string;
             tenant: components["schemas"]["TenantView"];
+        };
+        /** TenantBacklog */
+        TenantBacklog: {
+            breached_open: components["schemas"]["Metric_int_"];
+            mttr_hours: components["schemas"]["Metric_Decimal_"] | null;
+            open_incidents: components["schemas"]["Metric_int_"];
+            open_items: components["schemas"]["Metric_int_"];
+            resolved_30d: components["schemas"]["Metric_int_"];
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** TenantOption */
+        TenantOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** TenantUser */
         TenantUser: {
@@ -2898,6 +3646,15 @@ export interface components {
              */
             status: "provisional" | "closed";
         };
+        /** TriageHome */
+        TriageHome: {
+            awaiting: components["schemas"]["Metric_int_"];
+            /** Items */
+            items: components["schemas"]["TriageQueueItem"][];
+            low_confidence: components["schemas"]["Metric_int_"];
+            needs_person: components["schemas"]["Metric_int_"];
+            threshold: components["schemas"]["Metric_Decimal_"];
+        };
         /**
          * TriageOverrides
          * @description What a reviewer may change: the classification's fields, each to a value its
@@ -2914,6 +3671,31 @@ export interface components {
             intent?: ("service_down" | "performance" | "disk_space" | "backup_failure" | "certificate_expiry" | "patching" | "capacity_change" | "access_request" | "connectivity" | "security_alert" | "decommission" | "information_request" | "other") | null;
             /** Risk */
             risk?: ("low" | "medium" | "high") | null;
+        };
+        /** TriageQueueItem */
+        TriageQueueItem: {
+            /** Below Threshold */
+            below_threshold: boolean;
+            confidence: components["schemas"]["Metric_Decimal_"] | null;
+            /** Intent */
+            intent: string | null;
+            /** Number */
+            number: string;
+            /** Priority */
+            priority: string | null;
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "ready_for_planning" | "human";
+            /** Short Description */
+            short_description: string | null;
+            tenant: components["schemas"]["TenantView"];
+            /**
+             * Triaged At
+             * Format: date-time
+             */
+            triaged_at: string;
         };
         /** TriageView */
         TriageView: {
@@ -2951,6 +3733,38 @@ export interface components {
              * @enum {integer}
              */
             stage: 1 | 2 | 3;
+        };
+        /** TurnView */
+        TurnView: {
+            answer: components["schemas"]["AnswerView"] | null;
+            /** Answered At */
+            answered_at: string | null;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Question */
+            question: string;
+            /** Reason */
+            reason: string | null;
+            /** Stage */
+            stage: ("understanding" | "retrieving" | "looking_up" | "composing" | "checking") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "answered" | "dont_know" | "refused" | "failed";
         };
         /** Unallocated */
         Unallocated: {
@@ -3029,6 +3843,16 @@ export interface components {
             solution: string | null;
             /** Title */
             title: string;
+        };
+        /** WorkgroupBacklog */
+        WorkgroupBacklog: {
+            breached_open: components["schemas"]["Metric_int_"];
+            mttr_hours: components["schemas"]["Metric_Decimal_"] | null;
+            open_incidents: components["schemas"]["Metric_int_"];
+            open_items: components["schemas"]["Metric_int_"];
+            resolved_30d: components["schemas"]["Metric_int_"];
+            /** Workgroup */
+            workgroup: string | null;
         };
         /** WorkItemDetail */
         WorkItemDetail: {
@@ -3135,6 +3959,217 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Approvals"];
+                };
+            };
+        };
+    };
+    list_conversations_v1_assistant_conversations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"][];
+                };
+            };
+        };
+    };
+    get_conversation_v1_assistant_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_conversation_v1_assistant_conversations__conversation_id__delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_v1_assistant_questions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_v1_assistant_session_get: {
+        parameters: {
+            query?: {
+                screen?: "home" | "customers" | "customer" | "work" | "ticket" | "resources" | "resource" | "finops" | "finops_customer" | "margin" | "margin_customer" | "pricing" | "posture" | "performance" | "approvals" | "reports" | "report" | "knowledge" | "assurance" | "users" | "other";
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantSession"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_enabled_v1_assistant_tenants__tenant_id__enabled_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnabledRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnabledView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_turn_v1_assistant_turns__turn_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                turn_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3560,6 +4595,125 @@ export interface operations {
             };
         };
     };
+    list_credentials_v1_cloud_onboarding_credentials_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"][];
+                };
+            };
+        };
+    };
+    onboard_v1_cloud_onboarding_credentials_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AzureCredentialRequest"] | components["schemas"]["AwsCredentialRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_check_v1_cloud_onboarding_credentials__credential_id__checks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                credential_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_v1_cloud_onboarding_credentials__credential_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                credential_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CredentialView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     margin_overview_v1_commercial_margin_get: {
         parameters: {
             query?: {
@@ -3945,6 +5099,86 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ai_usage_v1_home_ai_usage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiUsageHome"];
+                };
+            };
+        };
+    };
+    cost_v1_home_cost_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CostHome"];
+                };
+            };
+        };
+    };
+    operations_v1_home_operations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationsHome"];
+                };
+            };
+        };
+    };
+    triage_v1_home_triage_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TriageHome"];
                 };
             };
         };

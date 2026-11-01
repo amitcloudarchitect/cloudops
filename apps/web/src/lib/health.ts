@@ -47,6 +47,9 @@ export const THRESHOLDS = {
   openIncidents: [5, 20, 50],
   criticalVulnerabilities: [1, 5, 20],
   vulnerabilitySeverity: [3, 4, 5],
+  // A tenant's monthly AI tokens as a percentage of its quota: the gateway warns
+  // from 80% and refuses at 100% (cloudops_gateway.Limits).
+  aiQuotaUsedPercent: [80, 90, 100],
 } as const satisfies Record<string, Thresholds>;
 
 const PRIORITY_BAND: Record<string, Band> = {

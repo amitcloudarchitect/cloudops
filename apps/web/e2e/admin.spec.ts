@@ -5,6 +5,7 @@ test.use({ role: "admin" });
 test("sees every module, customer mapping included", async ({ signedIn: page }) => {
   await page.goto("/");
   expect(await navLabels(page)).toEqual([
+    "Home",
     "Work queue",
     "Performance",
     "Security posture",
@@ -13,6 +14,7 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
     "Customers",
     "Customer mapping",
     "Portal onboarding",
+    "Cloud onboarding",
     "Connectors",
     "FinOps",
     "Margin",

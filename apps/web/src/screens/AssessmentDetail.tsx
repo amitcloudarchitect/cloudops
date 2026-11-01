@@ -15,6 +15,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { count, dateTime, decimal, safeHttps } from "@/lib/format";
 import type { Band } from "@/lib/health";
@@ -269,6 +270,7 @@ export function AssessmentDetail({ id }: { id: string }) {
   const me = useMe();
   const { token } = useAuth();
   const loaded = useApi((t) => apiGet(t, "/v1/assurance/assessments/{assessment_id}", { assessment_id: id }), `assessment:${id}`);
+  useAssistantContext({ screen: "assurance", tenantId: loaded.status === "ready" ? loaded.data.tenant.id : null });
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
   if (loaded.status === "loading") return <Loading what="assessment" />;

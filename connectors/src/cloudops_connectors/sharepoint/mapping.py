@@ -33,8 +33,9 @@ from typing import Any, Final
 from cloudops_domain.knowledge import DocKind, classify_document, page_at
 
 SOURCE: Final = "sharepoint"
-ENTITY: Final = "drive_item"
-ENTITIES: Final = frozenset({ENTITY})
+ENTITY: Final = "drive_item"  # a site's drive, through delta (Sites.Selected)
+FOLDER_ENTITY: Final = "folder_item"  # a folder granted on its own, read whole (ADR 0028)
+ENTITIES: Final = frozenset({ENTITY, FOLDER_ENTITY})
 SOURCE_KIND: Final = "sharepoint"
 TEXT_MIME: Final = frozenset({"text/plain", "text/markdown"})
 MAX_TEXT_BYTES: Final = 2 * 1024 * 1024
@@ -49,6 +50,13 @@ EXPECTED: Final = frozenset({"id"})  # tombstones carry little else
 
 class MalformedRecordError(ValueError):
     """An item without the fields that key it. Kept in bronze, counted, skipped."""
+
+
+def version_key(item: Mapping[str, Any]) -> str:
+    """What changes when a file's content does: its content tag, else its eTag,
+    else its time and size. Names the content's place in bronze."""
+    parts = [item.get(k) for k in ("cTag", "eTag", "lastModifiedDateTime", "size")]
+    return json.dumps([p if isinstance(p, (str, int)) else None for p in parts])
 
 
 @dataclass(frozen=True)

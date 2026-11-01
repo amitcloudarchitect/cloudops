@@ -10,6 +10,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { count, date } from "@/lib/format";
 import { band, THRESHOLDS } from "@/lib/health";
 import { useMe } from "@/lib/session";
@@ -21,6 +22,7 @@ const AGE_LABEL: Record<string, string> = { "0-30": "Open up to 30 days", "31-90
 // Security posture (the security officer's landing view, ADR 0018): open
 // vulnerabilities by severity and age, most severe and oldest first.
 export function Posture() {
+  useAssistantContext({ screen: "posture" });
   const me = useMe();
   const loaded = useApi((token) => apiGet(token, "/v1/posture"), "posture");
   if (loaded.status === "loading") return <Loading what="security posture" />;

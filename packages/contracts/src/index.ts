@@ -28,6 +28,11 @@ export type TenantAliases = Schemas["TenantAliases"];
 export type ProposalView = Schemas["ProposalView"];
 export type ProposalRequest = Schemas["ProposalRequest"];
 export type ReprocessView = Schemas["ReprocessView"];
+export type CloudCredential = Schemas["CredentialView"];
+export type CloudCheck = Schemas["CheckView"];
+export type AzureCredentialRequest = Schemas["AzureCredentialRequest"];
+export type AwsCredentialRequest = Schemas["AwsCredentialRequest"];
+export type CredentialCheckRequest = Schemas["CheckRequest"];
 export type ReprocessPreview = Schemas["ReprocessPreview"];
 export type ConnectorHealthList = Schemas["ConnectorHealthList"];
 export type ConnectorHealth = Schemas["ConnectorHealth"];
@@ -89,6 +94,19 @@ export type FigureSnapshot = Schemas["FigureSnapshot"];
 export type TableSnapshot = Schemas["TableSnapshot"];
 export type PortfolioView = Schemas["PortfolioView"];
 export type PortfolioLine = Schemas["PortfolioLine"];
+// The AMARA assistant (ADR 0029).
+export type AssistantSession = Schemas["AssistantSession"];
+export type TenantOption = Schemas["TenantOption"];
+export type TurnView = Schemas["TurnView"];
+export type AnswerView = Schemas["AnswerView"];
+export type SourceView = Schemas["SourceView"];
+export type ClaimView = Schemas["ClaimView"];
+export type ConversationSummary = Schemas["ConversationSummary"];
+export type ConversationView = Schemas["ConversationView"];
+export type AskRequest = Schemas["AskRequest"];
+export type ScreenContext = Schemas["ScreenContext"];
+export type EnabledRequest = Schemas["EnabledRequest"];
+export type EnabledView = Schemas["EnabledView"];
 
 // The values a reviewer may choose, read from the schema itself rather than
 // copied, so a new intent in the API reaches the console by regeneration.
@@ -110,3 +128,14 @@ export const TRIAGE_CHOICES = {
   action_class: enumOf<NonNullable<TriageOverrides["action_class"]>>("TriageOverrides", "action_class"),
   risk: enumOf<NonNullable<TriageOverrides["risk"]>>("TriageOverrides", "risk"),
 } as const;
+// The home dashboards (ADR 0030).
+export type OperationsHome = Schemas["OperationsHome"];
+export type PriorityLine = Schemas["PriorityLine"];
+export type ClosestItem = Schemas["ClosestItem"];
+export type TenantBacklog = Schemas["TenantBacklog"];
+export type WorkgroupBacklog = Schemas["WorkgroupBacklog"];
+export type TriageHome = Schemas["TriageHome"];
+export type CostHome = Schemas["CostHome"];
+export type CustomerCostHome = Schemas["CustomerCostHome"];
+export type AiUsageHome = Schemas["AiUsageHome"];
+export type PriceSummary = Schemas["PriceSummary"];

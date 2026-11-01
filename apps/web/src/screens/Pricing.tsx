@@ -18,6 +18,7 @@ import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { Provenance } from "@/components/Provenance";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { count, date, decimal, money } from "@/lib/format";
 import { useApi } from "@/lib/useApi";
@@ -246,6 +247,7 @@ function QuoteForm({ card }: { card: RateCardView }) {
 }
 
 export function Pricing() {
+  useAssistantContext({ screen: "pricing" });
   const loaded = useApi((token) => apiGet(token, "/v1/commercial/rate-card"), "rate-card");
   const header = (card?: RateCardView) => (
     <PageHeader

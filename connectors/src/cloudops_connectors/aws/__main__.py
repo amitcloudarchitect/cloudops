@@ -1,4 +1,5 @@
-"""Run the AWS connector (fixtures only until credentials exist).
+"""Run the AWS connector over recorded fixtures. A customer's own account, read with
+its stored access key (ADR 0027), is ``cloudops_connectors.customer``'s.
 
     python -m cloudops_connectors.aws run --fixtures [--entity config|cur|cost_total|invoice]
     python -m cloudops_connectors.aws schedule

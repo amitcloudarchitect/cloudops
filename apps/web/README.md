@@ -40,6 +40,7 @@ Playwright starts the API and the console unless they are running. First run:
 | `src/fonts/`, `src/brand/`, `src/components/BrandLogo.tsx` | the open stand-in fonts and the approved logo (ADR 0024) |
 | `src/lib/nav.ts` | modules and the permission each needs |
 | `src/lib/health.ts` | the one health scale and its thresholds |
+| `src/lib/dashboard.ts` | home dashboard widgets, their permissions and each role's default layout (ADR 0030) |
 | `src/components/` | metric card, provenance, health badge, table, empty states, shell |
 | `src/screens/` | work queue, ticket and triage panel, resource context, customers |
 | `e2e/` | journeys per role |

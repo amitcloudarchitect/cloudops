@@ -46,6 +46,13 @@ migrate: $(ENV_FILE) ## apply database migrations as cloudops_migrator (one-pers
 seed: $(ENV_FILE) ## load the synthetic dataset, then check isolation (refuses if already seeded)
 	uv run python -m cloudops_devdata.seed
 
+simulation: ## write the Azure Sponsorship simulation's ServiceNow import files and Qualys responses to build/simulation
+	uv run python -m cloudops_devdata.simulation write
+
+simulation-load: env ## load the simulation's platform side, then its findings through the Qualys connector (after make seed)
+	uv run python -m cloudops_devdata.simulation load
+	uv run python -m cloudops_devdata.simulation qualys run --fixtures
+
 api: env ## run the API on http://127.0.0.1:8000 (dev token issuer, OpenAPI at /openapi.json)
 	uv run python -m cloudops_api
 

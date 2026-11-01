@@ -12,6 +12,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { Provenance } from "@/components/Provenance";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { date } from "@/lib/format";
 import { priorityBand } from "@/lib/health";
 import { useMe } from "@/lib/session";
@@ -47,6 +48,7 @@ const PRESETS: Record<string, View[]> = {
 type Status = "open" | "closed" | "all";
 
 export function WorkQueue() {
+  useAssistantContext({ screen: "work" });
   const me = useMe();
   const params = useSearchParams();
   const [status, setStatus] = useState<Status>("open");

@@ -12,6 +12,7 @@ from decimal import Decimal
 
 import pytest
 
+from cloudops_devdata.seed import default_anchor
 from cloudops_devdata.synthetic import (
     COST_DAYS,
     CURRENCIES,
@@ -287,3 +288,13 @@ def test_the_internal_tenant_is_a_tenant_like_any_other() -> None:
                                     and c.usage_date <= b.as_of), Decimal(0))
     # Nothing of any customer's moved.
     assert all(ds.for_tenant(t)["cloudops.cost_fact"] for t in before)
+
+
+@pytest.mark.parametrize(("today", "anchor"), [
+    (date(2026, 11, 2), date(2026, 11, 1)),
+    (date(2026, 11, 1), date(2026, 11, 1)),  # not October: the console opens on November
+    (date(2027, 1, 1), date(2027, 1, 1)),
+    (date(2026, 3, 1), date(2026, 3, 1)),
+])
+def test_the_default_anchor_is_yesterday_but_never_last_month(today: date, anchor: date) -> None:
+    assert default_anchor(today) == anchor

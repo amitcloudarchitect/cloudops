@@ -1,6 +1,12 @@
 # id-cloudops-ingest-dev (stack 05 output workload_client_ids). Not secrets.
 # The live cost feed of the platform's own subscription into the internal tenant
 # (ADR 0023). Needs stacks 04-data, 04b and 05 applied first (docs/platform-cost-feed.md).
+#
+# Dev only (ADR 0027, under ADR 0003): a second container, `customers`, reads customer
+# estates with each customer's own stored, read-only credential. Its secrets are listed
+# in the SecretProviderClass below and must exist in Key Vault BEFORE this is synced:
+# the CSI driver will not mount a missing secret, and the whole pod (the platform's own
+# cost feed with it) then fails to start (user decision: one pod). docs/cloud-onboarding.md.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -26,6 +32,9 @@ data:
   # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
   CLOUDOPS_TELEMETRY: "off"
   CLOUDOPS_DEPLOYMENT: dev
+  # ADR 0003, guardrail 4: stored customer credentials, dev only. The configuration
+  # refuses stored_key where CLOUDOPS_DEPLOYMENT is prd; no other overlay sets it.
+  CLOUDOPS_CUSTOMER_CREDENTIALS: stored_key
 ---
 apiVersion: secrets-store.csi.x-k8s.io/v1
 kind: SecretProviderClass
@@ -37,3 +46,54 @@ spec:
     clientID: 3ab83a64-7866-4d7c-beb7-28849dd1683a
     keyvaultName: kv-cloudops-app-dev-weu
     tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe
+    # The ingest login, and one entry per onboarded customer credential, named
+    # customer-<short code>-azure-secret (AWS: -aws-access-key-id, -aws-secret-access-key).
+    # Names only; the values are created in Key Vault out of band.
+    objects: |
+      array:
+        - |
+          objectName: postgres-ingest-dsn
+          objectType: secret
+        - |
+          objectName: customer-azsponsor-azure-secret
+          objectType: secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-azure
+  namespace: platform-ingest
+spec:
+  template:
+    spec:
+      containers:
+        # The customer-credential worker (python -m cloudops_connectors.customer): claims
+        # onboarding checks, then one Temporal worker and schedule set per active credential.
+        # Read-only reach, checked at onboarding; no execution plane.
+        - name: customers
+          image: connector-servicenow  # the connectors image, another entry point
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.customer", "worker"]
+          ports:
+            - { name: probes-customer, containerPort: 8081 }
+          env:
+            - { name: CLOUDOPS_PROBE_PORT, value: "8081" }
+          envFrom:
+            - configMapRef: { name: connector-azure }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: probes-customer }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet: { path: /readyz, port: probes-customer }
+            periodSeconds: 10
+            timeoutSeconds: 3
+          volumeMounts:
+            - { name: secrets, mountPath: /mnt/secrets, readOnly: true }
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }

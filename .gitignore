@@ -38,3 +38,4 @@ apps/web/test-results/
 apps/web/playwright-report/
 apps/web/e2e/.tokens/
 evals/drafting/last-report.json
+evals/assistant/last-report.json

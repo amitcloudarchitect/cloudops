@@ -4,7 +4,9 @@
 // each summary section beside the text a person writes or accepts, and release.
 // A draft is never printed and never released: the PDF shows a person's text
 // only, and approve and publish wait until every section has one. Figures are
-// shown as the PDF prints them, money in the contract currency.
+// shown as the PDF prints them, money in the contract currency. A customer
+// (CXO, VP or director; ADR 0030) reads published packs only, with the
+// customer's price and each section's published text: no draft, no editor.
 
 import { useState } from "react";
 
@@ -14,6 +16,7 @@ import { HealthBadge } from "@/components/HealthBadge";
 import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, apiDownload, apiGet, apiPost } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { count, dateTime, decimal, money } from "@/lib/format";
 import { can, useMe } from "@/lib/session";
@@ -155,10 +158,16 @@ function Narrative({ pack, n, editable, onChange }: { pack: string; n: Narrative
   );
 }
 
+/** A customer's view of a section's narrative: the published text and nothing else. */
+function PublishedNarrative({ n }: { n: NarrativeView }) {
+  return n.text ? <p className="mt-3 text-sm text-ink">{n.text}</p> : null;
+}
+
 export function ReportPack({ id }: { id: string }) {
   const me = useMe();
   const { token } = useAuth();
   const loaded = useApi((t) => apiGet(t, "/v1/reports/packs/{pack_id}", { pack_id: id }), `pack:${id}`);
+  useAssistantContext({ screen: "report", tenantId: loaded.status === "ready" ? loaded.data.tenant.id : null });
   const [message, setMessage] = useState<Message>(null);
   const [busy, setBusy] = useState(false);
   if (loaded.status === "loading") return <Loading what="report pack" />;
@@ -238,7 +247,8 @@ export function ReportPack({ id }: { id: string }) {
                 {s.title}
               </h2>
               <SectionView section={s} currency={pack.contract_currency} />
-              {n ? <Narrative pack={id} n={n} editable={editable} onChange={changed} /> : null}
+              {n && me.kind === "customer" ? <PublishedNarrative n={n} /> : null}
+              {n && me.kind !== "customer" ? <Narrative pack={id} n={n} editable={editable} onChange={changed} /> : null}
             </section>
           );
         })}

@@ -54,7 +54,8 @@ class FakeGateway:
 
     async def complete(self, ctx: CallContext, *, tier: Tier, task: str,
                        messages: Sequence[Message], tools: Sequence[ToolSpec] = (),
-                       retrieval: Any = None, tool_calls: Any = None) -> GatewayReply:
+                       retrieval: Any = None, tool_calls: Any = None,
+                       cache: Any = None) -> GatewayReply:
         self.sent.append(list(messages))
         self.offered.append([t.name for t in tools])
         item = self.replies.popleft() if self.replies else VALID

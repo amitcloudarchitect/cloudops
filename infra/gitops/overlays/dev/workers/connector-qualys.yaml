@@ -1,0 +1,70 @@
+# id-cloudops-ingest-dev (stack 05 output workload_client_ids). Not secrets.
+# ADR 0028. Before this syncs: stacks 04-data, 04b-rbac and 05-aks applied.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector-qualys
+  namespace: platform-ingest
+  annotations:
+    azure.workload.identity/client-id: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connector-qualys
+  namespace: platform-ingest
+data:
+  # The bronze container stack 04-data creates for this source; 04b grants the ingest
+  # identity Storage Blob Data Contributor on it alone.
+  CLOUDOPS_BRONZE_CONTAINER_URL: https://stcloudopsbronzedevweu.blob.core.windows.net/qualys
+  # Required by the BLOB component; the connector never writes reports.
+  CLOUDOPS_REPORTS_CONTAINER_URL: https://stcloudopsreportsdevweu.blob.core.windows.net/reports
+  # No Qualys subscription in dev yet: the simulated Azure Sponsorship estate (ADR 0025),
+  # through the real connector code, marked simulated. Refused unless the deployment is
+  # dev. Becomes "live" with CLOUDOPS_QUALYS_URL and CLOUDOPS_QUALYS_USERNAME, and
+  # qualys-api-password added below, once dev has an API user.
+  CLOUDOPS_QUALYS_SOURCE: simulation
+  # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
+  CLOUDOPS_TELEMETRY: "off"
+  CLOUDOPS_DEPLOYMENT: dev
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: connector-qualys
+  namespace: platform-ingest
+spec:
+  parameters:
+    clientID: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe
+---
+# Simulation is served by cloudops_devdata, which only the migrate image carries (the
+# connectors image has the connector, not the simulation). Same connector code.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-qualys
+  namespace: platform-ingest
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: migrate
+          command: ["/app/.venv/bin/python", "-m", "cloudops_devdata.simulation.qualys_live",
+                    "worker"]
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: connector-qualys-schedule
+  namespace: platform-ingest
+spec:
+  template:
+    spec:
+      containers:
+        - name: schedule
+          image: migrate
+          command: ["/app/.venv/bin/python", "-m", "cloudops_devdata.simulation.qualys_live",
+                    "schedule"]

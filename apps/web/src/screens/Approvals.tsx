@@ -10,6 +10,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { Provenance } from "@/components/Provenance";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { date } from "@/lib/format";
 import { priorityBand } from "@/lib/health";
 import { can, useMe } from "@/lib/session";
@@ -19,6 +20,7 @@ import { useApi } from "@/lib/useApi";
 // Read-only: approving and rejecting arrive with the approval state machine,
 // which lives in the workflow engine, not in this screen.
 export function Approvals() {
+  useAssistantContext({ screen: "approvals" });
   const me = useMe();
   const loaded = useApi((token) => apiGet(token, "/v1/approvals"), "approvals");
   if (loaded.status === "loading") return <Loading what="changes awaiting approval" />;

@@ -52,6 +52,9 @@ class MeView(ApiModel):
     oid: UUID
     kind: str
     role: str
+    # The role's class (stable when an administrator renames the role): the console
+    # picks the home dashboard's default layout from it (ADR 0030).
+    role_class: str
     permissions: list[str]
     tenants: list[TenantView]
     subscription_limited: bool
@@ -96,6 +99,10 @@ class CostLine(ApiModel):
     currency: str
     amortized: Metric[Decimal]
     converted: Metric[Decimal] | None  # None: no currency asked for, or no rate in force
+    # Provenance (ADR 0027): of ``amortized``, what is in accounts also held by another
+    # tenant (the platform's own subscription, also a customer's). Each tenant holds
+    # it once, so a total across both tenants counts it twice. None: none such.
+    shared_with_platform: Metric[Decimal] | None = None
 
 
 class CostSummary(ApiModel):
@@ -180,6 +187,7 @@ async def me(request: Request, access: AccessDep) -> MeView:
         oid=access.identity.oid,
         kind=access.kind,
         role=access.role_name,
+        role_class=access.scope.role.value,
         permissions=sorted(access.permissions),
         tenants=[TenantView(id=r[0], name=r[1]) for r in rows],
         subscription_limited=access.scope.account_ids is not None,
@@ -243,7 +251,8 @@ async def get_resource(
 # for or no rate in force, never a 1 or a 0.
 _STAFF_COST: Final = text(
     "SELECT a.provider, c.currency, sum(c.amortized_cost), max(c.usage_date),"
-    "   sum(c.amortized_cost * r.rate), bool_and(r.rate IS NOT NULL)"
+    "   sum(c.amortized_cost * r.rate), bool_and(r.rate IS NOT NULL),"
+    "   sum(c.amortized_cost) FILTER (WHERE a.shared_with_platform)"
     " FROM cloudops.cost_fact c"
     " JOIN cloudops.cloud_account a ON a.id = c.account_id"
     " LEFT JOIN LATERAL (SELECT CASE WHEN CAST(:rep AS text) IS NULL THEN NULL"
@@ -362,8 +371,12 @@ async def cost_summary(
                 converted=_converted(conv, conv_ok, currency,
                                      COST_SOURCE.get(provider, provider), _end_of(last_day),
                                      cref),
+                shared_with_platform=None if shared is None else Metric[Decimal](
+                    value=Decimal(shared), unit=ccy,
+                    source_system=COST_SOURCE.get(provider, provider),
+                    as_of=_end_of(last_day), query_ref=ref, is_modelled=False),
             )
-            for provider, ccy, total, last_day, conv, conv_ok in rows
+            for provider, ccy, total, last_day, conv, conv_ok, shared in rows
         ],
     )
 

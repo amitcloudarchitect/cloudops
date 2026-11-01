@@ -8,15 +8,21 @@ environment. ``__main__`` wires them from the configuration layer.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import AsyncExitStack, asynccontextmanager
+
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 
 from cloudops_api import (
+    assistant,
     assurance,
     bff,
+    cloud_onboarding,
     commercial,
     connectors,
+    home,
     knowledge,
     mapping,
     operations,
@@ -24,6 +30,7 @@ from cloudops_api import (
     reports,
 )
 from cloudops_api.access import ScopeResolver
+from cloudops_api.assistant import AssistantRuntime
 from cloudops_api.auth import TokenValidator
 from cloudops_api.health import PROBES
 from cloudops_api.pipeline import AuditedRoute, Platform
@@ -42,12 +49,25 @@ def create_app(
     signer: Signer | None = None,
     availability: AvailabilitySource | None = None,
     financial: FinancialSections | None = None,
+    assistant_factory: AssistantFactory | None = None,
 ) -> FastAPI:
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        # The assistant (ADR 0029) needs the AI gateway; without one configured its
+        # endpoints answer 503 assistant_unavailable and everything else runs.
+        async with AsyncExitStack() as stack:
+            if assistant_factory is not None:
+                runtime = await assistant_factory(stack)
+                stack.push_async_callback(runtime.aclose)
+                app.state.assistant = runtime
+            yield
+
     app = FastAPI(
         title="CloudOps Platform API",
         version="0.1.0",
         docs_url=None,
         redoc_url=None,
+        lifespan=lifespan,
         # The schema drives generated TypeScript types; served locally only.
         openapi_url="/openapi.json" if expose_openapi else None,
     )
@@ -76,10 +96,13 @@ def create_app(
     return app
 
 
+AssistantFactory = Callable[[AsyncExitStack], Awaitable[AssistantRuntime]]
+
 # Every router the API serves. Endpoints are added to these, never to the app.
 ROUTERS: tuple[APIRouter, ...] = (
     bff.router, operations.router, mapping.router, connectors.router, portal.router,
-    commercial.router, knowledge.router, assurance.router, reports.router,
+    commercial.router, knowledge.router, assurance.router, reports.router, assistant.router,
+    cloud_onboarding.router, home.router,
 )
 
 

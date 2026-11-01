@@ -155,6 +155,18 @@ LEFT JOIN cloudops.document d ON d.id = c.document_id AND d.deleted_at IS NULL
 ORDER BY f.score DESC, f.id LIMIT :limit
 """)  # noqa: S608 - table names and predicates are module constants
 
+# Getronics-wide chunks only (ADR 0029): the help pages, for a search that has no
+# reason to touch a tenant's documents, such as a customer scope's, which has no
+# grant on them at all.
+SEARCH_GLOBAL: Final = text(f"""
+WITH global_ranks AS ({_branches("cloudops.global_knowledge_chunk", "")}),
+fused AS (SELECT id, sum(1.0 / (:k + r)) AS score FROM global_ranks GROUP BY id)
+SELECT 'global', f.id, NULL::uuid, g.title, g.body, g.source_kind, g.source_ref, f.score,
+       NULL::uuid, NULL::text, NULL::text, NULL::integer
+FROM fused f JOIN cloudops.global_knowledge_chunk g ON g.id = f.id
+ORDER BY f.score DESC, f.id LIMIT :limit
+""")  # noqa: S608 - the table name is a module constant
+
 _INSERT: Final = text(
     "INSERT INTO cloudops.knowledge_chunk (tenant_id, source_kind, source_ref, title, body,"
     " embedding) VALUES (:tenant_id, :kind, :ref, :title, :body, CAST(:embedding AS vector))"
@@ -183,10 +195,12 @@ class KnowledgeIndex:
         return ids
 
     async def search(self, ctx: CallContext, query: str, *, kinds: Sequence[str],
-                     limit: int = 8) -> list[Hit]:
-        (qvec,) = await self._gateway.embed(ctx, [query], task="retrieve")
+                     limit: int = 8, task: str = "retrieve", tenant: bool = True
+                     ) -> list[Hit]:
+        """``tenant=False`` searches Getronics-wide chunks only."""
+        (qvec,) = await self._gateway.embed(ctx, [query], task=task)
         async with self._db.transaction(ctx.scope) as conn:
-            rows = [tuple(r) for r in await conn.execute(SEARCH, {
+            rows = [tuple(r) for r in await conn.execute(SEARCH if tenant else SEARCH_GLOBAL, {
                 "qvec": _vector(qvec), "qtext": query, "kinds": list(kinds),
                 "depth": BRANCH_DEPTH, "k": RRF_K, "limit": limit,
             })]
@@ -212,6 +226,15 @@ _FILL: Final = text(
     "UPDATE cloudops.knowledge_chunk SET embedding = CAST(:embedding AS vector),"
     " embedded_at = now() WHERE id = :id AND embedding IS NULL AND md5(body) = :digest"
     " AND tenant_id = ANY(cloudops.current_tenant_ids())"
+)
+# Getronics-wide help pages (ADR 0029): the application cannot write the global
+# table, so it fills an empty embedding through the one function that may.
+_GLOBAL_PENDING: Final = text(
+    "SELECT id, body, md5(body) FROM cloudops.global_knowledge_chunk"
+    " WHERE embedding IS NULL ORDER BY created_at, id LIMIT :limit"
+)
+_GLOBAL_FILL: Final = text(
+    "SELECT cloudops.fill_global_embedding(:id, :digest, :embedding)"
 )
 _UNINDEXED_NOTES: Final = text(
     "SELECT w.number, w.short_description, w.close_notes FROM cloudops.work_item w"
@@ -251,18 +274,26 @@ class KnowledgeIndexer:
 
     async def embed_pending(self, ctx: CallContext, *, limit: int = 500) -> int:
         """Embed up to ``limit`` chunks of this tenant that have none yet."""
+        return await self._embed(ctx, _PENDING, _FILL, limit)
+
+    async def embed_global_pending(self, ctx: CallContext, *, limit: int = 500) -> int:
+        """Embed Getronics-wide chunks that have none yet (the help pages), billed
+        to ``ctx``'s tenant: the internal one."""
+        return await self._embed(ctx, _GLOBAL_PENDING, _GLOBAL_FILL, limit)
+
+    async def _embed(self, ctx: CallContext, pending_sql: Any, fill_sql: Any, limit: int) -> int:
         done = 0
         while done < limit:
             async with self._db.transaction(ctx.scope) as conn:
                 pending = [tuple(r) for r in await conn.execute(
-                    _PENDING, {"limit": min(self._batch, limit - done)})]
+                    pending_sql, {"limit": min(self._batch, limit - done)})]
             if not pending:
                 break
             vectors = await self._gateway.embed(ctx, [str(r[1]) for r in pending],
                                                 task="index")
             async with self._db.transaction(ctx.scope) as conn:
                 for (chunk_id, _, digest), vector in zip(pending, vectors, strict=True):
-                    await conn.execute(_FILL, {"id": chunk_id, "digest": digest,
+                    await conn.execute(fill_sql, {"id": chunk_id, "digest": digest,
                                                "embedding": _vector(vector)})
             done += len(pending)
             if len(pending) < self._batch:

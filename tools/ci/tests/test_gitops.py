@@ -43,6 +43,10 @@ DEV = PLATFORM + WORKERS
 WEB = [d for d in PLATFORM if d["metadata"].get("namespace") == "platform-web"]  # ADR 0017
 ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
             + _build(GITOPS / "base/connector-azure")  # ADR 0023
+            # ADR 0028: SharePoint, Qualys and CoreStack, read-only.
+            + _build(GITOPS / "base/connector-sharepoint")
+            + _build(GITOPS / "base/connector-qualys")
+            + _build(GITOPS / "base/connector-corestack")
             + _build(GITOPS / "base/worker-ai")
             # Step 19 (ADR 0022): in dev once id-cloudops-observability-dev exists.
             + _build(GITOPS / "base/observability") + _build(GITOPS / "base/platform-metrics"))
@@ -682,3 +686,87 @@ def test_front_door_only_reaches_nodes_that_run_the_gateway() -> None:
     deployment = yaml.safe_load(config["deployment"])
     assert deployment["spec"]["template"]["spec"]["nodeSelector"] == {
         "cloudops.getronics.com/pool": "app"}
+
+
+# --- stored customer credentials (ADR 0003, ADR 0027) ----------------------------------
+
+CUSTOMER_SECRET = re.compile(
+    r"customer-[a-z0-9]{2,10}-(azure-secret|aws-access-key-id|aws-secret-access-key)")
+
+
+def _stored_key(docs: list[dict[str, Any]]) -> bool:
+    return any(d["kind"] == "ConfigMap"
+               and d.get("data", {}).get("CLOUDOPS_CUSTOMER_CREDENTIALS") == "stored_key"
+               for d in docs)
+
+
+def _customer_workers(docs: list[dict[str, Any]]) -> list[str]:
+    return [f"{name}/{c['name']}" for name, pod in _workloads(docs)
+            for c in pod.get("containers", [])
+            if "cloudops_connectors.customer" in " ".join(c.get("command", []))]
+
+
+def _spc_objects(d: dict[str, Any]) -> list[str]:
+    return re.findall(r"objectName:\s*(\S+)", d["spec"]["parameters"].get("objects", ""))
+
+
+def test_stored_customer_credentials_are_dev_only() -> None:
+    """Guardrail 4 in GitOps too: only dev sets stored_key or runs the worker that
+    uses it. The configuration refuses it in prd regardless."""
+    assert _stored_key(WORKERS)
+    assert _customer_workers(WORKERS) == ["Deployment/connector-azure/customers"]
+    for env in ("uat", "prd"):
+        docs = _build(GITOPS / "overlays" / env)
+        assert not _stored_key(docs), env
+        assert _customer_workers(docs) == [], env
+    for base in ("connector-azure", "connector-servicenow", "worker-ai"):
+        docs = _build(GITOPS / "base" / base)
+        assert not _stored_key(docs), base
+        assert _customer_workers(docs) == [], base
+
+
+def test_customer_secrets_are_mounted_in_the_connector_azure_pod_only() -> None:
+    """Named by the one pattern (ADR 0003, guardrail 2), and in no other workload's
+    SecretProviderClass: the API, the AI worker and ServiceNow never mount one."""
+    holders: dict[str, list[str]] = {}
+    for d in DEV:
+        if d["kind"] == "SecretProviderClass":
+            names = [n for n in _spc_objects(d) if n.startswith("customer-")]
+            if names:
+                holders[d["metadata"]["name"]] = names
+    assert set(holders) == {"connector-azure"}
+    assert all(CUSTOMER_SECRET.fullmatch(n) for n in holders["connector-azure"])
+
+
+# ADR 0028: SharePoint, Qualys and CoreStack ---------------------------------------------
+
+
+def _commands(docs: list[dict[str, Any]]) -> list[str]:
+    return [" ".join(c.get("command", [])) for _, pod in _workloads(docs)
+            for c in pod.get("containers", [])]
+
+
+def test_the_qualys_simulation_runs_in_dev_only() -> None:
+    """Decision 8: simulated vulnerabilities are never shown as real ones. Only the dev
+    workers run the simulation's entry point and say simulation; the base reads Qualys."""
+    sim = "cloudops_devdata.simulation.qualys_live"
+    assert any(sim in c for c in _commands(WORKERS))
+    assert any(d["kind"] == "ConfigMap" and d.get("data", {}).get(
+        "CLOUDOPS_QUALYS_SOURCE") == "simulation" for d in WORKERS)
+    base = _build(GITOPS / "base/connector-qualys")
+    assert not any(sim in c for c in _commands(base))
+    for env in ("uat", "prd"):
+        docs = _build(GITOPS / "overlays" / env)
+        assert not any(sim in c for c in _commands(docs)), env
+
+
+def test_the_new_sources_mount_only_their_own_secrets() -> None:
+    """SharePoint has no secret at all (a federated credential); Qualys in simulation
+    has none; CoreStack has its key pair. Each also mounts the ingest login."""
+    want = {"connector-sharepoint": ["postgres-ingest-dsn"],
+            "connector-qualys": ["postgres-ingest-dsn"],
+            "connector-corestack": ["postgres-ingest-dsn", "corestack-access-key",
+                                    "corestack-secret-key"]}
+    got = {d["metadata"]["name"]: _spc_objects(d) for d in WORKERS
+           if d["kind"] == "SecretProviderClass" and d["metadata"]["name"] in want}
+    assert got == want

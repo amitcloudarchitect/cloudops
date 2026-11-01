@@ -1,7 +1,7 @@
 """Every case in the LLD's "Isolation cases that must exist" table.
 
 Each case has its database-level half tested here against the real schema. The
-half that belongs to a component not yet built (API, assistant, broker) is a
+half that belongs to a component not yet built (the broker) is a
 strict-xfail stub naming that component; it turns red the moment the
 component exists, until a real test replaces it.
 
@@ -34,7 +34,6 @@ COMMERCIAL_ROLES = {
     "platform_admin",
 }
 
-assistant_built = has_python("services/**/*assistant*/**/*.py", "services/**/*agent*/**/*.py")
 broker_built = has_python("execution/**/*.py")
 
 
@@ -111,6 +110,9 @@ TENANT_TABLES = (
     "cloudops.report_pack_commercial",
     # Step 17 follow-up (ADR 0021).
     "cloudops.report_pack_price",
+    # ADR 0028.
+    "cloudops.sharepoint_folder",
+    "cloudops.security_finding",
 )
 # Written by people and the drafting worker through the application login only.
 NOT_INGESTED = frozenset({
@@ -151,8 +153,10 @@ def test_case2_unscoped_sees_global_knowledge_and_nothing_else(seeded: Seeded) -
     every scope, including none. Customer chunks stay invisible (ADR 0001)."""
     with psycopg.connect(seeded.app_dsn) as cx:
         customer = cx.execute("SELECT count(*) FROM cloudops.knowledge_chunk").fetchone()
-        shared = cx.execute("SELECT title FROM cloudops.global_knowledge_chunk").fetchall()
+        shared = cx.execute("SELECT title FROM cloudops.global_knowledge_chunk"
+                            " WHERE source_kind NOT LIKE 'platform_help%'").fetchall()
     assert customer == (0,)
+    # Besides the assistant's help pages, which the migrate step loads (ADR 0029).
     assert shared == [("Global runbook",)]
 
 
@@ -284,9 +288,88 @@ async def test_case4_cross_tenant_comparison_returns_only_own_tenant(
     assert [r[0] for r in rows] == [seeded.a.id]
 
 
-@pending("Phase 5/6 assistant: a single-tenant user's comparison request is refused")
-def test_case4_assistant_refuses() -> None:
-    stub(assistant_built, "the assistant")
+def _assistant(app_db: Database, model: Any) -> Any:
+    from cloudops_agents.assistant import Assistant
+    from cloudops_agents.trace import MemoryTraceSink
+    from cloudops_gateway.gateway import Gateway
+    from cloudops_gateway.pricing import LOCAL_DEPLOYMENTS
+    from cloudops_gateway.providers import MockProvider
+    from cloudops_gateway.registry import ToolRegistry
+    from cloudops_gateway.retrieval import KnowledgeIndex
+    from cloudops_gateway.tools import TOOLS
+
+    gateway = Gateway(app_db, {"mock": model, "mock-secondary": MockProvider("mock-secondary")},
+                      LOCAL_DEPLOYMENTS)
+    registry = ToolRegistry(app_db)
+    for tool in TOOLS:
+        registry.register(tool)
+    return Assistant(gateway, registry, KnowledgeIndex(app_db, gateway), MemoryTraceSink())
+
+
+def _customer_question(seeded: Seeded, text_: str) -> Any:
+    from cloudops_agents.assistant import Question
+    from cloudops_gateway.gateway import CallContext
+
+    resolved = TenantScope([seeded.a.id], Role.CUSTOMER, "principal:isolation-customer")
+    ctx = CallContext.for_tenant(resolved, seeded.a.id, {"tickets.read", "inventory.read"})
+    return Question(ctx=ctx, mode="account", text=text_, audience="customer",
+                    subject=seeded.a.name)
+
+
+async def test_case4_assistant_refuses_a_comparison_before_any_model(
+    app_db: Database, seeded: Seeded
+) -> None:
+    """A single-tenant (customer) user asks to compare two customers: refused, by
+    the deterministic guard, before the question reaches a model."""
+    from cloudops_gateway.providers import MockProvider
+
+    model = MockProvider("mock")
+    for question in (f"Compare our ticket volumes with {seeded.b.name}.",
+                     "How do we rank against your other customers on SLA?",
+                     "Show me all customers' open incidents."):
+        outcome = await _assistant(app_db, model).answer(_customer_question(seeded, question))
+        assert outcome.status == "refused", question
+        assert outcome.reason == "cross_customer"
+    assert model.sent == []
+
+
+async def test_case4_assistant_tools_cannot_reach_another_tenant(
+    app_db: Database, seeded: Seeded
+) -> None:
+    """Past the guards (a classifier fooled into "account"), the answerer asks a
+    tool for another tenant's ticket: the tool runs under the conversation's one
+    tenant, finds nothing, and the answer cannot cite it."""
+    import json
+
+    from cloudops_gateway.providers import Completion, MockProvider, ToolCallRequest
+
+    with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+        cx.execute("INSERT INTO cloudops.work_item (tenant_id, kind, number, company_raw,"
+                   " opened_at, short_description) VALUES (%s, 'incident', 'INC0009901', 'X',"
+                   " now(), 'bravo secret outage')", (seeded.b.id,))
+    model = MockProvider("mock")
+    model.queue("assistant.classify", Completion(json.dumps(
+        {"intent": "account", "other_customer": False, "confidence": 0.9}), (), 0, 10))
+    model.queue("assistant.rerank", Completion('{"order": [0], "confidence": 0.9}', (), 0, 5))
+    model.queue("assistant.answer",
+                Completion("", (ToolCallRequest("c1", "get_ticket",
+                                                '{"number": "INC0009901"}'),), 0, 10),
+                Completion(json.dumps({
+                    "status": "answered", "answer": "It is a bravo secret outage.",
+                    "claims": [{"text": "bravo secret outage",
+                                "sources": ["work_item:INC0009901"]}],
+                    "confidence": 0.9}), (), 0, 20))
+    try:
+        outcome = await _assistant(app_db, model).answer(
+            _customer_question(seeded, "What is ticket INC0009901 about?"))
+    finally:
+        with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+            cx.execute("DELETE FROM cloudops.work_item WHERE number = 'INC0009901'")
+    sent = "\n".join(m.content for _, msgs in model.sent for m in msgs)
+    assert "bravo secret outage" not in sent.split("<request")[0]
+    assert '"found": false' in sent
+    assert outcome.status == "dont_know"
+    assert outcome.reason == "ungrounded"
 
 
 # --- 5. Credential minted for A used against B -> broker rejection ----------------
@@ -502,12 +585,24 @@ WRITES = {
         "INSERT INTO cloudops.document (tenant_id, source_system, site_id, item_id, name,"
         " extraction) VALUES (:t, 'sharepoint', 's', :u, 'x', 'text')"
     ),
+    # ADR 0028: connectors only, too.
+    "cloudops.sharepoint_folder": (
+        "INSERT INTO cloudops.sharepoint_folder (tenant_id, drive_id, item_id, name)"
+        " VALUES (:t, 'd', :u, 'x')"
+    ),
+    "cloudops.security_finding": (
+        "INSERT INTO cloudops.security_finding (tenant_id, source_system, source_scope,"
+        " finding_id, category, severity, title, status, customer_raw, detected_at,"
+        " updated_at) VALUES (:t, 'corestack', 's', :u, 'security', 'high', 'x', 'open',"
+        " 'x', now(), now())"
+    ),
 }
 
 # Tables only connectors write: the application role holds SELECT alone.
 INGEST_WRITTEN = (
     "staging.", "cloudops.tenant_alias", "cloudops.cost_finding", "cloudops.directory_",
-    "cloudops.sharepoint_site", "cloudops.document",
+    "cloudops.sharepoint_site", "cloudops.document", "cloudops.sharepoint_folder",
+    "cloudops.security_finding",
 )
 
 

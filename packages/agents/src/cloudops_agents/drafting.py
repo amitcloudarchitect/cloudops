@@ -245,6 +245,9 @@ _RELEASE: Final = {
 }
 _PENDING: Final = text("SELECT kind, id, tenant_id FROM cloudops.pending_drafts(:limit)")
 _TENANTS: Final = text("SELECT tenant_id FROM cloudops.knowledge_tenants()")
+_INTERNAL: Final = text("SELECT cloudops.internal_tenant()")
+_PURGE: Final = text("SELECT cloudops.assistant_purge()")
+RETENTION_PRINCIPAL: Final = "service:assistant-retention"
 
 
 def control_data(control: Mapping[str, Any], evidence: Sequence[Mapping[str, Any]],
@@ -403,10 +406,29 @@ class DraftingActivities:
         await self._indexer.index_close_notes(ctx)
         return await self._indexer.embed_pending(ctx)
 
+    @activity.defn
+    async def index_help(self) -> int:
+        """The assistant's help pages (global knowledge, ADR 0029), embedded under
+        and billed to the internal tenant. No internal tenant yet: nothing to do."""
+        async with self._db.transaction(TenantScope.for_resolution(INDEXER_PRINCIPAL)) as conn:
+            internal = await conn.scalar(_INTERNAL)
+        if internal is None:
+            return 0
+        return await self._indexer.embed_global_pending(_ctx(internal, INDEXER_PRINCIPAL))
+
+
+    @activity.defn
+    async def purge_conversations(self) -> int:
+        """Assistant conversations untouched for 90 days, and the prompt text the
+        gateway recorded for them (ADR 0029). The window is in the database."""
+        async with self._db.transaction(TenantScope.for_resolution(RETENTION_PRINCIPAL)) as conn:
+            return int(await conn.scalar(_PURGE) or 0)
+
 
 def activities(acts: DraftingActivities) -> list[Any]:
     return [acts.pending_drafts, acts.draft_control, acts.draft_narrative,
-            acts.knowledge_tenants, acts.index_tenant]
+            acts.knowledge_tenants, acts.index_tenant, acts.index_help,
+            acts.purge_conversations]
 
 
 # --- workflows -------------------------------------------------------------------------
@@ -454,6 +476,12 @@ class KnowledgeIndexWorkflow:
             DraftingActivities.knowledge_tenants, start_to_close_timeout=DB_TIMEOUT,
             retry_policy=DB_RETRY)
         done: dict[str, int] = {}
+        try:
+            done["help"] = await workflow.execute_activity_method(
+                DraftingActivities.index_help, start_to_close_timeout=INDEX_TIMEOUT,
+                retry_policy=AGENT_RETRY)
+        except ActivityError:
+            done["help"] = INDEX_FAILED
         for tenant in tenants:
             try:
                 done[tenant] = await workflow.execute_activity_method(
@@ -464,8 +492,20 @@ class KnowledgeIndexWorkflow:
         return done
 
 
-WORKFLOWS: Final = [DraftSweepWorkflow, KnowledgeIndexWorkflow]
+@workflow.defn
+class AssistantRetentionWorkflow:
+    """Daily: delete assistant conversations past their 90 days."""
+
+    @workflow.run
+    async def run(self) -> int:
+        return await workflow.execute_activity_method(
+            DraftingActivities.purge_conversations, start_to_close_timeout=DB_TIMEOUT,
+            retry_policy=DB_RETRY)
+
+
+WORKFLOWS: Final = [DraftSweepWorkflow, KnowledgeIndexWorkflow, AssistantRetentionWorkflow]
 SCHEDULES: Final = (
+    ("assistant-retention", AssistantRetentionWorkflow, timedelta(days=1)),
     ("drafting-sweep", DraftSweepWorkflow, timedelta(minutes=1)),
     ("knowledge-index", KnowledgeIndexWorkflow, timedelta(minutes=15)),
 )

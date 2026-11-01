@@ -1,0 +1,9 @@
+<ListAttachedGroupPoliciesResponse xmlns="https://iam.amazonaws.com/doc/2010-05-08/">
+  <ListAttachedGroupPoliciesResult>
+    <AttachedPolicies>
+      <member><PolicyName>CloudOpsCostExplorerRead</PolicyName><PolicyArn>arn:aws:iam::123456789012:policy/CloudOpsCostExplorerRead</PolicyArn></member>
+    </AttachedPolicies>
+    <IsTruncated>false</IsTruncated>
+  </ListAttachedGroupPoliciesResult>
+  <ResponseMetadata><RequestId>req-4</RequestId></ResponseMetadata>
+</ListAttachedGroupPoliciesResponse>
