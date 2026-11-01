@@ -63,6 +63,26 @@ function Feedback({ message }: { message: Message }) {
 
 // --- mapping a name --------------------------------------------------------------
 
+// The connectors that hold an unmatched company name for mapping, by the source_system
+// each writes. A source seen in the quarantine or the aliases but missing here is
+// still offered, under its raw name, so a new connector never needs this list first.
+const SOURCES: Record<string, string> = {
+  servicenow: "ServiceNow",
+  sharepoint: "SharePoint",
+  qualys: "Qualys",
+  corestack: "CoreStack",
+  entra: "Entra ID",
+  azure: "Azure",
+  aws: "AWS",
+};
+
+function sourceLabel(source: string): string {
+  return SOURCES[source] ?? source;
+}
+
+// The name-select value that means "type a name the source has not sent yet".
+const TYPED = "";
+
 interface Target {
   source: string;
   alias: string;
@@ -70,10 +90,40 @@ interface Target {
   fromQuarantine: boolean;
 }
 
-function MapForm({ target, tenants, onDone, onCancel }: { target: Target; tenants: TenantAliases[]; onDone: (text: string) => void; onCancel: () => void }) {
+function MapForm({
+  target,
+  tenants,
+  held,
+  onDone,
+  onCancel,
+}: {
+  target: Target;
+  tenants: TenantAliases[];
+  held: QuarantinedAlias[];
+  onDone: (text: string) => void;
+  onCancel: () => void;
+}) {
   const { token } = useAuth();
+  const sources = [...new Set([...Object.keys(SOURCES), ...held.map((q) => q.source_system), ...tenants.flatMap((t) => t.aliases.map((a) => a.source_system))])];
+  // Names a source sent that no customer matched and nobody has proposed yet, most sighted first.
+  const unmappedFrom = (from: string) =>
+    held.filter((q) => q.source_system === from && !q.pending_proposal_id).sort((a, b) => b.occurrences.value - a.occurrences.value);
   const [source, setSource] = useState(target.source);
-  const [alias, setAlias] = useState(target.alias);
+  const [alias, setAlias] = useState(target.fromQuarantine ? target.alias : (unmappedFrom(target.source)[0]?.alias ?? ""));
+  const [typing, setTyping] = useState(!target.fromQuarantine && unmappedFrom(target.source).length === 0);
+  const unmapped = unmappedFrom(source);
+
+  function chooseSource(next: string) {
+    const first = unmappedFrom(next)[0];
+    setSource(next);
+    setAlias(first?.alias ?? "");
+    setTyping(!first);
+  }
+
+  function chooseName(next: string) {
+    setTyping(next === TYPED);
+    setAlias(next);
+  }
   const [mode, setMode] = useState<"existing" | "new">(tenants.length === 0 ? "new" : "existing");
   const [tenantId, setTenantId] = useState(target.suggested ?? "");
   const [name, setName] = useState("");
@@ -121,16 +171,53 @@ function MapForm({ target, tenants, onDone, onCancel }: { target: Target; tenant
       <h3 id="map-heading" className="text-base font-semibold text-ink">
         Map a name to a customer
       </h3>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className={label}>
-          Source system
-          <input className={control} value={source} onChange={(e) => setSource(e.target.value)} readOnly={target.fromQuarantine} maxLength={40} required />
-        </label>
-        <label className={`${label} sm:col-span-2`}>
-          Name, exactly as the source sends it
-          <input className={control} value={alias} onChange={(e) => setAlias(e.target.value)} readOnly={target.fromQuarantine} maxLength={200} required />
-        </label>
-      </div>
+      {target.fromQuarantine ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className={label}>
+            Source system
+            <input className={control} value={sourceLabel(source)} readOnly />
+          </label>
+          <label className={`${label} sm:col-span-2`}>
+            Name, exactly as the source sends it
+            <input className={control} value={alias} readOnly required />
+          </label>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className={label}>
+            Source system
+            <select className={control} value={source} onChange={(e) => chooseSource(e.target.value)}>
+              {sources.map((s) => (
+                <option key={s} value={s}>
+                  {sourceLabel(s)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex flex-col gap-3 sm:col-span-2">
+            <label className={label}>
+              Name the source sent
+              <select className={control} value={typing ? TYPED : alias} onChange={(e) => chooseName(e.target.value)}>
+                {unmapped.map((q) => (
+                  <option key={q.id} value={q.alias}>
+                    {q.alias} ({count(q.occurrences.value)} {q.occurrences.value === 1 ? "sighting" : "sightings"})
+                  </option>
+                ))}
+                <option value={TYPED}>A name not held yet: type it…</option>
+              </select>
+              {unmapped.length === 0 ? (
+                <span className="font-normal">Nothing from {sourceLabel(source)} is waiting to be mapped. Type the name to map it before its first sync.</span>
+              ) : null}
+            </label>
+            {typing ? (
+              <label className={label}>
+                Name, exactly as the source sends it
+                <input className={control} value={alias} onChange={(e) => setAlias(e.target.value)} maxLength={200} required />
+              </label>
+            ) : null}
+          </div>
+        </div>
+      )}
       <fieldset className="space-y-2">
         <legend className="text-xs font-medium text-muted">Customer</legend>
         <div className="flex flex-wrap gap-4 text-sm text-ink">
@@ -427,7 +514,7 @@ export function CustomerMapping() {
 
   const quarantineColumns: Column<QuarantinedAlias>[] = [
     { key: "alias", header: "Name as sent", value: (q) => q.alias, sortable: true, className: "break-words" },
-    { key: "source", header: "Source", value: (q) => q.source_system, sortable: true },
+    { key: "source", header: "Source", value: (q) => sourceLabel(q.source_system), sortable: true },
     { key: "sightings", header: "Sightings", value: (q) => q.occurrences.value, render: (q) => count(q.occurrences.value), sortable: true, className: "tabular-nums" },
     { key: "last", header: "Last seen", value: (q) => q.last_seen, render: (q) => dateTime(q.last_seen), sortable: true },
     { key: "suggested", header: "Suggested customer", value: (q) => q.suggested_tenant?.name ?? null, render: (q) => q.suggested_tenant?.name ?? <span className="text-muted">None</span> },
@@ -496,7 +583,9 @@ export function CustomerMapping() {
 
       <div className="space-y-6">
         <Feedback message={message} />
-        {target ? <MapForm key={`${target.source}:${target.alias}`} target={target} tenants={tenants} onDone={done} onCancel={() => setTarget(null)} /> : null}
+        {target ? (
+          <MapForm key={`${target.source}:${target.alias}`} target={target} tenants={tenants} held={quarantine.items} onDone={done} onCancel={() => setTarget(null)} />
+        ) : null}
 
         <section aria-labelledby="pending-heading">
           <h2 id="pending-heading" className="mb-2 section-title">
