@@ -1,7 +1,7 @@
 """SharePoint folders, CoreStack security findings, snapshot scopes (expand).
 
 Revision ID: 0028
-Revises: 0026
+Revises: 0027
 Create Date: 2026-11-01
 
 ADR 0028: SharePoint, Qualys and CoreStack read for real, read-only, in dev.
@@ -28,7 +28,7 @@ from __future__ import annotations
 from alembic import op
 
 revision = "0028"
-down_revision = "0026"
+down_revision = "0027"
 branch_labels = None
 depends_on = None
 
