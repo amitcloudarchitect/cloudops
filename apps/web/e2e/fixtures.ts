@@ -69,6 +69,15 @@ export const test = base.extend<{ role: RoleName; signedIn: Page }>({
 
 export { expect };
 
+/** The navigation's area headings, in order: only areas holding a module the role can use. */
+export async function navAreas(page: Page): Promise<string[]> {
+  const nav = page.getByRole("navigation", { name: "Modules" });
+  await expect(nav).toBeVisible();
+  return (await nav.getByRole("list").evaluateAll((lists) =>
+    lists.map((l) => document.getElementById(l.getAttribute("aria-labelledby") ?? "")?.textContent ?? ""),
+  )).map((s) => s.trim());
+}
+
 export async function navLabels(page: Page): Promise<string[]> {
   const nav = page.getByRole("navigation", { name: "Modules" });
   await expect(nav).toBeVisible();

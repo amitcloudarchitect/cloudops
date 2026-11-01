@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 import { useAssistant } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
-import { visibleModules } from "@/lib/nav";
+import { visibleAreas } from "@/lib/nav";
 import { can, useSession } from "@/lib/session";
 
 import { AssistantPanel, SHORTCUT_ARIA, SHORTCUT_LABEL } from "./AssistantPanel";
@@ -112,35 +112,47 @@ export function AppShell({ children }: { children: ReactNode }) {
       break;
     case "ready": {
       const me = session.me;
-      const modules = visibleModules((p) => can(me, p), me.kind === "staff");
+      const areas = visibleAreas((p) => can(me, p), me.kind === "staff");
       content = children;
       nav = (
         <nav aria-label="Modules">
-          <ul className="flex flex-wrap gap-1 lg:flex-col lg:gap-0.5">
-            {modules.map((m) => {
-              const current = pathname === m.href || pathname.startsWith(`${m.href}/`);
+          <div className="flex flex-wrap gap-x-4 gap-y-2 lg:flex-col lg:gap-4">
+            {areas.map(({ area, modules }) => {
+              const id = `nav-${area.toLowerCase().replace(/[^a-z]+/g, "-")}`;
               return (
-                <li key={m.href}>
-                  <Link
-                    href={m.href}
-                    aria-current={current ? "page" : undefined}
-                    className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm ${
-                      current
-                        ? "bg-selected font-semibold text-ink"
-                        : "text-muted hover:bg-surface-raised hover:text-ink"
-                    }`}
-                  >
-                    {/* The brand's one shape, the circle: lit for the current module. */}
-                    <span
-                      aria-hidden="true"
-                      className={`size-2 shrink-0 rounded-full ${current ? "bg-brand" : "border border-line"}`}
-                    />
-                    {m.label}
-                  </Link>
-                </li>
+                <div key={area}>
+                  <p id={id} className="px-3 pb-1 text-xs font-semibold uppercase tracking-wide text-muted">
+                    {area}
+                  </p>
+                  <ul aria-labelledby={id} className="flex flex-wrap gap-1 lg:flex-col lg:gap-0.5">
+                    {modules.map((m) => {
+                      const current = m.href === "/" ? pathname === "/" : pathname === m.href || pathname.startsWith(`${m.href}/`);
+                      return (
+                        <li key={m.href}>
+                          <Link
+                            href={m.href}
+                            aria-current={current ? "page" : undefined}
+                            className={`flex items-center gap-2.5 rounded-control px-3 py-2 text-sm ${
+                              current
+                                ? "bg-selected font-semibold text-ink"
+                                : "text-muted hover:bg-surface-raised hover:text-ink"
+                            }`}
+                          >
+                            {/* The brand's one shape, the circle: lit for the current module. */}
+                            <span
+                              aria-hidden="true"
+                              className={`size-2 shrink-0 rounded-full ${current ? "bg-brand" : "border border-line"}`}
+                            />
+                            {m.label}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
               );
             })}
-          </ul>
+          </div>
         </nav>
       );
       who = (

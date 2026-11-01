@@ -36,6 +36,15 @@ session as a binding), each in its own way.
    only to staff with more than one tenant; a customer never sees it, and its
    `tenantId` is always null (its scope is already one tenant).
 
+5. **Navigation areas.** The console's modules are grouped into Operations, Security,
+   Commercial, Assurance & Reports, Knowledge and Settings (`lib/nav.ts`). Settings
+   holds user management, cloud and portal onboarding (with the AMARA switch),
+   customer mapping (with the platform host) and connectors. Each entry keeps its own
+   permission, so the area shows only to platform administrators and the staff (or
+   customer administrators) authorised for one of them. Every page still checks
+   permission itself. Observability, SecOps and Commercial setup have their places,
+   reserved until their pages exist.
+
 ## Consequences
 
 - A client-supplied tenant id can only ever reduce what a request reads. Hiding the
