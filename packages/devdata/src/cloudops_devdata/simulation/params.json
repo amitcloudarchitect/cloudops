@@ -1,0 +1,108 @@
+{
+ "_comment": [
+  "Distributions extracted once from the operations workbook (September 2026 report preparation) and reviewed: numbers and generic ServiceNow or monitoring vocabulary only.",
+  "No customer, staff or ticket text from the workbook is in this file; the generator never reads the workbook. Values marked 'assumed' are not in the workbook and were chosen for the simulation.",
+  "Volumes are the workbook's per-customer median, per month, scaled to one customer."
+ ],
+ "volumes_per_month": {
+  "_source": "incidents 747 across 9 customers (median about 65); changes 127 across 10; requests 97 across 12; project tasks 16 across the estate",
+  "incident": 65,
+  "change_request": 13,
+  "sc_req_item": 8,
+  "pm_project_task": 2
+ },
+ "incident": {
+  "priority_mix": {"3 - Moderate": 0.463, "4 - Low": 0.477, "5 - Planning": 0.060},
+  "resolve_hours_lognormal": {
+   "_source": "resolve time quantiles per priority: median and 90th percentile, hours",
+   "3 - Moderate": {"median": 3.3, "p90": 26.4},
+   "4 - Low": {"median": 2.8, "p90": 55.0},
+   "5 - Planning": {"median": 3.0, "p90": 70.0}
+  },
+  "resolve_hours_cap": 720,
+  "pending_share": 0.37,
+  "pending_hours_lognormal": {"median": 3.0, "p90": 60.0},
+  "sla_breach_rate": 0.013,
+  "state_mix_closed": {"Closed": 0.87, "Resolved": 0.13},
+  "closure_mix": {
+   "_source": "the workbook's closure column, mapped to ServiceNow close codes: workaround, permanent, cancelled, auto-close, other",
+   "workaround": 0.432,
+   "permanent": 0.297,
+   "cancelled": 0.18,
+   "auto_close": 0.061,
+   "not_resolved": 0.03
+  },
+  "ci_empty_rate": 0.017,
+  "alert_shaped_share": 0.70,
+  "bracket_tag_share": 0.27,
+  "short_description_chars": {"p10": 42, "p50": 75, "p90": 89},
+  "close_note_shape_mix": {
+   "_source": "close note shapes by keyword share: healed/recovered alert, copied from parent, returned to normal after monitoring, cancelled or duplicate, structured multi-line",
+   "auto_healed": 0.30,
+   "parent_copy": 0.14,
+   "monitored_normal": 0.16,
+   "cancelled_note": 0.13,
+   "structured": 0.27
+  },
+  "theme_mix": {
+   "_source": "alert metric mix from the alerts sheet, restricted to what applies to virtual machines",
+   "availability": 0.30,
+   "script_error": 0.12,
+   "memory": 0.14,
+   "disk": 0.16,
+   "agent": 0.07,
+   "cpu": 0.09,
+   "service": 0.05,
+   "certificate": 0.02,
+   "access": 0.02,
+   "backup": 0.01,
+   "k8s_volume": 0.02
+  },
+  "hour_of_day_weights": [19, 26, 27, 10, 43, 27, 71, 79, 21, 22, 26, 40, 42, 23, 28, 28, 30, 24, 11, 28, 18, 34, 16, 54],
+  "weekday_weights": [62, 133, 165, 134, 65, 87, 101],
+  "actual_hours_lognormal": {"_source": "assumed: the workbook records no hours on incidents", "median": 0.5, "p90": 2.0},
+  "missing_hours_rate": 0.03
+ },
+ "change_request": {
+  "type_mix": {"_source": "Planned 75.6% as normal, Standard 7.9%, Unplanned 11% and Emergency 5.5% as emergency", "normal": 0.756, "standard": 0.079, "emergency": 0.165},
+  "window_hours_lognormal": {"median": 6.0, "p90": 40.0},
+  "window_hours_floor": 1,
+  "overrun_rate": 0.047,
+  "close_mix": {"successful": 0.93, "successful_issues": 0.04, "unsuccessful": 0.03},
+  "task_actual_over_planned": {"p10": 0.97, "p50": 1.0, "p90": 1.06}
+ },
+ "sc_req_item": {
+  "state_mix": {"Closed Complete": 0.948, "Closed Incomplete": 0.031, "Closed Skipped": 0.021},
+  "contact_type_mix": {"self-service": 0.526, "email": 0.443, "proactive": 0.031},
+  "sla_breach_rate": 0.103,
+  "open_to_close_hours_lognormal": {"median": 107.0, "p90": 410.0},
+  "actual_hours_lognormal": {"_source": "assumed: the workbook records no time on requests", "median": 1.0, "p90": 3.0}
+ },
+ "pm_project_task": {
+  "planned_hours_lognormal": {"median": 3.5, "p90": 15.0},
+  "actual_over_planned": {"p10": 0.97, "p50": 1.0, "p90": 1.06}
+ },
+ "assignment_group_shares": [0.93, 0.05, 0.02],
+ "assignees": 6,
+ "vulnerability": {
+  "os_severity_mix": {"5": 0.69, "4": 0.114, "3": 0.18, "2": 0.011, "1": 0.004},
+  "app_severity_mix": {"5": 0.145, "4": 0.663, "3": 0.186, "2": 0.006},
+  "os_per_asset": {"p10": 1, "p50": 5, "p90": 9},
+  "app_per_asset": {"p10": 1, "p50": 1, "p90": 5},
+  "app_asset_share": 0.75,
+  "potential_share": 0.036,
+  "remediated_share": {"_source": "assumed", "value": 0.25}
+ },
+ "commercial": {
+  "_source": "revenue sheet: median monthly manage revenue about 5,300; manage cost to revenue median 0.689 (10th 0.614, 90th 0.909); revenue to consumption median 0.153",
+  "contract_currency": "EUR",
+  "billing_currency": "USD",
+  "monthly_manage_revenue": "5250.000000",
+  "cost_to_revenue": "0.689",
+  "revenue_to_consumption": "0.153",
+  "target_margin": "0.30",
+  "consumption_uplift": "0.07",
+  "professional_services": "6400.000000",
+  "consumption_day_jitter": 0.12
+ }
+}

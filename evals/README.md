@@ -59,7 +59,8 @@ lowering the classifier's threshold each turns it red.
 1. Add one line to the right `golden/<kind>.jsonl`, with a new id (`cls-009`).
    - `ticket` is the ticket as ServiceNow delivers it.
    - `expected` holds the correct route, intent, class, CI and reason.
-   - `tenant` is one of the test tenants (`alpha`, `bravo`, `charlie`).
+   - `tenant` is one of the test tenants (`alpha`, `bravo`, `charlie`), or `azsponsor`, the
+     simulation's customer, with the invented example estate as inventory (`docs/simulation`).
 2. Add its replies to `cassettes/classifier.jsonl`, and to `cassettes/enricher.jsonl`
    if it reaches enrichment. Key the replies by ticket number and task.
 3. For a cross-tenant case, add a `plant`: the other tenant's content it tries to reach.
