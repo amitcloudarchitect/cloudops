@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import os
 import sys
+from contextlib import AsyncExitStack
 from typing import Final
 
 import uvicorn
 
-from cloudops_api.app import create_app
+from cloudops_agents.runtime import build_gateway
+from cloudops_api.app import AssistantFactory, create_app
+from cloudops_api.assistant import AssistantRuntime, build_runtime
 from cloudops_api.auth import KeySource, RemoteKeys, StaticKeys, TokenValidator
 from cloudops_config import (
     Component,
@@ -64,6 +67,22 @@ def _availability(local: bool) -> TelemetryAvailability | None:
         t.url, t.database, t.username, cfg.secrets.get(t.password_secret)))
 
 
+def _assistant(db: Database) -> AssistantFactory | None:
+    """The assistant (ADR 0029), when the AI gateway is configured: in Azure, the
+    Azure OpenAI endpoint and this pod's workload identity. Without it the API runs
+    and the assistant answers 503 assistant_unavailable."""
+    try:
+        llm = load_settings(os.environ, require={Component.LLM})
+    except ConfigurationError as exc:
+        print(f"assistant disabled: {exc}", file=sys.stderr)
+        return None
+
+    async def factory(stack: AsyncExitStack) -> AssistantRuntime:
+        return build_runtime(db, await build_gateway(llm, db, stack))
+
+    return factory
+
+
 def main() -> int:
     try:
         settings = load_settings(os.environ, require={Component.DATABASE_APP, Component.AUTH})
@@ -81,13 +100,15 @@ def main() -> int:
         print("error: no token key source configured", file=sys.stderr)
         return 1
     local = settings.environment is Environment.LOCAL
+    db = Database.create(settings.database_dsn(DbLogin.APP))
     app = create_app(
-        db=Database.create(settings.database_dsn(DbLogin.APP)),
+        db=db,
         validator=TokenValidator(auth, keys),
         expose_openapi=local,
         web_origins=auth.web_origins,
         signer=_signer(settings),
         availability=_availability(local),
+        assistant_factory=_assistant(db),
     )
     try:
         uvicorn.run(

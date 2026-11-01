@@ -183,7 +183,10 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
     onboarding (0011) is read by the resolver before any scope exists and
     written by the access functions' owner only. The drafting queue (0013)
     lists requested drafts across tenants: requested only, three columns,
-    function owner only."""
+    function owner only. The assistant (0023): its definer functions forget a
+    conversation's recorded prompts and purge conversations past 90 days, and
+    fill an empty help embedding; ``audience`` is on the global table, which has
+    no tenant isolation to widen."""
     with psycopg.connect(seeded.admin_dsn) as cx:
         extra = cx.execute(
             "SELECT c.relname, p.polname, array(SELECT rolname FROM pg_roles"
@@ -195,9 +198,16 @@ def test_the_only_extra_permissive_policies_are_the_resolvers_registries(
             "   AND c.oid <> 'audit.platform_action_log'::regclass ORDER BY 1, 2"
         ).fetchall()
     assert extra == [
+        ("agent_run", "assistant_forget", ["cloudops_resolver"]),
+        ("agent_run", "assistant_forget_read", ["cloudops_resolver"]),
         ("alias_reprocess", "reprocess_queue_claim", ["cloudops_access_admin"]),
         ("alias_reprocess", "reprocess_queue_read", ["cloudops_access_admin"]),
+        ("assistant_conversation", "assistant_purge", ["cloudops_resolver"]),
+        ("assistant_conversation", "assistant_purge_read", ["cloudops_resolver"]),
         ("control_response", "draft_queue_read", ["cloudops_resolver"]),
+        ("global_knowledge_chunk", "audience", []),
+        ("global_knowledge_chunk", "embedding_fill", ["cloudops_resolver"]),
+        ("llm_call", "assistant_forget", ["cloudops_resolver"]),
         ("llm_call", "spend_registry_read", ["cloudops_resolver"]),
         ("portal_onboarding", "access_admin_all", ["cloudops_access_admin"]),
         ("portal_onboarding", "resolver_read", ["cloudops_resolver"]),

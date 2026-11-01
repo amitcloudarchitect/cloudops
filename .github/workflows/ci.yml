@@ -145,7 +145,10 @@ jobs:
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: evaluation-report
-          path: evals/last-report.json
+          path: |
+            evals/last-report.json
+            evals/drafting/last-report.json
+            evals/assistant/last-report.json
           if-no-files-found: ignore
 
   # The workbook's reference case (321 CIs, 24x7, Gold, India). The Decimal port in

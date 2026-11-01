@@ -25,6 +25,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/assistant/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations_v1_assistant_conversations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["get_conversation_v1_assistant_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/conversations/{conversation_id}/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete Conversation
+         * @description Delete one of the caller's conversations, and clear the prompt text and
+         *     agent output the gateway recorded for it.
+         */
+        post: operations["delete_conversation_v1_assistant_conversations__conversation_id__delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask
+         * @description Ask a question, in a new conversation or a running one. Answered in the
+         *     background; poll the turn.
+         */
+        post: operations["ask_v1_assistant_questions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Session
+         * @description What the panel offers here: whether it is available, which account it is
+         *     about, and suggested questions for the screen and the caller's permissions.
+         */
+        get: operations["session_v1_assistant_session_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/tenants/{tenant_id}/enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Enabled
+         * @description Switch the assistant on or off for a customer's portal users. Staff always
+         *     have it. Off by default until the customer-role evaluation cases pass.
+         */
+        post: operations["set_enabled_v1_assistant_tenants__tenant_id__enabled_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/assistant/turns/{turn_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Turn */
+        get: operations["get_turn_v1_assistant_turns__turn_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/assurance/assessments": {
         parameters: {
             query?: never;
@@ -1253,6 +1388,15 @@ export interface components {
             observed_on: string;
             ratio: components["schemas"]["Metric_Decimal_"] | null;
         };
+        /** AnswerView */
+        AnswerView: {
+            /** Claims */
+            claims: components["schemas"]["ClaimView"][];
+            /** Sources */
+            sources: components["schemas"]["SourceView"][];
+            /** Text */
+            text: string;
+        };
         /** Approval */
         Approval: {
             /** Narrative Seen */
@@ -1276,6 +1420,16 @@ export interface components {
             count: components["schemas"]["Metric_int_"];
             /** Items */
             items: components["schemas"]["PendingChange"][];
+        };
+        /** AskRequest */
+        AskRequest: {
+            context?: components["schemas"]["ScreenContext"];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Question */
+            question: string;
+            /** Tenant Id */
+            tenant_id?: string | null;
         };
         /** AssessmentDetail */
         AssessmentDetail: {
@@ -1343,6 +1497,23 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** AssistantSession */
+        AssistantSession: {
+            /** Available */
+            available: boolean;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "account" | "help";
+            /** Suggestions */
+            suggestions: string[];
+            tenant: components["schemas"]["TenantOption"] | null;
+            /** Tenants */
+            tenants: components["schemas"]["TenantOption"][];
+            /** Unavailable Reason */
+            unavailable_reason: ("not_enabled" | "not_configured") | null;
+        };
         /**
          * BandRules
          * @description The thresholds the bands were computed with, so a screen explains them
@@ -1397,6 +1568,13 @@ export interface components {
             source_ref: string | null;
             /** Web Url */
             web_url: string | null;
+        };
+        /** ClaimView */
+        ClaimView: {
+            /** Sources */
+            sources: string[];
+            /** Text */
+            text: string;
         };
         /** CollectedView */
         CollectedView: {
@@ -1540,6 +1718,50 @@ export interface components {
             requirement: string;
             /** Title */
             title: string;
+        };
+        /** ConversationSummary */
+        ConversationSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "account" | "help";
+            tenant: components["schemas"]["TenantOption"] | null;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** ConversationView */
+        ConversationView: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "account" | "help";
+            tenant: components["schemas"]["TenantOption"] | null;
+            /** Title */
+            title: string;
+            /** Turns */
+            turns: components["schemas"]["TurnView"][];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /**
          * CostLine
@@ -1748,6 +1970,21 @@ export interface components {
             items: components["schemas"]["Metric_int_"];
             items_without_hours: components["schemas"]["Metric_int_"];
             modelled_hours: components["schemas"]["Metric_Decimal_"] | null;
+        };
+        /** EnabledRequest */
+        EnabledRequest: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** EnabledView */
+        EnabledView: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Tenant Id
+             * Format: uuid
+             */
+            tenant_id: string;
         };
         /** EvidencePackSummary */
         EvidencePackSummary: {
@@ -2755,6 +2992,22 @@ export interface components {
             percent: components["schemas"]["Metric_Decimal_"] | null;
             scorable: components["schemas"]["Metric_int_"];
         };
+        /**
+         * ScreenContext
+         * @description Where the panel was opened. A hint, re-checked under the resolved scope.
+         */
+        ScreenContext: {
+            /** Record Id */
+            record_id?: string | null;
+            /** Record Type */
+            record_type?: ("ticket" | "resource") | null;
+            /**
+             * Screen
+             * @default other
+             * @enum {string}
+             */
+            screen: "home" | "customers" | "customer" | "work" | "ticket" | "resources" | "resource" | "finops" | "finops_customer" | "margin" | "margin_customer" | "pricing" | "posture" | "performance" | "approvals" | "reports" | "report" | "knowledge" | "assurance" | "users" | "other";
+        };
         /** SectionNarrativeEdit */
         SectionNarrativeEdit: {
             /** Text */
@@ -2783,6 +3036,21 @@ export interface components {
              * @enum {integer}
              */
             severity: 1 | 2 | 3 | 4 | 5;
+        };
+        /** SourceView */
+        SourceView: {
+            /** As Of */
+            as_of: string | null;
+            /** Is Modelled */
+            is_modelled: boolean;
+            /** Label */
+            label: string;
+            /** Ref */
+            ref: string;
+            /** Source System */
+            source_system: string;
+            /** Url */
+            url: string | null;
         };
         /** SowView */
         SowView: {
@@ -2834,6 +3102,16 @@ export interface components {
             /** Status */
             status: string;
             tenant: components["schemas"]["TenantView"];
+        };
+        /** TenantOption */
+        TenantOption: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** TenantUser */
         TenantUser: {
@@ -2951,6 +3229,40 @@ export interface components {
              * @enum {integer}
              */
             stage: 1 | 2 | 3;
+        };
+        /** TurnView */
+        TurnView: {
+            answer: components["schemas"]["AnswerView"] | null;
+            /** Answered At */
+            answered_at: string | null;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Question */
+            question: string;
+            /** Reason */
+            reason: string | null;
+            /** Seq */
+            seq: number;
+            /** Stage */
+            stage: ("understanding" | "retrieving" | "looking_up" | "composing" | "checking") | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "answered" | "dont_know" | "refused" | "failed";
         };
         /** Unallocated */
         Unallocated: {
@@ -3135,6 +3447,217 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Approvals"];
+                };
+            };
+        };
+    };
+    list_conversations_v1_assistant_conversations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationSummary"][];
+                };
+            };
+        };
+    };
+    get_conversation_v1_assistant_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_conversation_v1_assistant_conversations__conversation_id__delete_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ask_v1_assistant_questions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AskRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_v1_assistant_session_get: {
+        parameters: {
+            query?: {
+                screen?: "home" | "customers" | "customer" | "work" | "ticket" | "resources" | "resource" | "finops" | "finops_customer" | "margin" | "margin_customer" | "pricing" | "posture" | "performance" | "approvals" | "reports" | "report" | "knowledge" | "assurance" | "users" | "other";
+                tenant_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantSession"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_enabled_v1_assistant_tenants__tenant_id__enabled_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnabledRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnabledView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_turn_v1_assistant_turns__turn_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                turn_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

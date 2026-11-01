@@ -202,6 +202,42 @@ async def test_user_quota_warns_at_80_percent_then_refuses_before_any_provider_c
     assert _calls(seeded, c.principal_id)[-1][0] == "refused"
 
 
+async def test_assistant_sub_budget_never_starves_other_tasks(
+    app: Database, providers: Providers, seeded: Seeded
+) -> None:
+    """ADR 0029: the assistant's tasks have their own cap inside the user's quota;
+    reaching it refuses the assistant and leaves triage running."""
+    from cloudops_gateway.gateway import SubBudget
+
+    limits = Limits(sub_budgets={"assistant.": SubBudget(user_daily_tokens=60,
+                                                         tenant_monthly_fraction=1.0)})
+    gw = _gateway(app, providers, limits)
+    c = ctx(seeded.a)
+    await gw.complete(c, tier=Tier.SMALL, task="assistant.classify",
+                      messages=[Message("user", "x" * 300)])
+    with pytest.raises(QuotaExceededError):
+        await gw.complete(c, tier=Tier.SMALL, task="assistant.answer",
+                          messages=[Message("user", "again")])
+    reply = await gw.complete(c, tier=Tier.SMALL, task="classify_ticket",
+                              messages=[Message("user", "triage still runs")])
+    assert reply.text
+
+
+async def test_customer_scope_calls_the_gateway_and_cannot_read_the_ledger(
+    app: Database, providers: Providers, seeded: Seeded
+) -> None:
+    """A customer scope writes its ledger row (no RETURNING) and reads quotas
+    through the totals function (migration 0023)."""
+    c = ctx(seeded.a, role=Role.CUSTOMER, perms=("tickets.read",))
+    reply = await _gateway(app, providers).complete(
+        c, tier=Tier.SMALL, task="assistant.classify", messages=[Message("user", "hi")])
+    assert reply.call_id > 0
+    with psycopg.connect(seeded.admin_dsn) as cx:
+        row = cx.execute("SELECT principal, outcome FROM cloudops.llm_call WHERE id = %s",
+                         (reply.call_id,)).fetchone()
+    assert row == (c.principal_id, "succeeded")
+
+
 async def test_tenant_quota_applies_across_users(
     app: Database, providers: Providers, seeded: Seeded
 ) -> None:

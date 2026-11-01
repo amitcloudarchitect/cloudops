@@ -222,7 +222,9 @@ async def test_the_sweep_drafts_everything_requested(step17: Step17, drafter: An
             drafting.KnowledgeIndexWorkflow.run, id=f"index-{uuid4().hex[:8]}",
             task_queue=drafting.TASK_QUEUE)
     assert any(o.id == str(narrative) and o.state == "drafted" for o in outcomes)
-    assert set(indexed) == {str(t.id) for t in step17.seeded.tenants}
+    # Each tenant, and the help pages (ADR 0029): none, with no internal tenant here.
+    assert set(indexed) == {str(t.id) for t in step17.seeded.tenants} | {"help"}
+    assert indexed["help"] == 0
     assert _state(step17, "report_narrative", narrative, "draft_state") == ("drafted",)
     assert datetime.now(UTC)  # the sweep ran to completion within the test server
 
