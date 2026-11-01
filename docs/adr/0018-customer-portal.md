@@ -3,6 +3,8 @@
 - **Status:** Accepted, 2026-10-31
 - **Amended by:** ADR 0021: `cost_fact`'s cost columns are Getronics' cost, revoked from
   `cloudops_customer`; the cost permission now shows a customer the price it is charged.
+  ADR 0030: every role lands on its home dashboard, led by its D4 landing view; CXO and
+  VP or director read their published report packs.
 - **Decided by:** Amit Kumar
 - **Applies to:** step 18 (HLD M2 customer onboarding, M22 customer portal and identity)
 - **Implements:** `db/migrations/versions/0011_customer_portal.py`, `db/bootstrap/roles.sql`,

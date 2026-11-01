@@ -3,9 +3,9 @@
 // modules, and never a Getronics-only one. The data boundary itself is the
 // database's (db/tests/test_customer_portal.py); these check what a person sees.
 
-import type { Me, WorkItemList } from "@cloudops/contracts";
+import type { Me, ReportPackView, WorkItemList } from "@cloudops/contracts";
 
-import { api, expect, navLabels, test, token } from "./fixtures";
+import { api, apiPost, expect, navLabels, test, token } from "./fixtures";
 import type { RoleName } from "./roles";
 
 const API = process.env.CLOUDOPS_E2E_API ?? "http://127.0.0.1:8000";
@@ -21,12 +21,38 @@ async function post<T>(role: RoleName, path: string, body: unknown): Promise<T> 
   return (await response.json()) as T;
 }
 
+function lastMonth(): string {
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Last month's pack for the customer's tenant, generated, reviewed and published
+ * by a platform administrator as Getronics would (ADR 0020), and one draft after it. */
+async function publishedPack(customer: RoleName): Promise<{ published: ReportPackView; draft: ReportPackView }> {
+  const tenant = (await api<Me>(customer, "/v1/me")).tenants[0];
+  if (!tenant) throw new Error("the customer has no tenant: run make seed");
+  const generate = () => apiPost<ReportPackView>("admin", "/v1/reports/packs", { tenant_id: tenant.id, period: lastMonth() });
+  const made = await generate();
+  if (made.status !== 201) throw new Error(`generating ${tenant.name}'s pack: ${made.status}`);
+  const pack = made.body;
+  for (const n of pack.narratives) {
+    await apiPost("admin", `/v1/reports/packs/${pack.id}/narratives/${n.section}`, { text: `Published ${n.section.replace(/_/g, " ")}.` });
+  }
+  await apiPost("admin", `/v1/reports/packs/${pack.id}/approve`);
+  const published = await apiPost<ReportPackView>("admin", `/v1/reports/packs/${pack.id}/publish`);
+  if (published.status !== 200) throw new Error(`publishing: ${published.status}`);
+  return { published: published.body, draft: (await generate()).body };
+}
+
 function uuid(): string {
   return crypto.randomUUID();
 }
 
 interface Journey {
   role: RoleName;
+  /** The dashboard's first widget: the role's landing view (ADR 0018 D4, ADR 0030). */
+  lead: string;
   landing: RegExp;
   heading: RegExp | string;
   nav: string[];
@@ -34,26 +60,29 @@ interface Journey {
 }
 
 const JOURNEYS: Journey[] = [
-  { role: "cxo", landing: /\/customers$/, heading: /Northwind/, nav: ["Work queue", "Performance", "Security posture", "Resources", "Customers", "Users"], roleName: "CXO" },
-  { role: "vp", landing: /\/performance$/, heading: "Performance", nav: ["Work queue", "Performance", "Resources", "Customers"], roleName: "VP or director" },
-  { role: "architect", landing: /\/resources$/, heading: "Resources", nav: ["Resources", "Customers"], roleName: "Architect" },
-  { role: "customerEngineer", landing: /\/work$/, heading: "Work queue", nav: ["Work queue", "Performance", "Resources", "Customers"], roleName: "Customer engineer" },
-  { role: "security", landing: /\/posture$/, heading: "Security posture", nav: ["Security posture", "Resources", "Customers"], roleName: "Security officer" },
-  { role: "approver", landing: /\/approvals$/, heading: "Approvals", nav: ["Approvals", "Resources", "Customers"], roleName: "Approver" },
+  { role: "cxo", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Work queue", "Performance", "Security posture", "Resources", "Customers", "Users", "Reports"], roleName: "CXO" },
+  { role: "vp", lead: "SLA attainment", landing: /\/performance$/, heading: "Performance", nav: ["Home", "Work queue", "Performance", "Resources", "Customers", "Reports"], roleName: "VP or director" },
+  { role: "architect", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Resources", "Customers"], roleName: "Architect" },
+  { role: "customerEngineer", lead: "Open incidents and SLA risk", landing: /\/work\?kind=Incident$/, heading: "Work queue", nav: ["Home", "Work queue", "Performance", "Resources", "Customers"], roleName: "Customer engineer" },
+  { role: "security", lead: "Vulnerabilities", landing: /\/posture$/, heading: "Security posture", nav: ["Home", "Security posture", "Resources", "Customers"], roleName: "Security officer" },
+  { role: "approver", lead: "Changes awaiting approval", landing: /\/approvals$/, heading: "Approvals", nav: ["Home", "Approvals", "Resources", "Customers"], roleName: "Approver" },
 ];
 
 for (const journey of JOURNEYS) {
   test.describe(`${journey.roleName}`, () => {
     test.use({ role: journey.role });
 
-    test("lands on its own view, with its modules and no Getronics-only ones", async ({ signedIn: page }) => {
+    test("lands on its dashboard led by its own view, with its modules and no Getronics-only ones", async ({ signedIn: page }) => {
       await page.goto("/");
-      await expect(page).toHaveURL(journey.landing);
-      await expect(page.getByRole("heading", { level: 1 })).toHaveText(journey.heading);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Home");
+      await expect(page.locator("section[data-widget]").first().getByRole("heading", { level: 2 })).toHaveText(journey.lead);
       const labels = await navLabels(page);
       expect(labels).toEqual(journey.nav);
       for (const hidden of STAFF_ONLY) expect(labels).not.toContain(hidden);
       await expect(page.getByTestId("role")).toHaveText(journey.roleName);
+      await page.getByRole("link", { name: `View the evidence for ${journey.lead}` }).click();
+      await expect(page).toHaveURL(journey.landing);
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(journey.heading);
     });
 
     test("a typed-in Getronics-only module says it is not available", async ({ signedIn: page }) => {
@@ -77,6 +106,33 @@ test.describe("CXO", () => {
     await expect(page.getByText(/Cloud cost/)).toHaveCount(0);
     await expect(page.getByText(/Not yet priced/)).toHaveCount(0); // Northwind's SOW has an uplift
     await expect(page.getByText(/margin|rate card|revenue|SOW/i)).toHaveCount(0);
+  });
+
+  test("reads its published report pack: the price, never Getronics' cost or a draft (ADR 0030)", async ({ signedIn: page }) => {
+    const { published, draft } = await publishedPack("cxo");
+    await page.goto("/reports");
+    expect(await navLabels(page)).toContain("Reports");
+    await expect(page.getByRole("form", { name: "Generate a monthly pack" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Portfolio" })).toHaveCount(0);
+    const table = page.getByRole("table", { name: "Report packs" });
+    await expect(table.getByRole("link", { name: new RegExp(`version ${published.version}$`) })).toBeVisible();
+    await expect(table.getByRole("link", { name: new RegExp(`version ${draft.version}$`) })).toHaveCount(0);
+
+    await table.getByRole("link", { name: new RegExp(`version ${published.version}$`) }).click();
+    await expect(page.getByRole("heading", { level: 1, name: `${published.tenant.name} · ${published.period}` })).toBeVisible();
+    const summary = page.getByRole("region", { name: "Executive summary" });
+    await expect(summary).toContainText(/Cloud consumption: /);
+    await expect(summary).toContainText("Published executive summary.");
+    await expect(page.getByText(/Cloud cost/)).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Financial dashboard" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Revenue mix" })).toHaveCount(0);
+    await expect(page.getByText(/AI draft/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Approve|Publish|Save narrative/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Download PDF" })).toBeVisible();
+
+    // The draft generated after it does not exist for the customer.
+    await page.goto(`/reports/${draft.id}`);
+    await expect(page.getByRole("heading", { level: 1, name: `${published.tenant.name} · ${published.period}` })).toHaveCount(0);
   });
 
   test("administers its organisation's users: adds, changes and removes one", async ({ signedIn: page }) => {
