@@ -1,4 +1,4 @@
-import { expect, navLabels, test } from "./fixtures";
+import { expect, navAreas, navLabels, test } from "./fixtures";
 
 test.use({ role: "admin" });
 
@@ -7,22 +7,25 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
   expect(await navLabels(page)).toEqual([
     "Home",
     "Work queue",
-    "Performance",
-    "Security posture",
-    "Approvals",
     "Resources",
+    "Approvals",
+    "Performance",
     "Customers",
-    "Customer mapping",
-    "Portal onboarding",
-    "Cloud onboarding",
-    "Connectors",
+    "Security posture",
     "FinOps",
     "Margin",
     "Pricing",
-    "Knowledge",
     "Assurance",
     "Reports",
+    "Knowledge",
+    "Cloud onboarding",
+    "Portal onboarding",
+    "Customer mapping",
+    "Connectors",
   ]);
+  expect(await navAreas(page)).toEqual(["Operations", "Security", "Commercial", "Assurance & Reports", "Knowledge", "Settings"]);
+  const settings = page.getByRole("list", { name: "Settings" });
+  await expect(settings.getByRole("link")).toHaveText(["Cloud onboarding", "Portal onboarding", "Customer mapping", "Connectors"]);
   await page.goto("/mapping");
   await expect(page.getByRole("heading", { level: 1, name: "Customer mapping" })).toBeVisible();
 });

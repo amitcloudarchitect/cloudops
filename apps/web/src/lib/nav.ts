@@ -6,9 +6,14 @@
 /** Not a matrix permission: held by a customer administrator of its own tenant (/v1/me). */
 export const TENANT_ADMIN = "tenant_admin";
 
+/** The navigation's areas, in order. An area with no module the role can use is not shown. */
+export const AREAS = ["Operations", "Security", "Commercial", "Assurance & Reports", "Knowledge", "Settings"] as const;
+export type Area = (typeof AREAS)[number];
+
 export interface Module {
   href: string;
   label: string;
+  area: Area;
   permission: string;
   /** Staff only: a customer never sees it, even holding the permission. */
   staff?: boolean;
@@ -18,35 +23,51 @@ export interface Module {
 
 export const MODULES: readonly Module[] = [
   // The role's dashboard (ADR 0030): where every role lands.
-  { href: "/", label: "Home", permission: "authenticated" },
-  { href: "/work", label: "Work queue", permission: "tickets.read" },
+  { href: "/", label: "Home", area: "Operations", permission: "authenticated" },
+  { href: "/work", label: "Work queue", area: "Operations", permission: "tickets.read" },
+  { href: "/resources", label: "Resources", area: "Operations", permission: "inventory.read" },
+  { href: "/approvals", label: "Approvals", area: "Operations", permission: "approvals.read" },
   // Step 18: the customer roles' landing views (ADR 0018); staff with the permission see them too.
-  { href: "/performance", label: "Performance", permission: "tickets.read" },
-  { href: "/posture", label: "Security posture", permission: "vulnerabilities.read" },
-  { href: "/approvals", label: "Approvals", permission: "approvals.read" },
-  { href: "/resources", label: "Resources", permission: "inventory.read" },
-  { href: "/customers", label: "Customers", permission: "authenticated" },
-  // Step 18: a customer administrator's own users (ADR 0018, D2).
-  { href: "/users", label: "Users", permission: TENANT_ADMIN },
-  // Step 14b: onboarding customers and mapping source company names to them (HLD M1).
-  { href: "/mapping", label: "Customer mapping", permission: "mapping.manage" },
-  // Step 18: onboarding a customer to the portal (HLD M2), platform administrators only.
-  { href: "/onboarding", label: "Portal onboarding", permission: "access.manage" },
-  // ADR 0027: a customer's cloud estate, read-only, from a stored credential (ADR 0003).
-  { href: "/cloud-onboarding", label: "Cloud onboarding", permission: "access.manage", staff: true },
-  // Step 15: ingest health per source and entity, and schema drift (staff only).
-  { href: "/connectors", label: "Connectors", permission: "connectors.read" },
+  { href: "/performance", label: "Performance", area: "Operations", permission: "tickets.read" },
+  { href: "/customers", label: "Customers", area: "Operations", permission: "authenticated" },
+  // The platform's own health (ADR 0022). Its page and permission come with it; until then, reserved.
+  { href: "/observability", label: "Observability", area: "Operations", permission: "connectors.read", staff: true, reserved: true },
+  { href: "/posture", label: "Security posture", area: "Security", permission: "vulnerabilities.read" },
+  // The SecOps workspace: built separately; shown once its page exists.
+  { href: "/secops", label: "SecOps", area: "Security", permission: "vulnerabilities.read", staff: true, reserved: true },
   // Step 16: cost reconciliation and allocation, margin, and the pricing engine.
   // Customer viewers hold cost.read for their own cost; the FinOps module is staff work.
-  { href: "/finops", label: "FinOps", permission: "cost.read", staff: true },
-  { href: "/margin", label: "Margin", permission: "commercial.read", staff: true },
-  { href: "/pricing", label: "Pricing", permission: "commercial.read", staff: true },
-  // Step 17: document staleness and gaps, assessments, and monthly report packs.
-  { href: "/knowledge", label: "Knowledge", permission: "knowledge.read", staff: true },
-  { href: "/assurance", label: "Assurance", permission: "assurance.read", staff: true },
-  { href: "/reports", label: "Reports", permission: "reports.read" },
+  { href: "/finops", label: "FinOps", area: "Commercial", permission: "cost.read", staff: true },
+  { href: "/margin", label: "Margin", area: "Commercial", permission: "commercial.read", staff: true },
+  { href: "/pricing", label: "Pricing", area: "Commercial", permission: "commercial.read", staff: true },
+  // Step 17: assessments and monthly report packs.
+  { href: "/assurance", label: "Assurance", area: "Assurance & Reports", permission: "assurance.read", staff: true },
+  { href: "/reports", label: "Reports", area: "Assurance & Reports", permission: "reports.read" },
+  // Step 17: document staleness and gaps.
+  { href: "/knowledge", label: "Knowledge", area: "Knowledge", permission: "knowledge.read", staff: true },
+  // Settings: who may use the platform and what it is connected to. Each entry keeps
+  // its own permission, so the area shows only to those who hold one of them.
+  // Step 18: a customer administrator's own users (ADR 0018, D2).
+  { href: "/users", label: "Users", area: "Settings", permission: TENANT_ADMIN },
+  // ADR 0027: a customer's cloud estate, read-only, from a stored credential (ADR 0003).
+  { href: "/cloud-onboarding", label: "Cloud onboarding", area: "Settings", permission: "access.manage", staff: true },
+  // Step 18: onboarding a customer to the portal (HLD M2), and its AMARA switch (ADR 0029).
+  { href: "/onboarding", label: "Portal onboarding", area: "Settings", permission: "access.manage" },
+  // Step 14b: onboarding tenants, mapping source company names to them (HLD M1), and
+  // which tenant hosts the platform (ADR 0031).
+  { href: "/mapping", label: "Customer mapping", area: "Settings", permission: "mapping.manage" },
+  // Step 15: ingest health per source and entity, and schema drift (staff only).
+  { href: "/connectors", label: "Connectors", area: "Settings", permission: "connectors.read" },
+  // SOWs and rate cards: built separately; shown once its page exists.
+  { href: "/settings/commercial", label: "Commercial setup", area: "Settings", permission: "commercial.read", staff: true, reserved: true },
 ];
 
 export function visibleModules(has: (permission: string) => boolean, staff: boolean): Module[] {
   return MODULES.filter((m) => !m.reserved && (staff || !m.staff) && has(m.permission));
+}
+
+/** The visible modules grouped by area, in AREAS order, empty areas left out. */
+export function visibleAreas(has: (permission: string) => boolean, staff: boolean): { area: Area; modules: Module[] }[] {
+  const modules = visibleModules(has, staff);
+  return AREAS.map((area) => ({ area, modules: modules.filter((m) => m.area === area) })).filter((g) => g.modules.length > 0);
 }

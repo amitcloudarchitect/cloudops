@@ -60,13 +60,23 @@ interface Journey {
 }
 
 const JOURNEYS: Journey[] = [
-  { role: "cxo", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Work queue", "Performance", "Security posture", "Resources", "Customers", "Users", "Reports"], roleName: "CXO" },
-  { role: "vp", lead: "SLA attainment", landing: /\/performance$/, heading: "Performance", nav: ["Home", "Work queue", "Performance", "Resources", "Customers", "Reports"], roleName: "VP or director" },
+  { role: "cxo", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Security posture", "Reports", "Users"], roleName: "CXO" },
+  { role: "vp", lead: "SLA attainment", landing: /\/performance$/, heading: "Performance", nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Reports"], roleName: "VP or director" },
   { role: "architect", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Resources", "Customers"], roleName: "Architect" },
-  { role: "customerEngineer", lead: "Open incidents and SLA risk", landing: /\/work\?kind=Incident$/, heading: "Work queue", nav: ["Home", "Work queue", "Performance", "Resources", "Customers"], roleName: "Customer engineer" },
-  { role: "security", lead: "Vulnerabilities", landing: /\/posture$/, heading: "Security posture", nav: ["Home", "Security posture", "Resources", "Customers"], roleName: "Security officer" },
-  { role: "approver", lead: "Changes awaiting approval", landing: /\/approvals$/, heading: "Approvals", nav: ["Home", "Approvals", "Resources", "Customers"], roleName: "Approver" },
+  { role: "customerEngineer", lead: "Open incidents and SLA risk", landing: /\/work\?kind=Incident$/, heading: "Work queue", nav: ["Home", "Work queue", "Resources", "Performance", "Customers"], roleName: "Customer engineer" },
+  { role: "security", lead: "Vulnerabilities", landing: /\/posture$/, heading: "Security posture", nav: ["Home", "Resources", "Customers", "Security posture"], roleName: "Security officer" },
+  { role: "approver", lead: "Changes awaiting approval", landing: /\/approvals$/, heading: "Approvals", nav: ["Home", "Resources", "Approvals", "Customers"], roleName: "Approver" },
 ];
+
+test.describe("a customer administrator", () => {
+  test.use({ role: "cxo" });
+
+  test("finds its users under Settings, and nothing else there", async ({ signedIn: page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("list", { name: "Settings" }).getByRole("link")).toHaveText(["Users"]);
+    await expect(page.getByTestId("customer-select")).toHaveCount(0);
+  });
+});
 
 for (const journey of JOURNEYS) {
   test.describe(`${journey.roleName}`, () => {

@@ -1,6 +1,6 @@
 import type { WorkItemList } from "@cloudops/contracts";
 
-import { api, expect, navLabels, test, triagedTicket } from "./fixtures";
+import { api, expect, navAreas, navLabels, test, triagedTicket } from "./fixtures";
 
 test.use({ role: "customer" });
 
@@ -8,7 +8,8 @@ test("sees its own services, without staff-only detail", async ({ signedIn: page
   await page.goto("/");
   // Every role opens on its dashboard (ADR 0030); the viewer's leads with its service.
   await expect(page.getByRole("heading", { level: 2, name: "Your service" })).toBeVisible();
-  expect(await navLabels(page)).toEqual(["Home", "Work queue", "Performance", "Security posture", "Resources", "Customers"]);
+  expect(await navLabels(page)).toEqual(["Home", "Work queue", "Resources", "Performance", "Customers", "Security posture"]);
+  expect(await navAreas(page)).toEqual(["Operations", "Security"]);
   await page.goto("/work");
   await expect(page.getByText("Customer viewer · Customer")).toBeVisible();
   const table = page.getByRole("table", { name: "Work items" });
