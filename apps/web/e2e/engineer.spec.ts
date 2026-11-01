@@ -7,7 +7,7 @@ test.use({ role: "engineer" });
 test("sees the operations modules and connectors, and not customer mapping", async ({ signedIn: page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: "Home" })).toBeVisible();
-  expect(await navLabels(page)).toEqual(["Home", "Work queue", "Resources", "Performance", "Customers", "Security posture", "Knowledge", "Connectors"]);
+  expect(await navLabels(page)).toEqual(["Home", "Work queue", "Resources", "Performance", "Customers", "Security posture", "SecOps", "Knowledge", "Connectors"]);
   // Settings shows only what the role holds a permission for: connector health, not onboarding.
   expect(await navAreas(page)).toEqual(["Operations", "Security", "Knowledge", "Settings"]);
   await expect(page.getByRole("list", { name: "Settings" }).getByRole("link")).toHaveText(["Connectors"]);

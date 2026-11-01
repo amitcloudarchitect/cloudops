@@ -213,8 +213,15 @@ class Posture(ApiModel):
     open_total: Metric[int]
 
 
-_AGE_BANDS: Final[tuple[tuple[AgeBandName, int, int | None], ...]] = (
+AGE_BANDS: Final[tuple[tuple[AgeBandName, int, int | None], ...]] = (
     ("0-30", 0, 30), ("31-90", 31, 90), ("91+", 91, None))
+# Whole days a finding has been open at :now, and its band; shared with the SecOps
+# workspace (ADR 0036). A first detection in the future has no band.
+AGE_DAYS: Final = (
+    "floor(extract(epoch FROM (CAST(:now AS timestamptz) - first_detected)) / 86400)::int")
+AGE_BAND: Final = "CASE " + " ".join(
+    f"WHEN {AGE_DAYS} >= {low}" + ("" if high is None else f" AND {AGE_DAYS} <= {high}")
+    + f" THEN '{band}'" for band, low, high in AGE_BANDS) + " END"
 
 
 @router.get("/posture", response_model=Posture)
@@ -225,9 +232,9 @@ async def posture(request: Request, access: AccessDep, scope: ScopeDep) -> Postu
         severities = {int(r[0]): int(r[1]) for r in _rows(await conn.execute(text(
             "SELECT severity, count(*) FROM cloudops.vulnerability"
             " WHERE remediated_at IS NULL GROUP BY 1")))}
-        ages = [int(r[0]) for r in _rows(await conn.execute(text(
-            "SELECT floor(extract(epoch FROM (:now - first_detected)) / 86400)::int"
-            " FROM cloudops.vulnerability WHERE remediated_at IS NULL"), {"now": now}))]
+        ages = {str(r[0]): int(r[1]) for r in _rows(await conn.execute(text(
+            f"SELECT {AGE_BAND}, count(*) FROM cloudops.vulnerability"  # noqa: S608 - constants
+            " WHERE remediated_at IS NULL GROUP BY 1"), {"now": now})) if r[0] is not None}
         rows = [tuple(r) for r in await conn.execute(text(
             "SELECT qid, title, severity, asset_name, resource_id, first_detected"
             " FROM cloudops.vulnerability WHERE remediated_at IS NULL"
@@ -240,10 +247,9 @@ async def posture(request: Request, access: AccessDep, scope: ScopeDep) -> Postu
             for s in (5, 4, 3, 2, 1)
         ],
         by_age=[
-            AgeBand(band=band, open=_metric(
-                sum(1 for a in ages if a >= low and (high is None or a <= high)),
-                "vulnerabilities", "qualys", "vulnerabilities.open_by_age", band=band))
-            for band, low, high in _AGE_BANDS
+            AgeBand(band=band, open=_metric(ages.get(band, 0), "vulnerabilities", "qualys",
+                                            "vulnerabilities.open_by_age", band=band))
+            for band, _, _ in AGE_BANDS
         ],
         findings=[
             OpenFinding(qid=str(qid), title=title, severity=sev, asset_name=asset,
