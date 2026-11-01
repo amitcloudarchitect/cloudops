@@ -20,14 +20,14 @@ resources:
 images:
   - name: connector-servicenow
     newName: crcloudopsdevweu.azurecr.io/connector-servicenow
-    newTag: d0e29c5
+    newTag: f521af8
   - name: worker-ai
     newName: crcloudopsdevweu.azurecr.io/worker-ai
-    newTag: d0e29c5
+    newTag: f521af8
   # connector-qualys in dev: the Qualys simulation is cloudops_devdata's (ADR 0028).
   - name: migrate
     newName: crcloudopsdevweu.azurecr.io/migrate
-    newTag: d0e29c5
+    newTag: f521af8
 patches:
   - path: connector-servicenow.yaml
   - path: connector-azure.yaml
