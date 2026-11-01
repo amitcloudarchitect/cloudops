@@ -1,0 +1,43 @@
+# id-cloudops-ingest-dev (stack 05 output workload_client_ids). Not secrets.
+# ADR 0028. Before this syncs: stacks 04-data, 04b-rbac and 05-aks applied, and
+# corestack-access-key and corestack-secret-key in Key Vault (the CSI driver will not
+# mount a missing secret).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector-corestack
+  namespace: platform-ingest
+  annotations:
+    azure.workload.identity/client-id: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connector-corestack
+  namespace: platform-ingest
+data:
+  # The bronze container stack 04-data creates for this source; 04b grants the ingest
+  # identity Storage Blob Data Contributor on it alone.
+  CLOUDOPS_BRONZE_CONTAINER_URL: https://stcloudopsbronzedevweu.blob.core.windows.net/corestack
+  # Required by the BLOB component; the connector never writes reports.
+  CLOUDOPS_REPORTS_CONTAINER_URL: https://stcloudopsreportsdevweu.blob.core.windows.net/reports
+  # Dev reads with a named person's own key pair (both halves in Key Vault), a
+  # time-limited exception recorded in ADR 0028; production needs a dedicated
+  # read-only CoreStack user first.
+  CLOUDOPS_CORESTACK_URL: https://portal-api.corestack.io
+  # The Azure Sponsorship tenant, only.
+  CLOUDOPS_CORESTACK_TENANTS: 69b6555c5a21a9cc93915990
+  # Step 19 (ADR 0022): off until the collector runs in dev (see ../config.yaml).
+  CLOUDOPS_TELEMETRY: "off"
+  CLOUDOPS_DEPLOYMENT: dev
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: connector-corestack
+  namespace: platform-ingest
+spec:
+  parameters:
+    clientID: 3ab83a64-7866-4d7c-beb7-28849dd1683a
+    keyvaultName: kv-cloudops-app-dev-weu
+    tenantId: 2fa5e26d-5ad2-415f-88a2-771caca87cbe

@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 
 ARM_SCOPE: Final = "https://management.azure.com/.default"
 STORAGE_SCOPE: Final = "https://storage.azure.com/.default"
+GRAPH_SCOPE: Final = "https://graph.microsoft.com/.default"
 
 
 class _Token(Protocol):
@@ -81,12 +82,17 @@ class EntraAuth(httpx.Auth):
         yield request
 
 
-def workload_credential(identity: WorkloadIdentity) -> WorkloadIdentityCredential:
+def workload_credential(identity: WorkloadIdentity,
+                        client_id: str | None = None) -> WorkloadIdentityCredential:
     """The async credential for the identity the Azure profile validated at start.
-    Its values, not the environment's: the profile is the one place that reads them."""
+    Its values, not the environment's: the profile is the one place that reads them.
+
+    ``client_id`` names an app registration to exchange the same projected token
+    for instead of the pod's managed identity: one with a federated credential for
+    this service account (``app-cloudops-sharepoint``, ADR 0028). Same directory."""
     from azure.identity.aio import WorkloadIdentityCredential
 
     kwargs = {} if identity.authority_host is None else {"authority": identity.authority_host}
     return WorkloadIdentityCredential(tenant_id=identity.tenant_id,
-                                      client_id=identity.client_id,
+                                      client_id=client_id or identity.client_id,
                                       token_file_path=str(identity.token_file), **kwargs)

@@ -38,7 +38,9 @@ from cloudops_devdata.simulation.triage import TriageIncident, bind
 
 COMPANY: Final = "Azure Sponsorship"
 SHORT_CODE: Final = "AZSPONSOR"  # access.onboard_tenant: 2 to 10 capitals or digits
-QUALYS_TAG: Final = f"Customer:{COMPANY}"
+# As the real subscription tags a customer's hosts (ADR 0028): generic tags every host
+# carries, and the customer's name as a plain tag, resolved through its qualys alias.
+QUALYS_TAGS: Final = ("Cloud Agent", "Default", COMPANY)
 DAYS: Final = 90
 NAMESPACE: Final = uuid.UUID("0b6c4a0e-5d3e-4f43-8f39-8a9b7cf1d2a4")
 # Correlation fields on every imported record: how the README finds them to undo.

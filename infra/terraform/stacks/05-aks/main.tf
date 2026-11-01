@@ -269,10 +269,15 @@ locals {
   # the ingest login, so it is the ingest identity too; the collector has its own,
   # federated once var.observability_enabled says stacks 02 and 03 are applied.
   # The Azure connector's live path (ADR 0023) reads the platform's own cost as the
-  # ingest identity too.
+  # ingest identity too, and so do the read-only sources of ADR 0028 (their bronze
+  # containers; SharePoint's Graph token is the app registration's, through its own
+  # federated credential on the same service account, created out of band).
   additional_federated_service_accounts = {
     ingest-platform-metrics      = { identity = "ingest", account = "platform-ingest/platform-metrics" }
     ingest-connector-azure       = { identity = "ingest", account = "platform-ingest/connector-azure" }
+    ingest-connector-sharepoint  = { identity = "ingest", account = "platform-ingest/connector-sharepoint" }
+    ingest-connector-qualys      = { identity = "ingest", account = "platform-ingest/connector-qualys" }
+    ingest-connector-corestack   = { identity = "ingest", account = "platform-ingest/connector-corestack" }
     observability-otel-collector = { identity = "observability", account = "observability/otel-collector" }
   }
   additional_enabled = {

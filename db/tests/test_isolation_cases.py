@@ -110,6 +110,9 @@ TENANT_TABLES = (
     "cloudops.report_pack_commercial",
     # Step 17 follow-up (ADR 0021).
     "cloudops.report_pack_price",
+    # ADR 0028.
+    "cloudops.sharepoint_folder",
+    "cloudops.security_finding",
 )
 # Written by people and the drafting worker through the application login only.
 NOT_INGESTED = frozenset({
@@ -582,12 +585,24 @@ WRITES = {
         "INSERT INTO cloudops.document (tenant_id, source_system, site_id, item_id, name,"
         " extraction) VALUES (:t, 'sharepoint', 's', :u, 'x', 'text')"
     ),
+    # ADR 0028: connectors only, too.
+    "cloudops.sharepoint_folder": (
+        "INSERT INTO cloudops.sharepoint_folder (tenant_id, drive_id, item_id, name)"
+        " VALUES (:t, 'd', :u, 'x')"
+    ),
+    "cloudops.security_finding": (
+        "INSERT INTO cloudops.security_finding (tenant_id, source_system, source_scope,"
+        " finding_id, category, severity, title, status, customer_raw, detected_at,"
+        " updated_at) VALUES (:t, 'corestack', 's', :u, 'security', 'high', 'x', 'open',"
+        " 'x', now(), now())"
+    ),
 }
 
 # Tables only connectors write: the application role holds SELECT alone.
 INGEST_WRITTEN = (
     "staging.", "cloudops.tenant_alias", "cloudops.cost_finding", "cloudops.directory_",
-    "cloudops.sharepoint_site", "cloudops.document",
+    "cloudops.sharepoint_site", "cloudops.document", "cloudops.sharepoint_folder",
+    "cloudops.security_finding",
 )
 
 

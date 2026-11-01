@@ -2,6 +2,8 @@
 # worker is not ready until Temporal answers. connector-servicenow reads the dev
 # instance (ADR 0009). worker-ai calls the dev Azure OpenAI account (ADR 0012).
 # connector-azure feeds the platform's own cost into the internal tenant (ADR 0023).
+# connector-sharepoint, -qualys and -corestack read those sources, read-only (ADR 0028);
+# Qualys is the simulated estate until dev has a Qualys subscription.
 #
 # Image tags are the only thing the pipeline changes here (step 13). Nothing in
 # this directory is a secret.
@@ -10,6 +12,9 @@ kind: Kustomization
 resources:
   - ../../../base/connector-servicenow
   - ../../../base/connector-azure
+  - ../../../base/connector-sharepoint
+  - ../../../base/connector-qualys
+  - ../../../base/connector-corestack
   - ../../../base/worker-ai
   - values.yaml
 images:
@@ -19,9 +24,16 @@ images:
   - name: worker-ai
     newName: crcloudopsdevweu.azurecr.io/worker-ai
     newTag: ff37c76
+  # connector-qualys in dev: the Qualys simulation is cloudops_devdata's (ADR 0028).
+  - name: migrate
+    newName: crcloudopsdevweu.azurecr.io/migrate
+    newTag: ff37c76
 patches:
   - path: connector-servicenow.yaml
   - path: connector-azure.yaml
+  - path: connector-sharepoint.yaml
+  - path: connector-qualys.yaml
+  - path: connector-corestack.yaml
   - path: worker-ai.yaml
 replacements:
   - source: { kind: ConfigMap, name: overlay-values, fieldPath: data.dataSubnet }
@@ -29,6 +41,12 @@ replacements:
       - select: { kind: NetworkPolicy, name: connector-servicenow }
         fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: connector-azure }
+        fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: connector-sharepoint }
+        fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: connector-qualys }
+        fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
+      - select: { kind: NetworkPolicy, name: connector-corestack }
         fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]
       - select: { kind: NetworkPolicy, name: worker-ai }
         fieldPaths: [spec.egress.1.to.0.ipBlock.cidr]

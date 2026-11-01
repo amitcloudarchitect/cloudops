@@ -3,9 +3,17 @@
 fetch     one detection page (``id_min`` is the cursor)
 inspect   after the page is in bronze: the QIDs it names, whose KnowledgeBase
           entries are fetched and stored in bronze beside it (``.kb.xml``)
-process   normalise, resolve the customer tag, link resources (asset id, then
+process   normalise, resolve the customer tags, link resources (asset id, then
           name_norm plus IP, then name_norm), upsert on (tenant, QID, asset
           name, first detected), quarantine, record drift; then the watermark
+
+**Customer.** Each of a host's candidate tags (``mapping.customer_candidates``)
+is resolved; the host is filed under the one tenant they resolve to. None
+resolving: each candidate is quarantined with a count, for the customer mapping,
+and nothing is written. Two tenants: rejected and counted, kept in bronze.
+
+**Simulated** (``simulated=True``, dev only, ADR 0028): the same code over the
+simulated estate of ADR 0025; every row it writes says so in ``raw_extra``.
 
 Pages come in host-id order, not time order, so the watermark moves only on
 the run's last page, to the highest processed time the run saw: a run that
@@ -67,8 +75,9 @@ class QualysSource(Source):
     source = mapping.SOURCE
     entities = mapping.ENTITIES
 
-    def __init__(self, client: QualysClient) -> None:
+    def __init__(self, client: QualysClient, *, simulated: bool = False) -> None:
         self._client = client
+        self._simulated = simulated
         self.instance = client.base_url
 
     async def fetch(
@@ -118,18 +127,20 @@ class QualysSource(Source):
         scope0 = TenantScope((), Role.INGEST, principal(self.source))
         async with db.transaction(scope0) as conn:
             resolved = await state.resolve_aliases(
-                conn, self.source, (d.customer_raw for d in detections))
+                conn, self.source, (c for d in detections for c in d.customers))
         by_tenant: dict[UUID, list[mapping.Detection]] = defaultdict(list)
         unmatched: Counter[str] = Counter()
         for d in detections:
-            tenant = resolved[d.customer_raw].tenant_id
-            if tenant is None:
-                unmatched[d.customer_raw] += 1
+            tenants = {t for c in d.customers if (t := resolved[c].tenant_id) is not None}
+            if not tenants:
+                unmatched.update(d.customers)
+                counts.quarantined += 1
+            elif len(tenants) > 1:
+                counts.rejected += 1  # tags naming two customers; stays in bronze
             elif d.qid not in kb:
                 counts.rejected += 1  # no title to give it; stays in bronze
             else:
-                by_tenant[tenant].append(d)
-        counts.quarantined = sum(unmatched.values())
+                by_tenant[tenants.pop()].append(d)
 
         watermark = None
         if ctx.advance and ctx.final:
@@ -153,7 +164,7 @@ class QualysSource(Source):
                         if resource is None:
                             unlinked[identity.Unlinked(
                                 tenant, f"qualys:{d.host_id}", d.asset_name, None, d.ip)] += 1
-                        rows.append(_row(d, tenant, resource, kb[d.qid]))
+                        rows.append(_row(d, tenant, resource, kb[d.qid], self._simulated))
                 await conn.execute(_UPSERT, rows)
             await state.quarantine_aliases(conn, self.source, unmatched, ref)
             await identity.quarantine(conn, self.source, unlinked, ref)
@@ -169,8 +180,10 @@ class QualysSource(Source):
 
 
 def _row(
-    d: mapping.Detection, tenant: UUID, resource: UUID | None, kb: mapping.KbEntry
+    d: mapping.Detection, tenant: UUID, resource: UUID | None, kb: mapping.KbEntry,
+    simulated: bool = False,
 ) -> dict[str, Any]:
+    extra = {**d.raw_extra, "simulated": True} if simulated else d.raw_extra
     return {
         "tenant_id": tenant, "qid": d.qid, "asset_name": d.asset_name, "asset_ipv4": d.ip,
         "resource_id": resource, "scope": kb.scope, "title": kb.title, "severity": d.severity,
@@ -179,5 +192,5 @@ def _row(
         "first_detected": d.first_detected, "last_detected": d.last_detected,
         "remediated_at": d.remediated_at, "detection_span_days": d.span_days,
         "status": d.status,
-        "raw_extra": json.dumps(d.raw_extra, sort_keys=True) if d.raw_extra else None,
+        "raw_extra": json.dumps(extra, sort_keys=True) if extra else None,
     }

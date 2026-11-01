@@ -1,8 +1,8 @@
 {
  "sites": [
   {
-   "site_id": "getronics.sharepoint.com,410f89da-0925-56a2-8a61-d21e58eab834,e79f9886-d4be-5587-9ce8-c88aae878ec1",
-   "site_url": "https://getronics.sharepoint.com/sites/nwl-operations",
+   "site_id": "contoso.sharepoint.com,410f89da-0925-56a2-8a61-d21e58eab834,e79f9886-d4be-5587-9ce8-c88aae878ec1",
+   "site_url": "https://contoso.sharepoint.com/sites/nwl-operations",
    "customer": "Northwind Logistics B.V.",
    "code": "NWL",
    "display_name": "Northwind Logistics B.V. Operations",
@@ -15,7 +15,7 @@
      "folder": {
       "childCount": 3
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents",
      "lastModifiedDateTime": "2026-04-10T00:00:00Z",
      "parentReference": {
       "driveType": "documentLibrary",
@@ -28,7 +28,7 @@
      "eTag": "\"{a57136c7-f4a9-53d2-bdaa-69f83d41f512},1\"",
      "createdDateTime": "2026-06-19T00:00:00Z",
      "lastModifiedDateTime": "2026-06-29T00:00:00Z",
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks",
      "size": 0,
      "folder": {
       "childCount": 2
@@ -46,7 +46,7 @@
      "eTag": "\"{96335214-4d39-5242-a112-1f5d9d8c22cf},1\"",
      "createdDateTime": "2026-07-19T00:00:00Z",
      "lastModifiedDateTime": "2026-07-29T00:00:00Z",
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover",
      "size": 0,
      "folder": {
       "childCount": 2
@@ -70,7 +70,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
      "size": 789,
      "file": {
       "mimeType": "text/markdown",
@@ -101,7 +101,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/patching-standard.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/patching-standard.md",
      "size": 9144,
      "file": {
       "mimeType": "text/markdown",
@@ -132,7 +132,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/contacts.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/contacts.txt",
      "size": 116,
      "file": {
       "mimeType": "text/plain",
@@ -163,7 +163,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/network-diagram.vsdx",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/network-diagram.vsdx",
      "size": 48213,
      "file": {
       "mimeType": "application/vnd.ms-visio.drawing",
@@ -193,7 +193,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/ghost.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/ghost.txt",
      "size": 0,
      "file": {
       "mimeType": "text/plain",
@@ -224,7 +224,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/shift-notes.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Handover/shift-notes.txt",
      "size": 248,
      "file": {
       "mimeType": "text/plain",
@@ -257,7 +257,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
      "size": 1056,
      "file": {
       "mimeType": "text/markdown",
@@ -303,7 +303,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/patch-window.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-operations/Shared%20Documents/Runbooks/patch-window.md",
      "size": 69,
      "file": {
       "mimeType": "text/markdown",
@@ -335,8 +335,8 @@
    }
   },
   {
-   "site_id": "getronics.sharepoint.com,ab0be465-5693-5527-bbe2-2ff56597d349,7a1b5e97-b95f-57b9-9c62-580b25873418",
-   "site_url": "https://getronics.sharepoint.com/sites/nwl-projects",
+   "site_id": "contoso.sharepoint.com,ab0be465-5693-5527-bbe2-2ff56597d349,7a1b5e97-b95f-57b9-9c62-580b25873418",
+   "site_url": "https://contoso.sharepoint.com/sites/nwl-projects",
    "customer": "Northwind Logistics",
    "code": "NWL",
    "display_name": "Northwind Logistics B.V. Projects",
@@ -349,7 +349,7 @@
      "folder": {
       "childCount": 3
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents",
      "lastModifiedDateTime": "2026-04-10T00:00:00Z",
      "parentReference": {
       "driveType": "documentLibrary",
@@ -362,7 +362,7 @@
      "eTag": "\"{9975ac21-0500-5da6-8588-eac50aa10534},1\"",
      "createdDateTime": "2026-06-19T00:00:00Z",
      "lastModifiedDateTime": "2026-06-29T00:00:00Z",
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents/Runbooks",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents/Runbooks",
      "size": 0,
      "folder": {
       "childCount": 2
@@ -380,7 +380,7 @@
      "eTag": "\"{73ddf499-871e-5aa7-a05f-14f6b51e5c38},1\"",
      "createdDateTime": "2026-07-19T00:00:00Z",
      "lastModifiedDateTime": "2026-07-29T00:00:00Z",
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover",
      "size": 0,
      "folder": {
       "childCount": 2
@@ -404,7 +404,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents/Runbooks/restart-print-spooler.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents/Runbooks/restart-print-spooler.md",
      "size": 789,
      "file": {
       "mimeType": "text/markdown",
@@ -435,7 +435,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents/Runbooks/patching-standard.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents/Runbooks/patching-standard.md",
      "size": 9144,
      "file": {
       "mimeType": "text/markdown",
@@ -466,7 +466,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover/contacts.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover/contacts.txt",
      "size": 116,
      "file": {
       "mimeType": "text/plain",
@@ -497,7 +497,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover/network-diagram.vsdx",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover/network-diagram.vsdx",
      "size": 48213,
      "file": {
       "mimeType": "application/vnd.ms-visio.drawing",
@@ -527,7 +527,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover/ghost.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/nwl-projects/Shared%20Documents/Handover/ghost.txt",
      "size": 0,
      "file": {
       "mimeType": "text/plain",
@@ -556,8 +556,8 @@
    "change_content": {}
   },
   {
-   "site_id": "getronics.sharepoint.com,b03639b9-26ad-563f-a76d-7993dce3aaa2,e0d0aeeb-a45e-5564-90ff-4b61d09c804c",
-   "site_url": "https://getronics.sharepoint.com/sites/crl-operations",
+   "site_id": "contoso.sharepoint.com,b03639b9-26ad-563f-a76d-7993dce3aaa2,e0d0aeeb-a45e-5564-90ff-4b61d09c804c",
+   "site_url": "https://contoso.sharepoint.com/sites/crl-operations",
    "customer": "Contoso Retail Ltd",
    "code": "CRL",
    "display_name": "Contoso Retail Ltd Operations",
@@ -570,7 +570,7 @@
      "folder": {
       "childCount": 3
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents",
      "lastModifiedDateTime": "2026-04-10T00:00:00Z",
      "parentReference": {
       "driveType": "documentLibrary",
@@ -583,7 +583,7 @@
      "eTag": "\"{8631f5e3-e100-5bdc-82e3-ef76b63a408c},1\"",
      "createdDateTime": "2026-06-19T00:00:00Z",
      "lastModifiedDateTime": "2026-06-29T00:00:00Z",
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks",
      "size": 0,
      "folder": {
       "childCount": 2
@@ -601,7 +601,7 @@
      "eTag": "\"{e2dc05d5-af5b-5fc3-8bdb-0de02798b25e},1\"",
      "createdDateTime": "2026-07-19T00:00:00Z",
      "lastModifiedDateTime": "2026-07-29T00:00:00Z",
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover",
      "size": 0,
      "folder": {
       "childCount": 2
@@ -625,7 +625,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
      "size": 788,
      "file": {
       "mimeType": "text/markdown",
@@ -656,7 +656,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/patching-standard.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/patching-standard.md",
      "size": 9143,
      "file": {
       "mimeType": "text/markdown",
@@ -687,7 +687,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/contacts.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/contacts.txt",
      "size": 110,
      "file": {
       "mimeType": "text/plain",
@@ -718,7 +718,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/network-diagram.vsdx",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/network-diagram.vsdx",
      "size": 48213,
      "file": {
       "mimeType": "application/vnd.ms-visio.drawing",
@@ -748,7 +748,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/ghost.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/ghost.txt",
      "size": 0,
      "file": {
       "mimeType": "text/plain",
@@ -779,7 +779,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/shift-notes.txt",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Handover/shift-notes.txt",
      "size": 242,
      "file": {
       "mimeType": "text/plain",
@@ -812,7 +812,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/restart-print-spooler.md",
      "size": 1055,
      "file": {
       "mimeType": "text/markdown",
@@ -858,7 +858,7 @@
        "displayName": "Service Desk Engineer"
       }
      },
-     "webUrl": "https://getronics.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/patch-window.md",
+     "webUrl": "https://contoso.sharepoint.com/sites/crl-operations/Shared%20Documents/Runbooks/patch-window.md",
      "size": 74,
      "file": {
       "mimeType": "text/markdown",

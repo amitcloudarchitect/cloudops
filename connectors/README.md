@@ -36,16 +36,17 @@ on one shared orchestration, `core/ingest.py` (`ConnectorIngest`,
 `ConnectorReplay`). Each source supplies a `Source` with `fetch` (one page as
 sent), `inspect` (after bronze: record count, next cursor, companion payloads),
 and `process` (the contract's steps 5 to 8 for one page). `core/identity.py`,
-`core/drift.py` and `core/cli.py` are shared by all of them.
+`core/drift.py` and `core/cli.py` are shared by all of them. SharePoint, Qualys and
+CoreStack also run live in dev (ADR 0028, `docs/real-connectors.md`).
 
 | Source | Entities | Cadence | Notes |
 | --- | --- | --- | --- |
-| `qualys` | `host_detection` | daily | FQDN naming: resources match on asset id, then `name_norm` plus IP, then `name_norm`. KnowledgeBase entries are stored in bronze beside each page. Customer from the `Customer:` host tag. |
-| `corestack` | `finding` | daily | Writes `cost_finding` only, never `cost_fact`: cost comes from the providers' raw exports (HLD). API shape assumed until CoreStack docs and a sandbox exist (`corestack/mapping.py`). |
+| `qualys` | `host_detection` | daily | FQDN naming: resources match on asset id, then `name_norm` plus IP, then `name_norm`. KnowledgeBase entries are stored in bronze beside each page. Customer from the host's asset tags, less `Cloud Agent` and `Default` (ADR 0028). Live as the Qualys API user; in dev, until there is one, the simulated estate (`cloudops_devdata.simulation.qualys_live`), marked simulated. |
+| `corestack` | `finding` | daily | The real API (ADR 0028): a token from the access key pair, then each CoreStack tenant read whole (no change feed); a finding gone from the snapshot is resolved. Cost into `cost_finding` (no money in the API), Security and Compliance into `security_finding`, never `cost_fact`: cost comes from the providers' raw exports (HLD). The client can send the token request and two GETs, nothing else. |
 | `azure` | `resource`, `cost_export`, `cost_total`, `invoice` | 15 min, daily | Resource Graph in subscription batches, honouring `x-ms-user-quota-remaining`. The snapshot is authoritative per subscription: resources not seen in a complete run are closed. Cost exports, totals and invoices: see step 16 below. |
 | `aws` | `config`, `cur`, `cost_total`, `invoice` | 15 min, daily | Config aggregator queries; CUR from S3, each assembly staged and swapped into `cost_fact` atomically, so a restatement replaces the period. Totals and invoices: see step 16 below. |
 | `ecb` | `fx` | daily | ECB euro reference rates into `fx_rate` (step 16 below). |
-| `sharepoint` | `drive_item` | nightly | Per-site selected consent, delta sync per site. Deletion, or a site's consent withdrawn, removes its chunks. |
+| `sharepoint` | `drive_item`, `folder_item` | nightly | `drive_item`: per-site selected consent, delta sync per site. `folder_item` (ADR 0028, the live path): a folder per customer, granted on its own and named as the customer, read whole each run through a federated credential (no secret). Deletion, or consent withdrawn, removes the chunks. |
 | `entra` | `user`, `role_assignment` | daily | Users by delta; role assignments as a snapshot, removals closed. |
 
 ### Step 16: cost exports, provider totals and FX rates

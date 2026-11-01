@@ -43,6 +43,10 @@ DEV = PLATFORM + WORKERS
 WEB = [d for d in PLATFORM if d["metadata"].get("namespace") == "platform-web"]  # ADR 0017
 ALL_OURS = (PLATFORM + _build(GITOPS / "base/connector-servicenow")
             + _build(GITOPS / "base/connector-azure")  # ADR 0023
+            # ADR 0028: SharePoint, Qualys and CoreStack, read-only.
+            + _build(GITOPS / "base/connector-sharepoint")
+            + _build(GITOPS / "base/connector-qualys")
+            + _build(GITOPS / "base/connector-corestack")
             + _build(GITOPS / "base/worker-ai")
             # Step 19 (ADR 0022): in dev once id-cloudops-observability-dev exists.
             + _build(GITOPS / "base/observability") + _build(GITOPS / "base/platform-metrics"))
@@ -732,3 +736,37 @@ def test_customer_secrets_are_mounted_in_the_connector_azure_pod_only() -> None:
                 holders[d["metadata"]["name"]] = names
     assert set(holders) == {"connector-azure"}
     assert all(CUSTOMER_SECRET.fullmatch(n) for n in holders["connector-azure"])
+
+
+# ADR 0028: SharePoint, Qualys and CoreStack ---------------------------------------------
+
+
+def _commands(docs: list[dict[str, Any]]) -> list[str]:
+    return [" ".join(c.get("command", [])) for _, pod in _workloads(docs)
+            for c in pod.get("containers", [])]
+
+
+def test_the_qualys_simulation_runs_in_dev_only() -> None:
+    """Decision 8: simulated vulnerabilities are never shown as real ones. Only the dev
+    workers run the simulation's entry point and say simulation; the base reads Qualys."""
+    sim = "cloudops_devdata.simulation.qualys_live"
+    assert any(sim in c for c in _commands(WORKERS))
+    assert any(d["kind"] == "ConfigMap" and d.get("data", {}).get(
+        "CLOUDOPS_QUALYS_SOURCE") == "simulation" for d in WORKERS)
+    base = _build(GITOPS / "base/connector-qualys")
+    assert not any(sim in c for c in _commands(base))
+    for env in ("uat", "prd"):
+        docs = _build(GITOPS / "overlays" / env)
+        assert not any(sim in c for c in _commands(docs)), env
+
+
+def test_the_new_sources_mount_only_their_own_secrets() -> None:
+    """SharePoint has no secret at all (a federated credential); Qualys in simulation
+    has none; CoreStack has its key pair. Each also mounts the ingest login."""
+    want = {"connector-sharepoint": ["postgres-ingest-dsn"],
+            "connector-qualys": ["postgres-ingest-dsn"],
+            "connector-corestack": ["postgres-ingest-dsn", "corestack-access-key",
+                                    "corestack-secret-key"]}
+    got = {d["metadata"]["name"]: _spc_objects(d) for d in WORKERS
+           if d["kind"] == "SecretProviderClass" and d["metadata"]["name"] in want}
+    assert got == want

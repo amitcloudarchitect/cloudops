@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import enum
 import ipaddress
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -63,6 +64,9 @@ class Component(enum.StrEnum):
     SERVICENOW = "servicenow"
     AZURE_COST = "azure_cost"
     CUSTOMER_ACCESS = "customer_access"
+    SHAREPOINT = "sharepoint"
+    QUALYS = "qualys"
+    CORESTACK = "corestack"
 
 
 class DbLogin(enum.StrEnum):
@@ -309,6 +313,146 @@ def _servicenow(environ: Mapping[str, str], store: SecretStore) -> ServiceNowCon
     return ServiceNowConfig(url, client_id, SERVICENOW_CLIENT_SECRET)
 
 
+# The read-only sources of ADR 0028 ---------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class SharePointConfig:
+    """``app-cloudops-sharepoint``, reached from the pod's projected service account
+    token through a federated credential on the app registration (no secret), and the
+    folders granted to it under ListItems.SelectedOperations.Selected (ADR 0028). Each
+    folder is ``<drive id>/<item id>``. Not secret; Azure only."""
+
+    client_id: str
+    folders: tuple[str, ...]
+
+
+SHAREPOINT_CLIENT_ID_VAR: Final = "CLOUDOPS_SHAREPOINT_CLIENT_ID"
+SHAREPOINT_FOLDERS_VAR: Final = "CLOUDOPS_SHAREPOINT_FOLDERS"  # comma-separated
+_GRAPH_ID: Final = re.compile(r"^[A-Za-z0-9!_-]{1,200}$")
+
+
+def _sharepoint(environ: Mapping[str, str]) -> SharePointConfig:
+    client_id = _uuid(environ, SHAREPOINT_CLIENT_ID_VAR)
+    folders = tuple(f.strip() for f in _required(environ, SHAREPOINT_FOLDERS_VAR).split(","))
+    for folder in folders:
+        drive, _, item = folder.partition("/")
+        if not _GRAPH_ID.fullmatch(drive) or not _GRAPH_ID.fullmatch(item):
+            raise ConfigurationError(
+                f"{SHAREPOINT_FOLDERS_VAR}: each folder is <drive id>/<item id>")
+    if len(set(folders)) != len(folders):
+        raise ConfigurationError(f"{SHAREPOINT_FOLDERS_VAR} names a folder twice")
+    return SharePointConfig(client_id, folders)
+
+
+class QualysSource(enum.StrEnum):
+    LIVE = "live"  # the Qualys API, with the API user's password from the store
+    SIMULATION = "simulation"  # dev only: ADR 0025's simulated estate, served in-process
+
+
+@dataclass(frozen=True, slots=True)
+class QualysConfig:
+    """Where the Qualys connector reads host detections (ADR 0028).
+
+    ``live``: the platform's API server URL and API user (not secret); the password
+    is read from the store by name when a session starts. ``simulation`` serves the
+    simulated Azure Sponsorship estate through the real connector code, and is
+    refused anywhere but a dev (or local) deployment: it exists until dev has a
+    real Qualys subscription, and its rows are marked simulated."""
+
+    source: QualysSource
+    api_url: str | None = None
+    username: str | None = None
+    password_secret: str | None = None
+
+
+QUALYS_SOURCE_VAR: Final = "CLOUDOPS_QUALYS_SOURCE"  # live | simulation
+QUALYS_URL_VAR: Final = "CLOUDOPS_QUALYS_URL"
+QUALYS_USERNAME_VAR: Final = "CLOUDOPS_QUALYS_USERNAME"
+QUALYS_PASSWORD_SECRET: Final = "qualys-api-password"  # noqa: S105 - a name
+# Qualys' platform API servers (qualysapi.<platform>.apps.qualys.<tld>, and the US 1 pod).
+QUALYS_DOMAINS: Final = (".qualys.com", ".qualys.eu", ".qualys.in", ".qualys.ca",
+                         ".qualys.ae", ".qualys.uk", ".qualys.ksa")
+
+
+def _qualys(environ: Mapping[str, str], store: SecretStore, env: Environment) -> QualysConfig:
+    raw = environ.get(QUALYS_SOURCE_VAR, "").strip()
+    try:
+        source = QualysSource(raw)
+    except ValueError:
+        raise ConfigurationError(
+            f"{QUALYS_SOURCE_VAR} must be 'live' or 'simulation', explicitly") from None
+    if source is QualysSource.SIMULATION:
+        deployment = environ.get(DEPLOYMENT_VAR, "").strip()
+        allowed = {"dev", "local", ""} if env is Environment.LOCAL else {"dev"}
+        if deployment not in allowed:
+            raise ConfigurationError(
+                f"{QUALYS_SOURCE_VAR}=simulation is refused outside dev ({DEPLOYMENT_VAR} "
+                "must say dev): simulated vulnerabilities are never shown as real ones")
+        named = [v for v in (QUALYS_URL_VAR, QUALYS_USERNAME_VAR) if environ.get(v, "").strip()]
+        if named:
+            raise ConfigurationError(
+                f"{', '.join(named)} set with {QUALYS_SOURCE_VAR}=simulation: say live, or "
+                "remove them")
+        return QualysConfig(source)
+    url = _bare_https(environ, QUALYS_URL_VAR)
+    host = urlsplit(url).hostname or ""
+    if not host.endswith(QUALYS_DOMAINS):
+        raise ConfigurationError(f"{QUALYS_URL_VAR} must be a Qualys platform API server")
+    username = _required(environ, QUALYS_USERNAME_VAR)
+    store.get(QUALYS_PASSWORD_SECRET)  # raises MissingSecretError, naming the secret
+    return QualysConfig(source, url, username, QUALYS_PASSWORD_SECRET)
+
+
+@dataclass(frozen=True, slots=True)
+class CoreStackConfig:
+    """CoreStack's API, read with an access key pair (ADR 0028). The CoreStack
+    tenants to read are configuration; both halves of the key pair are read from the
+    store by name each time a token is requested (the key id names a person's key in
+    dev, so it stays out of the repository too)."""
+
+    api_url: str
+    tenants: tuple[str, ...]
+    access_key: str  # the secret's *name* in the store, never its value
+    secret_key: str  # likewise
+
+
+CORESTACK_URL_VAR: Final = "CLOUDOPS_CORESTACK_URL"
+CORESTACK_TENANTS_VAR: Final = "CLOUDOPS_CORESTACK_TENANTS"  # comma-separated tenant ids
+CORESTACK_ACCESS_KEY: Final = "corestack-access-key"
+CORESTACK_SECRET_KEY: Final = "corestack-secret-key"  # noqa: S105 - a name
+_CORESTACK_ID: Final = re.compile(r"^[A-Za-z0-9-]{1,64}$")
+
+
+def _corestack(environ: Mapping[str, str], store: SecretStore) -> CoreStackConfig:
+    url = _bare_https(environ, CORESTACK_URL_VAR)
+    tenants = tuple(t.strip() for t in _required(environ, CORESTACK_TENANTS_VAR).split(","))
+    for value in tenants:
+        if not _CORESTACK_ID.fullmatch(value):
+            raise ConfigurationError(f"{CORESTACK_TENANTS_VAR} holds CoreStack tenant ids")
+    if len(set(tenants)) != len(tenants):
+        raise ConfigurationError(f"{CORESTACK_TENANTS_VAR} names a tenant twice")
+    for name in (CORESTACK_ACCESS_KEY, CORESTACK_SECRET_KEY):
+        store.get(name)  # raises MissingSecretError, naming the secret
+    return CoreStackConfig(url, tenants, CORESTACK_ACCESS_KEY, CORESTACK_SECRET_KEY)
+
+
+def _bare_https(environ: Mapping[str, str], var: str) -> str:
+    url = _required(environ, var).rstrip("/")
+    parts = urlsplit(url)
+    if (parts.scheme != "https" or not parts.hostname or parts.path or parts.query
+            or parts.fragment or parts.username or parts.password):
+        raise ConfigurationError(f"{var} must be an https:// address with no path")
+    return url
+
+
+def _uuid(environ: Mapping[str, str], var: str) -> str:
+    try:
+        return str(UUID(_required(environ, var)))
+    except ValueError:
+        raise ConfigurationError(f"{var} must be a client (application) id") from None
+
+
 _T = TypeVar("_T")
 
 
@@ -367,6 +511,18 @@ class Settings:
     @property
     def customer_access(self) -> CustomerAccessConfig:
         return self._get(Component.CUSTOMER_ACCESS, CustomerAccessConfig)
+
+    @property
+    def sharepoint(self) -> SharePointConfig:
+        return self._get(Component.SHAREPOINT, SharePointConfig)
+
+    @property
+    def qualys(self) -> QualysConfig:
+        return self._get(Component.QUALYS, QualysConfig)
+
+    @property
+    def corestack(self) -> CoreStackConfig:
+        return self._get(Component.CORESTACK, CoreStackConfig)
 
     @property
     def llm(self) -> LlmGateway:
@@ -482,6 +638,16 @@ def _local(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
         elif c is Component.CUSTOMER_ACCESS:
             # From a laptop the customer's secret is in .env.local (ADR 0003, 2).
             components[c] = _customer_access(environ, Environment.LOCAL)
+        elif c is Component.SHAREPOINT:
+            # Graph is read through a federated credential on the app registration,
+            # which only a federated pod has (ADR 0028). Fixtures need none of this.
+            raise ConfigurationError(
+                "the live SharePoint path runs in Azure only; use --fixtures locally")
+        elif c is Component.QUALYS:
+            components[c] = _qualys(environ, store, Environment.LOCAL)
+        elif c is Component.CORESTACK:
+            # Opt-in from a laptop, as ServiceNow: the secret key in .env.local.
+            components[c] = _corestack(environ, store)
     return Settings(Environment.LOCAL, store, None, components)
 
 
@@ -536,6 +702,12 @@ def _azure(environ: Mapping[str, str], wanted: frozenset[Component]) -> Settings
             components[c] = _azure_cost(environ)
         elif c is Component.CUSTOMER_ACCESS:
             components[c] = _customer_access(environ, Environment.AZURE)
+        elif c is Component.SHAREPOINT:
+            components[c] = _sharepoint(environ)
+        elif c is Component.QUALYS:
+            components[c] = _qualys(environ, store, Environment.AZURE)
+        elif c is Component.CORESTACK:
+            components[c] = _corestack(environ, store)
         elif c is Component.LLM:
             components[c] = _azure_openai(environ)
     return Settings(Environment.AZURE, store, identity, components)

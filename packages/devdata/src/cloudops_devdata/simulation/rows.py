@@ -31,7 +31,7 @@ from cloudops_devdata.simulation.model import (
     COMPANY,
     DAYS,
     NAMESPACE,
-    QUALYS_TAG,
+    QUALYS_TAGS,
     Simulation,
     Ticket,
     Vm,
@@ -209,7 +209,7 @@ def _vulnerabilities(sim: Simulation, out: PlatformRows,
                     v.os_version, "Apply the vendor update referenced in the advisory.",
                     "An attacker may exploit this to compromise the host.",
                     "Potential" if rng.random() < float(p["potential_share"]) else "Confirmed",
-                    [QUALYS_TAG, f"RG:{v.resource_group}"], first, last, fixed,
+                    list(QUALYS_TAGS), first, last, fixed,
                     Decimal((last - first).days)))
 
 

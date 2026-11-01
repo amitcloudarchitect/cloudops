@@ -1,0 +1,290 @@
+# Federated to id-cloudops-ingest-{env} (stack 05), which writes its bronze container.
+# Qualys itself is read as the API user (ADR 0028); in dev, until there is one, the
+# simulated estate is served in-process (CLOUDOPS_QUALYS_SOURCE=simulation).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: connector-qualys
+  annotations:
+    azure.workload.identity/client-id: SET-IN-OVERLAY
+automountServiceAccountToken: false
+---
+# Its client certificate for Temporal (mutual TLS, ADR 0010), from the internal CA.
+# Also KEDA's, for reading this queue's depth (TriggerAuthentication below).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: connector-qualys-temporal
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  secretName: connector-qualys-temporal-tls
+  duration: 2160h
+  renewBefore: 720h
+  privateKey: { algorithm: ECDSA, size: 256, encoding: PKCS8, rotationPolicy: Always }
+  commonName: connector-qualys
+  uris: [spiffe://cloudops.internal/ns/platform-ingest/sa/connector-qualys]
+  usages: [client auth]
+  issuerRef: { group: cert-manager.io, kind: ClusterIssuer, name: cloudops-internal-ca }
+---
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: connector-qualys
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    clientID: SET-IN-OVERLAY
+    keyvaultName: SET-IN-OVERLAY
+    tenantId: SET-IN-OVERLAY
+    objects: |
+      array:
+        - |
+          objectName: postgres-ingest-dsn
+          objectType: secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connector-qualys
+spec:
+  replicas: 1  # KEDA owns the count (scaledobject below)
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: connector-qualys
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: connector-qualys
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: connector-qualys
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 60  # let in-flight activities finish
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532  # the certificate's key is group-readable only
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ingest] }
+      containers:
+        - name: worker
+          image: connector-servicenow  # the connectors package, another entry point
+          # No --fixtures: the live path, which serves only its live entities.
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.qualys", "worker"]
+          ports:
+            - { name: probes, containerPort: 8080 }
+          envFrom:
+            - configMapRef: { name: connector-qualys }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          livenessProbe:
+            httpGet: { path: /healthz, port: probes }
+            periodSeconds: 10
+            timeoutSeconds: 2
+          readinessProbe:
+            httpGet: { path: /readyz, port: probes }
+            periodSeconds: 10
+            timeoutSeconds: 3
+          volumeMounts:
+            - { name: secrets, mountPath: /mnt/secrets, readOnly: true }
+            # A whole directory, never subPath: renewed files must appear in place.
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
+      volumes:
+        - name: secrets
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: connector-qualys
+        - name: temporal-tls
+          secret:
+            secretName: connector-qualys-temporal-tls
+            defaultMode: 0440
+---
+# KEDA reads the queue depth over mutual TLS too, with the worker's certificate.
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: connector-qualys-temporal
+spec:
+  secretTargetRef:
+    - { parameter: cert, name: connector-qualys-temporal-tls, key: tls.crt }
+    - { parameter: key, name: connector-qualys-temporal-tls, key: tls.key }
+    - { parameter: ca, name: connector-qualys-temporal-tls, key: ca.crt }
+---
+# Scale on Temporal task queue depth (KEDA's temporal scaler, the AKS add-on). After
+# the Deployment: a ScaledObject without its target is not healthy.
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: connector-qualys
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  scaleTargetRef:
+    name: connector-qualys
+  minReplicaCount: 1
+  maxReplicaCount: 1
+  triggers:
+    - type: temporal
+      metadata:
+        endpoint: temporal-frontend.temporal.svc.cluster.local:7233
+        tlsServerName: temporal-frontend.temporal.svc.cluster.local  # checked against the certificate
+        namespace: default
+        taskQueue: connectors-qualys
+        targetQueueSize: "1"
+      authenticationRef:
+        name: connector-qualys-temporal
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: connector-qualys
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: connector-qualys
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: connector-qualys
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: connector-qualys
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: temporal
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+      ports:
+        - { protocol: TCP, port: 7233 }
+    - to:
+        - ipBlock: { cidr: SET-IN-OVERLAY }
+      ports:
+        - { protocol: TCP, port: 5432 }
+    # Entra (token exchange), storage for the bronze layer, and the
+    # Qualys API server (live only).
+    - ports:
+        - { protocol: TCP, port: 443 }
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - { protocol: TCP, port: 4318 }
+---
+# Creates or updates the daily schedule of each live entity on every sync; safe to
+# repeat. After the worker is ready, so a first sync starts ingesting at once.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: connector-qualys-schedule
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: connector-qualys-schedule
+        # The Azure profile refuses to start without a workload identity, even for
+        # a job that only talks to Temporal; it is the worker's own identity.
+        azure.workload.identity/use: "true"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: connector-qualys
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ingest] }
+      containers:
+        - name: schedule
+          image: connector-servicenow
+          command: ["/app/.venv/bin/python", "-m", "cloudops_connectors.qualys", "schedule"]
+          envFrom:
+            - configMapRef: { name: connector-qualys }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
+            # The job reads no secret: an empty store, never the worker's Key Vault mount.
+            - { name: no-secrets, mountPath: /mnt/secrets, readOnly: true }
+      volumes:
+        - name: temporal-tls
+          secret:
+            secretName: connector-qualys-temporal-tls
+            defaultMode: 0440
+        - name: no-secrets
+          emptyDir: { sizeLimit: 1Mi }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: connector-qualys-schedule
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: connector-qualys-schedule
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: temporal
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+      ports:
+        - { protocol: TCP, port: 7233 }
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - { protocol: TCP, port: 4318 }
