@@ -109,7 +109,7 @@ async def test_ingest_lands_every_detection_where_the_ground_truth_says(
     assert 0 < linked < len(good), "some link, some cannot be linked without guessing"
 
     # Unmatched customer tags quarantined with counts; nothing guessed.
-    tags = Counter(_tag_of(e.host_id) for e in held)
+    tags = Counter(t for e in held for t in _tags_of(e.host_id))
     assert dict(rows(dsn, "SELECT alias, occurrence_count FROM staging.tenant_alias_quarantine"
                           " WHERE source_system = 'qualys'")) == dict(tags)
     assert mapping.NO_CUSTOMER in tags
@@ -141,11 +141,11 @@ async def test_ingest_lands_every_detection_where_the_ground_truth_says(
         ("succeeded", len(good), len(held), 2, sum(unlinked.values()))]
 
 
-def _tag_of(host_id: str) -> str:
+def _tags_of(host_id: str) -> tuple[str, ...]:
     for h in mapping.hosts(load_fixture("host_detection.xml")):
         if h["ID"] == host_id:
             found, _ = mapping.normalise(h)
-            return found[0].customer_raw
+            return found[0].customers
     raise KeyError(host_id)
 
 

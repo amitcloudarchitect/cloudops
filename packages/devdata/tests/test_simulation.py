@@ -282,7 +282,8 @@ def test_findings_name_the_vms_by_name_and_address(sim: Simulation) -> None:
         for d in detections:
             vm = by_name[d.asset_name]
             assert d.ip == vm.private_ip
-            assert d.customer_raw == COMPANY
+            assert d.customers == (COMPANY,)  # Cloud Agent and Default are not names
+            assert d.tags == ("Cloud Agent", "Default", COMPANY)
             found += 1
     assert found == len(data.vulnerabilities)
     severities = {f.severity for f in data.vulnerabilities}
@@ -443,3 +444,59 @@ def test_no_workbook_name_or_text_reaches_the_output(sim: Simulation) -> None:
 def test_the_window_ends_at_the_anchor() -> None:
     s = build(ANCHOR + timedelta(days=1), 11, EXAMPLE)
     assert s.start == ANCHOR + timedelta(days=1) - timedelta(days=DAYS - 1)
+
+
+# Dev's Qualys simulation (ADR 0028) ------------------------------------------------------
+
+_SUB = "3f6b2d1e-8c4a-4e7b-9d2f-6a1c5e8b7d40"
+
+
+def _resource(name: str, rg: str, os_name: str | None = "Windows Server 2022") -> tuple[Any, ...]:
+    from datetime import UTC, datetime
+
+    native = (f"/subscriptions/{_SUB}/resourceGroups/{rg}/providers/Microsoft.Compute/"
+              f"virtualMachines/{name}")
+    return (name, native, os_name, "westeurope", "PowerState/running",
+            datetime(2026, 5, 4, 9, 12, tzinfo=UTC), _SUB, "Example Lab Subscription")
+
+
+def test_the_dev_estate_is_the_customers_vms_less_the_platforms_own() -> None:
+    from cloudops_devdata.simulation import qualys_live
+
+    estate = qualys_live.estate_from_resources([
+        _resource("vm-web-weu-01", "rg-web-weu"),
+        _resource("vm-app-weu-01", "rg-app-weu", "Ubuntu 24.04"),
+        _resource("vm-cloudops-devbox-dev-weu", "rg-cloudops-devbox-dev-weu"),
+        _resource("aks-agentpool-1", "rg-cloudops-aks-dev-weu"),
+    ])
+    assert estate is not None
+    assert estate.subscription_id == _SUB
+    assert [(r["NAME"], r["OPERATING SYSTEM"]) for r in estate.rows] == [
+        ("vm-web-weu-01", "Windows"), ("vm-app-weu-01", "Linux")]
+    assert qualys_live.estate_from_resources([
+        _resource("vm-cloudops-devbox-dev-weu", "rg-cloudops-devbox-dev-weu")]) is None
+
+
+async def test_the_dev_simulation_runs_the_real_connector_and_marks_what_it_serves() -> None:
+    from datetime import UTC, datetime
+
+    from cloudops_connectors.core.raw import MemoryRawStore
+    from cloudops_connectors.qualys import mapping
+    from cloudops_connectors.qualys.source import _row
+    from cloudops_devdata.simulation import qualys_live
+
+    source = qualys_live._fixtures()
+    assert source.instance == qualys_live.SIMULATION_HOST
+    fetched = await source.fetch(mapping.ENTITY, "", datetime(2026, 1, 1, tzinfo=UTC), None)
+    info = await source.inspect(MemoryRawStore(), mapping.ENTITY, "", "qualys/x.xml",
+                                fetched.body, None)
+    assert info.records > 0
+    (d, *_), _ = mapping.normalise(mapping.hosts(fetched.body)[0])
+    assert d.customers == (COMPANY,)
+    kb = mapping.KbEntry("t", "os", None, None)
+    row = _row(d, uuid4(), None, kb, simulated=True)
+    assert json.loads(row["raw_extra"])["simulated"] is True
+    # The same estate, the same findings, whatever the day: the anchor is fixed.
+    again = qualys_live._fixtures()
+    assert (await again.fetch(mapping.ENTITY, "", datetime(2026, 1, 1, tzinfo=UTC), None)
+            ).body == fetched.body

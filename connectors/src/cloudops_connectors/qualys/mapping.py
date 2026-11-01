@@ -8,10 +8,15 @@ names and stored in bronze beside it.
 Naming is FQDN-first (``VMUKWEBP01.NORTHWIND.LOCAL``), so resource matching is
 on ``name_norm`` plus IP (LLD, Identity resolution), after Qualys's asset id.
 
-The customer is the host's tag under ``Customer:`` (one Getronics subscription,
-customers told apart by tag). A host with no such tag is ``(no customer tag)``,
-quarantined like ServiceNow's ``(no company)``; one with two is rejected and
-counted, never guessed between.
+The customer comes from the host's asset tags (one Getronics subscription,
+customers told apart by tag; ADR 0028). In the real subscription a customer is a
+plain tag named for it, beside generic tags every host carries (``Cloud Agent``,
+``Default``): every tag except those (``IGNORED_TAGS``) is a candidate customer
+name, resolved through the alias map like any source's company name
+(``source.py``). A ``Customer:<name>`` tag, where a host has one, is the only
+candidate. A host with no candidate is ``(no customer tag)``, quarantined like
+ServiceNow's ``(no company)``; one whose candidates resolve to two tenants is
+rejected and counted, never guessed between.
 
 Every field not mapped, on the host or the detection, is kept in ``raw_extra``.
 Results and KB text are data, never instruction (CLAUDE.md rule 4).
@@ -32,6 +37,8 @@ ENTITY: Final = "host_detection"
 ENTITIES: Final = frozenset({ENTITY})
 CUSTOMER_TAG_PREFIX: Final = "Customer:"
 NO_CUSTOMER: Final = "(no customer tag)"
+# Tags every host carries whatever its customer (compared case-insensitively).
+IGNORED_TAGS: Final = frozenset({"cloud agent", "default"})
 
 HOST_MAPPED: Final = frozenset({
     "ID", "ASSET_ID", "IP", "DNS", "DNS_DATA", "NETBIOS", "OS", "TAGS", "TRACKING_METHOD",
@@ -72,7 +79,7 @@ class Detection:
     asset_name: str
     ip: str | None
     operating_system: str | None
-    customer_raw: str
+    customers: tuple[str, ...]  # candidate customer names, from the tags
     tags: tuple[str, ...]
     detection_type: str
     qid: int
@@ -165,12 +172,12 @@ def knowledge_base(body: bytes) -> dict[int, KbEntry]:
     return out
 
 
-def _customer(tags: list[str]) -> str:
-    named = sorted({t[len(CUSTOMER_TAG_PREFIX):].strip() for t in tags
-                    if t.startswith(CUSTOMER_TAG_PREFIX)} - {""})
-    if len(named) > 1:
-        raise MalformedRecordError("host carries more than one customer tag")
-    return named[0] if named else NO_CUSTOMER
+def customer_candidates(tags: list[str]) -> tuple[str, ...]:
+    """The tags that may name the host's customer, sorted; ``(NO_CUSTOMER,)`` if none."""
+    explicit = {t[len(CUSTOMER_TAG_PREFIX):].strip() for t in tags
+                if t.startswith(CUSTOMER_TAG_PREFIX)} - {""}
+    named = explicit or {t for t in tags if t and t.casefold() not in IGNORED_TAGS}
+    return tuple(sorted(named)) or (NO_CUSTOMER,)
 
 
 def normalise(host: Mapping[str, Any]) -> tuple[list[Detection], int]:
@@ -187,10 +194,7 @@ def normalise(host: Mapping[str, Any]) -> tuple[list[Detection], int]:
     tags_el = host.get("TAGS")
     tags = [str(t.get("NAME", "")).strip() for t in as_list(
         tags_el.get("TAG") if isinstance(tags_el, Mapping) else None) if isinstance(t, Mapping)]
-    try:
-        customer = _customer(tags)
-    except MalformedRecordError:
-        return [], len(raw) or 1
+    customers = customer_candidates(tags)
     host_extra = {k: v for k, v in host.items() if k not in HOST_MAPPED}
     tracking = _text(host.get("TRACKING_METHOD")) or ""
     out: list[Detection] = []
@@ -213,7 +217,7 @@ def normalise(host: Mapping[str, Any]) -> tuple[list[Detection], int]:
                 asset_name=name,
                 ip=_text(host.get("IP")),
                 operating_system=_text(host.get("OS")),
-                customer_raw=customer,
+                customers=customers,
                 tags=tuple(t for t in tags if t),
                 detection_type="Cloud Agent" if tracking == "AGENT" else "Remote",
                 qid=int(qid),

@@ -5,9 +5,10 @@ and a way to run the real step 15 connector over them.
 
 Same shape as ``cloudops_devdata.qualys_fixtures``: a Host List VM Detection
 response and the KnowledgeBase entries for its QIDs. Each host is a lab VM,
-named as Azure names it, with its (simulated) private address and the customer
-tag ``Customer:Azure Sponsorship``, which the connector resolves through the
-tenant's ``qualys`` alias. Served by the connector's own fake subscription, so
+named as Azure names it, with its (simulated) private address and the tags the
+real subscription gives a customer's hosts (``Cloud Agent``, ``Default`` and the
+customer's name, which the connector resolves through the tenant's ``qualys``
+alias; ADR 0028). Served by the connector's own fake subscription, so
 the connector code that runs is exactly the step 15 code; nothing here writes a
 finding itself.
 """
@@ -21,7 +22,7 @@ from typing import Final
 from xml.etree.ElementTree import Element, SubElement, indent, tostring
 
 from cloudops_devdata.qualys_fixtures import _kb, _text
-from cloudops_devdata.simulation.model import NAMESPACE, QUALYS_TAG, Simulation
+from cloudops_devdata.simulation.model import NAMESPACE, QUALYS_TAGS, Simulation
 from cloudops_devdata.simulation.rows import PlatformRows
 
 TIME: Final = "%Y-%m-%dT%H:%M:%SZ"
@@ -60,7 +61,7 @@ def detections(sim: Simulation, rows: PlatformRows) -> bytes:
         _text(host, "LAST_SCAN_DATETIME", _t(scanned))
         _text(host, "NETWORK_ID", "0")
         tags = SubElement(host, "TAGS")
-        for i, tag in enumerate((QUALYS_TAG, f"RG:{vm.resource_group}")):
+        for i, tag in enumerate(QUALYS_TAGS):
             t = SubElement(tags, "TAG")
             _text(t, "TAG_ID", 20_000 + i)
             _text(t, "NAME", tag)

@@ -246,7 +246,8 @@ missing the load warns that margin will show "not captured".
 `qualys run --fixtures` runs the step 15 connector over the simulation's Host
 List Detection and KnowledgeBase responses, served by the connector's own fake
 subscription. Each host is a VM of the estate, named and addressed as the resource is,
-and tagged `Customer:Azure Sponsorship`. Every finding links to its VM.
+and tagged `Cloud Agent`, `Default` and `Azure Sponsorship`, as the real subscription tags a
+customer's hosts (ADR 0028). Every finding links to its VM.
 
 **Money** (CLAUDE.md rule 5) is `Decimal` at `numeric(18,6)`. Each amount sits
 beside its currency: the contract in EUR, Azure consumption in USD. Nothing is
