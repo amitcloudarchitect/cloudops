@@ -126,6 +126,9 @@ class TenantAliases(ApiModel):
     internal: bool  # internal to Getronics; reported like a customer (ADR 0031)
     hosts_platform: bool  # the platform runs in its subscription
     aliases: list[AliasView]
+    # Cloud accounts it already holds, by provider ("azure": 1): a customer may hold
+    # several, and onboarding refuses one another tenant holds (ADR 0031).
+    accounts: dict[str, int]
 
 
 class OnboardRequest(ApiModel):
@@ -280,13 +283,19 @@ async def list_tenants(request: Request, access: AccessDep) -> list[TenantAliase
         aliases = [tuple(r) for r in await conn.execute(text(
             "SELECT tenant_id, source_system, alias, confirmed_at FROM cloudops.tenant_alias"
             " ORDER BY source_system, alias"))]
+        held = [tuple(r) for r in await conn.execute(text(
+            "SELECT tenant_id, provider, count(*) FROM cloudops.cloud_account"
+            " GROUP BY tenant_id, provider ORDER BY provider"))]
     by_tenant: dict[UUID, list[AliasView]] = {}
     for tid, source, alias, confirmed in aliases:
         by_tenant.setdefault(tid, []).append(
             AliasView(source_system=source, alias=alias, confirmed_at=confirmed))
+    accounts: dict[UUID, dict[str, int]] = {}
+    for tid, provider, count in held:
+        accounts.setdefault(tid, {})[provider] = int(count)
     return [TenantAliases(tenant=TenantView(id=t[0], name=t[1]), short_code=t[2], status=t[3],
-                          internal=t[4], hosts_platform=t[5],
-                          aliases=by_tenant.get(t[0], [])) for t in tenants]
+                          internal=t[4], hosts_platform=t[5], aliases=by_tenant.get(t[0], []),
+                          accounts=accounts.get(t[0], {})) for t in tenants]
 
 
 _PROPOSALS: Final = (

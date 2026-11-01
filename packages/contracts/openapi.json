@@ -5863,6 +5863,7 @@
       },
       "ResourceList": {
         "additionalProperties": false,
+        "description": "One page, ordered by name. ``count`` is every resource in scope, so a\ncaller can tell a page from the whole; ``next_offset`` is None on the last.",
         "properties": {
           "count": {
             "$ref": "#/components/schemas/Metric_int_"
@@ -5880,11 +5881,28 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
           }
         },
         "required": [
           "items",
-          "count"
+          "count",
+          "offset",
+          "next_offset"
         ],
         "title": "ResourceList",
         "type": "object"
@@ -5896,6 +5914,10 @@
           "account_id": {
             "format": "uuid",
             "title": "Account Id",
+            "type": "string"
+          },
+          "customer": {
+            "title": "Customer",
             "type": "string"
           },
           "id": {
@@ -5957,6 +5979,7 @@
         "required": [
           "id",
           "tenant_id",
+          "customer",
           "account_id",
           "native_id",
           "name",
@@ -6815,6 +6838,13 @@
       "TenantAliases": {
         "additionalProperties": false,
         "properties": {
+          "accounts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Accounts",
+            "type": "object"
+          },
           "aliases": {
             "items": {
               "$ref": "#/components/schemas/AliasView"
@@ -6848,7 +6878,8 @@
           "status",
           "internal",
           "hosts_platform",
-          "aliases"
+          "aliases",
+          "accounts"
         ],
         "title": "TenantAliases",
         "type": "object"
@@ -11385,6 +11416,29 @@
       "get": {
         "operationId": "list_resources_v1_resources_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
           {
             "description": "One customer in the caller's scope; omitted: every customer in it.",
             "in": "query",

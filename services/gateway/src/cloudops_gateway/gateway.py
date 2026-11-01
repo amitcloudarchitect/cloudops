@@ -359,11 +359,25 @@ class Gateway:
         r = redact(m.content, ctx.personal_terms)
         return Message(m.role, r.text, m.tool_call_id, m.name, m.tool_calls), r.count
 
-    async def _check_quota_and_breaker(self, trace: dict[str, Any]) -> bool:
-        ctx: CallContext = trace["ctx"]
+    async def headroom(self, ctx: CallContext, task: str) -> bool:
+        """Whether background work for this tenant may start now: every budget a
+        call for ``task`` counts against is below its alert fraction, and no
+        breaker is open. A scheduler asks before it starts work, so that work a
+        refusal would only route to a person is left for the next run; people
+        asking interactively keep the last part of the budget. Refuses nothing."""
+        budgets, tenant_breaker, platform_spend = await self._budget_state(ctx, task)
+        if tenant_breaker or self._tripped(*platform_spend):
+            return False
+        return all(used < self.limits.alert_fraction * limit for used, limit, _ in budgets)
+
+    async def _budget_state(
+        self, ctx: CallContext, task: str,
+    ) -> tuple[list[tuple[int, float, str]], bool, tuple[Decimal, Decimal]]:
+        """(used, limit, refusal) for every budget a call for ``task`` counts
+        against; whether the tenant's breaker is open; platform spend (recent,
+        trailing)."""
         lim = self.limits
         recent, trailing = _interval(lim.breaker_recent), _interval(lim.breaker_trailing)
-        task = str(trace["task"])
         prefix, sub = next(((p, b) for p, b in lim.sub_budgets.items() if task.startswith(p)),
                            ("", None))
         async with self._db.transaction(ctx.scope) as conn:
@@ -375,7 +389,6 @@ class Gateway:
                 _PLATFORM_SPEND, {"recent": recent, "trailing": trailing}
             )).one())
         user_used, tenant_used = int(usage[0]), int(usage[1])
-        # (used, limit, refusal) for every budget this call counts against.
         budgets: list[tuple[int, float, str]] = [
             (user_used, lim.user_daily_tokens, "user daily token quota reached"),
             (tenant_used, lim.tenant_monthly_tokens, "tenant monthly token quota reached"),
@@ -386,12 +399,19 @@ class Gateway:
                 (int(usage[3]), sub.tenant_monthly_fraction * lim.tenant_monthly_tokens,
                  f"{prefix} tenant monthly quota reached"),
             ]
+        return budgets, bool(usage[4]), (Decimal(platform_spend[0]), Decimal(platform_spend[1]))
+
+    async def _check_quota_and_breaker(self, trace: dict[str, Any]) -> bool:
+        ctx: CallContext = trace["ctx"]
+        lim = self.limits
+        budgets, tenant_breaker, platform_spend = await self._budget_state(
+            ctx, str(trace["task"]))
         for used, limit, message in budgets:
             if used >= limit:
                 await self._refuse(trace, QuotaExceededError(message))
-        if bool(usage[4]):
+        if tenant_breaker:
             await self._refuse(trace, CircuitOpenError("tenant spend rate above threshold"))
-        if self._tripped(Decimal(platform_spend[0]), Decimal(platform_spend[1])):
+        if self._tripped(*platform_spend):
             await self._refuse(trace, CircuitOpenError("platform spend rate above threshold"))
         return any(used >= lim.alert_fraction * limit for used, limit, _ in budgets)
 

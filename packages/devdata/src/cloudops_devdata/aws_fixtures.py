@@ -212,9 +212,9 @@ def _config(ds: Dataset) -> tuple[bytes, list[ConfigExpected]]:
     native = {code[a.tenant_id]: a.native_id for a in accounts.values()}
     extra(f"arn:aws:s3:::fab-cur-archive-{native['FAB']}", native["FAB"], "FAB",
           f"fab-cur-archive-{native['FAB']}", "AWS::S3::Bucket", "storage.account", 301)
-    sg = "sg-0f1e2d3c4b5a69788"
-    extra(f"arn:aws:ec2:eu-west-1:{native['NWL']}:security-group/{sg}", native["NWL"], "NWL",
-          sg, "AWS::EC2::SecurityGroup", "other", 302)
+    vault = "nwl-backup-vault"
+    extra(f"arn:aws:backup:eu-west-1:{native['NWL']}:backup-vault:{vault}", native["NWL"], "NWL",
+          vault, "AWS::Backup::BackupVault", "other", 302)
     for n, (rtype, rid) in enumerate((("AWS::EC2::Instance", "i-0badc0ffee0000001"),
                                       ("AWS::S3::Bucket", "shadow-it-uploads"))):
         arn = (f"arn:aws:ec2:eu-west-1:{UNREGISTERED}:instance/{rid}" if rtype == _EC2

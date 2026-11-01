@@ -2,7 +2,9 @@
 // staff without access.manage. The read-only check itself runs in the connector
 // worker and is proven in pytest; here: the form takes identifiers only, names the
 // Key Vault secret to create, and lists the credential in the inventory.
-import { expect, navLabels, test } from "./fixtures";
+import type { TenantAliases } from "@cloudops/contracts";
+
+import { api, expect, navLabels, test } from "./fixtures";
 
 function code(): string {
   return `E2E${Math.random().toString(36).slice(2, 7).toUpperCase()}`.slice(0, 10);
@@ -30,6 +32,25 @@ test.describe("platform administrator", () => {
     await expect(page.getByText(`customer-${short.toLowerCase()}-azure-secret`)).toBeVisible();
     await expect(page.getByText(/Waiting for the connector worker/)).toBeVisible();
     await expect(page.getByRole("table", { name: "Stored customer credentials" })).toContainText(`E2E Lab ${short}`);
+  });
+
+  test("says what each customer already holds", async ({ signedIn: page }) => {
+    // A customer may hold several accounts (ADR 0031), so the list keeps every customer.
+    const tenants = await api<TenantAliases[]>("admin", "/v1/mapping/tenants");
+    const holder = tenants.find((t) => (t.accounts.azure ?? 0) > 0);
+    const empty = tenants.find((t) => Object.keys(t.accounts).length === 0);
+    if (!holder) throw new Error("no seeded tenant holds an Azure subscription: run make seed");
+    await page.goto("/cloud-onboarding");
+    const customer = page.getByRole("form", { name: "Onboard a cloud account" }).getByLabel("Customer");
+    const n = holder.accounts.azure ?? 0;
+    const held = [`${n} Azure ${n === 1 ? "subscription" : "subscriptions"}`];
+    const aws = holder.accounts.aws ?? 0;
+    if (aws) held.push(`${aws} AWS ${aws === 1 ? "account" : "accounts"}`);
+    await expect(customer.locator("option", { hasText: `${holder.tenant.name} (${holder.short_code}) · ${held.join(", ")}` })).toHaveCount(1);
+    if (empty) {
+      const bare = `${empty.tenant.name} (${empty.short_code})`.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      await expect(customer.locator("option", { hasText: new RegExp(`^${bare}$`) })).toHaveCount(1);
+    }
   });
 
   test("refuses an AWS key id that is not one", async ({ signedIn: page }) => {

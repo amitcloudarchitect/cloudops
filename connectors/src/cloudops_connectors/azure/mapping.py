@@ -47,7 +47,11 @@ QUERY: Final = (
 )
 
 # Resource Graph type (lowercase) -> (ARM spelling, canonical type). The first
-# four are what the estate holds today (synthetic's _AZURE_TYPES).
+# four are what the synthetic estate holds (synthetic's _AZURE_TYPES); the rest
+# are the types a real subscription holds most. Canonical names are shared with
+# AWS (aws/mapping.py) where the thing is the same, and with the rate card's
+# catalogue (cloudops_commercial.ratecard) where it has a row: a type mapped to
+# one of those is priced from then on.
 TYPES: Final[Mapping[str, tuple[str, str]]] = {
     t.lower(): (t, canonical) for t, canonical in (
         ("Microsoft.Compute/virtualMachines", "compute.vm"),
@@ -55,6 +59,58 @@ TYPES: Final[Mapping[str, tuple[str, str]]] = {
         ("Microsoft.Storage/storageAccounts", "storage.account"),
         ("Microsoft.Web/sites", "web.app"),
         ("Microsoft.Network/loadBalancers", "network.load_balancer"),
+        # Compute
+        ("Microsoft.Compute/virtualMachines/extensions", "compute.vm_extension"),
+        ("Microsoft.Compute/virtualMachineScaleSets", "compute.vm_scale_set"),
+        ("Microsoft.Compute/availabilitySets", "compute.availability_set"),
+        ("Microsoft.Compute/images", "compute.image"),
+        ("Microsoft.Compute/galleries", "compute.image_gallery"),
+        ("Microsoft.Compute/galleries/images", "compute.image"),
+        ("Microsoft.Compute/galleries/images/versions", "compute.image_version"),
+        ("Microsoft.Compute/sshPublicKeys", "security.ssh_key"),
+        ("Microsoft.ContainerService/managedClusters", "compute.kubernetes"),
+        ("Microsoft.ContainerRegistry/registries", "container.registry"),
+        ("Microsoft.App/containerApps", "compute.container_app"),
+        ("Microsoft.App/managedEnvironments", "compute.container_app_environment"),
+        ("Microsoft.Web/serverFarms", "web.app_plan"),
+        # Storage
+        ("Microsoft.Compute/disks", "storage.disk"),
+        ("Microsoft.Compute/snapshots", "storage.snapshot"),
+        ("Microsoft.RecoveryServices/vaults", "backup.vault"),
+        # Network
+        ("Microsoft.Network/networkInterfaces", "network.interface"),
+        ("Microsoft.Network/publicIPAddresses", "network.public_ip"),
+        ("Microsoft.Network/virtualNetworks", "network.vnet"),
+        ("Microsoft.Network/virtualNetworks/subnets", "network.subnet"),
+        ("Microsoft.Network/networkSecurityGroups", "network.security_group"),
+        ("Microsoft.Network/routeTables", "network.route_table"),
+        ("Microsoft.Network/natGateways", "network.nat_gateway"),
+        ("Microsoft.Network/privateEndpoints", "network.private_endpoint"),
+        ("Microsoft.Network/privateDnsZones", "network.dns_zone"),
+        ("Microsoft.Network/privateDnsZones/virtualNetworkLinks", "network.dns_zone_link"),
+        ("Microsoft.Network/dnsZones", "network.dns_zone"),
+        ("Microsoft.Network/networkWatchers", "network.watcher"),
+        ("Microsoft.Network/bastionHosts", "network.bastion"),
+        ("Microsoft.Network/applicationGateways", "network.application_gateway"),
+        ("Microsoft.Network/azureFirewalls", "network.firewall"),
+        ("Microsoft.Network/virtualNetworkGateways", "network.vpn_gateway"),
+        # Security and identity
+        ("Microsoft.KeyVault/vaults", "security.key_vault"),
+        ("Microsoft.ManagedIdentity/userAssignedIdentities", "identity.managed_identity"),
+        # Databases and messaging
+        ("Microsoft.Sql/servers", "database.sql_server"),
+        ("Microsoft.DBforPostgreSQL/flexibleServers", "database.postgresql"),
+        ("Microsoft.DBforMySQL/flexibleServers", "database.mysql"),
+        ("Microsoft.DocumentDB/databaseAccounts", "database.nosql"),
+        ("Microsoft.Cache/Redis", "database.cache"),
+        ("Microsoft.EventHub/namespaces", "messaging.event_stream"),
+        ("Microsoft.ServiceBus/namespaces", "messaging.queue"),
+        # Monitoring
+        ("Microsoft.OperationalInsights/workspaces", "monitoring.log_workspace"),
+        ("Microsoft.Insights/components", "monitoring.app_insights"),
+        ("Microsoft.Insights/actionGroups", "monitoring.action_group"),
+        ("Microsoft.Insights/dataCollectionRules", "monitoring.data_collection_rule"),
+        ("Microsoft.OperationsManagement/solutions", "monitoring.solution"),
     )
 }
 

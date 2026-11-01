@@ -15,12 +15,38 @@ import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
 type Resource = components["schemas"]["ResourceStaffView"] | components["schemas"]["ResourceView"];
+type Page = components["schemas"]["ResourceList"];
+
+/** Every page of the list, in order: the table's search, facets and export work
+ * over the whole estate, never over a first page that looks like all of it. */
+async function allResources(token: string, tenantId: string | null): Promise<Page> {
+  const narrowed = customerQuery(tenantId);
+  const first = await apiGet(token, "/v1/resources", {}, narrowed);
+  const items = [...first.items];
+  let next = first.next_offset;
+  while (next !== null && next !== undefined) {
+    const page = await apiGet(token, "/v1/resources", {}, { ...narrowed, offset: String(next) });
+    items.push(...page.items);
+    next = page.next_offset;
+  }
+  return { ...first, items, next_offset: null };
+}
+
+function customer(r: Resource): string | null {
+  return "customer" in r ? r.customer : null;
+}
+
+/** The canonical type, or the provider's own when the platform has none for it. */
+function typeLabel(r: Resource): string {
+  return r.type === "other" && "type_native" in r ? r.type_native : r.type;
+}
 
 export function ResourceList() {
   useAssistantContext({ screen: "resources" });
   const me = useMe();
+  const staff = me.kind === "staff";
   const { tenantId } = useCustomer();
-  const loaded = useApi((token) => apiGet(token, "/v1/resources", {}, customerQuery(tenantId)), `resources:${tenantId ?? "all"}`);
+  const loaded = useApi((token) => allResources(token, tenantId), `resources:${tenantId ?? "all"}`);
   const columns: Column<Resource>[] = [
     {
       key: "name",
@@ -32,7 +58,8 @@ export function ResourceList() {
         </Link>
       ),
     },
-    { key: "type", header: "Type", value: (r) => r.type },
+    ...(staff ? [{ key: "customer", header: "Customer", value: customer }] : []),
+    { key: "type", header: "Type", value: typeLabel },
     { key: "region", header: "Region", value: (r) => r.region },
     { key: "state", header: "State", value: (r) => r.state },
   ];
@@ -55,7 +82,8 @@ export function ResourceList() {
             rowKey={(r) => r.id}
             columns={columns}
             facets={[
-              { key: "type", label: "Type", value: (r) => r.type },
+              ...(staff ? [{ key: "customer", label: "Customer", value: customer }] : []),
+              { key: "type", label: "Type", value: typeLabel },
               { key: "region", label: "Region", value: (r) => r.region },
             ]}
             role={me.role}

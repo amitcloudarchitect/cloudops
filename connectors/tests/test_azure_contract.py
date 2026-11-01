@@ -79,8 +79,61 @@ def test_unmapped_fields_are_kept_in_raw_extra_and_tags_verbatim() -> None:
 
 
 def test_an_unknown_type_is_kept_as_other_not_dropped() -> None:
-    r = mapping.normalise({**ROW, "type": "microsoft.keyvault/vaults"})
-    assert (r.type_native, r.type_canonical) == ("microsoft.keyvault/vaults", mapping.OTHER)
+    r = mapping.normalise({**ROW, "type": "microsoft.devtestlab/schedules"})
+    assert (r.type_native, r.type_canonical) == ("microsoft.devtestlab/schedules", mapping.OTHER)
+
+
+@pytest.mark.parametrize(("graph_type", "native", "canonical"), [
+    ("microsoft.compute/disks", "Microsoft.Compute/disks", "storage.disk"),
+    ("microsoft.network/networkinterfaces", "Microsoft.Network/networkInterfaces",
+     "network.interface"),
+    ("microsoft.network/publicipaddresses", "Microsoft.Network/publicIPAddresses",
+     "network.public_ip"),
+    ("microsoft.network/virtualnetworks", "Microsoft.Network/virtualNetworks", "network.vnet"),
+    ("microsoft.network/virtualnetworks/subnets", "Microsoft.Network/virtualNetworks/subnets",
+     "network.subnet"),
+    ("microsoft.network/networksecuritygroups", "Microsoft.Network/networkSecurityGroups",
+     "network.security_group"),
+    ("microsoft.compute/sshpublickeys", "Microsoft.Compute/sshPublicKeys", "security.ssh_key"),
+    ("microsoft.compute/galleries/images", "Microsoft.Compute/galleries/images",
+     "compute.image"),
+    ("microsoft.compute/galleries/images/versions",
+     "Microsoft.Compute/galleries/images/versions", "compute.image_version"),
+    ("microsoft.compute/virtualmachines/extensions",
+     "Microsoft.Compute/virtualMachines/extensions", "compute.vm_extension"),
+    ("microsoft.keyvault/vaults", "Microsoft.KeyVault/vaults", "security.key_vault"),
+    ("microsoft.managedidentity/userassignedidentities",
+     "Microsoft.ManagedIdentity/userAssignedIdentities", "identity.managed_identity"),
+    ("microsoft.operationalinsights/workspaces", "Microsoft.OperationalInsights/workspaces",
+     "monitoring.log_workspace"),
+    ("microsoft.containerservice/managedclusters", "Microsoft.ContainerService/managedClusters",
+     "compute.kubernetes"),
+    ("microsoft.containerregistry/registries", "Microsoft.ContainerRegistry/registries",
+     "container.registry"),
+    ("microsoft.web/serverfarms", "Microsoft.Web/serverFarms", "web.app_plan"),
+])
+def test_common_types_map_to_arm_spelling_and_a_canonical_type(
+    graph_type: str, native: str, canonical: str,
+) -> None:
+    """Resource Graph sends types lowercased; the table restores ARM's spelling."""
+    r = mapping.normalise({**ROW, "type": graph_type})
+    assert (r.type_native, r.type_canonical) == (native, canonical)
+
+
+def test_the_type_table_is_consistent() -> None:
+    for key, (native, canonical) in mapping.TYPES.items():
+        assert key == native.lower()
+        assert canonical != mapping.OTHER
+        assert canonical == canonical.lower(), canonical
+        assert canonical.count(".") == 1, canonical
+
+
+def test_types_aws_also_holds_share_its_canonical_names() -> None:
+    from cloudops_connectors.aws.mapping import TYPE_CANONICAL
+
+    assert set(TYPE_CANONICAL.values()) - {c for _, c in mapping.TYPES.values()} <= {
+        "compute.function", "compute.container_cluster", "network.internet_gateway",
+        "network.cdn", "security.key", "security.secret", "identity.role", "storage.file_share"}
 
 
 def test_state_falls_back_to_provisioning_and_os_to_its_type() -> None:
