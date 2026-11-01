@@ -226,6 +226,91 @@ def sharepoint() -> dict[str, Any]:
     return {"sites": [_site(spec) for spec in SITES]}
 
 
+# --- SharePoint folders (ADR 0028) -------------------------------------------------------
+#
+# One document library holding a folder per customer, each granted on its own under
+# ListItems.SelectedOperations.Selected, as Graph answers for a folder: the folder
+# item, then ``/children`` of it and of every subfolder. The folder's name is the
+# customer alias. One folder resolves exactly, one only through normalisation
+# (case and legal suffix), and one belongs to nobody the platform knows.
+
+FOLDER_SITE: Final = SiteSpec("GTN", "customer-documents", "")
+FOLDER_ROOT: Final = "Customer_Documents"
+
+
+@dataclass(frozen=True)
+class FolderSpec:
+    code: str | None  # None: a customer the platform does not know
+    name: str  # the folder's name, which is the alias
+
+
+FOLDERS: Final = (
+    FolderSpec("NWL", "Northwind Logistics B.V."),
+    FolderSpec("CRL", "CONTOSO RETAIL"),  # resolves normalised
+    FolderSpec(None, "Contoso Pharma AG"),
+)
+
+
+class _Library(_Site):
+    """The shared library: items carry Graph's ``/drives/{id}/root:`` paths and
+    the site id, as ``/children`` returns them."""
+
+    def __init__(self) -> None:
+        super().__init__(FOLDER_SITE)
+        self.site = site_id(FOLDER_SITE)
+
+    def _parent(self, path: str) -> dict[str, Any]:
+        folder = path.rsplit("/", 1)[0] or "/"
+        return {"driveType": "documentLibrary", "driveId": self.drive,
+                "id": self.ids.get(folder, self.root), "siteId": self.site,
+                "path": f"/drives/{self.drive}/root:" + ("" if folder == "/" else folder)}
+
+
+def _folder(lib: _Library, spec: FolderSpec) -> dict[str, Any]:
+    company = _NAMES[spec.code].name if spec.code else spec.name
+    domain = _NAMES[spec.code].domain if spec.code else "pharma.example"
+    top = f"/{FOLDER_ROOT}/{spec.name}"
+    folder = lib.folder(top, 150)
+    runbooks, handover = lib.folder(f"{top}/Runbooks", 120), lib.folder(f"{top}/Handover", 90)
+    items = [
+        runbooks, handover,
+        lib.file(f"{top}/Statement of work.md", MIME_MD, 100,
+                 f"# Statement of work: {company}\n\nManaged operations, business hours.\n"),
+        lib.file(f"{top}/Runbooks/restart-print-spooler.md", MIME_MD, 40,
+                 _runbook(company, domain, "Print Spooler", 3)),
+        lib.file(f"{top}/Runbooks/patching-standard.md", MIME_MD, 35,
+                 _runbook(company, domain, "Windows Update", 40)),
+        lib.file(f"{top}/Handover/network-diagram.vsdx", MIME_VISIO, 80, size=48213),
+        lib.file(f"{top}/Handover/shift-notes.txt", MIME_TXT, 20,
+                 f"Night shift notes for {company}.\n\n{INJECTION}\n\n"
+                 "Backups completed without errors.\n"),
+    ]
+    first = dict(lib.content)
+    edited = lib.file(f"{top}/Runbooks/restart-print-spooler.md", MIME_MD, 2,
+                      _runbook(company, domain, "Print Spooler", 4)
+                      + "\nRevised after the October incident review.\n", version=2)
+    added = lib.file(f"{top}/Runbooks/patch-window.md", MIME_MD, 1,
+                     f"# Patch window\n\nSecond Tuesday, 22:00 to 02:00 {domain} time.\n")
+    return {
+        "code": spec.code, "name": spec.name, "folder": folder, "items": items,
+        "content": {k: v for k, v in first.items() if k in {i["id"] for i in items}},
+        # The second run: an edit, a deletion (the Statement of work) and a new file.
+        "changes": {"edit": edited, "delete": items[2]["id"], "add": added},
+        "change_content": {k: v for k, v in lib.content.items()
+                           if k in (edited["id"], added["id"]) and first.get(k) != v},
+    }
+
+
+def sharepoint_folders() -> dict[str, Any]:
+    lib = _Library()
+    lib.folder(f"/{FOLDER_ROOT}", 200)
+    folders = []
+    for spec in FOLDERS:
+        lib.content.clear()
+        folders.append(_folder(lib, spec))
+    return {"site_id": lib.site, "drive_id": lib.drive, "folders": folders}
+
+
 # --- Entra ID ----------------------------------------------------------------------------
 
 
@@ -292,6 +377,7 @@ def aliases() -> list[tuple[str, str, str]]:
     """(source, alias, tenant code). Only the exact spelling of each SharePoint
     customer is registered; the normalised one must resolve through it."""
     out = [("sharepoint", _NAMES[c].name, c) for c in sorted({s.code for s in SITES})]
+    # The folders resolve through these too; Contoso's only through normalisation.
     out += [("entra", directory_id(c), c) for c in ENTRA_TENANTS]
     return out
 
@@ -303,6 +389,7 @@ def _dump(payload: dict[str, Any]) -> bytes:
 def build() -> dict[str, bytes]:
     """File name (relative to the connectors package) -> bytes."""
     return {"sharepoint/fixtures/sites.json": _dump(sharepoint()),
+            "sharepoint/fixtures/folders.json": _dump(sharepoint_folders()),
             "entra/fixtures/directories.json": _dump(entra())}
 
 

@@ -1,13 +1,22 @@
-"""Run the SharePoint connector (fixtures only until credentials exist).
+"""Run the SharePoint connector: recorded fixtures, or live for granted folders.
 
     python -m cloudops_connectors.sharepoint register --fixtures
     python -m cloudops_connectors.sharepoint register --customer NAME --site-id ID --site-url URL
-    python -m cloudops_connectors.sharepoint run --fixtures
+    python -m cloudops_connectors.sharepoint run --fixtures [--entity drive_item|folder_item]
+    python -m cloudops_connectors.sharepoint worker            # Azure profile: the live path
     python -m cloudops_connectors.sharepoint schedule
 
 ``register`` records a site's Sites.Selected grant under its customer (refused,
 and the name quarantined, when the name resolves to no tenant); ``--fixtures``
 registers every fixture site. The rest is ``core/cli.py``.
+
+The live path (ADR 0028) reads the folders in ``CLOUDOPS_SHAREPOINT_FOLDERS``, each
+granted to ``app-cloudops-sharepoint`` on its own, as entity ``folder_item``. It
+authenticates as that app registration with the pod's projected service account
+token (a federated credential on the app; no secret anywhere), and only reads:
+the app holds ListItems.SelectedOperations.Selected and each grant is ``read``.
+A folder needs no ``register``: its name is the customer alias, mapped through the
+customer mapping like any other source's.
 """
 
 from __future__ import annotations
@@ -16,13 +25,22 @@ import argparse
 import asyncio
 import os
 import sys
+from contextlib import AsyncExitStack
 from datetime import timedelta
+from typing import Final
 
-from cloudops_config import Component, ConfigurationError, DbLogin, load_settings
-from cloudops_connectors.core.cli import main
-from cloudops_connectors.graph.client import GraphClient
-from cloudops_connectors.sharepoint.fake import FIXTURE_GRAPH, FakeSharePoint, load_fixture
-from cloudops_connectors.sharepoint.mapping import ENTITY, SOURCE
+from cloudops_config import Component, ConfigurationError, DbLogin, Settings, load_settings
+from cloudops_connectors.azure.auth import GRAPH_SCOPE, EntraAuth, workload_credential
+from cloudops_connectors.core.cli import Live, main
+from cloudops_connectors.graph.client import GRAPH, GraphClient
+from cloudops_connectors.sharepoint.fake import (
+    FIXTURE_GRAPH,
+    FakeSharePoint,
+    folder_scope,
+    load_fixture,
+    load_folders,
+)
+from cloudops_connectors.sharepoint.mapping import ENTITY, FOLDER_ENTITY, SOURCE
 from cloudops_connectors.sharepoint.source import (
     SharePointSource,
     UnresolvedCustomerError,
@@ -34,7 +52,31 @@ from cloudops_tenancy import Database
 def _fixtures() -> SharePointSource:
     fake = FakeSharePoint.from_fixtures()
     customers = [s["customer"] for s in load_fixture()["sites"]]
-    return SharePointSource(GraphClient(FIXTURE_GRAPH, transport=fake.transport()), customers)
+    lib = load_folders()
+    scopes = [folder_scope(lib["drive_id"], f["folder"]["id"]) for f in lib["folders"]]
+    return SharePointSource(GraphClient(FIXTURE_GRAPH, transport=fake.transport()), customers,
+                            scopes)
+
+
+def live_entities(settings: Settings) -> frozenset[str]:
+    return frozenset({FOLDER_ENTITY})
+
+
+def live_source(settings: Settings, stack: AsyncExitStack) -> SharePointSource:
+    """The granted folders, as ``app-cloudops-sharepoint`` through workload identity."""
+    identity = settings.workload_identity
+    if identity is None:
+        raise ConfigurationError("the live SharePoint path needs the pod's workload identity")
+    config = settings.sharepoint
+    credential = workload_credential(identity, client_id=config.client_id)
+    stack.push_async_callback(credential.close)
+    client = GraphClient(GRAPH, auth=EntraAuth(credential, GRAPH_SCOPE, GRAPH))
+    stack.push_async_callback(client.aclose)
+    return SharePointSource(client, folder_scopes=config.folders,
+                            entities=live_entities(settings))
+
+
+LIVE: Final = Live(frozenset({Component.SHAREPOINT}), live_entities, live_source)
 
 
 async def _register(args: argparse.Namespace) -> int:
@@ -75,7 +117,8 @@ def _main(argv: list[str]) -> int:
         except ConfigurationError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
-    return main(SOURCE, {ENTITY: timedelta(days=1)}, _fixtures, argv)
+    return main(SOURCE, {ENTITY: timedelta(days=1), FOLDER_ENTITY: timedelta(days=1)},
+                _fixtures, argv, live=LIVE)
 
 
 if __name__ == "__main__":
