@@ -104,6 +104,14 @@ def _attr(value: str) -> str:
     return re.sub(r"[^A-Za-z0-9_.:/-]", "_", value)[:120]
 
 
+def _nonce() -> str:
+    # Never all digits: sixteen digits can pass for a Luhn-valid card number,
+    # and the gateway's redaction would rewrite every section tag.
+    while (nonce := secrets.token_hex(8)).isdigit():
+        pass
+    return nonce
+
+
 def build_messages(
     system: str,
     *,
@@ -112,7 +120,7 @@ def build_messages(
     data: Sequence[DataItem] = (),
     nonce: str | None = None,
 ) -> list[Message]:
-    nonce = nonce or secrets.token_hex(8)
+    nonce = nonce or _nonce()
     rules = [system.strip(), STANDING_RULE.format(nonce=nonce)]
     if schema is not None:
         rules.append(OUTPUT_CONTRACT.format(schema=json.dumps(schema, sort_keys=True)))
