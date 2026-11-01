@@ -27,6 +27,12 @@ const SOURCE_LABEL: Record<string, string> = {
   customer_price: "Price charged",
   audit_log: "Action log",
   triage_review: "Triage reviews",
+  // The home sections (ADR 0038).
+  execution_plane: "Execution plane",
+  inventory: "Platform inventory",
+  corestack: "CoreStack",
+  assurance: "Assurance assessments",
+  size_band_policy: "Size band settings",
 };
 
 export function sourceLabel(source: string): string {

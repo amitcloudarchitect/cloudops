@@ -51,8 +51,11 @@ function uuid(): string {
 
 interface Journey {
   role: RoleName;
-  /** The dashboard's first widget: the role's landing view (ADR 0018 D4, ADR 0030). */
-  lead: string;
+  /** The dashboard's first section (ADR 0038), its landing view's where it has one;
+   * null: no section for the role, only the link to its view (ADR 0018 D4). */
+  lead: string | null;
+  /** The landing view's module, linked from the dashboard's header. */
+  view: string;
   landing: RegExp;
   heading: RegExp | string;
   nav: string[];
@@ -60,12 +63,12 @@ interface Journey {
 }
 
 const JOURNEYS: Journey[] = [
-  { role: "cxo", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Security posture", "Reports", "Users"], roleName: "CXO" },
-  { role: "vp", lead: "SLA attainment", landing: /\/performance$/, heading: "Performance", nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Reports"], roleName: "VP or director" },
-  { role: "architect", lead: "Your service", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Resources", "Customers"], roleName: "Architect" },
-  { role: "customerEngineer", lead: "Open incidents and SLA risk", landing: /\/work\?kind=Incident$/, heading: "Work queue", nav: ["Home", "Work queue", "Resources", "Performance", "Customers"], roleName: "Customer engineer" },
-  { role: "security", lead: "Vulnerabilities", landing: /\/posture$/, heading: "Security posture", nav: ["Home", "Resources", "Customers", "Security posture"], roleName: "Security officer" },
-  { role: "approver", lead: "Changes awaiting approval", landing: /\/approvals$/, heading: "Approvals", nav: ["Home", "Resources", "Approvals", "Customers"], roleName: "Approver" },
+  { role: "cxo", lead: "Operations", view: "Customers", landing: /\/customers$/, heading: /Northwind/, nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Security posture", "Reports", "Users"], roleName: "CXO" },
+  { role: "vp", lead: "Operations", view: "Performance", landing: /\/performance$/, heading: "Performance", nav: ["Home", "Work queue", "Resources", "Performance", "Customers", "Reports"], roleName: "VP or director" },
+  { role: "architect", lead: "Your cloud consumption", view: "Resources", landing: /\/resources$/, heading: "Resources", nav: ["Home", "Resources", "Customers"], roleName: "Architect" },
+  { role: "customerEngineer", lead: "Operations", view: "Work queue", landing: /\/work$/, heading: "Work queue", nav: ["Home", "Work queue", "Resources", "Performance", "Customers"], roleName: "Customer engineer" },
+  { role: "security", lead: "Security & compliance", view: "Security posture", landing: /\/posture$/, heading: "Security posture", nav: ["Home", "Resources", "Customers", "Security posture"], roleName: "Security officer" },
+  { role: "approver", lead: null, view: "Approvals", landing: /\/approvals$/, heading: "Approvals", nav: ["Home", "Resources", "Approvals", "Customers"], roleName: "Approver" },
 ];
 
 test.describe("a customer administrator", () => {
@@ -82,15 +85,16 @@ for (const journey of JOURNEYS) {
   test.describe(`${journey.roleName}`, () => {
     test.use({ role: journey.role });
 
-    test("lands on its dashboard led by its own view, with its modules and no Getronics-only ones", async ({ signedIn: page }) => {
+    test("lands on its dashboard led by its own view's section, with its modules and no Getronics-only ones", async ({ signedIn: page }) => {
       await page.goto("/");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Home");
-      await expect(page.locator("section[data-widget]").first().getByRole("heading", { level: 2 })).toHaveText(journey.lead);
+      if (journey.lead) await expect(page.locator("section[data-section]").first().getByRole("heading", { level: 2 })).toHaveText(journey.lead);
+      else await expect(page.locator("section[data-section]")).toHaveCount(0);
       const labels = await navLabels(page);
       expect(labels).toEqual(journey.nav);
       for (const hidden of STAFF_ONLY) expect(labels).not.toContain(hidden);
       await expect(page.getByTestId("role")).toHaveText(journey.roleName);
-      await page.getByRole("link", { name: `View the evidence for ${journey.lead}` }).click();
+      await page.getByRole("link", { name: `Go to ${journey.view}` }).click();
       await expect(page).toHaveURL(journey.landing);
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(journey.heading);
     });

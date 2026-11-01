@@ -134,6 +134,29 @@
         "title": "AgeBand",
         "type": "object"
       },
+      "AgeCount": {
+        "additionalProperties": false,
+        "properties": {
+          "band": {
+            "enum": [
+              "0-30",
+              "31-90",
+              "91+"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "band",
+          "open"
+        ],
+        "title": "AgeCount",
+        "type": "object"
+      },
       "AiAgent": {
         "additionalProperties": false,
         "properties": {
@@ -854,6 +877,46 @@
         "title": "AssessmentRequest",
         "type": "object"
       },
+      "AssessmentScore": {
+        "additionalProperties": false,
+        "properties": {
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "opened_at": {
+            "format": "date-time",
+            "title": "Opened At",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant",
+          "framework",
+          "title",
+          "opened_at",
+          "score"
+        ],
+        "title": "AssessmentScore",
+        "type": "object"
+      },
       "AssessmentSummary": {
         "additionalProperties": false,
         "properties": {
@@ -1060,6 +1123,29 @@
           "secret_expires_at"
         ],
         "title": "AzureCredentialRequest",
+        "type": "object"
+      },
+      "BandCustomers": {
+        "additionalProperties": false,
+        "properties": {
+          "band": {
+            "enum": [
+              "large",
+              "medium",
+              "small"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "customers": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "band",
+          "customers"
+        ],
+        "title": "BandCustomers",
         "type": "object"
       },
       "BandRules": {
@@ -3059,6 +3145,121 @@
         "title": "CustomerPrice",
         "type": "object"
       },
+      "CustomerSize": {
+        "additionalProperties": false,
+        "properties": {
+          "band": {
+            "enum": [
+              "large",
+              "medium",
+              "small"
+            ],
+            "title": "Band",
+            "type": "string"
+          },
+          "providers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "resource_band": {
+            "enum": [
+              "large",
+              "medium",
+              "small"
+            ],
+            "title": "Resource Band",
+            "type": "string"
+          },
+          "resources": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "spend": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spend_band": {
+            "anyOf": [
+              {
+                "enum": [
+                  "large",
+                  "medium",
+                  "small"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend Band"
+          },
+          "spend_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_permitted",
+                  "no_cost",
+                  "no_fx_rate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spend Reason"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "providers",
+          "resources",
+          "spend",
+          "spend_reason",
+          "spend_band",
+          "resource_band",
+          "band"
+        ],
+        "title": "CustomerSize",
+        "type": "object"
+      },
+      "DateRange": {
+        "additionalProperties": false,
+        "properties": {
+          "days": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "days"
+        ],
+        "title": "DateRange",
+        "type": "object"
+      },
       "DecisionRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3453,6 +3654,33 @@
           "users"
         ],
         "title": "EndpointUse",
+        "type": "object"
+      },
+      "EventLine": {
+        "additionalProperties": false,
+        "properties": {
+          "detected": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "severity": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "severity",
+          "detected",
+          "open"
+        ],
+        "title": "EventLine",
         "type": "object"
       },
       "EvidencePackSummary": {
@@ -4063,6 +4291,78 @@
           "label"
         ],
         "title": "HealthBandRow",
+        "type": "object"
+      },
+      "HealthPart": {
+        "additionalProperties": false,
+        "properties": {
+          "cap": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "part": {
+            "enum": [
+              "p1_p2",
+              "availability",
+              "vulnerabilities",
+              "security_events"
+            ],
+            "title": "Part",
+            "type": "string"
+          },
+          "penalty": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "part",
+          "observed",
+          "penalty",
+          "cap"
+        ],
+        "title": "HealthPart",
+        "type": "object"
+      },
+      "KindReceived": {
+        "additionalProperties": false,
+        "properties": {
+          "by_priority": {
+            "items": {
+              "$ref": "#/components/schemas/PriorityCount"
+            },
+            "title": "By Priority",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "received": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "kind",
+          "received",
+          "by_priority"
+        ],
+        "title": "KindReceived",
         "type": "object"
       },
       "LiveRequest": {
@@ -5211,6 +5511,65 @@
         "title": "OperationsHome",
         "type": "object"
       },
+      "OperationsSection": {
+        "additionalProperties": false,
+        "properties": {
+          "attainment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "range": {
+            "$ref": "#/components/schemas/DateRange"
+          },
+          "received": {
+            "items": {
+              "$ref": "#/components/schemas/KindReceived"
+            },
+            "title": "Received",
+            "type": "array"
+          },
+          "received_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "remediation": {
+            "$ref": "#/components/schemas/RemediationFigures"
+          },
+          "sla": {
+            "items": {
+              "$ref": "#/components/schemas/SlaLine"
+            },
+            "title": "Sla",
+            "type": "array"
+          },
+          "triage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/cloudops_api__home_sections__TriageFigures"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "range",
+          "received",
+          "received_total",
+          "triage",
+          "remediation",
+          "sla",
+          "attainment"
+        ],
+        "title": "OperationsSection",
+        "type": "object"
+      },
       "PendingChange": {
         "additionalProperties": false,
         "properties": {
@@ -5452,6 +5811,68 @@
         "title": "PlatformHostRequest",
         "type": "object"
       },
+      "PlatformSection": {
+        "additionalProperties": false,
+        "properties": {
+          "bands": {
+            "items": {
+              "$ref": "#/components/schemas/BandCustomers"
+            },
+            "title": "Bands",
+            "type": "array"
+          },
+          "both_clouds": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "by_provider": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderCustomers"
+            },
+            "title": "By Provider",
+            "type": "array"
+          },
+          "customers": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "internal": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "no_cloud": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/SizePolicyView"
+          },
+          "range": {
+            "$ref": "#/components/schemas/DateRange"
+          },
+          "sizes": {
+            "items": {
+              "$ref": "#/components/schemas/CustomerSize"
+            },
+            "title": "Sizes",
+            "type": "array"
+          },
+          "spend_month": {
+            "title": "Spend Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "range",
+          "customers",
+          "internal",
+          "by_provider",
+          "both_clouds",
+          "no_cloud",
+          "spend_month",
+          "bands",
+          "sizes",
+          "policy"
+        ],
+        "title": "PlatformSection",
+        "type": "object"
+      },
       "PortfolioLine": {
         "additionalProperties": false,
         "properties": {
@@ -5678,6 +6099,24 @@
         "title": "PriceSummary",
         "type": "object"
       },
+      "PriorityCount": {
+        "additionalProperties": false,
+        "properties": {
+          "priority": {
+            "title": "Priority",
+            "type": "string"
+          },
+          "received": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "priority",
+          "received"
+        ],
+        "title": "PriorityCount",
+        "type": "object"
+      },
       "PriorityLine": {
         "additionalProperties": false,
         "properties": {
@@ -5845,6 +6284,28 @@
           "reprocess"
         ],
         "title": "ProposalView",
+        "type": "object"
+      },
+      "ProviderCustomers": {
+        "additionalProperties": false,
+        "properties": {
+          "customers": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "provider": {
+            "enum": [
+              "azure",
+              "aws"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "customers"
+        ],
+        "title": "ProviderCustomers",
         "type": "object"
       },
       "PublishRateCard": {
@@ -6597,6 +7058,38 @@
           "finished_at"
         ],
         "title": "RecomputeView",
+        "type": "object"
+      },
+      "RemediationFigures": {
+        "additionalProperties": false,
+        "description": "Always 0 until the execution plane exists (CLAUDE.md: not before the\nsecurity review). The figure is shown with its reason, never hidden.",
+        "properties": {
+          "auto_remediated": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "const": "execution_plane_not_built",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "available",
+          "reason",
+          "auto_remediated"
+        ],
+        "title": "RemediationFigures",
         "type": "object"
       },
       "ReportPackSummary": {
@@ -7430,6 +7923,77 @@
         "title": "ResponseView",
         "type": "object"
       },
+      "RevenueSection": {
+        "additionalProperties": false,
+        "properties": {
+          "customer_price": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PriceLine"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Price"
+          },
+          "projects": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcePending"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "range": {
+            "$ref": "#/components/schemas/DateRange"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
+          },
+          "revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcePending"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "view": {
+            "enum": [
+              "staff",
+              "customer"
+            ],
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "range",
+          "view",
+          "reporting_currency",
+          "revenue",
+          "projects",
+          "customer_price"
+        ],
+        "title": "RevenueSection",
+        "type": "object"
+      },
       "ReviewRequest": {
         "additionalProperties": false,
         "properties": {
@@ -8134,6 +8698,89 @@
         "title": "SectionSnapshot",
         "type": "object"
       },
+      "SecurityEvents": {
+        "additionalProperties": false,
+        "properties": {
+          "by_severity": {
+            "items": {
+              "$ref": "#/components/schemas/EventLine"
+            },
+            "title": "By Severity",
+            "type": "array"
+          },
+          "compliance_open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "by_severity",
+          "compliance_open"
+        ],
+        "title": "SecurityEvents",
+        "type": "object"
+      },
+      "SecuritySection": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_average": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assessments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AssessmentScore"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessments"
+          },
+          "events": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SecurityEvents"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "open_total": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "range": {
+            "$ref": "#/components/schemas/DateRange"
+          },
+          "vulnerabilities": {
+            "items": {
+              "$ref": "#/components/schemas/SeverityLine"
+            },
+            "title": "Vulnerabilities",
+            "type": "array"
+          }
+        },
+        "required": [
+          "range",
+          "vulnerabilities",
+          "open_total",
+          "assessments",
+          "assessment_average",
+          "events"
+        ],
+        "title": "SecuritySection",
+        "type": "object"
+      },
       "SeverityAgeing": {
         "additionalProperties": false,
         "properties": {
@@ -8247,6 +8894,267 @@
         "title": "SeverityCount",
         "type": "object"
       },
+      "SeverityLine": {
+        "additionalProperties": false,
+        "properties": {
+          "by_age": {
+            "items": {
+              "$ref": "#/components/schemas/AgeCount"
+            },
+            "title": "By Age",
+            "type": "array"
+          },
+          "fixed": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "found": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "open": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "severity": {
+            "enum": [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            "title": "Severity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "severity",
+          "open",
+          "by_age",
+          "found",
+          "fixed"
+        ],
+        "title": "SeverityLine",
+        "type": "object"
+      },
+      "SizeBandSettings": {
+        "additionalProperties": false,
+        "properties": {
+          "can_edit": {
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "current": {
+            "$ref": "#/components/schemas/SizePolicyView"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/SizePolicyVersion"
+            },
+            "title": "History",
+            "type": "array"
+          }
+        },
+        "required": [
+          "current",
+          "history",
+          "can_edit"
+        ],
+        "title": "SizeBandSettings",
+        "type": "object"
+      },
+      "SizeBandsInput": {
+        "additionalProperties": false,
+        "description": "A whole set of thresholds. Spend is a decimal string: a JSON number would\narrive as a float (CLAUDE.md rule 5).",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "resources_large_above": {
+            "maximum": 10000000.0,
+            "minimum": 1.0,
+            "title": "Resources Large Above",
+            "type": "integer"
+          },
+          "resources_medium_from": {
+            "maximum": 10000000.0,
+            "minimum": 1.0,
+            "title": "Resources Medium From",
+            "type": "integer"
+          },
+          "spend_currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Spend Currency",
+            "type": "string"
+          },
+          "spend_large_above": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,6})?$",
+            "title": "Spend Large Above",
+            "type": "string"
+          },
+          "spend_medium_from": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,6})?$",
+            "title": "Spend Medium From",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spend_currency",
+          "spend_medium_from",
+          "spend_large_above",
+          "resources_medium_from",
+          "resources_large_above",
+          "reason"
+        ],
+        "title": "SizeBandsInput",
+        "type": "object"
+      },
+      "SizePolicyVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "resources_large_above": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "resources_medium_from": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "set_at": {
+            "format": "date-time",
+            "title": "Set At",
+            "type": "string"
+          },
+          "set_by_you": {
+            "title": "Set By You",
+            "type": "boolean"
+          },
+          "spend_large_above": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "spend_medium_from": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "version",
+          "currency",
+          "spend_medium_from",
+          "spend_large_above",
+          "resources_medium_from",
+          "resources_large_above",
+          "set_at",
+          "reason",
+          "set_by_you"
+        ],
+        "title": "SizePolicyVersion",
+        "type": "object"
+      },
+      "SizePolicyView": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "resources_large_above": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "resources_medium_from": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "set_at": {
+            "format": "date-time",
+            "title": "Set At",
+            "type": "string"
+          },
+          "spend_large_above": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "spend_medium_from": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "version",
+          "currency",
+          "spend_medium_from",
+          "spend_large_above",
+          "resources_medium_from",
+          "resources_large_above",
+          "set_at"
+        ],
+        "title": "SizePolicyView",
+        "type": "object"
+      },
+      "SlaLine": {
+        "additionalProperties": false,
+        "properties": {
+          "attainment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "breached_flagged": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "priority": {
+            "title": "Priority",
+            "type": "string"
+          },
+          "resolved": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "target_hours": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "within_target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "priority",
+          "resolved",
+          "target_hours",
+          "within_target",
+          "attainment",
+          "breached_flagged"
+        ],
+        "title": "SlaLine",
+        "type": "object"
+      },
       "SlabRow": {
         "additionalProperties": false,
         "properties": {
@@ -8349,6 +9257,34 @@
           "drift_open"
         ],
         "title": "SourceHealth",
+        "type": "object"
+      },
+      "SourcePending": {
+        "additionalProperties": false,
+        "description": "Figures another module serves and this one does not compute (ADR 0038): staff\nrevenue, cost and margin come from the revenue table (``/v1/commercial/revenue``),\nproject prices from the ServiceNow project task ingest. Until each is merged, the\nsection says so rather than showing a figure of its own.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "const": "no_data_source",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "available",
+          "reason"
+        ],
+        "title": "SourcePending",
         "type": "object"
       },
       "SourceView": {
@@ -9293,6 +10229,88 @@
         "title": "ToolRow",
         "type": "object"
       },
+      "TopCustomer": {
+        "additionalProperties": false,
+        "properties": {
+          "health": {
+            "$ref": "#/components/schemas/Metric_Decimal_"
+          },
+          "health_band": {
+            "enum": [
+              "healthy",
+              "watch",
+              "at-risk",
+              "critical"
+            ],
+            "title": "Health Band",
+            "type": "string"
+          },
+          "parts": {
+            "items": {
+              "$ref": "#/components/schemas/HealthPart"
+            },
+            "title": "Parts",
+            "type": "array"
+          },
+          "rank": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "rank",
+          "tenant",
+          "health",
+          "health_band",
+          "parts"
+        ],
+        "title": "TopCustomer",
+        "type": "object"
+      },
+      "TopCustomers": {
+        "additionalProperties": false,
+        "properties": {
+          "customers": {
+            "items": {
+              "$ref": "#/components/schemas/TopCustomer"
+            },
+            "title": "Customers",
+            "type": "array"
+          },
+          "range": {
+            "$ref": "#/components/schemas/DateRange"
+          },
+          "ranked": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcePending"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sort": {
+            "const": "health",
+            "title": "Sort",
+            "type": "string"
+          }
+        },
+        "required": [
+          "range",
+          "sort",
+          "revenue",
+          "ranked",
+          "customers"
+        ],
+        "title": "TopCustomers",
+        "type": "object"
+      },
       "TrendPoint": {
         "additionalProperties": false,
         "properties": {
@@ -9427,46 +10445,6 @@
           "day"
         ],
         "title": "TriageDay",
-        "type": "object"
-      },
-      "TriageFigures": {
-        "additionalProperties": false,
-        "properties": {
-          "accepted": {
-            "$ref": "#/components/schemas/Metric_int_"
-          },
-          "human": {
-            "$ref": "#/components/schemas/Metric_int_"
-          },
-          "overridden": {
-            "$ref": "#/components/schemas/Metric_int_"
-          },
-          "override_rate": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "ready_for_planning": {
-            "$ref": "#/components/schemas/Metric_int_"
-          },
-          "triaged": {
-            "$ref": "#/components/schemas/Metric_int_"
-          }
-        },
-        "required": [
-          "triaged",
-          "ready_for_planning",
-          "human",
-          "accepted",
-          "overridden",
-          "override_rate"
-        ],
-        "title": "TriageFigures",
         "type": "object"
       },
       "TriageHome": {
@@ -9699,7 +10677,7 @@
             "type": "array"
           },
           "totals": {
-            "$ref": "#/components/schemas/TriageFigures"
+            "$ref": "#/components/schemas/cloudops_api__observability__TriageFigures"
           },
           "window": {
             "$ref": "#/components/schemas/Window"
@@ -10840,6 +11818,83 @@
           "workgroup"
         ],
         "title": "WorkgroupBacklog",
+        "type": "object"
+      },
+      "cloudops_api__home_sections__TriageFigures": {
+        "additionalProperties": false,
+        "description": "Incidents and requests received in the range that the classifier triaged,\nby the route of their latest triage.",
+        "properties": {
+          "eligible": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "human": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "ready_for_planning": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "share": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "triaged": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "eligible",
+          "triaged",
+          "ready_for_planning",
+          "human",
+          "share"
+        ],
+        "title": "TriageFigures",
+        "type": "object"
+      },
+      "cloudops_api__observability__TriageFigures": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "human": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "overridden": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "override_rate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready_for_planning": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "triaged": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "triaged",
+          "ready_for_planning",
+          "human",
+          "accepted",
+          "overridden",
+          "override_rate"
+        ],
+        "title": "TriageFigures",
         "type": "object"
       }
     }
@@ -12852,6 +13907,477 @@
           }
         },
         "summary": "Operations"
+      }
+    },
+    "/v1/home/sections/operations": {
+      "get": {
+        "operationId": "operations_v1_home_sections_operations_get",
+        "parameters": [
+          {
+            "description": "First day, inclusive (UTC).",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First day, inclusive (UTC).",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Last day, inclusive (UTC); default today.",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last day, inclusive (UTC); default today.",
+              "title": "End"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationsSection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Operations"
+      }
+    },
+    "/v1/home/sections/platform": {
+      "get": {
+        "operationId": "platform_section_v1_home_sections_platform_get",
+        "parameters": [
+          {
+            "description": "First day, inclusive (UTC).",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First day, inclusive (UTC).",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Last day, inclusive (UTC); default today.",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last day, inclusive (UTC); default today.",
+              "title": "End"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformSection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Platform Section"
+      }
+    },
+    "/v1/home/sections/revenue": {
+      "get": {
+        "description": "A customer: the price of its own consumption, closed months only, converted\nat each day's rate when ``currency`` is given (ADR 0021). Staff, with\n``commercial.read``: which sources the section waits for.",
+        "operationId": "revenue_v1_home_sections_revenue_get",
+        "parameters": [
+          {
+            "description": "First day, inclusive (UTC).",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First day, inclusive (UTC).",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Last day, inclusive (UTC); default today.",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last day, inclusive (UTC); default today.",
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueSection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revenue"
+      }
+    },
+    "/v1/home/sections/security": {
+      "get": {
+        "operationId": "security_v1_home_sections_security_get",
+        "parameters": [
+          {
+            "description": "First day, inclusive (UTC).",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First day, inclusive (UTC).",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Last day, inclusive (UTC); default today.",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last day, inclusive (UTC); default today.",
+              "title": "End"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecuritySection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Security"
+      }
+    },
+    "/v1/home/sections/top-customers": {
+      "get": {
+        "description": "The ten least healthy customers first: what needs attention. Ranking by\nrevenue joins once the revenue table serves it.",
+        "operationId": "top_customers_v1_home_sections_top_customers_get",
+        "parameters": [
+          {
+            "description": "First day, inclusive (UTC).",
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "First day, inclusive (UTC).",
+              "title": "Start"
+            }
+          },
+          {
+            "description": "Last day, inclusive (UTC); default today.",
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Last day, inclusive (UTC); default today.",
+              "title": "End"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "health",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopCustomers"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Top Customers"
       }
     },
     "/v1/home/triage": {
@@ -14868,6 +16394,61 @@
           }
         },
         "summary": "Vulnerabilities"
+      }
+    },
+    "/v1/settings/size-bands": {
+      "get": {
+        "operationId": "size_bands_v1_settings_size_bands_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeBandSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Size Bands"
+      },
+      "post": {
+        "description": "A new version of the thresholds, in force from now. The version before it\nstays, with its reason; the request is in the audit log.",
+        "operationId": "set_size_bands_v1_settings_size_bands_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SizeBandsInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SizeBandSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Size Bands"
       }
     },
     "/v1/tenant/roles": {

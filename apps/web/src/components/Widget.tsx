@@ -1,28 +1,15 @@
 "use client";
 
-// A home dashboard widget (ADR 0030): a titled card that links to the screen
-// holding its evidence, with its own loading and refusal states, so one slow or
-// refused widget never blanks the dashboard. While the layout is being edited, its
-// move and hide controls sit in the header, reachable by keyboard.
+// What a dashboard panel shares (ADR 0030, ADR 0038): its own loading and refusal
+// states, so one slow or refused panel never blanks the page; a gap said in words,
+// never drawn as zero; its source line; and one request per endpoint per visit.
 
-import Link from "next/link";
 import { createContext, useContext, useRef, type ReactNode } from "react";
 
 import { ApiError } from "@/lib/api";
 import { useApi, type Loaded } from "@/lib/useApi";
 
 import { Provenance, type AnyMetric } from "./Provenance";
-
-export interface FrameControls {
-  editing: boolean;
-  first: boolean;
-  last: boolean;
-  onUp: () => void;
-  onDown: () => void;
-  onHide: () => void;
-}
-
-export const FrameContext = createContext<FrameControls | null>(null);
 
 // Widgets that read the same endpoint share one request per visit to the page.
 const CacheContext = createContext<Map<string, Promise<unknown>> | null>(null);
@@ -45,51 +32,6 @@ export function useShared<T>(key: string, load: (token: string) => Promise<T>): 
     }
     return pending;
   }, key);
-}
-
-export function Frame({
-  id,
-  title,
-  href,
-  wide = false,
-  children,
-}: {
-  id: string;
-  title: string;
-  /** The evidence screen. Absent where no screen holds more than the widget does. */
-  href?: string;
-  wide?: boolean;
-  children: ReactNode;
-}) {
-  const controls = useContext(FrameContext);
-  const heading = `widget-${id}`;
-  return (
-    <section aria-labelledby={heading} data-widget={id} className={`card flex min-w-0 flex-col p-4 ${wide ? "xl:col-span-2" : ""}`}>
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-        <h2 id={heading} className="section-title">
-          {title}
-        </h2>
-        {controls?.editing ? (
-          <div className="flex gap-1" role="group" aria-label={`Arrange ${title}`}>
-            <button type="button" className="btn btn-secondary px-2 py-1 text-xs" disabled={controls.first} onClick={controls.onUp}>
-              Move up<span className="sr-only"> {title}</span>
-            </button>
-            <button type="button" className="btn btn-secondary px-2 py-1 text-xs" disabled={controls.last} onClick={controls.onDown}>
-              Move down<span className="sr-only"> {title}</span>
-            </button>
-            <button type="button" className="btn btn-secondary px-2 py-1 text-xs" onClick={controls.onHide}>
-              Hide<span className="sr-only"> {title}</span>
-            </button>
-          </div>
-        ) : href ? (
-          <Link href={href} className="link text-xs font-semibold">
-            View the evidence<span className="sr-only"> for {title}</span>
-          </Link>
-        ) : null}
-      </div>
-      <div className="min-w-0 flex-1">{children}</div>
-    </section>
-  );
 }
 
 /** A widget's body once its data is in; its loading and refusal states otherwise. */

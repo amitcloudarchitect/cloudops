@@ -1,115 +1,86 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+// Home (ADR 0038, amending ADR 0030): five sections, each over a date range the
+// viewer chooses and, where it helps, compared with a second range side by side.
+// Every section follows the customer chosen in the top bar: staff read every
+// customer or the one chosen; a customer reads its own. A role sees only the
+// sections it may, its landing view's section first (ADR 0018, D4).
+
+import Link from "next/link";
+import { useMemo } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
-import { FrameContext, WidgetCache } from "@/components/Widget";
+import { WidgetCache } from "@/components/Widget";
 import { useAssistantContext } from "@/lib/assistant";
-import { defaultLayout, loadLayout, place, saveLayout, WIDGETS, type Layout, type Role, type WidgetId } from "@/lib/dashboard";
+import { useCustomer } from "@/lib/customer";
+import { SECTIONS, sectionsFor, type SectionId } from "@/lib/dashboard";
+import { MODULES } from "@/lib/nav";
 import { can, useMe } from "@/lib/session";
 
-import { WIDGET_COMPONENTS } from "./HomeWidgets";
+import { OperationsSection } from "./home/Operations";
+import { PlatformSection } from "./home/Platform";
+import { RevenueSection } from "./home/Revenue";
+import { SecuritySection } from "./home/Security";
+import { TopCustomersSection } from "./home/TopCustomers";
 
-// Home is the role's dashboard (ADR 0030): an at-a-glance view of the estate, from
-// widgets the role may see, in its role's default order, with the role's landing
-// view (ADR 0018, D4) first. The user may hide and reorder widgets; the layout is
-// kept in this browser, per role.
 export function Home() {
   useAssistantContext({ screen: "home" });
   const me = useMe();
-  const role: Role = useMemo(
-    () => ({ kind: me.kind, roleClass: me.role_class, landing: me.landing, can: (p: string) => can(me, p) }),
-    [me],
-  );
-  const fallback = useMemo(() => ({ order: defaultLayout(role), hidden: [] as WidgetId[] }), [role]);
-  const [layout, setLayout] = useState<Layout>(fallback);
-  const [editing, setEditing] = useState(false);
-  // Storage is read after mount: the server render has none.
-  useEffect(() => setLayout(loadLayout(me.role, role)), [me.role, role]);
+  const { tenantId, tenants } = useCustomer();
+  const customer = me.kind !== "staff";
+  const sections = useMemo(() => sectionsFor({ kind: me.kind, landing: me.landing, can: (p: string) => can(me, p) }), [me]);
+  const landingPath = me.landing ? me.landing.split("?")[0] : null;
+  const landing = landingPath ? MODULES.find((m) => m.href === landingPath) : undefined;
+  const chosen = tenantId ? tenants.find((t) => t.id === tenantId)?.name : null;
 
-  const update = (next: Layout) => {
-    setLayout(next);
-    saveLayout(me.role, next);
-  };
-  const reset = () => {
-    setLayout(fallback);
-    saveLayout(me.role, null);
-  };
-  const shown = layout.order.filter((id) => !layout.hidden.includes(id));
-  const hidden = layout.order.filter((id) => layout.hidden.includes(id));
+  const subtitle = customer
+    ? "Your service at a glance: choose a date range for each section, or compare two."
+    : `${chosen ? `${chosen} only.` : "Every customer in your scope."} Choose a date range for each section, or compare two; the customer selector above narrows every section.`;
 
-  if (layout.order.length === 0) {
-    return <EmptyState title="Nothing to show for your role yet" next="Ask a platform administrator which role you need." />;
-  }
+  const render: Record<SectionId, () => React.ReactNode> = {
+    operations: () => <OperationsSection />,
+    revenue: () => <RevenueSection customer={customer} />,
+    security: () => <SecuritySection customer={customer} />,
+    platform: () => <PlatformSection />,
+    top: () => <TopCustomersSection />,
+  };
+
   return (
     <>
-      <PageHeader
-        title="Home"
-        subtitle={
-          me.kind === "customer"
-            ? "Your service at a glance. Every figure links to the screen behind it."
-            : "Your estate at a glance, for your role. Every figure links to the screen behind it."
-        }
-      >
-        <div className="flex flex-wrap gap-2">
-          {editing ? (
-            <button type="button" className="btn btn-secondary" onClick={reset}>
-              Reset to default
-            </button>
-          ) : null}
-          <button type="button" className={editing ? "btn btn-primary" : "btn btn-secondary"} aria-pressed={editing} onClick={() => setEditing((e) => !e)}>
-            {editing ? "Done" : "Arrange widgets"}
-          </button>
-        </div>
+      <PageHeader title="Home" subtitle={subtitle}>
+        {landing && landing.href !== "/" ? (
+          <Link href={me.landing ?? landing.href} className="btn btn-secondary">
+            Go to {landing.label}
+          </Link>
+        ) : null}
       </PageHeader>
-      {editing && hidden.length > 0 ? (
-        <div className="card mb-4 p-4" role="group" aria-label="Hidden widgets">
-          <p className="section-title mb-2">Hidden</p>
-          <ul className="flex flex-wrap gap-2">
-            {hidden.map((id) => (
-              <li key={id}>
-                <button
-                  type="button"
-                  className="btn btn-secondary px-2 py-1 text-xs"
-                  onClick={() => update({ ...layout, hidden: layout.hidden.filter((h) => h !== id) })}
-                >
-                  Show {WIDGETS[id].title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-      {shown.length === 0 ? (
-        <EmptyState title="Every widget is hidden" next="Use Arrange widgets to show them again, or reset to your role's default." plain />
-      ) : null}
-      <WidgetCache>
-        <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          {shown.map((id, i) => {
-            const Widget = WIDGET_COMPONENTS[id];
-            const step = (by: -1 | 1) => {
-              const beside = shown[i + by];
-              if (beside) update({ ...layout, order: place(layout.order, id, beside, by) });
-            };
-            return (
-              <FrameContext.Provider
-                key={id}
-                value={{
-                  editing,
-                  first: i === 0,
-                  last: i === shown.length - 1,
-                  onUp: () => step(-1),
-                  onDown: () => step(1),
-                  onHide: () => update({ ...layout, hidden: [...layout.hidden, id] }),
-                }}
-              >
-                <Widget />
-              </FrameContext.Provider>
-            );
-          })}
-        </div>
-      </WidgetCache>
+      {sections.length === 0 ? (
+        <EmptyState title="No dashboard section for your role" next={landing ? `Your view is ${landing.label}, linked above.` : "Ask a platform administrator which role you need."} />
+      ) : (
+        <>
+          {sections.length > 1 ? (
+            <nav aria-label="Home sections" className="mb-4">
+              <ul className="flex flex-wrap gap-2">
+                {sections.map((id) => (
+                  <li key={id}>
+                    <a href={`#section-${id}`} className="btn btn-secondary px-3 py-1 text-xs">
+                      {customer && id === "revenue" ? "Your cloud consumption" : SECTIONS[id].title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
+          <WidgetCache>
+            <div className="flex flex-col gap-6">
+              {sections.map((id) => (
+                <div key={id}>{render[id]()}</div>
+              ))}
+            </div>
+          </WidgetCache>
+        </>
+      )}
     </>
   );
 }
