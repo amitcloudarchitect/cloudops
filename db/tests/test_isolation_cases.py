@@ -115,6 +115,8 @@ TENANT_TABLES = (
     "cloudops.security_finding",
     # ADR 0035.
     "cloudops.margin_recompute",
+    # ADR 0038.
+    "cloudops.project_task",
 )
 # Written by people and the drafting worker through the application login only.
 NOT_INGESTED = frozenset({

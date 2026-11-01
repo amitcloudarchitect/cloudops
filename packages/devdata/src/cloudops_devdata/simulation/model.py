@@ -222,6 +222,9 @@ class Ticket:
     planned_start: datetime | None = None
     planned_end: datetime | None = None
     contact_type: str | None = None
+    # pm_project_task: its made-up price, in the currency it is entered in (ADR 0038).
+    price: Decimal | None = None
+    price_currency: str | None = None
     triage: TriageIncident | None = None
 
     @property
@@ -496,15 +499,18 @@ _PROJECT: Final = (
 )
 
 
-def _project_tasks(sim: Simulation, rng: random.Random) -> None:
+def _project_tasks(sim: Simulation, rng: random.Random, prices: random.Random) -> None:
+    """Prices come from their own stream, so adding them moved no other draw. The
+    latest ``open_tasks`` stay in progress: proposed initiatives (ADR 0038)."""
     p = params()["pm_project_task"]
     n = round(params()["volumes_per_month"]["pm_project_task"] * DAYS / 30)
-    for day in _days(rng, sim, n, params()["incident"]["weekday_weights"]):
+    days = sorted(_days(rng, sim, n, params()["incident"]["weekday_weights"]))
+    for i, day in enumerate(days):
         opened = _opened(rng, day, params()["incident"])
         vm = _pick(rng, sim.vms, opened)
         planned = _hours(_lognormal(rng, p["planned_hours_lognormal"]))
         closed = opened + timedelta(days=rng.randrange(1, 10))
-        done = closed.date() <= sim.anchor
+        done = closed.date() <= sim.anchor and i < len(days) - int(p["open_tasks"])
         sim.tickets.append(Ticket(
             "pm_project_task", "", opened, "Closed Complete" if done else "Work in Progress",
             rng.choice(_PROJECT).format(rg=vm.resource_group, vnet=vm.vnet),
@@ -512,7 +518,9 @@ def _project_tasks(sim: Simulation, rng: random.Random) -> None:
             rng.choice(PEOPLE), None, closed_at=closed if done else None,
             planned_hours=planned,
             actual_hours=_hours(float(planned) * _ratio(rng, p["actual_over_planned"]))
-            if done else None))
+            if done else None,
+            price=Decimal(round(_lognormal(prices, p["price_lognormal"]) / 50) * 50),
+            price_currency=str(p["price_currency"])))
 
 
 def _triage(sim: Simulation) -> None:
@@ -561,7 +569,8 @@ def build(anchor: date, seed: int, estate: Estate) -> Simulation:
     _incidents(sim, random.Random(f"{seed}:incident"))  # noqa: S311 - simulated data
     _changes(sim, random.Random(f"{seed}:change"))  # noqa: S311
     _requests(sim, random.Random(f"{seed}:request"))  # noqa: S311
-    _project_tasks(sim, random.Random(f"{seed}:project"))  # noqa: S311
+    _project_tasks(sim, random.Random(f"{seed}:project"),  # noqa: S311
+                   random.Random(f"{seed}:project-price"))  # noqa: S311
     _number(sim)
     _triage(sim)
     return sim

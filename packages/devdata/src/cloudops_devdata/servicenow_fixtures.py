@@ -12,6 +12,11 @@ and company spellings line up with the inventory and aliases in the database.
 which tenant each ticket lands in (or quarantine), which resource it links to,
 and which records are rejected as malformed. The committed fixture files must
 equal ``build()`` exactly (a test checks), so they cannot drift from it.
+
+**Project tasks (``pm_project_task``)** (ADR 0038) follow the fields and the
+currency-field shape read from dev407774 (2026-11-01), with companies and prices
+made up: a recording of real records waits for the read account's access to them.
+``project_expectations()`` is their ground truth.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ import sys
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, Final
 
@@ -46,6 +52,21 @@ STATE_VALUE: Final = {
     "New": "1", "In Progress": "2", "On Hold": "3", "Awaiting Caller": "3",
     "Resolved": "6", "Closed": "7",
 }
+
+
+# planned_task's state choice: value -> label (standard PPM).
+PROJECT_STATES: Final = {"-5": "Pending", "1": "Open", "2": "Work in Progress",
+                         "3": "Closed Complete", "4": "Closed Incomplete", "7": "Closed Skipped"}
+PROJECT_ENTITY: Final = "pm_project_task"
+
+
+@dataclass(frozen=True)
+class ProjectExpected:
+    number: str
+    tenant_code: str | None  # None: quarantined
+    status: str | None  # None: malformed
+    price: str | None  # as the connector stores it, before rounding
+    currency: str | None
 
 
 @dataclass(frozen=True)
@@ -168,6 +189,8 @@ def build() -> tuple[dict[str, list[dict[str, Any]]], list[Expected]]:
     tables["incident"].append(broken)
     expected.append(Expected("INC0099999", "incident", None, None, malformed=True))
 
+    tables[PROJECT_ENTITY] = [r for r, _ in _project_tasks(ds)]
+
     for records in tables.values():
         records.sort(key=lambda r: (r["sys_updated_on"]["value"], r["sys_id"]["value"]))
     return tables, expected
@@ -175,6 +198,85 @@ def build() -> tuple[dict[str, list[dict[str, Any]]], list[Expected]]:
 
 def expectations() -> list[Expected]:
     return build()[1]
+
+
+def project_expectations() -> list[ProjectExpected]:
+    return [e for _, e in _project_tasks(generate(FIXTURE_ANCHOR, FIXTURE_SEED))]
+
+
+def _project_record(number: str, company: tuple[str, str], state: str, opened: datetime,
+                    closed: datetime | None, cost: dict[str, str]) -> dict[str, Any]:
+    updated = closed or opened + timedelta(hours=3)
+    return {
+        "sys_id": _f(_sys_id("pm", number)),
+        "number": _f(number),
+        "company": _f(*company),
+        "top_task": _f(_sys_id("prj", company[0]), "Managed service onboarding"),
+        "short_description": _f(f"Synthetic project task {number[-4:]}"),
+        "state": _f(state, PROJECT_STATES[state]),
+        "opened_at": _f(_t(opened)),
+        "start_date": _f(_t(opened + timedelta(days=1))),
+        "end_date": _f(_t(opened + timedelta(days=20))),
+        "closed_at": _f(_t(closed)),
+        "sys_updated_on": _f(_t(updated)),
+        "cost": cost,
+        "work_cost": _f("0", "0.00"),
+        "percent_complete": _f("100" if closed else "40"),
+        "sys_class_name": _f(PROJECT_ENTITY),
+    }
+
+
+# The instance's reference currency and a made-up rate to it: what ``value`` and
+# ``display_value`` of a currency field carry. The connector must ignore both.
+_REFERENCE_RATE: Final = Decimal("1.1173")
+
+
+def _cost(amount: Decimal, ccy: str) -> dict[str, str]:
+    """A currency field as dev407774 returns it with ``sysparm_display_value=all``
+    (2026-11-01): converted halves, and the amount as entered with its code."""
+    converted = amount * _REFERENCE_RATE
+    return {"value": f"{converted:.4f}", "display_value": f"${converted:,.4f}",
+            "currency_display_value": f"{ccy};{amount:.2f}"}
+
+
+def _project_tasks(ds: Dataset) -> list[tuple[dict[str, Any], ProjectExpected]]:
+    """Per tenant: two delivered tasks, one closed without a price, and one open.
+    Then a quarantined company and a malformed record. Prices are made up."""
+    currency = {s.tenant_id: s.currency for s in ds.sows}
+    spelling = {w.tenant_id: w.company_raw for w in ds.work_items}
+    out: list[tuple[dict[str, Any], ProjectExpected]] = []
+    seq = 1000
+    base = datetime(2026, 9, 1, 9, tzinfo=UTC)
+    for i, t in enumerate(ds.tenants):
+        ccy = currency.get(t.id, "EUR")  # a tenant without a SOW still has projects
+        company = (_sys_id("company", t.short_code), spelling[t.id])
+        amounts = (Decimal(12500 + 2500 * i), Decimal(4800 + 150 * i), Decimal(36000 + 4000 * i))
+        rows = (
+            ("3", _cost(amounts[0], ccy), amounts[0], ccy),
+            ("3", _cost(amounts[1], ccy), amounts[1], ccy),
+            ("7", _f("", ""), None, None),
+            ("2", _cost(amounts[2], ccy), amounts[2], ccy),
+        )
+        for j, (state, cost, amount, code) in enumerate(rows):
+            seq += 1
+            number = f"PRJTASK{seq:07d}"
+            opened = base + timedelta(days=7 * j + i)
+            closed = None if state == "2" else opened + timedelta(days=14)
+            out.append((
+                _project_record(number, company, state, opened, closed, cost),
+                ProjectExpected(number, t.short_code, "open" if state == "2" else "closed",
+                                None if amount is None else f"{amount:.2f}", code)))
+    seq += 1
+    alias = ds.alias_quarantine[0].alias
+    quarantined = f"PRJTASK{seq:07d}"
+    out.append((_project_record(quarantined, (_sys_id("company", alias), alias), "1",
+                                base, None, _cost(Decimal(999), "EUR")),
+                ProjectExpected(quarantined, None, "open", "999.00", "EUR")))
+    broken = _project_record("PRJTASK0099999", (_sys_id("company", "x"), alias), "1", base,
+                             None, _f(""))
+    broken["state"] = _f("", "")  # no state: neither open nor closed, so not keyable
+    out.append((broken, ProjectExpected("PRJTASK0099999", None, None, None, None)))
+    return out
 
 
 def render(records: list[dict[str, Any]]) -> str:

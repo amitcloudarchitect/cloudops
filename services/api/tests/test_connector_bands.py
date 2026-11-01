@@ -113,3 +113,12 @@ def test_rates_are_decimals_to_four_places_half_up() -> None:
     assert rate(1, 8) == Decimal("0.1250")
     assert rate(0, 0) is None
     assert isinstance(rate(1, 2), Decimal)
+
+
+def test_a_source_without_the_table_is_its_own_state_not_an_outage() -> None:
+    """ADR 0038: ServiceNow project tasks while Project Portfolio Management is
+    inactive. Runs, never a success, and still not critical: nothing is broken."""
+    a = assess(replace(QUIET, last_success_at=None, last_status="source_absent",
+                       runs_24h=4, failed_runs_24h=0), NOW)
+    assert (a.band, a.timeliness, a.reasons) == ("unknown", "source_absent", ("source_absent",))
+    assert a.age_seconds is None

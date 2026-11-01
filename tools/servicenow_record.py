@@ -14,7 +14,12 @@ Scrubbed before anything is written, so the files are safe to commit:
 - every reference to a person becomes ``Person N`` with a placeholder sys_id,
   the same person getting the same N across files;
 - long free text (description, comments, work notes) is replaced;
-- email addresses and phone numbers are removed from the text that is kept.
+- email addresses and phone numbers are removed from the text that is kept;
+- a project task's short description is replaced too: it names the customer's
+  own resource groups and networks (ADR 0038).
+
+``--entity`` (repeatable) records only those entities, leaving the others'
+files as they are.
 
 Review the diff before committing: scrubbing is by field name and pattern, and
 a new custom field on the instance could carry something it does not know.
@@ -36,7 +41,7 @@ from urllib.parse import urlsplit
 
 from cloudops_connectors.servicenow.auth import ClientCredentials
 from cloudops_connectors.servicenow.client import ServiceNowClient
-from cloudops_connectors.servicenow.mapping import ENTITIES
+from cloudops_connectors.servicenow.mapping import ALL_ENTITIES, PROJECT_ENTITY
 
 REPO = Path(__file__).resolve().parents[1]
 OUT = REPO / "connectors" / "tests" / "recorded"
@@ -55,9 +60,14 @@ _EMAIL = re.compile(r"[\w.+-]+@[\w-]+(\.[\w-]+)+")
 _PHONE = re.compile(r"\+?\d[\d ()-]{7,}\d")
 
 
+# Kept text that an entity's records fill with things the repository must not hold.
+REDACTED_BY_ENTITY = {PROJECT_ENTITY: frozenset({"short_description"})}
+
+
 class Scrubber:
     def __init__(self) -> None:
         self._people: dict[str, int] = {}
+        self.redacted = REDACTED_TEXT
 
     def _person(self, original: str) -> int:
         return self._people.setdefault(original, len(self._people) + 1)
@@ -80,15 +90,34 @@ class Scrubber:
             ns = [self._person(p) for p in people]
             return {"value": ",".join(f"{n:032x}" for n in ns),
                     "display_value": ", ".join(f"Person {n}" for n in ns)}
-        if name in REDACTED_TEXT:
+        if name in self.redacted:
             filled = bool(value or display)
             return {"value": "[redacted]" if filled else "",
                     "display_value": "[redacted]" if filled else ""}
         return {**cell, "value": self._text(value, free_text=free),
                 "display_value": self._text(display, free_text=free)}
 
-    def record(self, record: dict[str, Any]) -> dict[str, Any]:
-        return {k: self.field(k, v) for k, v in sorted(record.items())}
+    def record(self, record: dict[str, Any], entity: str = "") -> dict[str, Any]:
+        self.redacted = REDACTED_TEXT | REDACTED_BY_ENTITY.get(entity, frozenset())
+        # A redacted text is echoed elsewhere (a project task's ``project`` and
+        # ``top_task`` display it): remove it wherever it appears in the record.
+        echoes = sorted({str(half) for name in self.redacted & record.keys()
+                         if isinstance(record[name], dict)
+                         for half in record[name].values() if len(str(half)) >= 8},
+                        key=len, reverse=True)
+        clean = {k: self.field(k, v) for k, v in sorted(record.items())}
+        return {k: self._strip(v, echoes) if k not in self.redacted else v
+                for k, v in clean.items()}
+
+    @staticmethod
+    def _strip(cell: Any, echoes: list[str]) -> Any:
+        def one(value: Any) -> Any:
+            if not isinstance(value, str):
+                return value
+            for echo in echoes:
+                value = value.replace(echo, "[redacted]")
+            return value
+        return {k: one(v) for k, v in cell.items()} if isinstance(cell, dict) else one(cell)
 
 
 def _secret() -> str:
@@ -101,19 +130,21 @@ def _secret() -> str:
         check=True, capture_output=True, text=True).stdout.rstrip("\n")
 
 
-async def record(instance: str, client_id: str) -> list[Path]:
+async def record(instance: str, client_id: str,
+                 entities: list[str] | None = None) -> list[Path]:
     host = urlsplit(instance).netloc.split(".")[0]
     client = ServiceNowClient(instance, auth=ClientCredentials(
         f"{instance}/oauth_token.do", client_id, _secret))
     scrub = Scrubber()
     written = []
     try:
-        for entity in sorted(ENTITIES):
+        for entity in sorted(entities or ALL_ENTITIES):
             body = json.loads(await client.fetch(entity, datetime.now(UTC) - timedelta(days=3650),
                                                  0))
             path = OUT / host / f"{entity}.json"
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps({"result": [scrub.record(r) for r in body["result"]]},
+            path.write_text(json.dumps({"result": [scrub.record(r, entity)
+                                                   for r in body["result"]]},
                                        indent=1, sort_keys=True) + "\n", encoding="utf-8")
             written.append(path)
     finally:
@@ -125,8 +156,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--instance", required=True)
     parser.add_argument("--client-id", required=True)
+    parser.add_argument("--entity", action="append", choices=sorted(ALL_ENTITIES))
     args = parser.parse_args(argv)
-    for path in asyncio.run(record(args.instance.rstrip("/"), args.client_id)):
+    for path in asyncio.run(record(args.instance.rstrip("/"), args.client_id, args.entity)):
         count = len(json.loads(path.read_text(encoding="utf-8"))["result"])
         print(f"wrote {path.relative_to(REPO)} ({count} records)", file=sys.stderr)
     return 0

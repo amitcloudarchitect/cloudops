@@ -14,16 +14,21 @@ database, Temporal and the bronze container all answer); it stops, to be
 restarted, when its Temporal client certificate is renewed (ADR 0010).
 ``reprocess`` runs the re-process queue once: the oldest re-process request a
 person made in the console, if any (ADR 0015).
-``schedule`` creates a Temporal schedule (every 5 minutes, LLD) that starts
-``ServiceNowIngest`` for an entity, or updates it if it exists, and, when no
-entity is named, the one that runs the re-process queue every minute: it runs
-as a Job on every sync, so repeating it is safe.
+``schedule`` creates a Temporal schedule (every 5 minutes, LLD; project tasks
+every six hours, ADR 0037 and 0038) that starts ``ServiceNowIngest`` for an
+entity, or updates it if it exists, and, when no entity is named, the one that
+runs the re-process queue every minute: it runs as a Job on every sync, so
+repeating it is safe.
 
 ``--fixtures`` serves recorded fixtures from an in-process fake instance:
 local profile only. Without it the connector reads the instance configured by
 the SERVICENOW component (``CLOUDOPS_SERVICENOW_URL``, ``_CLIENT_ID``, and the
 client secret ``servicenow-read-client-secret`` from the secret store) with
 OAuth client credentials, after checking the account's time zone (ADR 0009).
+
+``CLOUDOPS_SERVICENOW_PROJECT_PRICE_FIELD`` names the project task field read as
+the price (default ``cost``, "Total planned cost"; ADR 0038). A change needs no migration:
+each row records the field that priced it, and a replay re-reads bronze.
 """
 
 from __future__ import annotations
@@ -63,10 +68,11 @@ from cloudops_config import (
 from cloudops_config.probes import serve_probes
 from cloudops_config.temporal import connect, run_worker
 from cloudops_connectors.core.raw import BlobRawStore
+from cloudops_connectors.core.sync import CUSTOMER_SYNC
 from cloudops_connectors.servicenow.auth import ClientCredentials
 from cloudops_connectors.servicenow.client import IntegrationUserError, ServiceNowClient
 from cloudops_connectors.servicenow.fake import FIXTURE_HOST, FakeServiceNow
-from cloudops_connectors.servicenow.mapping import ENTITIES
+from cloudops_connectors.servicenow.mapping import ALL_ENTITIES, PROJECT_ENTITY, price_field
 from cloudops_connectors.servicenow.workflows import (
     TASK_QUEUE,
     WORKFLOWS,
@@ -84,6 +90,8 @@ from cloudops_tenancy import Database
 
 AZURITE = "UseDevelopmentStorage=true"
 SCHEDULE_EVERY = timedelta(minutes=5)  # LLD: ServiceNow incremental sync
+# Business data that changes slowly: every six hours (ADR 0037, ADR 0038).
+EVERY: dict[str, timedelta] = {PROJECT_ENTITY: CUSTOMER_SYNC}
 # A person waits on a re-process request; an idle run is one query.
 REPROCESS_EVERY = timedelta(minutes=1)
 REPROCESS_SCHEDULE = "servicenow-reprocess"
@@ -98,6 +106,13 @@ def _container(settings: Settings) -> ContainerClient:
     return ContainerClient.from_container_url(
         blob.bronze_container_url, credential=WorkloadIdentityCredential()
     )
+
+
+def _price_field() -> str:
+    try:
+        return price_field(os.environ)
+    except ValueError as exc:
+        raise ConfigurationError(str(exc)) from None
 
 
 def _client(settings: Settings, fixtures: bool) -> ServiceNowClient:
@@ -116,7 +131,7 @@ async def _main(args: argparse.Namespace) -> int:
         # Temporal only: the schedule job needs no database, storage or instance.
         settings = load_settings(os.environ, require={Component.TEMPORAL})
         temporal = await connect(settings.temporal, **temporal_options())
-        for entity in args.entity or sorted(ENTITIES):
+        for entity in args.entity or sorted(ALL_ENTITIES):
             print(await _schedule(temporal, entity))
         if not args.entity:
             print(await _schedule_reprocess(temporal))
@@ -136,7 +151,8 @@ async def _main(args: argparse.Namespace) -> int:
         stack.push_async_callback(client.aclose)
         if not args.fixtures:
             print(f"reading as {await client.check_integration_user()}")
-        acts = ServiceNowActivities(db, BlobRawStore(container), client)
+        acts = ServiceNowActivities(db, BlobRawStore(container), client,
+                                    price_field=_price_field())
         worker = Worker(temporal, task_queue=TASK_QUEUE, workflows=WORKFLOWS,
                         activities=activities(acts))
         if args.command == "worker":
@@ -164,7 +180,7 @@ async def _main(args: argparse.Namespace) -> int:
                 )
                 print(json.dumps(asdict(queue), indent=2))
                 return 0
-            for entity in args.entity or sorted(ENTITIES):
+            for entity in args.entity or sorted(ALL_ENTITIES):
                 wf_id = f"servicenow-{args.command}-{entity}-{uuid.uuid4().hex[:8]}"
                 if args.command == "run":
                     report = await temporal.execute_workflow(
@@ -189,15 +205,19 @@ def _schedule_for(entity: str) -> Schedule:
             ServiceNowIngest.run, IngestRequest(entity, since),
             id=f"servicenow-{entity}", task_queue=TASK_QUEUE,
         ),
-        spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=SCHEDULE_EVERY)]),
+        spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every(entity))]),
     )
+
+
+def every(entity: str) -> timedelta:
+    return EVERY.get(entity, SCHEDULE_EVERY)
 
 
 async def _schedule(temporal: Client, entity: str) -> str:
     """Create the entity's schedule, or bring an existing one in line: the job runs
     on every sync, so it must be safe to repeat."""
     return await _upsert(temporal, f"servicenow-{entity}", _schedule_for(entity),
-                         SCHEDULE_EVERY)
+                         every(entity))
 
 
 async def _schedule_reprocess(temporal: Client) -> str:
@@ -235,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("run", "replay", "reprocess", "worker", "schedule"):
         p = sub.add_parser(name)
         p.add_argument("--fixtures", action="store_true", help="serve recorded fixtures (local)")
-        p.add_argument("--entity", action="append", choices=sorted(ENTITIES))
+        p.add_argument("--entity", action="append", choices=sorted(ALL_ENTITIES))
         if name == "run":
             p.add_argument("--since", default=(datetime.now(UTC) - timedelta(days=120)).isoformat(),
                            help="ISO time to start from when no watermark exists")
