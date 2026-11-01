@@ -12,11 +12,12 @@ entity at the source's cadence (HLD, Integration), safe to repeat. Temporal's
 default overlap policy (skip) keeps it to one run at a time per entity: the
 LLD's "one report pull at a time" for Qualys.
 
-**Fixtures, or the platform's own identity.** No customer credentials exist yet
-(CLAUDE.md rule 2; ADR 0003), so a connector without a ``Live`` path refuses to
-start without ``--fixtures`` rather than reach for one. ``--fixtures`` serves
-recorded fixtures from an in-process fake, in the local profile only. A ``Live``
-path (Azure, ADR 0023) reads with the pod's workload identity, in the Azure
+**Fixtures, or the platform's own identity.** A connector without a ``Live`` path
+refuses to start without ``--fixtures`` rather than reach for a credential
+(CLAUDE.md rule 2). Customer estates read with a customer's own stored credential
+(ADR 0003, ADR 0027) are ``cloudops_connectors.customer``'s, not this command's.
+``--fixtures`` serves recorded fixtures from an in-process fake, in the local
+profile only. A ``Live`` path (Azure, ADR 0023) reads with the pod's workload identity, in the Azure
 profile only, and only its own entities: ``run`` and ``schedule`` default to
 them and refuse any other.
 """
@@ -82,7 +83,7 @@ class NoCredentialPathError(ConfigurationError):
     """Raised instead of reaching for a credential that does not exist."""
 
 
-def _container(settings: Settings) -> ContainerClient:
+def bronze_container(settings: Settings) -> ContainerClient:
     blob = settings.blob
     if blob.auth is AuthMode.AZURITE_DEV_ACCOUNT:
         return ContainerClient.from_connection_string(AZURITE, "bronze")
@@ -97,8 +98,9 @@ def _fixture_source(settings: Settings, fixtures: bool, name: str,
                     factory: Callable[[], Source]) -> Source:
     if not fixtures:
         raise NoCredentialPathError(
-            f"{name} has no credential path yet: there are no customer credentials "
-            "(CLAUDE.md rule 2, ADR 0003). Run with --fixtures in the local profile."
+            f"{name} has no credential path here (CLAUDE.md rule 2). Run with --fixtures in "
+            "the local profile; a customer's own stored credential is "
+            "cloudops_connectors.customer's (ADR 0027)."
         )
     if settings.environment is not Environment.LOCAL:
         raise ConfigurationError("--fixtures is local-only")
@@ -127,7 +129,7 @@ def _entities(args: argparse.Namespace, entities: Mapping[str, timedelta],
     return wanted
 
 
-async def _upsert(temporal: Client, schedule_id: str, wanted: Schedule) -> str:
+async def upsert_schedule(temporal: Client, schedule_id: str, wanted: Schedule) -> str:
     try:
         await temporal.create_schedule(schedule_id, wanted)
     except ScheduleAlreadyRunningError:
@@ -156,7 +158,7 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
                     id=f"{name}-{entity}", task_queue=queue),
                 spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=entities[entity])]),
             )
-            print(f"{await _upsert(temporal, f'{name}-{entity}', wanted)}: every "
+            print(f"{await upsert_schedule(temporal, f'{name}-{entity}', wanted)}: every "
                   f"{entities[entity]}")
         return 0
     live = None if args.fixtures else live
@@ -175,7 +177,7 @@ async def _main(args: argparse.Namespace, name: str, entities: Mapping[str, time
             source = live.build(settings, stack)
         db = Database.create(settings.database_dsn(DbLogin.INGEST), pool_size=2)
         stack.push_async_callback(db.dispose)
-        container = _container(settings)
+        container = bronze_container(settings)
         stack.push_async_callback(container.close)
         acts = ConnectorActivities(db, BlobRawStore(container), source)
         worker = Worker(temporal, task_queue=queue, workflows=WORKFLOWS,

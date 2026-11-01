@@ -1,0 +1,4 @@
+<ErrorResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+  <Error><Type>Sender</Type><Code>InvalidClientTokenId</Code><Message>The security token included in the request is invalid.</Message></Error>
+  <RequestId>01234567-89ab-cdef-0123-456789abcdef</RequestId>
+</ErrorResponse>

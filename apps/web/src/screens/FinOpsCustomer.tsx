@@ -121,7 +121,13 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
   ];
 
   const checkColumns: Column<AccountCheck>[] = [
-    { key: "account", header: "Account", value: (c) => c.account_name, sortable: true },
+    {
+      key: "account",
+      header: "Account",
+      value: (c) => c.account_name,
+      render: (c) => (c.shared_with_platform ? `${c.account_name} (shared with the platform)` : c.account_name),
+      sortable: true,
+    },
     { key: "kind", header: "Checked against", value: (c) => (c.kind === "invoice" ? "Invoice" : "Provider total"), sortable: true },
     {
       key: "status",
@@ -253,6 +259,11 @@ export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
             Our ledger against the invoice once there is one, otherwise the provider’s latest total. Drift above 0.5% leaves the figure unverified.
           </p>
           {cost.checks[0] ? <Provenance metric={cost.checks[0].ledger} /> : null}
+          {cost.checks.some((c) => c.shared_with_platform) ? (
+            <p className="text-sm text-ink" role="note">
+              An account marked “shared with the platform” is also Getronics’ own subscription. Its cost appears under this customer and under the internal tenant, and each is reconciled on its own figures: never add the two together (ADR 0027).
+            </p>
+          ) : null}
           <DataTable
             id="finops-checks"
             caption="Reconciliation checks"

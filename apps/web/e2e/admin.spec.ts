@@ -13,6 +13,7 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
     "Customers",
     "Customer mapping",
     "Portal onboarding",
+    "Cloud onboarding",
     "Connectors",
     "FinOps",
     "Margin",

@@ -682,3 +682,53 @@ def test_front_door_only_reaches_nodes_that_run_the_gateway() -> None:
     deployment = yaml.safe_load(config["deployment"])
     assert deployment["spec"]["template"]["spec"]["nodeSelector"] == {
         "cloudops.getronics.com/pool": "app"}
+
+
+# --- stored customer credentials (ADR 0003, ADR 0027) ----------------------------------
+
+CUSTOMER_SECRET = re.compile(
+    r"customer-[a-z0-9]{2,10}-(azure-secret|aws-access-key-id|aws-secret-access-key)")
+
+
+def _stored_key(docs: list[dict[str, Any]]) -> bool:
+    return any(d["kind"] == "ConfigMap"
+               and d.get("data", {}).get("CLOUDOPS_CUSTOMER_CREDENTIALS") == "stored_key"
+               for d in docs)
+
+
+def _customer_workers(docs: list[dict[str, Any]]) -> list[str]:
+    return [f"{name}/{c['name']}" for name, pod in _workloads(docs)
+            for c in pod.get("containers", [])
+            if "cloudops_connectors.customer" in " ".join(c.get("command", []))]
+
+
+def _spc_objects(d: dict[str, Any]) -> list[str]:
+    return re.findall(r"objectName:\s*(\S+)", d["spec"]["parameters"].get("objects", ""))
+
+
+def test_stored_customer_credentials_are_dev_only() -> None:
+    """Guardrail 4 in GitOps too: only dev sets stored_key or runs the worker that
+    uses it. The configuration refuses it in prd regardless."""
+    assert _stored_key(WORKERS)
+    assert _customer_workers(WORKERS) == ["Deployment/connector-azure/customers"]
+    for env in ("uat", "prd"):
+        docs = _build(GITOPS / "overlays" / env)
+        assert not _stored_key(docs), env
+        assert _customer_workers(docs) == [], env
+    for base in ("connector-azure", "connector-servicenow", "worker-ai"):
+        docs = _build(GITOPS / "base" / base)
+        assert not _stored_key(docs), base
+        assert _customer_workers(docs) == [], base
+
+
+def test_customer_secrets_are_mounted_in_the_connector_azure_pod_only() -> None:
+    """Named by the one pattern (ADR 0003, guardrail 2), and in no other workload's
+    SecretProviderClass: the API, the AI worker and ServiceNow never mount one."""
+    holders: dict[str, list[str]] = {}
+    for d in DEV:
+        if d["kind"] == "SecretProviderClass":
+            names = [n for n in _spc_objects(d) if n.startswith("customer-")]
+            if names:
+                holders[d["metadata"]["name"]] = names
+    assert set(holders) == {"connector-azure"}
+    assert all(CUSTOMER_SECRET.fullmatch(n) for n in holders["connector-azure"])

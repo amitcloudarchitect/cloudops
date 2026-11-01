@@ -1,0 +1,6 @@
+<GetPolicyResponse xmlns="https://iam.amazonaws.com/doc/2010-05-08/">
+  <GetPolicyResult>
+    <Policy><PolicyName>CloudOpsCostExplorerRead</PolicyName><DefaultVersionId>v2</DefaultVersionId><PolicyId>ANPAEXAMPLEPOLICY001</PolicyId><Path>/</Path><Arn>arn:aws:iam::123456789012:policy/CloudOpsCostExplorerRead</Arn><AttachmentCount>1</AttachmentCount><IsAttachable>true</IsAttachable></Policy>
+  </GetPolicyResult>
+  <ResponseMetadata><RequestId>req-6</RequestId></ResponseMetadata>
+</GetPolicyResponse>

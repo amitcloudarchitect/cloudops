@@ -195,9 +195,17 @@ def _who() -> str:
 class AzureDaily:
     """The entity's fetch, inspect and process, for ``AzureSource``."""
 
-    def __init__(self, client: AzureClient, today: Callable[[], date]) -> None:
+    def __init__(self, client: AzureClient, today: Callable[[], date],
+                 binding: identity.Binding | None = None) -> None:
         self._client = client
         self._today = today
+        self._binding = binding
+
+    def _statement(self, tenant: Any, sub: str) -> str:
+        """What a newer statement supersedes. A customer credential's statements are
+        its tenant's: the platform's own run of the same subscription (ADR 0023)
+        restates the internal tenant's month, never the customer's (ADR 0027)."""
+        return f"daily/{sub}" if self._binding is None else f"daily/{tenant}/{sub}"
 
     async def fetch(self, cursor: str | None) -> Fetched:
         head = _queue(cursor)[0]
@@ -234,7 +242,7 @@ class AzureDaily:
             # reuses it, and a later run's statement is a different one.
             work = [{"sub": s, "from": a.isoformat(), "to": b.isoformat(), "page": 0,
                      "assembly": str(uuid.uuid5(_NAMESPACE, f"{ref}|{s}|{a:%Y-%m}"))}
-                    for s in subs for a, b in periods(day)]
+                    for s in identity.admit(self._binding, subs) for a, b in periods(day)]
             return PageInfo(len(listed), _cursor(work + rest))
         try:
             found, bad, _, link = lines(body, date.fromisoformat(head["from"]),
@@ -268,7 +276,8 @@ class AzureDaily:
         first_ref = ref if page == 0 else meta["manifest_ref"]
 
         async with db.transaction(TenantScope((), Role.INGEST, _who())) as conn:
-            tenant = (await identity.resolve_ids(conn, mapping.SOURCE, {sub})).get(sub)
+            tenant = (await identity.resolve_ids(conn, mapping.SOURCE, {sub},
+                                                 self._binding)).get(sub)
             existing = await assembly.fetch(conn, run_id)
         if tenant is None:
             # Counted by the rows it carries; a page with none has nothing to count.
@@ -283,7 +292,8 @@ class AzureDaily:
 
         async with db.transaction(TenantScope({tenant}, Role.INGEST, _who())) as conn:
             if page == 0:
-                await assembly.register(conn, run_id, f"daily/{sub}", period, first_ref,
+                await assembly.register(conn, run_id, self._statement(tenant, sub), period,
+                                        first_ref,
                                         [_key(run_id, 0)])
             elif existing is None:
                 raise MissingRawError("a later page's statement is not registered: "

@@ -32,7 +32,7 @@ from typing import Any, Final
 
 from cloudops_connectors.aws import mapping
 from cloudops_connectors.aws.client import CostExplorerClient, InvoicingClient
-from cloudops_connectors.core import billing
+from cloudops_connectors.core import billing, identity
 from cloudops_connectors.core.ingest import Fetched, PageContext, PageInfo, PageOutcome
 from cloudops_connectors.core.raw import RawStore
 from cloudops_tenancy import Database
@@ -202,11 +202,17 @@ def month_to_date(today: date) -> tuple[date, date]:
 class AwsBilling:
     """The two entities' fetch, inspect and process, for ``AwsSource``."""
 
-    def __init__(self, payers: list[PayerBilling], today: Callable[[], date]) -> None:
+    def __init__(self, payers: list[PayerBilling], today: Callable[[], date],
+                 binding: identity.Binding | None = None) -> None:
+        """``binding``: a customer's own access key (ADR 0027), which may ask only
+        for its own account and whose figures resolve to its tenant only."""
         self._payers = {p.payer: p for p in payers}
         if len(self._payers) != len(payers):
             raise ValueError("a payer is configured twice")
+        if binding is not None and not set(self._payers) <= binding.native_ids:
+            raise identity.TargetOutOfScopeError("a payer outside the credential's scope")
         self._today = today
+        self._binding = binding
 
     @property
     def payers(self) -> list[str]:
@@ -257,4 +263,5 @@ class AwsBilling:
         else:
             raise ValueError("bronze page is not this entity's billing response")
         return await billing.store(db, ref, ctx, source=mapping.SOURCE, entity=entity,
-                                   totals=totals, records=len(totals) + bad, rejected=bad)
+                                   totals=totals, records=len(totals) + bad, rejected=bad,
+                                   binding=self._binding)

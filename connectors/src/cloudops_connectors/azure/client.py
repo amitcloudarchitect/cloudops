@@ -28,7 +28,17 @@ parses them. The same code runs against ARM and ``FakeAzure``.
 - Billing invoices (entity ``invoice``): ``GET /providers/Microsoft.Billing/
   billingAccounts/{acct}/billingSubscriptions/{id}/invoices`` for a window of
   invoice periods, ``nextLink`` followed only on this client's own host.
+- Role assignments (a customer credential's check, ADR 0027): ``GET /subscriptions/
+  {id}/providers/Microsoft.Authorization/roleAssignments`` filtered to what is
+  ``assignedTo`` the credential's own principal (its groups included), and a role
+  definition by its id, both under one subscription.
 - Anything else non-2xx raises; Temporal's retry policy owns those retries.
+
+**Target scope** (ADR 0003, guardrail 5). A client built with ``allowed`` (a
+customer credential's subscriptions) refuses, before any request, a call naming
+a subscription outside them: ``TargetOutOfScopeError``. The listing is the one
+call that names none; what it shows beyond ``allowed`` is quarantined by the
+caller and never read.
 """
 
 from __future__ import annotations
@@ -43,6 +53,7 @@ from urllib.parse import quote
 import httpx
 
 from cloudops_connectors.azure.mapping import QUERY
+from cloudops_connectors.core.identity import TargetOutOfScopeError
 from cloudops_connectors.core.ratelimit import MAX_WAIT_SECONDS
 
 ARM: Final = "https://management.azure.com"
@@ -55,6 +66,7 @@ GRAPH_API: Final = "2022-10-01"
 DEFAULT_WAIT: Final = 5.0  # Resource Graph's quota window is five seconds
 COST_QUERY_API: Final = "2023-11-01"
 BILLING_API: Final = "2024-04-01"
+AUTHORIZATION_API: Final = "2022-04-01"
 # Fixed: the connector asks for exactly this. The total cost of the month so
 # far, as billed (ActualCost), with its currency.
 COST_QUERY: Final[dict[str, Any]] = {
@@ -88,6 +100,12 @@ _BILLING_ACCOUNT: Final = re.compile(r"[A-Za-z0-9][A-Za-z0-9:_.\-]{0,199}")
 _COST_RETRY: Final = tuple(
     f"x-ms-ratelimit-microsoft.costmanagement-{k}-retry-after"
     for k in ("qpu", "entity", "tenant", "client"))
+
+
+_ROLE_DEFINITION: Final = re.compile(
+    r"/subscriptions/(?P<sub>[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12})"
+    r"/providers/Microsoft\.Authorization/roleDefinitions/[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")
+_GUID: Final = re.compile(r"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}")
 
 
 def cost_query_path(subscription: str) -> str:
@@ -155,7 +173,14 @@ class AzureClient:
         page_size: int = PAGE_SIZE,
         max_throttle_retries: int = 5,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        allowed: frozenset[str] | None = None,
     ) -> None:
+        """``allowed``: the only subscriptions this client may name (a customer
+        credential's). ``None``: any (the platform's own identity, fixtures)."""
+        if allowed is not None and (not allowed or not all(
+                _SUBSCRIPTION.fullmatch(a) for a in allowed)):
+            raise ValueError("allowed names at least one subscription id")
+        self.allowed = allowed
         self.base_url = base_url.rstrip("/")
         self.page_size = page_size
         self._max_throttle_retries = max_throttle_retries
@@ -197,7 +222,16 @@ class AzureClient:
             raise ValueError("nextLink points away from the management endpoint")
         return await self._send("GET", str(link), None, None)
 
+    def _target(self, subscription: str) -> str:
+        """The second lock behind the sources' own filtering: refused, never sent."""
+        _subscription(subscription)
+        if self.allowed is not None and subscription not in self.allowed:
+            raise TargetOutOfScopeError("subscription outside the credential's scope")
+        return subscription
+
     async def resources(self, subscriptions: list[str], skip_token: str | None) -> bytes:
+        for sub in subscriptions:
+            self._target(sub)
         options: dict[str, Any] = {"$top": self.page_size, "resultFormat": "objectArray"}
         if skip_token is not None:
             options["$skipToken"] = skip_token
@@ -207,30 +241,53 @@ class AzureClient:
         )
 
     async def cost_query(self, subscription: str) -> bytes:
-        return await self._send("POST", cost_query_path(_subscription(subscription)),
+        return await self._send("POST", cost_query_path(self._target(subscription)),
                                 {"api-version": COST_QUERY_API}, COST_QUERY)
 
     async def cost_daily(self, subscription: str, start: date, end: date,
                          next_link: str | None = None) -> bytes:
         body = daily_query(start, end)
+        self._target(subscription)
         if next_link is not None:
             link = httpx.URL(next_link)
             if f"{link.scheme}://{link.netloc.decode()}" != self.base_url:
                 raise ValueError("nextLink points away from the management endpoint")
+            if not link.path.startswith(f"/subscriptions/{subscription}/"):
+                raise TargetOutOfScopeError("nextLink names another subscription")
             return await self._send("POST", str(link), None, body)
-        return await self._send("POST", cost_query_path(_subscription(subscription)),
+        return await self._send("POST", cost_query_path(subscription),
                                 {"api-version": COST_QUERY_API}, body)
 
     async def invoices(self, billing_account: str, subscription: str, start: date,
                        end: date, next_link: str | None = None) -> bytes:
+        self._target(subscription)
         if next_link is not None:
             return await self._own(next_link)
         if not _BILLING_ACCOUNT.fullmatch(billing_account):
             raise ValueError("not a billing account name")
         return await self._send(
-            "GET", invoices_path(billing_account, _subscription(subscription)),
+            "GET", invoices_path(billing_account, subscription),
             {"api-version": BILLING_API, "periodStartDate": start.isoformat(),
              "periodEndDate": end.isoformat()}, None)
+
+    async def role_assignments(self, subscription: str, principal_id: str) -> bytes:
+        """Every assignment the principal holds, directly or through a group, at,
+        above or below the subscription."""
+        if not _GUID.fullmatch(principal_id):
+            raise ValueError("not a principal object id")
+        return await self._send(
+            "GET", f"/subscriptions/{self._target(subscription)}/providers/"
+                   "Microsoft.Authorization/roleAssignments",
+            {"api-version": AUTHORIZATION_API, "$filter": f"assignedTo('{principal_id}')"},
+            None)
+
+    async def role_definition(self, definition_id: str) -> bytes:
+        """A role definition, by the id an assignment names, under its subscription."""
+        found = _ROLE_DEFINITION.fullmatch(definition_id)
+        if found is None:
+            raise ValueError("not a subscription-scoped role definition id")
+        self._target(found["sub"])
+        return await self._send("GET", definition_id, {"api-version": AUTHORIZATION_API}, None)
 
     async def _own(self, link_text: str) -> bytes:
         link = httpx.URL(link_text)
