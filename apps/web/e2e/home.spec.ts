@@ -94,7 +94,8 @@ test.describe("revenue and margin", () => {
     await settled(page);
     const table = revenue.getByRole("table", { name: /Revenue and margin by component/ });
     for (const component of ["Hosting cost (Azure and AWS consumption)", "Managed services revenue", "Margin", "New project price (closed project tasks)"]) {
-      await expect(table.getByRole("row", { name: new RegExp(component.replace(/[()]/g, "\\$&")) })).toContainText("No data source yet");
+      const row = table.getByRole("row").filter({ has: page.getByRole("rowheader", { name: component, exact: true }) });
+      await expect(row).toContainText("No data source yet");
     }
     await expect(revenue.getByText(/^EUR /)).toHaveCount(0);
   });
@@ -133,7 +134,7 @@ test.describe("platform and size bands", () => {
     await page.getByRole("button", { name: "Save as a new version" }).click();
     const next = Number(before.current.version.value) + 1;
     await expect(page.getByRole("status")).toHaveText(`Version ${next} is in force from now.`);
-    await expect(page.getByRole("table", { name: /Every version of the size band thresholds/ }).getByRole("row", { name: new RegExp(reason) })).toBeVisible();
+    await expect(page.getByRole("table", { name: /Every version of the size band thresholds/ }).getByRole("row").filter({ hasText: reason })).toBeVisible();
   });
 });
 
