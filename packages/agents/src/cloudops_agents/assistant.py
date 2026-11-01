@@ -231,6 +231,29 @@ def asks_to_compare(question: str) -> bool:
 
 
 _NUMBER: Final = re.compile(r"(?<![\w.])-?\d[\d,]*(?:\.\d+)?")
+# Dates, times and identifiers are not figures: the minutes of a timestamp must not
+# ground a made-up "47". They are taken out before numbers are read, and one in an
+# answer must appear in the evidence.
+_ZONE: Final = r"(?:Z|[+-]\d{2}(?::?\d{2})?)?"
+_TIME: Final = rf"\d{{1,2}}:\d{{2}}(?::\d{{2}}(?:\.\d+)?)?{_ZONE}"
+_STAMP: Final = re.compile(
+    r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"
+    rf"|\b(?P<date>\d{{4}}-\d{{2}}-\d{{2}})(?:[T ](?P<time>{_TIME}))?(?!\w)"
+    rf"|(?<![\w:.])(?P<clock>{_TIME})(?![\w:])",
+    re.IGNORECASE)
+_IDENTIFIER: Final = re.compile(r"\b[A-Z]{2,8}\d{3,12}\b")
+
+
+def _stamps(value: str) -> tuple[str, set[str]]:
+    """The text without its dates, times and identifiers, and those stamps (each
+    timestamp also as its date and its time) as written."""
+    found: set[str] = set()
+    for m in _STAMP.finditer(value):
+        found.add(m.group().lower().replace(" ", "t"))
+        for part in ("date", "time"):
+            if m.group(part):
+                found.add(m.group(part).lower())
+    return _IDENTIFIER.sub(" ", _STAMP.sub(" ", value)), found
 
 
 def _numbers(value: str) -> list[Decimal]:
@@ -246,16 +269,23 @@ def _numbers(value: str) -> list[Decimal]:
 def ungrounded_numbers(answer: str, evidence: Sequence[str]) -> list[str]:
     """Numbers in the answer that appear nowhere in the evidence: as given,
     rounded to 0-2 places, or (a fraction) as a percentage. A computed number
-    (a sum, a difference) is ungrounded."""
+    (a sum, a difference) is ungrounded. Dates, times and identifiers are not
+    numbers: one in the answer must appear in the evidence, as written or
+    shortened (a date or a time to the minute of a timestamp)."""
     known: set[Decimal] = set()
+    stamps: set[str] = set()
     for text in evidence:
+        text, found = _stamps(text)
+        stamps |= found
         for n in _numbers(text):
             for v in (n, n * 100):
                 known.add(v.normalize())
                 for places in (0, 1, 2):
                     known.add(v.quantize(Decimal(1).scaleb(-places),
                                          rounding=ROUND_HALF_UP).normalize())
-    return sorted({str(n) for n in _numbers(answer) if n.normalize() not in known})
+    answer, quoted = _stamps(answer)
+    return sorted({str(n) for n in _numbers(answer) if n.normalize() not in known}
+                  | {q for q in quoted if not any(s.startswith(q) for s in stamps)})
 
 
 def _tool_sources(content: str) -> list[dict[str, Any]]:

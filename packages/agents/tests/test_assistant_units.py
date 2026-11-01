@@ -47,6 +47,35 @@ def test_numbers_must_come_from_the_evidence() -> None:
     assert ungrounded_numbers("INC0012345 is open", evidence) == []  # an id, not a number
 
 
+STAMPED = ['{"number": "INC0012345", "opened_at": "2026-11-01T06:47:12Z",'
+           ' "updated": "2026-10-30 09:15:03.481+00:00", "due": "18:30",'
+           ' "id": "3f2a9c47-0b1d-4e8a-9c2f-12ab34cd5678", "breached": 3,'
+           ' "price": "1250.500000", "margin_fraction": "0.2153"}']
+
+
+@pytest.mark.parametrize("made_up", ["47", "12", "6", "2026", "11", "1", "30", "15", "481",
+                                     "18", "4", "9", "5678", "12345"])
+def test_dates_times_and_ids_do_not_ground_a_number(made_up: str) -> None:
+    """Each of these occurs only inside a timestamp, a time or an id."""
+    assert ungrounded_numbers(f"The ticket breached its SLA {made_up} times.",
+                              STAMPED) == [made_up]
+
+
+def test_figures_beside_timestamps_are_still_grounded() -> None:
+    assert ungrounded_numbers("3 tickets breached; price 1250.5 EUR", STAMPED) == []
+    assert ungrounded_numbers("Margin was 21.53%, about 21.5% or 22%", STAMPED) == []
+    assert ungrounded_numbers("That is 1253.5 in total", STAMPED) == ["1253.5"]
+
+
+def test_a_date_or_time_in_the_answer_must_be_in_the_evidence() -> None:
+    assert ungrounded_numbers("It opened on 2026-11-01 at 06:47.", STAMPED) == []
+    assert ungrounded_numbers("Opened 2026-11-01T06:47:12Z, due 18:30.", STAMPED) == []
+    assert ungrounded_numbers("Updated 2026-10-30 09:15.", STAMPED) == []
+    assert ungrounded_numbers("It opened on 2026-11-02.", STAMPED) == ["2026-11-02"]
+    assert ungrounded_numbers("It opened at 06:48.", STAMPED) == ["06:48"]
+    assert ungrounded_numbers("Record 3f2a9c47-0b1d-4e8a-9c2f-12ab34cd5678.", STAMPED) == []
+
+
 def test_the_help_corpus_loads_and_splits_by_audience() -> None:
     pages = load_pages()
     kinds = {p.kind for p in pages}
