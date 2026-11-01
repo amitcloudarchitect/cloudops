@@ -1,4 +1,4 @@
-"""Connector sync (migration 0034, ADR 0037): the six-hour expected interval, the
+"""Connector sync (migration 0035, ADR 0037): the six-hour expected interval, the
 requests the database queues when a customer is onboarded, and the worker's claim.
 A request carries a source and a reason only, the application can neither read nor
 write one, and the claim triggers each schedule once or leaves the request waiting."""

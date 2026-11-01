@@ -1,7 +1,7 @@
 """Connector sync: every six hours, and once as soon as a customer is onboarded (expand).
 
-Revision ID: 0034
-Revises: 0033
+Revision ID: 0035
+Revises: 0034
 Create Date: 2026-11-01
 
 ADR 0037.
@@ -36,8 +36,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0034"
-down_revision = "0033"
+revision = "0035"
+down_revision = "0034"
 branch_labels = None
 depends_on = None
 

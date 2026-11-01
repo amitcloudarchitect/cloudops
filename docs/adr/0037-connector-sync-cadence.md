@@ -5,7 +5,7 @@
 - **Implements:** the user's request (2026-11-01): "connectors should sync once as
   soon customer is on-boarded, post that it should sync every 6 hours".
   `connectors/src/cloudops_connectors/core/sync.py`, the worker command in
-  `core/cli.py`, migration `0034_connector_sync`.
+  `core/cli.py`, migration `0035_connector_sync`.
 - **Amends:** ADR 0028 (SharePoint, Qualys and CoreStack ran daily). Follows ADR
   0015's request pattern: the API records, a worker acts.
 

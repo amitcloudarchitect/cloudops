@@ -3,14 +3,14 @@
 
 **Every six hours** (``CUSTOMER_SYNC``): SharePoint, Qualys and CoreStack, whose
 sources have no change feed worth polling more often. Connector health expects the
-same interval (``staging.connector_schedule``, migration 0034). The schedule job
+same interval (``staging.connector_schedule``, migration 0035). The schedule job
 applies a changed interval to an existing schedule (``cli.upsert_schedule``
 replaces its spec); it never triggers a run on an update.
 
 **Once, now, when a customer is onboarded.** The database queues a
 ``staging.sync_request`` for a source when a tenant is onboarded, an alias for that
 source is approved, or an account is added (a passed credential check adds them):
-triggers, migration 0034. The API starts nothing (ADR 0015's pattern). Each of
+triggers, migration 0035. The API starts nothing (ADR 0015's pattern). Each of
 these sources' workers polls every minute (``serve``), claims its own source's
 waiting request and triggers each of its schedules once. ``BUFFER_ONE``: a run
 already going started before the change, so one more runs after it rather than
@@ -38,7 +38,7 @@ from cloudops_tenancy import Database, Role, TenantScope
 log = logging.getLogger(__name__)
 
 CUSTOMER_SYNC: Final = timedelta(hours=6)
-# The sources the database queues requests for (migration 0034, SYNC_SOURCES).
+# The sources the database queues requests for (migration 0035, SYNC_SOURCES).
 SYNC_SOURCES: Final = frozenset({"sharepoint", "qualys", "corestack"})
 POLL: Final = timedelta(minutes=1)
 KEEP: Final = timedelta(days=30)  # claimed requests, kept for a person to read
