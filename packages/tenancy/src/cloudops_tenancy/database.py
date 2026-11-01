@@ -104,12 +104,14 @@ _INTERNAL: Final = "_cloudops_tenancy_internal"
 _APPLY_SCOPE: Final = text(
     "SELECT set_config('app.tenant_ids', :tenant_ids, true),"
     "       set_config('app.role', :role, true),"
-    "       set_config('app.account_ids', :account_ids, true)"
+    "       set_config('app.account_ids', :account_ids, true),"
+    "       set_config('app.principal_id', :principal_id, true)"
 )
 
 _READ_SCOPE: Final = text(
     "SELECT current_setting('app.tenant_ids', true), current_setting('app.role', true),"
     "       current_setting('app.account_ids', true),"
+    "       current_setting('app.principal_id', true),"
     "       CASE WHEN current_user = session_user THEN '' ELSE current_user::text END"
 )
 
@@ -245,6 +247,7 @@ class Database:
                     "tenant_ids": scope.tenant_ids_setting,
                     "role": scope.role.value,
                     "account_ids": scope.account_ids_setting,
+                    "principal_id": scope.principal_id,
                 },
                 execution_options={_INTERNAL: True},
             )
@@ -292,9 +295,10 @@ async def _assert_scope_intact(conn: AsyncConnection, scope: TenantScope) -> Non
         scope.tenant_ids_setting,
         scope.role.value,
         scope.account_ids_setting,
+        scope.principal_id,
         CUSTOMER_DB_ROLE if scope.role is Role.CUSTOMER else "",
     )
-    if (row[0], row[1], row[2], row[3]) != expected:
+    if (row[0], row[1], row[2], row[3], row[4]) != expected:
         _cross_tenant_attempt("tenancy.commit_check", "scope changed during the transaction")
         raise ScopeTamperingError("scope changed during the transaction; rolled back")
 

@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { count, date, decimal } from "@/lib/format";
 import { can, useMe } from "@/lib/session";
@@ -105,6 +106,7 @@ function OpenAssessment({ frameworks }: { frameworks: FrameworkView[] }) {
 }
 
 export function AssuranceList() {
+  useAssistantContext({ screen: "assurance" });
   const me = useMe();
   const loaded = useApi(load, "assurance");
   if (loaded.status === "loading") return <Loading what="assessments" />;

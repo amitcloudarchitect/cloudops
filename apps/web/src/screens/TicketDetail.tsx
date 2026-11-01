@@ -9,6 +9,7 @@ import { HealthBadge } from "@/components/HealthBadge";
 import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { dateTime } from "@/lib/format";
 import { priorityBand } from "@/lib/health";
 import { can, useMe } from "@/lib/session";
@@ -32,6 +33,11 @@ function hours(seconds: number): string {
 export function TicketDetail({ number }: { number: string }) {
   const me = useMe();
   const loaded = useApi((token) => apiGet(token, "/v1/work-items/{number}", { number }), number);
+  useAssistantContext({
+    screen: "ticket",
+    tenantId: loaded.status === "ready" ? loaded.data.tenant.id : null,
+    record: { type: "ticket", id: number },
+  });
 
   if (loaded.status === "loading") return <Loading what={number} />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="ticket" />;

@@ -41,20 +41,16 @@ from cloudops_agents.remediation import (
     TriageActivities,
     activities,
 )
+from cloudops_agents.runtime import build_gateway
 from cloudops_config import (
     Component,
     ConfigurationError,
     DbLogin,
     Environment,
-    Settings,
     load_settings,
 )
 from cloudops_config.probes import serve_probes
 from cloudops_config.temporal import connect, run_worker
-from cloudops_gateway.azure_openai import TOKEN_SCOPE, AzureOpenAIProvider
-from cloudops_gateway.gateway import Gateway
-from cloudops_gateway.pricing import AZURE_DEPLOYMENTS, LOCAL_DEPLOYMENTS
-from cloudops_gateway.providers import MockProvider, Provider
 from cloudops_gateway.registry import ToolRegistry
 from cloudops_gateway.retrieval import KnowledgeIndex
 from cloudops_gateway.tools import TOOLS
@@ -62,25 +58,6 @@ from cloudops_observability.process import start, temporal_options
 from cloudops_tenancy import Database
 
 SERVICE = "worker-triage"
-
-
-async def _gateway(settings: Settings, db: Database, stack: AsyncExitStack) -> Gateway:
-    if settings.environment is Environment.LOCAL:
-        return Gateway(db, {"mock": MockProvider("mock"),
-                            "mock-secondary": MockProvider("mock-secondary")},
-                       LOCAL_DEPLOYMENTS)
-    from azure.identity.aio import WorkloadIdentityCredential
-
-    credential = WorkloadIdentityCredential()  # caches and renews the token
-    stack.push_async_callback(credential.close)
-
-    async def token() -> str:
-        return (await credential.get_token(TOKEN_SCOPE)).token
-
-    provider = AzureOpenAIProvider(settings.azure_openai.endpoint, token=token)
-    stack.push_async_callback(provider.aclose)
-    providers: dict[str, Provider] = {provider.name: provider}
-    return Gateway(db, providers, AZURE_DEPLOYMENTS)
 
 
 async def _schedule() -> int:
@@ -115,7 +92,7 @@ async def _main() -> int:
         stack.callback(telemetry.shutdown)
         db = Database.create(settings.database_dsn(DbLogin.APP), pool_size=4)
         stack.push_async_callback(db.dispose)
-        gateway = await _gateway(settings, db, stack)
+        gateway = await build_gateway(settings, db, stack)
         registry = ToolRegistry(db)
         for tool in (*TOOLS, knowledge_tool(KnowledgeIndex(db, gateway))):
             registry.register(tool)

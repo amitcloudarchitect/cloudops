@@ -7,6 +7,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { count, money, month } from "@/lib/format";
 import { band, THRESHOLDS, type Band } from "@/lib/health";
 import { can, useMe } from "@/lib/session";
@@ -51,6 +52,9 @@ function PriceCards({ prices }: { prices: CustomerPrice[] }) {
 
 export function CustomerOverviewView() {
   const me = useMe();
+  useAssistantContext(
+    me.tenants.length > 1 ? { screen: "customers" } : { screen: "customer", tenantId: me.tenants[0]?.id ?? null },
+  );
   const loaded = useApi((token) => apiGet(token, "/v1/customers"), "customers");
   if (loaded.status === "loading") return <Loading what="your customers" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="customers" />;

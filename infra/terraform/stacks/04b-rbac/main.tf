@@ -167,6 +167,16 @@ resource "azurerm_role_assignment" "ai_openai_user" {
   skip_service_principal_aad_check = true
 }
 
+# The AMARA assistant runs in the API process (ADR 0029), so the API calls Azure
+# OpenAI as itself too: the same role, the same account scope, no keys.
+resource "azurerm_role_assignment" "api_openai_user" {
+  scope                            = data.azurerm_cognitive_account.openai.id
+  role_definition_name             = "Cognitive Services OpenAI User"
+  principal_id                     = data.azurerm_user_assigned_identity.workload["api"].principal_id
+  principal_type                   = "ServicePrincipal"
+  skip_service_principal_aad_check = true
+}
+
 # --- The pipeline (ADR 0013): push images, read for plans, never write ----------
 #
 # Its own lookup, not part of the workload set above: that set reads the app

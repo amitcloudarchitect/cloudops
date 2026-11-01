@@ -147,7 +147,7 @@ async def test_a_tampered_admin_claim_does_not_make_an_administrator(
     "SELECT reason FROM cloudops.triage_review",
     "SELECT output FROM cloudops.agent_run",
     "SELECT prompt_redacted FROM cloudops.llm_call",
-    "SELECT response FROM cloudops.llm_cache",
+    "SELECT prompt_hash FROM cloudops.llm_cache",  # 0023: only what a cache lookup reads
     "SELECT status FROM cloudops.portal_onboarding",
     "SELECT role_id FROM cloudops.portal_role_agreement",
     "SELECT alias FROM cloudops.alias_proposal",

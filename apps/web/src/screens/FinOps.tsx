@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PeriodControls, usePeriodChoice } from "@/components/PeriodControls";
 import { Provenance } from "@/components/Provenance";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { periodLabel, sortKey, sumDecimal, verificationReason } from "@/lib/commercial";
 import { count, money, percent } from "@/lib/format";
 import { can, useMe } from "@/lib/session";
@@ -86,6 +87,7 @@ function load(period: string | undefined, currency: string | undefined) {
 }
 
 export function FinOps() {
+  useAssistantContext({ screen: "finops" });
   const me = useMe();
   const choice = usePeriodChoice();
   const loaded = useApi(load(choice.period, choice.currency), `finops:${choice.query}`);

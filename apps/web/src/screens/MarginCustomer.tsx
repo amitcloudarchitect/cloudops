@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PeriodControls, usePeriodChoice } from "@/components/PeriodControls";
 import { Provenance } from "@/components/Provenance";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { periodLabel, sortKey } from "@/lib/commercial";
 import { count, dateTime, decimal, money, percent } from "@/lib/format";
 import { marginBand } from "@/lib/health";
@@ -30,6 +31,7 @@ function load(tenantId: string, period: string | undefined, currency: string | u
 }
 
 export function MarginCustomer({ tenantId }: { tenantId: string }) {
+  useAssistantContext({ screen: "margin_customer", tenantId });
   const me = useMe();
   const choice = usePeriodChoice();
   const loaded = useApi(load(tenantId, choice.period, choice.currency), `margin:${tenantId}:${choice.query}`);

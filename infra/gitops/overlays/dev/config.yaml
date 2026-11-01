@@ -16,6 +16,10 @@ data:
   # id-cloudops-observability-dev (stacks 02, 04b, 05). Then this line goes.
   CLOUDOPS_TELEMETRY: "off"
   CLOUDOPS_DEPLOYMENT: dev
+  # The AMARA assistant (ADR 0029) calls Azure OpenAI from the API as id-cloudops-api-dev,
+  # which needs Cognitive Services OpenAI User (stack 04b-rbac, api_openai_user). Until
+  # that is applied the assistant's turns fail as "unavailable"; nothing else changes.
+  CLOUDOPS_AZURE_OPENAI_ENDPOINT: https://oai-cloudops-dev-weu.openai.azure.com/
 ---
 apiVersion: v1
 kind: ConfigMap
