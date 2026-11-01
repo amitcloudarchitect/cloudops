@@ -4,14 +4,30 @@ least two currencies: the defects live in conversion, rate selection and roundin
 
 from __future__ import annotations
 
+import json
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
 from cloudops_commercial import margin, pricing
 from cloudops_commercial.margin import EffortBucket, MarginInputs, MonthRate
-from cloudops_commercial.ratecard import V2_14, RateCardError, rate_card, rate_card_on
+from cloudops_commercial.ratecard import (
+    InvalidRateCardError,
+    RateCardError,
+    chain,
+    from_document,
+    rate_card,
+    rate_card_on,
+    to_document,
+)
+
+# Version 1 as migration 0031 seeds it: the workbook's constants (ADR 0033).
+V2_14 = from_document(json.loads(
+    (Path(__file__).resolve().parents[3] / "db/migrations/data/rate_card_2026-v2.14.json")
+    .read_text(encoding="utf-8")))
+
 
 INV = {"Azure Virtual Machines / Amazon EC2": 15, "App Service / AWS Elastic Beanstalk": 260,
        "Azure Kubernetes Service (AKS) / Amazon EKS": 46}
@@ -162,12 +178,43 @@ def test_month_rate_is_the_mean_of_daily_rates() -> None:
 
 
 def test_rate_card_versions_are_effective_dated() -> None:
-    assert rate_card_on(date(2026, 10, 31)) is V2_14
-    assert rate_card("2026-v2.14") is V2_14
+    cards = (V2_14,)
+    assert rate_card_on(date(2026, 10, 31), cards) is V2_14
+    assert rate_card("2026-v2.14", cards) is V2_14
     with pytest.raises(RateCardError):
-        rate_card_on(date(2025, 12, 31))
+        rate_card_on(date(2025, 12, 31), cards)
     with pytest.raises(RateCardError):
-        rate_card("1999")
+        rate_card("1999", cards)
+
+
+def test_a_new_version_ends_the_previous_one_without_touching_it() -> None:
+    """Publishing never edits history: the previous version's end is derived
+    from its successor's start, and a date before the change still prices on it."""
+    v1 = to_document(V2_14)
+    v2 = {**v1, "version": "2027-v1", "effective_from": "2027-01-01",
+          "blended_day_rate": "280"}
+    old, new = chain([v2, v1])
+    assert old.effective_to == date(2027, 1, 1)
+    assert new.effective_to is None
+    assert rate_card_on(date(2026, 12, 31), (old, new)).version == "2026-v2.14"
+    assert rate_card_on(date(2027, 1, 1), (old, new)).blended_day_rate == Decimal(280)
+    assert from_document(v1) == V2_14
+
+
+@pytest.mark.parametrize(("change", "field"), [
+    ({"roles": [{"role": "Engineer", "share": "0.9"}]}, "roles"),
+    ({"blended_day_rate": 266.99}, "blended_day_rate"),  # a float, never accepted
+    ({"people_cost": [{"location": "Mixed", "monthly_cost": "1"}]}, "people_cost"),
+    ({"service_multipliers": [{"coverage": "24x7", "support": "Gold", "multiplier": "5"}]},
+     "service_multipliers"),
+    ({"base_pack_bands": [{"lower": "0", "upper": "10", "rate": "0"}]}, "base_pack_bands"),
+    ({"catalogue": [{"resource_type": "VM", "complexity": "99"}]}, "catalogue"),
+    ({"health_bands": [{"below": "0.2", "label": "a"}, {"below": "0.1", "label": "b"}]},
+     "health_bands"),
+])
+def test_a_document_that_cannot_price_is_refused(change: dict[str, object], field: str) -> None:
+    with pytest.raises(InvalidRateCardError, match=field):
+        from_document({**to_document(V2_14), **change})
 
 
 def test_a_month_without_billing_data_is_not_captured() -> None:

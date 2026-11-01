@@ -156,7 +156,12 @@ jobs:
   # that case and across every coverage, support model and location (step 16; LLD,
   # CI/CD: "pricing regression against the reference case"). The reference engine's
   # own float check still runs first: the oracle must pass before anything is
-  # compared with it.
+  # compared with it. Since ADR 0033 the rate card is data: the port runs on the
+  # seed document migration 0031 publishes as version 1, and the last step migrates
+  # a database and proves the published version 1 is that document digit for digit
+  # and quotes the reference case the same. Later versions are new prices by
+  # design: they are held to the engine's structural checks on publish, not to the
+  # workbook.
   pricing-regression:
     runs-on: ubuntu-24.04
     steps:
@@ -169,6 +174,13 @@ jobs:
       - run: uv sync --locked
       - name: the Decimal port reproduces the reference case to six places (release gate)
         run: uv run pytest packages/commercial/tests/test_pricing_reference.py -q
+      - name: database with pgvector and pg_partman
+        run: |
+          docker build -t cloudops-pg-test db/test-image
+          docker run -d --name pg -p 5432:5432 -e POSTGRES_PASSWORD=ci-only-throwaway cloudops-pg-test
+          for i in $(seq 1 30); do docker exec pg pg_isready -U postgres && break; sleep 2; done
+      - name: the published version 1 is the workbook's card (release gate)
+        run: uv run pytest db/tests/test_rate_card.py -q -k "version_1 or reference_quote"
 
   sast:
     name: SAST (CodeQL, high and critical fail)

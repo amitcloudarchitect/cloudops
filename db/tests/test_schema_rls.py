@@ -19,6 +19,13 @@ pytestmark = [pytest.mark.integration, pytest.mark.isolation]
 
 SCHEMAS = ("cloudops", "staging", "audit")
 
+RATE_CARD = {
+    "cloudops.rate_card", "cloudops.rate_card_complexity", "cloudops.rate_card_multiplier",
+    "cloudops.rate_card_catalogue", "cloudops.rate_card_type_map",
+    "cloudops.rate_card_base_band", "cloudops.rate_card_coverage_uplift",
+    "cloudops.rate_card_slab", "cloudops.rate_card_tool", "cloudops.rate_card_people_cost",
+    "cloudops.rate_card_role", "cloudops.rate_card_health_band",
+}
 # Reference and ingest-state tables with no tenant. Protected by grants.
 NON_TENANT = {
     "cloudops.fx_rate",
@@ -45,10 +52,12 @@ NON_TENANT = {
     # Migration 0020: what a principal with no tenant in scope did. Insert only from
     # an empty scope, read only by auditors (test_platform_action_log.py).
     "audit.platform_action_log",
+    # ADR 0033: the rate card, platform-wide like fx_rate. Commercial: below.
+    *RATE_CARD,
 }
 TENANT_KEYED_BY_ID = {"cloudops.tenant"}
 COMMERCIAL = {"cloudops.sow", "cloudops.margin_snapshot", "cloudops.margin_variance",
-              "cloudops.report_pack_commercial"}
+              "cloudops.report_pack_commercial", *RATE_CARD}
 PARTITIONED = {
     "cloudops.cost_fact",
     "cloudops.work_item",

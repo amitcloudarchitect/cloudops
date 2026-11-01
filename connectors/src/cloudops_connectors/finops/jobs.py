@@ -50,7 +50,7 @@ from uuid import UUID
 from sqlalchemy import text
 
 from cloudops_commercial import finops, margin
-from cloudops_commercial.ratecard import RateCard, rate_card_on
+from cloudops_commercial.ratecard import RateCard, chain, rate_card_on
 from cloudops_observability import record_reconciliation
 from cloudops_tenancy import Database, Role, ScopedConnection, TenantScope
 
@@ -623,10 +623,20 @@ async def _write_variance(conn: ScopedConnection, snapshot: UUID, tenant: UUID,
             "currency": f.contract_currency} for v in f.variance])
 
 
+# Every published rate card version (ADR 0033), read whole under the finops role,
+# which the commercial policy admits.
+_RATE_CARDS: Final = text("SELECT document FROM cloudops.rate_card_documents()")
+
+
+async def rate_cards(conn: ScopedConnection) -> tuple[RateCard, ...]:
+    return chain(r[0] for r in await conn.execute(_RATE_CARDS))
+
+
 async def compute_period(conn: ScopedConnection, tenant: UUID, period: date, through: date,
                          close: bool, report: MarginReport) -> None:
-    """Compute one customer-month and store it by the rules above."""
-    card = rate_card_on(period)
+    """Compute one customer-month and store it by the rules above. The month is
+    priced on the rate card version in force on its first day."""
+    card = rate_card_on(period, await rate_cards(conn))
     inputs, sow_id = await _inputs(conn, tenant, period, through, card, provisional=not close)
     verified = await cost_verified(conn, tenant, period, through)
     figures = margin.compute(inputs, card)

@@ -823,6 +823,40 @@
         "title": "BandRules",
         "type": "object"
       },
+      "BaseBandRow": {
+        "additionalProperties": false,
+        "properties": {
+          "lower": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Lower",
+            "type": "string"
+          },
+          "rate": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Rate",
+            "type": "string"
+          },
+          "upper": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upper"
+          }
+        },
+        "required": [
+          "lower",
+          "upper",
+          "rate"
+        ],
+        "title": "BaseBandRow",
+        "type": "object"
+      },
       "CatalogueRole": {
         "additionalProperties": false,
         "properties": {
@@ -867,6 +901,28 @@
           "permissions"
         ],
         "title": "CatalogueRole",
+        "type": "object"
+      },
+      "CatalogueRow": {
+        "additionalProperties": false,
+        "properties": {
+          "complexity": {
+            "pattern": "^([0-9]{1,3}|Case)$",
+            "title": "Complexity",
+            "type": "string"
+          },
+          "resource_type": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "complexity"
+        ],
+        "title": "CatalogueRow",
         "type": "object"
       },
       "ChangeRef": {
@@ -1341,6 +1397,27 @@
           "evidence_id"
         ],
         "title": "CollectedView",
+        "type": "object"
+      },
+      "ComplexityRow": {
+        "additionalProperties": false,
+        "properties": {
+          "complexity": {
+            "pattern": "^([0-9]{1,3}|Case)$",
+            "title": "Complexity",
+            "type": "string"
+          },
+          "minutes": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Minutes",
+            "type": "string"
+          }
+        },
+        "required": [
+          "complexity",
+          "minutes"
+        ],
+        "title": "ComplexityRow",
         "type": "object"
       },
       "ConnectorHealth": {
@@ -2029,6 +2106,31 @@
           "lines"
         ],
         "title": "CostSummary",
+        "type": "object"
+      },
+      "CoverageUpliftRow": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "enum": [
+              "8x5",
+              "16x5",
+              "24x7"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "uplift": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Uplift",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coverage",
+          "uplift"
+        ],
+        "title": "CoverageUpliftRow",
         "type": "object"
       },
       "CoverageView": {
@@ -3379,6 +3481,28 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HealthBandRow": {
+        "additionalProperties": false,
+        "properties": {
+          "below": {
+            "pattern": "^-?0?\\.\\d{1,6}$|^0$",
+            "title": "Below",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "below",
+          "label"
+        ],
+        "title": "HealthBandRow",
+        "type": "object"
+      },
       "LiveRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3984,6 +4108,41 @@
         "title": "MonthReconciliation",
         "type": "object"
       },
+      "MultiplierRow": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "enum": [
+              "8x5",
+              "16x5",
+              "24x7"
+            ],
+            "title": "Coverage",
+            "type": "string"
+          },
+          "multiplier": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Multiplier",
+            "type": "string"
+          },
+          "support": {
+            "enum": [
+              "Bronze",
+              "Silver",
+              "Gold"
+            ],
+            "title": "Support",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coverage",
+          "support",
+          "multiplier"
+        ],
+        "title": "MultiplierRow",
+        "type": "object"
+      },
       "NarrativeView": {
         "additionalProperties": false,
         "properties": {
@@ -4587,6 +4746,30 @@
         "title": "PendingChange",
         "type": "object"
       },
+      "PeopleCostRow": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "enum": [
+              "India",
+              "Budapest"
+            ],
+            "title": "Location",
+            "type": "string"
+          },
+          "monthly_cost": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Monthly Cost",
+            "type": "string"
+          }
+        },
+        "required": [
+          "location",
+          "monthly_cost"
+        ],
+        "title": "PeopleCostRow",
+        "type": "object"
+      },
       "Performance": {
         "additionalProperties": false,
         "properties": {
@@ -5056,6 +5239,26 @@
         "title": "ProposalView",
         "type": "object"
       },
+      "PublishRateCard": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/RateCardDocument"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document",
+          "reason"
+        ],
+        "title": "PublishRateCard",
+        "type": "object"
+      },
       "QuarantineList": {
         "additionalProperties": false,
         "properties": {
@@ -5333,6 +5536,268 @@
           "repricing_due"
         ],
         "title": "QuoteView",
+        "type": "object"
+      },
+      "RateCardDocument": {
+        "additionalProperties": false,
+        "description": "A whole rate card version, as the database stores it and the engine reads it\n(``cloudops_commercial.ratecard.from_document``).",
+        "properties": {
+          "base_pack_bands": {
+            "items": {
+              "$ref": "#/components/schemas/BaseBandRow"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Base Pack Bands",
+            "type": "array"
+          },
+          "base_pack_coverage_uplift": {
+            "items": {
+              "$ref": "#/components/schemas/CoverageUpliftRow"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "title": "Base Pack Coverage Uplift",
+            "type": "array"
+          },
+          "base_pack_floor": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Base Pack Floor",
+            "type": "string"
+          },
+          "blended_day_rate": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Blended Day Rate",
+            "type": "string"
+          },
+          "catalogue": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogueRow"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Catalogue",
+            "type": "array"
+          },
+          "ci_slabs": {
+            "items": {
+              "$ref": "#/components/schemas/SlabRow"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Ci Slabs",
+            "type": "array"
+          },
+          "complexity_minutes": {
+            "items": {
+              "$ref": "#/components/schemas/ComplexityRow"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Complexity Minutes",
+            "type": "array"
+          },
+          "corestack_consumption_rate": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Corestack Consumption Rate",
+            "type": "string"
+          },
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "health_bands": {
+            "items": {
+              "$ref": "#/components/schemas/HealthBandRow"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Health Bands",
+            "type": "array"
+          },
+          "healthy_label": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Healthy Label",
+            "type": "string"
+          },
+          "hours_per_day": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Hours Per Day",
+            "type": "string"
+          },
+          "minutes_per_day": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Minutes Per Day",
+            "type": "string"
+          },
+          "people_cost": {
+            "items": {
+              "$ref": "#/components/schemas/PeopleCostRow"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "People Cost",
+            "type": "array"
+          },
+          "repricing_headroom_minimum": {
+            "pattern": "^\\d{1,10}$",
+            "title": "Repricing Headroom Minimum",
+            "type": "string"
+          },
+          "repricing_headroom_share": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Repricing Headroom Share",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleRow"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Roles",
+            "type": "array"
+          },
+          "service_multipliers": {
+            "items": {
+              "$ref": "#/components/schemas/MultiplierRow"
+            },
+            "maxItems": 9,
+            "minItems": 9,
+            "title": "Service Multipliers",
+            "type": "array"
+          },
+          "source": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ToolRow"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Tools",
+            "type": "array"
+          },
+          "type_map": {
+            "items": {
+              "$ref": "#/components/schemas/TypeMapRow"
+            },
+            "maxItems": 500,
+            "title": "Type Map",
+            "type": "array"
+          },
+          "version": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$",
+            "title": "Version",
+            "type": "string"
+          },
+          "working_days_per_month": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Working Days Per Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "effective_from",
+          "source",
+          "currency",
+          "blended_day_rate",
+          "minutes_per_day",
+          "working_days_per_month",
+          "hours_per_day",
+          "base_pack_floor",
+          "corestack_consumption_rate",
+          "repricing_headroom_minimum",
+          "repricing_headroom_share",
+          "healthy_label",
+          "complexity_minutes",
+          "service_multipliers",
+          "catalogue",
+          "type_map",
+          "base_pack_bands",
+          "base_pack_coverage_uplift",
+          "ci_slabs",
+          "tools",
+          "people_cost",
+          "roles",
+          "health_bands"
+        ],
+        "title": "RateCardDocument",
+        "type": "object"
+      },
+      "RateCardVersionView": {
+        "additionalProperties": false,
+        "properties": {
+          "document": {
+            "$ref": "#/components/schemas/RateCardDocument"
+          },
+          "effective_from": {
+            "format": "date",
+            "title": "Effective From",
+            "type": "string"
+          },
+          "effective_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective To"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "in_force": {
+            "title": "In Force",
+            "type": "boolean"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "published_by": {
+            "title": "Published By",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "effective_from",
+          "effective_to",
+          "in_force",
+          "published_at",
+          "published_by",
+          "reason",
+          "document"
+        ],
+        "title": "RateCardVersionView",
         "type": "object"
       },
       "RateCardView": {
@@ -6410,6 +6875,28 @@
         "title": "RoleOption",
         "type": "object"
       },
+      "RoleRow": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Role",
+            "type": "string"
+          },
+          "share": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Share",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "share"
+        ],
+        "title": "RoleRow",
+        "type": "object"
+      },
       "RoutingView": {
         "additionalProperties": false,
         "properties": {
@@ -6641,6 +7128,40 @@
           "open"
         ],
         "title": "SeverityCount",
+        "type": "object"
+      },
+      "SlabRow": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "lower": {
+            "pattern": "^\\d{1,10}$",
+            "title": "Lower",
+            "type": "string"
+          },
+          "transition_weeks": {
+            "pattern": "^\\d{1,10}$",
+            "title": "Transition Weeks",
+            "type": "string"
+          },
+          "upper": {
+            "pattern": "^\\d{1,10}$",
+            "title": "Upper",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "lower",
+          "upper",
+          "transition_weeks"
+        ],
+        "title": "SlabRow",
         "type": "object"
       },
       "SourceView": {
@@ -7082,6 +7603,33 @@
           "name"
         ],
         "title": "TenantView",
+        "type": "object"
+      },
+      "ToolRow": {
+        "additionalProperties": false,
+        "properties": {
+          "cost_per_ci": {
+            "pattern": "^\\d{1,12}(\\.\\d{1,16})?$",
+            "title": "Cost Per Ci",
+            "type": "string"
+          },
+          "default": {
+            "title": "Default",
+            "type": "boolean"
+          },
+          "tool": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool",
+          "cost_per_ci",
+          "default"
+        ],
+        "title": "ToolRow",
         "type": "object"
       },
       "TrendPoint": {
@@ -7533,6 +8081,29 @@
           "answered_at"
         ],
         "title": "TurnView",
+        "type": "object"
+      },
+      "TypeMapRow": {
+        "additionalProperties": false,
+        "properties": {
+          "resource_type": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Resource Type",
+            "type": "string"
+          },
+          "type_canonical": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Type Canonical",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type_canonical",
+          "resource_type"
+        ],
+        "title": "TypeMapRow",
         "type": "object"
       },
       "Unallocated": {
@@ -9525,6 +10096,66 @@
           }
         },
         "summary": "Rate Card View"
+      }
+    },
+    "/v1/commercial/rate-cards": {
+      "get": {
+        "description": "Every published version, newest first, each whole: history is never edited.",
+        "operationId": "list_rate_cards_v1_commercial_rate_cards_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RateCardVersionView"
+                  },
+                  "title": "Response List Rate Cards V1 Commercial Rate Cards Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Rate Cards"
+      },
+      "post": {
+        "description": "Publish a new version, effective from a future date. It is a new row; the\nversion before it ends where this one begins and is otherwise untouched.",
+        "operationId": "publish_rate_card_v1_commercial_rate_cards_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishRateCard"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateCardVersionView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish Rate Card"
       }
     },
     "/v1/commercial/sows": {
