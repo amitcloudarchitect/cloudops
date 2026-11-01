@@ -46,6 +46,7 @@ const labelStyle = "flex flex-col gap-1 text-xs font-semibold text-muted";
 const MONEY = /^\d{1,12}(\.\d{1,6})?$/;
 const RATE = /^\d{1,12}(\.\d{1,16})?$/;
 const PERCENT = /^-?\d{1,2}(\.\d{1,4})?$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FREQUENCY_LABEL: Record<SowInput["billing_frequency"], string> = {
   monthly: "Monthly",
   quarterly: "Quarterly",
@@ -420,7 +421,7 @@ function Recompute({ tenantId, register, write, onDone }: { tenantId: string; re
         <p className="text-muted">
           {r ? `${STATUS[r.status]} (requested ${dateTime(r.requested_at)}${r.finished_at ? `, finished ${dateTime(r.finished_at)}` : ""}).` : "Recomputed daily by the FinOps worker."}{" "}
           {/* The id the API returned for this register, never the select's DOM value. */}
-          <Link href={`/margin/${encodeURIComponent(register.tenant.id)}`} className="link">
+          <Link href={`/margin/${encodeURIComponent(UUID.test(register.tenant.id) ? register.tenant.id : "")}`} className="link">
             Open this customer’s margin
           </Link>
         </p>
@@ -723,10 +724,15 @@ function RateCardSection({ publish }: { publish: boolean }) {
 export function CommercialSetup() {
   const me = useMe();
   const { tenantId: chosen } = useCustomer();
-  const [tenantId, setTenantId] = useState<string | null>(chosen ?? me.tenants[0]?.id ?? null);
+  // A customer id enters state only as a UUID the signed-in user's scope lists (/v1/me):
+  // never raw text from the select or the selector, so no URL is built from DOM text.
+  const known = (id: string | null | undefined): string | null =>
+    id && UUID.test(id) && me.tenants.some((t) => t.id === id) ? id : null;
+  const [tenantId, setTenantId] = useState<string | null>(known(chosen) ?? known(me.tenants[0]?.id));
   // The top-bar selector preselects the customer; this page's own list can change it.
   useEffect(() => {
-    if (chosen) setTenantId(chosen);
+    const id = known(chosen);
+    if (id) setTenantId(id);
   }, [chosen]);
   const write = can(me, "commercial.write");
   const publish = can(me, "ratecard.publish");
@@ -741,7 +747,7 @@ export function CommercialSetup() {
         <div className="space-y-4">
           <label className={`${labelStyle} max-w-sm`}>
             Customer
-            <select className={control} value={tenantId ?? ""} onChange={(e) => setTenantId(e.target.value || null)}>
+            <select className={control} value={tenantId ?? ""} onChange={(e) => setTenantId(known(e.target.value))}>
               {tenants.length === 0 ? <option value="">No customer in your scope</option> : null}
               {tenants.map((t) => (
                 <option key={t.id} value={t.id}>
