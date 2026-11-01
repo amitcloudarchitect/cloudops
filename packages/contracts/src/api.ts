@@ -2350,6 +2350,8 @@ export interface components {
         Onboarding: {
             /** Agreed Roles */
             agreed_roles: string[];
+            /** Assistant Enabled */
+            assistant_enabled: boolean;
             /** Domains */
             domains: string[];
             /** Federation Recorded At */
@@ -3254,8 +3256,6 @@ export interface components {
             question: string;
             /** Reason */
             reason: string | null;
-            /** Seq */
-            seq: number;
             /** Stage */
             stage: ("understanding" | "retrieving" | "looking_up" | "composing" | "checking") | null;
             /**

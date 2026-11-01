@@ -17,6 +17,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { Provenance } from "@/components/Provenance";
 import { ApiError, apiGet, apiPost } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { count, date, money } from "@/lib/format";
 import type { Band } from "@/lib/health";
@@ -170,6 +171,7 @@ function PortfolioTable({ data, currency, columns, role }: { data: PortfolioView
 }
 
 export function ReportsList() {
+  useAssistantContext({ screen: "reports" });
   const me = useMe();
   const loaded = useApi((t) => apiGet(t, "/v1/reports/packs"), "packs");
   if (loaded.status === "loading") return <Loading what="report packs" />;

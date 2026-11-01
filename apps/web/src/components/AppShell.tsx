@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 
+import { useAssistant } from "@/lib/assistant";
 import { useAuth } from "@/lib/auth";
 import { visibleModules } from "@/lib/nav";
 import { can, useSession } from "@/lib/session";
 
+import { AssistantPanel, SHORTCUT_ARIA, SHORTCUT_LABEL } from "./AssistantPanel";
 import { BrandLogo } from "./BrandLogo";
 import { BrandPhoto } from "./BrandPhoto";
 import { EmptyState } from "./EmptyState";
@@ -20,6 +23,26 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const session = useSession();
   const { signIn, signOut, state } = useAuth();
+  const assistant = useAssistant();
+  const ready = session.status === "ready" && pathname !== "/signin";
+  const { toggle, setOpen } = assistant;
+
+  // Ctrl+/ (⌘/ on a Mac) opens and closes AMARA, from anywhere in the console.
+  useEffect(() => {
+    if (!ready) {
+      setOpen(false);
+      return;
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key === "/") {
+        event.preventDefault();
+        toggle();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ready, toggle, setOpen]);
+  const panelOpen = ready && assistant.open;
 
   if (pathname === "/signin") return <main id="main">{children}</main>;
 
@@ -132,7 +155,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className={`flex min-h-screen flex-col ${panelOpen ? "lg:pr-[26rem]" : ""}`}>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-20 focus:rounded-control focus:bg-surface focus:p-2 focus:text-ink"
@@ -150,6 +173,21 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           {who}
           <ThemeToggle />
+          {ready ? (
+            <button
+              ref={assistant.launcher}
+              type="button"
+              onClick={toggle}
+              aria-expanded={panelOpen}
+              aria-controls={panelOpen ? "amara-panel" : undefined}
+              aria-keyshortcuts={SHORTCUT_ARIA}
+              title={`Ask AMARA (${SHORTCUT_LABEL})`}
+              className="btn btn-primary"
+            >
+              <span aria-hidden="true" className="size-2 rounded-full bg-accent-ink" />
+              Ask AMARA
+            </button>
+          ) : null}
           {session.status === "ready" ? (
             <button
               type="button"
@@ -171,6 +209,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mx-auto max-w-screen-2xl">{content}</div>
         </main>
       </div>
+      {panelOpen ? <AssistantPanel /> : null}
     </div>
   );
 }

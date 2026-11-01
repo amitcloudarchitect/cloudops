@@ -9,12 +9,14 @@ import { LoadError, Loading } from "@/components/Loading";
 import { PageHeader } from "@/components/PageHeader";
 import { Provenance } from "@/components/Provenance";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
 type Resource = components["schemas"]["ResourceStaffView"] | components["schemas"]["ResourceView"];
 
 export function ResourceList() {
+  useAssistantContext({ screen: "resources" });
   const me = useMe();
   const loaded = useApi((token) => apiGet(token, "/v1/resources"), "resources");
   const columns: Column<Resource>[] = [

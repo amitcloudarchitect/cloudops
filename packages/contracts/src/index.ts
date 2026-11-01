@@ -89,6 +89,19 @@ export type FigureSnapshot = Schemas["FigureSnapshot"];
 export type TableSnapshot = Schemas["TableSnapshot"];
 export type PortfolioView = Schemas["PortfolioView"];
 export type PortfolioLine = Schemas["PortfolioLine"];
+// The AMARA assistant (ADR 0029).
+export type AssistantSession = Schemas["AssistantSession"];
+export type TenantOption = Schemas["TenantOption"];
+export type TurnView = Schemas["TurnView"];
+export type AnswerView = Schemas["AnswerView"];
+export type SourceView = Schemas["SourceView"];
+export type ClaimView = Schemas["ClaimView"];
+export type ConversationSummary = Schemas["ConversationSummary"];
+export type ConversationView = Schemas["ConversationView"];
+export type AskRequest = Schemas["AskRequest"];
+export type ScreenContext = Schemas["ScreenContext"];
+export type EnabledRequest = Schemas["EnabledRequest"];
+export type EnabledView = Schemas["EnabledView"];
 
 // The values a reviewer may choose, read from the schema itself rather than
 // copied, so a new intent in the API reaches the console by regeneration.

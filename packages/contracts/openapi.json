@@ -3346,6 +3346,10 @@
             "title": "Agreed Roles",
             "type": "array"
           },
+          "assistant_enabled": {
+            "title": "Assistant Enabled",
+            "type": "boolean"
+          },
           "domains": {
             "items": {
               "type": "string"
@@ -3490,7 +3494,8 @@
           "first_admin_oid",
           "first_admin_at",
           "live_at",
-          "suspended_at"
+          "suspended_at",
+          "assistant_enabled"
         ],
         "title": "Onboarding",
         "type": "object"
