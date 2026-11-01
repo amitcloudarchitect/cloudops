@@ -23,6 +23,8 @@ const SOURCE_LABEL: Record<string, string> = {
   margin_engine: "Margin engine",
   sow_register: "SOW register",
   ecb: "ECB reference rates",
+  triage_classifier: "Triage classifier",
+  customer_price: "Price charged",
 };
 
 export function sourceLabel(source: string): string {

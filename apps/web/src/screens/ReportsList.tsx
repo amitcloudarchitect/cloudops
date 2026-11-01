@@ -195,7 +195,14 @@ export function ReportsList() {
   ];
   return (
     <>
-      <PageHeader title="Reports" subtitle="Monthly packs per customer, generated from live data. Narrative is drafted for a person to edit, and nothing is published without one." />
+      <PageHeader
+        title="Reports"
+        subtitle={
+          me.kind === "customer"
+            ? "Your monthly service reports, as published by Getronics."
+            : "Monthly packs per customer, generated from live data. Narrative is drafted for a person to edit, and nothing is published without one."
+        }
+      />
       {can(me, "reports.manage") ? <Generate /> : null}
       <DataTable
         id="report-packs"
@@ -209,7 +216,11 @@ export function ReportsList() {
         ]}
         role={me.role}
         initial={{ sort: { key: "generated", dir: "desc" }, facets: {} }}
-        empty={{ title: "No packs yet", next: "Generate a month for a customer to start." }}
+        empty={
+          me.kind === "customer"
+            ? { title: "No published reports yet", next: "Your service manager publishes each month's report here." }
+            : { title: "No packs yet", next: "Generate a month for a customer to start." }
+        }
       />
       {me.kind === "staff" && !me.subscription_limited ? <Portfolio /> : null}
     </>

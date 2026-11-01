@@ -22,8 +22,12 @@ SOW the currency is "not captured" and nothing is generated). The portfolio is
 in the reporting currency the viewer picks, from the same cost rows.
 
 **Access.** ``reports.read`` covers reading, and customers see only published
-packs (row-level security, migration 0013). No customer role holds
-``reports.read`` yet: the portal (step 18) decides. A pack outside scope is a
+packs (row-level security, migration 0013). The customer roles CXO and VP or
+director hold it (migration 0027, ADR 0030): a customer scope runs as
+``cloudops_customer``, granted the pack's snapshot, its price and a section's
+published text, so its queries name only those columns. Never the commercial
+sections, the AI drafts, or who generated, approved or edited a pack. The
+portfolio is staff work: a customer is refused it. A pack outside scope is a
 404. Report packs are tenant-wide, so a subscription-limited scope sees none.
 """
 
@@ -37,7 +41,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import Field
-from sqlalchemy import text
+from sqlalchemy import TextClause, text
 
 from cloudops_api.access import Access
 from cloudops_api.bff import TenantView
@@ -175,7 +179,7 @@ class PortfolioView(ApiModel):
 
 # --- queries ----------------------------------------------------------------------------
 
-_PACK_COLS: Final = (
+_PRICED: Final = (
     "p.id, p.tenant_id, t.canonical_name, p.period, p.version, p.status, p.contract_currency,"
     " p.generated_at, p.approved_at, p.published_at, p.data_as_of,"
     # The customer's price joins in where price_visibility lets the scope read it
@@ -184,17 +188,38 @@ _PACK_COLS: Final = (
     # section over the one before. Anyone else gets the pack without them.
     " p.sections || coalesce((SELECT r.sections FROM cloudops.report_pack_price r"
     "  WHERE r.pack_id = p.id AND r.tenant_id = p.tenant_id), '{}'::jsonb)"
+)
+_COMMERCIAL: Final = (
     " || coalesce((SELECT c.sections FROM cloudops.report_pack_commercial c"
     "  WHERE c.pack_id = p.id AND c.tenant_id = p.tenant_id), '{}'::jsonb)"
 )
-_PACK: Final = text(
-    f"SELECT {_PACK_COLS} FROM cloudops.report_pack p"  # noqa: S608 - module constant
-    " JOIN cloudops.tenant t ON t.id = p.tenant_id WHERE p.id = :id"
-)
-_NARRATIVES: Final = text(
-    "SELECT section, draft_state, draft_text, drafted_at, text, edited_by, edited_at, draft_note"
-    " FROM cloudops.report_narrative WHERE pack_id = :id ORDER BY section"
-)
+# A customer scope is granted nothing on report_pack_commercial (migration 0027):
+# naming it would fail, so its query never does.
+_PACK_COLS: Final = _PRICED + _COMMERCIAL
+
+
+def _pack_cols(staff: bool) -> str:
+    return _PACK_COLS if staff else _PRICED
+
+
+def _pack_sql(staff: bool) -> TextClause:
+    return text(
+        f"SELECT {_pack_cols(staff)} FROM cloudops.report_pack p"  # noqa: S608 - constants
+        " JOIN cloudops.tenant t ON t.id = p.tenant_id WHERE p.id = :id"
+    )
+
+
+_PACK: Final = {True: _pack_sql(True), False: _pack_sql(False)}
+_NARRATIVES: Final = {
+    True: text(
+        "SELECT section, draft_state, draft_text, drafted_at, text, edited_by, edited_at,"
+        " draft_note FROM cloudops.report_narrative WHERE pack_id = :id ORDER BY section"),
+    # The drafts, their state and who edited a section are not granted to a customer.
+    False: text(
+        "SELECT section, NULL::text, NULL::text, NULL::timestamptz, text, NULL::uuid,"
+        " edited_at, NULL::text FROM cloudops.report_narrative WHERE pack_id = :id"
+        " ORDER BY section"),
+}
 _CONTRACT_CURRENCY: Final = text(
     "SELECT currency FROM cloudops.sow WHERE tenant_id = :t AND effective_from < :e"
     " AND (effective_to IS NULL OR effective_to >= :s) ORDER BY effective_from DESC LIMIT 1"
@@ -209,15 +234,15 @@ def _summary(row: tuple[Any, ...]) -> ReportPackSummary:
     )
 
 
-async def _load(conn: ScopedConnection, pack: UUID) -> tuple[Any, ...]:
-    found = (await conn.execute(_PACK, {"id": pack})).one_or_none()
+async def _load(conn: ScopedConnection, pack: UUID, staff: bool = True) -> tuple[Any, ...]:
+    found = (await conn.execute(_PACK[staff], {"id": pack})).one_or_none()
     if found is None:
         raise ApiError(404, "not_found")
     return tuple(found)
 
 
 async def _view(conn: ScopedConnection, row: tuple[Any, ...], staff: bool) -> ReportPackView:
-    narratives = [tuple(r) for r in await conn.execute(_NARRATIVES, {"id": row[0]})]
+    narratives = [tuple(r) for r in await conn.execute(_NARRATIVES[staff], {"id": row[0]})]
     return ReportPackView(
         **_summary(row).model_dump(), data_as_of=row[10],
         sections=[SectionSnapshot.model_validate(row[11][k])
@@ -316,7 +341,7 @@ async def list_packs(
         params["p"] = _period(period)
     async with platform(request).db.transaction(access.scope) as conn:
         rows = [tuple(r) for r in await conn.execute(text(
-            f"SELECT {_PACK_COLS} FROM cloudops.report_pack p"  # noqa: S608 - constants only
+            f"SELECT {_pack_cols(access.kind == 'staff')} FROM cloudops.report_pack p"  # noqa: S608
             " JOIN cloudops.tenant t ON t.id = p.tenant_id"
             f" WHERE {' AND '.join(where)}"
             " ORDER BY p.period DESC, t.canonical_name, p.version DESC LIMIT 500"), params)]
@@ -326,9 +351,10 @@ async def list_packs(
 @router.get("/packs/{pack_id}", response_model=ReportPackView)
 @requires("reports.read")
 async def get_pack(request: Request, pack_id: UUID, access: AccessDep) -> ReportPackView:
+    staff = access.kind == "staff"
     async with platform(request).db.transaction(access.scope) as conn:
-        row = await _load(conn, pack_id)
-        view = await _view(conn, row, access.kind == "staff")
+        row = await _load(conn, pack_id, staff)
+        view = await _view(conn, row, staff)
     audit_only(request, [row[1]])
     return view
 
@@ -430,10 +456,12 @@ async def publish_pack(request: Request, pack_id: UUID, access: AccessDep) -> Re
 
 async def _lines(request: Request, pack_id: UUID, access: Access
                  ) -> tuple[tuple[Any, ...], list[Line]]:
+    staff = access.kind == "staff"
     async with platform(request).db.transaction(access.scope) as conn:
-        row = await _load(conn, pack_id)
+        row = await _load(conn, pack_id, staff)
         narratives = {str(r[0]): str(r[4]) for r in
-                      (tuple(x) for x in await conn.execute(_NARRATIVES, {"id": pack_id}))
+                      (tuple(x) for x in await conn.execute(_NARRATIVES[staff],
+                                                            {"id": pack_id}))
                       if r[4] is not None}
     audit_only(request, [row[1]])
     content = sections.PackContent.from_json(row[1], {
@@ -475,7 +503,10 @@ async def portfolio(
     period: Annotated[str, Query(pattern=PERIOD)],
     currency: Annotated[str, Query(pattern=CURRENCY)],
 ) -> PortfolioView:
-    if access.kind != "staff" or access.scope.account_ids is not None:
+    if access.kind != "staff":
+        # The portfolio consolidates Getronics' cost across customers: staff work.
+        raise ApiError(403, "forbidden")
+    if access.scope.account_ids is not None:
         raise ApiError(404, "not_found")
     month = _period(period)
     async with platform(request).db.transaction(access.scope) as conn:

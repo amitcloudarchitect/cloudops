@@ -4,7 +4,9 @@
 // each summary section beside the text a person writes or accepts, and release.
 // A draft is never printed and never released: the PDF shows a person's text
 // only, and approve and publish wait until every section has one. Figures are
-// shown as the PDF prints them, money in the contract currency.
+// shown as the PDF prints them, money in the contract currency. A customer
+// (CXO, VP or director; ADR 0030) reads published packs only, with the
+// customer's price and each section's published text: no draft, no editor.
 
 import { useState } from "react";
 
@@ -156,6 +158,11 @@ function Narrative({ pack, n, editable, onChange }: { pack: string; n: Narrative
   );
 }
 
+/** A customer's view of a section's narrative: the published text and nothing else. */
+function PublishedNarrative({ n }: { n: NarrativeView }) {
+  return n.text ? <p className="mt-3 text-sm text-ink">{n.text}</p> : null;
+}
+
 export function ReportPack({ id }: { id: string }) {
   const me = useMe();
   const { token } = useAuth();
@@ -240,7 +247,8 @@ export function ReportPack({ id }: { id: string }) {
                 {s.title}
               </h2>
               <SectionView section={s} currency={pack.contract_currency} />
-              {n ? <Narrative pack={id} n={n} editable={editable} onChange={changed} /> : null}
+              {n && me.kind === "customer" ? <PublishedNarrative n={n} /> : null}
+              {n && me.kind !== "customer" ? <Narrative pack={id} n={n} editable={editable} onChange={changed} /> : null}
             </section>
           );
         })}
