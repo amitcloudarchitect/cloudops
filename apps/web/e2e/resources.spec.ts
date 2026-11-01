@@ -30,7 +30,7 @@ test("shows every resource in scope, with its customer", async ({ signedIn: page
   await expect(table.getByRole("columnheader", { name: /Customer/ })).toBeVisible();
   await expect(page.getByText(`Showing ${total} of ${total}`)).toBeVisible();
 
-  await page.getByLabel("Customer").selectOption(customer);
+  await page.locator("#main").getByLabel("Customer").selectOption(customer);
   const theirs = items.filter((r) => r.customer === customer).length;
   await expect(page.getByText(`Showing ${theirs} of ${total}`)).toBeVisible();
 });
@@ -85,6 +85,6 @@ test("loads every page, and names a type the platform does not map by the provid
   expect(asked.filter((o) => o === "0")).toHaveLength(asked.filter((o) => o === "2").length);
   await expect(table.getByRole("row", { name: /alpha-key/ })).toContainText("Microsoft.Compute/sshPublicKeys");
   await expect(table.getByRole("row", { name: /alpha-vm/ })).toContainText("compute.vm");
-  await expect(page.getByLabel("Type").locator("option", { hasText: "Microsoft.Compute/sshPublicKeys" })).toHaveCount(1);
-  await expect(page.getByLabel("Customer").locator("option")).toHaveText(["Any", "Alpha", "Beta"]);
+  await expect(page.locator("#main").getByLabel("Type").locator("option", { hasText: "Microsoft.Compute/sshPublicKeys" })).toHaveCount(1);
+  await expect(page.locator("#main").getByLabel("Customer").locator("option")).toHaveText(["Any", "Alpha", "Beta"]);
 });
