@@ -31,7 +31,7 @@ for (const theme of ["light", "dark"] as const) {
     test("passes axe (WCAG 2.1 AA) and does not scroll sideways at tablet width", async ({ signedIn: page }) => {
       await page.goto("/mapping");
       await expect(page.getByRole("table", { name: "Quarantined names" })).toBeVisible();
-      await page.getByRole("button", { name: "Map a name or onboard a customer…" }).click();
+      await page.getByRole("button", { name: "Map a name or onboard a tenant…" }).click();
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
       expect(results.violations.map((v) => `/mapping: ${v.id} ${v.nodes.length}`)).toEqual([]);
       await page.setViewportSize({ width: 768, height: 1024 });
