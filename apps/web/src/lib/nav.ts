@@ -39,6 +39,8 @@ export const MODULES: readonly Module[] = [
   // Customer viewers hold cost.read for their own cost; the FinOps module is staff work.
   { href: "/finops", label: "FinOps", area: "Commercial", permission: "cost.read", staff: true },
   { href: "/margin", label: "Margin", area: "Commercial", permission: "commercial.read", staff: true },
+  // The monthly report's Revenue & margin sheet (ADR 0038).
+  { href: "/revenue", label: "Revenue & margin", area: "Commercial", permission: "commercial.read", staff: true },
   { href: "/pricing", label: "Pricing", area: "Commercial", permission: "commercial.read", staff: true },
   // Step 17: assessments and monthly report packs.
   { href: "/assurance", label: "Assurance", area: "Assurance & Reports", permission: "assurance.read", staff: true },

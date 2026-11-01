@@ -76,6 +76,8 @@ class SowInput(BaseModel):
     term_end: date | None = None
     currency: str = Field(pattern=r"^[A-Z]{3}$")
     service_scope: str = Field(min_length=1, max_length=500)
+    # Getronics resells the customer's cloud as a Cloud Solution Provider (ADR 0038).
+    csp: bool | None = None
     coverage: Literal["8x5", "16x5", "24x7"] | None = None
     support: Literal["Bronze", "Silver", "Gold"] | None = None
     recurring_fee: Money
@@ -114,6 +116,7 @@ class SowVersionView(ApiModel):
     term_end: date | None
     currency: str
     service_scope: str | None
+    csp: bool | None  # None: not recorded on this version
     coverage: str | None
     support: str | None
     recurring_fee: Metric[Decimal] | None
@@ -150,7 +153,7 @@ _VERSIONS: Final = text(
     "   coverage::text, support::text, recurring_fee, billing_frequency,"
     "   monthly_manage_revenue, target_margin, consumption_uplift, hosting_acv, manage_acv,"
     "   professional_services, contracted_ci_count, document_uri, amendment_reason,"
-    "   entered_by, created_at"
+    "   entered_by, created_at, csp"
     " FROM cloudops.sow WHERE tenant_id = :t ORDER BY effective_from DESC, created_at DESC"
 )
 _RECOMPUTE: Final = text(
@@ -170,7 +173,7 @@ def _staff(access: Access) -> None:
 
 def _version(row: tuple[Any, ...], today: date) -> SowVersionView:
     (sid, n, ref, start, end, t_start, t_end, ccy, scope, cov, sup, fee, freq, monthly,
-     target, uplift, hosting, manage, services, cis, uri, why, by, at) = row
+     target, uplift, hosting, manage, services, cis, uri, why, by, at, csp) = row
     ccy = str(ccy).strip()
     q = query_ref("commercial.sow", 1, sow=str(sid))
 
@@ -188,7 +191,8 @@ def _version(row: tuple[Any, ...], today: date) -> SowVersionView:
     return SowVersionView(
         id=sid, version=whole(n, "version"), reference=ref, effective_from=start, effective_to=end,
         in_force=start <= today and (end is None or today <= end),
-        term_start=t_start, term_end=t_end, currency=ccy, service_scope=scope, coverage=cov,
+        term_start=t_start, term_end=t_end, currency=ccy, service_scope=scope, csp=csp,
+        coverage=cov,
         support=sup, recurring_fee=money(fee), billing_frequency=freq,
         monthly_manage_revenue=figure(monthly), target_margin=money(target, RATIO),
         consumption_uplift=money(uplift, RATIO), hosting_acv=money(hosting),

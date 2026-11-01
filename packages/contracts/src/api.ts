@@ -602,6 +602,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/commercial/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Revenue Overview
+         * @description Every customer in scope over a range of months (default: the latest closed
+         *     month), optionally against a second range: CSP, average monthly consumption,
+         *     manage revenue and cost, gross margin, professional services and ACVs, with
+         *     totals per contract currency and, given ``currency``, in it.
+         */
+        get: operations["revenue_overview_v1_commercial_revenue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/commercial/revenue.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Revenue Csv
+         * @description The range's rows and totals as the workbook's sheet, rounded for print.
+         */
+        get: operations["revenue_csv_v1_commercial_revenue_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/commercial/sows": {
         parameters: {
             query?: never;
@@ -2877,6 +2920,13 @@ export interface components {
             /** Idp Reference */
             idp_reference: string;
         };
+        /** FigureGap */
+        FigureGap: {
+            /** Figure */
+            figure: string;
+            /** Reason */
+            reason: string;
+        };
         /**
          * FigureSnapshot
          * @description A figure as generated: the value is unrounded text (an int, or a Decimal
@@ -3156,6 +3206,12 @@ export interface components {
             tenant_admin: boolean;
             /** Tenants */
             tenants: components["schemas"]["TenantView"][];
+        };
+        /** MissingCount */
+        MissingCount: {
+            customers: components["schemas"]["Metric_int_"];
+            /** Figure */
+            figure: string;
         };
         /** MonthPerformance */
         MonthPerformance: {
@@ -4022,6 +4078,93 @@ export interface components {
             /** Result */
             result: ("compliant" | "partially_compliant" | "non_compliant" | "not_applicable" | "manual") | null;
         };
+        /** RevenueBlock */
+        RevenueBlock: {
+            contract: components["schemas"]["RevenueFigures"];
+            /** Gaps */
+            gaps: components["schemas"]["FigureGap"][];
+            reported: components["schemas"]["RevenueFigures"] | null;
+        };
+        /**
+         * RevenueChange
+         * @description Current minus compare; the margin percentage's change is in ratio points.
+         */
+        RevenueChange: {
+            contract: components["schemas"]["RevenueFigures"] | null;
+            reported: components["schemas"]["RevenueFigures"] | null;
+        };
+        /**
+         * RevenueFigures
+         * @description One customer's figures in one currency. Monthly averages over the range:
+         *     consumption, revenue, cost and margin. Contract values: the rest. ``None``:
+         *     not captured, with the gap in ``gaps``.
+         */
+        RevenueFigures: {
+            cloud_consumption: components["schemas"]["Metric_Decimal_"] | null;
+            /** Currency */
+            currency: string | null;
+            gross_margin: components["schemas"]["Metric_Decimal_"] | null;
+            gross_margin_pct: components["schemas"]["Metric_Decimal_"] | null;
+            hosting_acv: components["schemas"]["Metric_Decimal_"] | null;
+            manage_acv: components["schemas"]["Metric_Decimal_"] | null;
+            manage_cost: components["schemas"]["Metric_Decimal_"] | null;
+            manage_revenue: components["schemas"]["Metric_Decimal_"] | null;
+            professional_services: components["schemas"]["Metric_Decimal_"] | null;
+        };
+        /** RevenueOverview */
+        RevenueOverview: {
+            compare_range: components["schemas"]["RevenueRange"] | null;
+            compare_totals: components["schemas"]["RevenueTotals"] | null;
+            range: components["schemas"]["RevenueRange"];
+            /** Reporting Currency */
+            reporting_currency: string | null;
+            /** Rows */
+            rows: components["schemas"]["RevenueRow"][];
+            totals: components["schemas"]["RevenueTotals"];
+            totals_change: components["schemas"]["RevenueTotalsChange"] | null;
+        };
+        /** RevenueRange */
+        RevenueRange: {
+            /** First */
+            first: string;
+            /** Last */
+            last: string;
+            months: components["schemas"]["Metric_int_"];
+        };
+        /** RevenueRow */
+        RevenueRow: {
+            change: components["schemas"]["RevenueChange"] | null;
+            compare: components["schemas"]["RevenueBlock"] | null;
+            /** Contract Currency */
+            contract_currency: string | null;
+            /** Csp */
+            csp: boolean | null;
+            current: components["schemas"]["RevenueBlock"];
+            /** Sow Reference */
+            sow_reference: string | null;
+            tenant: components["schemas"]["TenantView"];
+        };
+        /** RevenueTotal */
+        RevenueTotal: {
+            /** Currency */
+            currency: string;
+            customers: components["schemas"]["Metric_int_"];
+            figures: components["schemas"]["RevenueFigures"];
+            /** Missing */
+            missing: components["schemas"]["MissingCount"][];
+        };
+        /** RevenueTotals */
+        RevenueTotals: {
+            /** Contract */
+            contract: components["schemas"]["RevenueTotal"][];
+            reported: components["schemas"]["RevenueTotal"] | null;
+        };
+        /** RevenueTotalsChange */
+        RevenueTotalsChange: {
+            /** Contract */
+            contract: components["schemas"]["RevenueFigures"][];
+            reported: components["schemas"]["RevenueFigures"] | null;
+        };
         /** ReviewRequest */
         ReviewRequest: {
             /**
@@ -4325,6 +4468,8 @@ export interface components {
             contracted_ci_count?: string | null;
             /** Coverage */
             coverage?: ("8x5" | "16x5" | "24x7") | null;
+            /** Csp */
+            csp?: boolean | null;
             /** Currency */
             currency: string;
             /** Document Uri */
@@ -4375,6 +4520,8 @@ export interface components {
             contracted_ci_count: components["schemas"]["Metric_int_"] | null;
             /** Coverage */
             coverage: string | null;
+            /** Csp */
+            csp: boolean | null;
             /** Currency */
             currency: string;
             /** Document Uri */
@@ -6051,6 +6198,78 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RateCardVersionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revenue_overview_v1_commercial_revenue_get: {
+        parameters: {
+            query?: {
+                compare_from?: string | null;
+                compare_to?: string | null;
+                currency?: string | null;
+                from?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevenueOverview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revenue_csv_v1_commercial_revenue_csv_get: {
+        parameters: {
+            query?: {
+                currency?: string | null;
+                from?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
                 };
             };
             /** @description Validation Error */

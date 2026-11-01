@@ -432,7 +432,8 @@ async def test_case6_commercial_visibility_matches_the_role_list(
 
 @pytest.mark.parametrize(
     "column",
-    ["id", "monthly_manage_revenue", "hosting_acv", "manage_acv", "professional_services"],
+    ["id", "monthly_manage_revenue", "hosting_acv", "manage_acv", "professional_services",
+     "csp"],
 )
 async def test_case6_customer_scope_is_refused_every_commercial_field(
     app_db: Database, seeded: Seeded, column: str

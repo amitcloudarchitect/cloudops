@@ -102,12 +102,19 @@ export async function apiPost<P extends Post>(
   return (await send(token, "POST", url(path, params, query), body)) as PostOk<P>;
 }
 
-// Endpoints that answer with a document rather than JSON (the report pack's PDF).
-type Download = { [P in Get]: paths[P] extends { get: { responses: { 200: { content: { "application/pdf": unknown } } } } } ? P : never }[Get];
+// Endpoints that answer with a document rather than JSON (the report pack's PDF, the
+// Revenue & margin CSV).
+type DocumentContent = { "application/pdf": unknown } | { "text/csv": unknown };
+type Download = { [P in Get]: paths[P] extends { get: { responses: { 200: { content: DocumentContent } } } } ? P : never }[Get];
 
 /** Fetch a document with the user's token, as a Blob the browser can save. */
-export async function apiDownload<P extends Download>(token: string, path: P, params: Record<string, string>): Promise<Blob> {
-  const response = await fetch(url(path, params), { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+export async function apiDownload<P extends Download>(
+  token: string,
+  path: P,
+  params: Record<string, string>,
+  query?: Query,
+): Promise<Blob> {
+  const response = await fetch(url(path, params, query), { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
   if (!response.ok) throw new ApiError(response.status, "error", response.headers.get("x-request-id"));
   return response.blob();
 }
