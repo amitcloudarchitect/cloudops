@@ -62,7 +62,7 @@ az keyvault secret set --vault-name kv-cloudops-app-dev-weu --name corestack-acc
 ## 3. Merge, then let Argo CD roll it out
 
 The workers Application syncs the three Deployments, their KEDA ScaledObjects and the
-schedule jobs (daily). The images must be a build of this change: the release
+schedule jobs (every six hours, ADR 0037). The images must be a build of this change: the release
 pipeline bumps them in the dev overlay after merge (`Dev overlay: images <sha>`).
 
 ```bash
@@ -94,6 +94,8 @@ that resolves to no tenant. Map them on the console's customer mapping screen:
 | `corestack` | `Microsoft_Azure_Sponsorship-2023` (the CoreStack tenant's name) | Azure Sponsorship |
 | `qualys` | `Azure Sponsorship` (the asset tag) | Azure Sponsorship, if it did not already resolve |
 
+Approving a mapping queues a sync of that source at once (ADR 0037): the worker
+picks it up within a minute, so there is no need to wait six hours or exec a run.
 The next run files everything under the tenant. Connector health on the console shows
 each run, its counts and the quarantine depth.
 

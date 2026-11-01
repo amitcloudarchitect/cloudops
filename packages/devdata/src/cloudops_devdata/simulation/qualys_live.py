@@ -27,7 +27,7 @@ import asyncio
 import re
 from collections.abc import Awaitable, Callable, Iterable, Sequence
 from contextlib import AsyncExitStack
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from typing import Any, Final
 from uuid import UUID
 
@@ -38,6 +38,7 @@ from cloudops_config import Component, ConfigurationError, DbLogin, QualysSource
 from cloudops_connectors.core import state
 from cloudops_connectors.core.cli import Live, main
 from cloudops_connectors.core.ingest import principal
+from cloudops_connectors.core.sync import CUSTOMER_SYNC
 from cloudops_connectors.qualys.client import QualysClient
 from cloudops_connectors.qualys.fake import FakeQualys
 from cloudops_connectors.qualys.mapping import ENTITY, SOURCE
@@ -153,4 +154,4 @@ LIVE: Final = Live(frozenset({Component.QUALYS}), lambda _: frozenset({ENTITY}),
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(SOURCE, {ENTITY: timedelta(days=1)}, _fixtures, live=LIVE))
+    raise SystemExit(main(SOURCE, {ENTITY: CUSTOMER_SYNC}, _fixtures, live=LIVE))

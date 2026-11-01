@@ -26,12 +26,12 @@ import asyncio
 import os
 import sys
 from contextlib import AsyncExitStack
-from datetime import timedelta
 from typing import Final
 
 from cloudops_config import Component, ConfigurationError, DbLogin, Settings, load_settings
 from cloudops_connectors.azure.auth import GRAPH_SCOPE, EntraAuth, workload_credential
 from cloudops_connectors.core.cli import Live, main
+from cloudops_connectors.core.sync import CUSTOMER_SYNC
 from cloudops_connectors.graph.client import GRAPH, GraphClient
 from cloudops_connectors.sharepoint.fake import (
     FIXTURE_GRAPH,
@@ -117,7 +117,7 @@ def _main(argv: list[str]) -> int:
         except ConfigurationError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 1
-    return main(SOURCE, {ENTITY: timedelta(days=1), FOLDER_ENTITY: timedelta(days=1)},
+    return main(SOURCE, {ENTITY: CUSTOMER_SYNC, FOLDER_ENTITY: CUSTOMER_SYNC},
                 _fixtures, argv, live=LIVE)
 
 
