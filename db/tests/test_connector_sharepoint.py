@@ -130,11 +130,11 @@ async def test_a_site_under_an_unmapped_customer_is_refused_and_the_name_quarant
     db: Database, mapped: Synthetic
 ) -> None:
     with pytest.raises(UnresolvedCustomerError):
-        await register_site(db, UNREGISTERED_CUSTOMER, "getronics.sharepoint.com,x,y",
-                            "https://getronics.sharepoint.com/sites/pharma")
+        await register_site(db, UNREGISTERED_CUSTOMER, "contoso.sharepoint.com,x,y",
+                            "https://contoso.sharepoint.com/sites/pharma")
     dsn = mapped.admin_dsn
     assert rows(dsn, "SELECT count(*) FROM cloudops.sharepoint_site WHERE site_id = %s",
-                "getronics.sharepoint.com,x,y") == [(0,)]
+                "contoso.sharepoint.com,x,y") == [(0,)]
     assert rows(dsn, "SELECT alias, occurrence_count FROM staging.tenant_alias_quarantine"
                      " WHERE source_system = 'sharepoint'") == [(UNREGISTERED_CUSTOMER, 1)]
     # The variant spelling resolved through normalisation, to the right tenant.
