@@ -405,6 +405,7 @@ class Onboarding(ApiModel):
     first_admin_at: datetime | None
     live_at: datetime | None
     suspended_at: datetime | None
+    assistant_enabled: bool  # AMARA for the portal's users (ADR 0029)
 
 
 class CatalogueRole(ApiModel):
@@ -464,7 +465,7 @@ async def _onboarding(
         " coalesce((SELECT array_agg(g.role_id) FROM cloudops.portal_role_agreement g"
         "           WHERE g.tenant_id = t.id), '{}'),"
         " o.roles_agreement_ref, o.roles_agreed_at, o.first_admin_oid, o.first_admin_at,"
-        " o.live_at, o.suspended_at"
+        " o.live_at, o.suspended_at, t.assistant_enabled"
         " FROM cloudops.tenant t LEFT JOIN cloudops.portal_onboarding o ON o.tenant_id = t.id"
         f"{where} ORDER BY t.canonical_name"), {"t": tenant_id})]
     return [Onboarding(
@@ -473,6 +474,7 @@ async def _onboarding(
         agreed_roles=sorted(names.get(i, "unknown role") for i in r[7]),
         roles_agreement_ref=r[8], roles_agreed_at=r[9],
         first_admin_oid=r[10], first_admin_at=r[11], live_at=r[12], suspended_at=r[13],
+        assistant_enabled=bool(r[14]),
     ) for r in rows]
 
 

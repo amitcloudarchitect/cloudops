@@ -122,7 +122,7 @@ The user onboarded "Azure Sponsorship" (`azsponsor`) with the dev subscription
 - **Two feeds, two tenants, one subscription.** This feed keeps reading it with the
   ingest identity, through its alias, into the internal tenant. The customer's
   credential reads it into `azsponsor`, by its binding, never by the alias. Each has its
-  own `cloud_account` row (unique per tenant since migrations 0021 and 0022), its own
+  own `cloud_account` row (unique per tenant since migrations 0025 and 0026), its own
   watermarks, and its own daily-cost statements: a newer statement supersedes only its
   own tenant's, so neither feed replaces the other's month.
 - **Visible.** Both rows are `shared_with_platform`. The credential view, FinOps'

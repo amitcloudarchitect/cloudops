@@ -1,6 +1,6 @@
 """A stored customer credential: its inventory row, and its secret by name.
 
-The inventory row (``cloudops.customer_credential``, migration 0021) holds the
+The inventory row (``cloudops.customer_credential``, migration 0025) holds the
 identifiers and the Key Vault secret names, never a secret. The secret is read
 from the ``SecretStore`` each time it is used (CSI-mounted from Key Vault in
 Azure, ``.env.local`` on a laptop), so a rotated secret takes effect without a

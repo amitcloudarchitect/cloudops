@@ -1,7 +1,7 @@
 """Cloud onboarding: stored customer credentials, their checks, shared accounts (expand).
 
-Revision ID: 0021
-Revises: 0020
+Revision ID: 0025
+Revises: 0024
 Create Date: 2026-10-31
 
 ADR 0003 (stored, read-only customer credentials until production) and ADR 0027.
@@ -22,7 +22,7 @@ through the ``SecretStore``.
   no secret and no Temporal client). Status only moves forward.
 - ``cloudops.cloud_account``: one row per tenant per provider id (index
   ``cloud_account_tenant_provider_native_key``; the old global unique constraint
-  goes in 0022, the contract step). A trigger lets the same id be held by the
+  goes in 0026, the contract step). A trigger lets the same id be held by the
   internal tenant and at most one customer tenant, never two customers, and marks
   both rows ``shared_with_platform``: the provenance of the platform's own
   subscription appearing under a customer as well (ADR 0023, amended).
@@ -44,8 +44,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0021"
-down_revision = "0020"
+revision = "0025"
+down_revision = "0024"
 branch_labels = None
 depends_on = None
 

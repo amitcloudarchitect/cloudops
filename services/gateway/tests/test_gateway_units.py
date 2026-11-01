@@ -234,9 +234,23 @@ def test_write_tools_must_declare_an_idempotency_key() -> None:
         reg.register(Tool("w", "d", SCHEMA, "tickets.read", ToolKind.WRITE, _record))
 
 
-def test_the_three_shipped_tools_register_and_are_read_only() -> None:
+def test_the_shipped_tools_register_and_are_read_only() -> None:
     reg = ToolRegistry(db=None)  # type: ignore[arg-type]
     for tool in TOOLS:
         reg.register(tool)
-    assert {t.name for t in TOOLS} == {"get_resource_context", "search_tickets", "get_cost_trend"}
+    assert {t.name for t in TOOLS} == {
+        "get_resource_context", "search_tickets", "get_cost_trend",
+        # The assistant's (ADR 0029).
+        "get_ticket", "get_sla_summary", "get_open_vulnerabilities", "get_recent_changes",
+        "get_margin"}
     assert all(t.kind is ToolKind.READ for t in TOOLS)
+
+
+def test_margin_is_offered_only_to_commercial_permissions() -> None:
+    reg = ToolRegistry(db=None)  # type: ignore[arg-type]
+    for tool in TOOLS:
+        reg.register(tool)
+    customer = {s.name for s in reg.specs({"tickets.read", "inventory.read", "cost.read"})}
+    assert "get_margin" not in customer
+    assert "get_ticket" in customer
+    assert "get_margin" in {s.name for s in reg.specs({"commercial.read"})}

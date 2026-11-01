@@ -1,12 +1,12 @@
 """A provider id is unique per tenant, not globally (contract).
 
-Revision ID: 0022
-Revises: 0021
+Revision ID: 0026
+Revises: 0025
 Create Date: 2026-10-31
 
 ADR 0027 and ADR 0023 (amended). The platform's own dev subscription is also the
 first onboarded customer's ("Azure Sponsorship"), so one subscription id is held
-by two tenants. 0021 added the per-tenant unique index the connectors now upsert
+by two tenants. 0025 added the per-tenant unique index the connectors now upsert
 on (``ON CONFLICT (tenant_id, provider, native_id)``) and the trigger that admits a
 shared id only between the internal tenant and one customer. This drops the old
 global ``UNIQUE (provider, native_id)``, which would refuse the second row.
@@ -23,8 +23,8 @@ from __future__ import annotations
 
 from alembic import op
 
-revision = "0022"
-down_revision = "0021"
+revision = "0026"
+down_revision = "0025"
 branch_labels = None
 depends_on = None
 

@@ -15,7 +15,7 @@ secret and no Temporal client).
 The tenant is created or chosen with the customer-mapping endpoints (``/v1/mapping/
 tenants``), which a platform administrator may use too.
 
-Every write is a database function (migration 0021) that checks the permission,
+Every write is a database function (migration 0025) that checks the permission,
 staff, and the tenant's assignment and scope again; refusals map to structured
 codes, with no tenant, customer or secret name in them. Expiry is at most 90 days
 (ADR 0003, guardrail 3), enforced by the function and the table.
@@ -61,7 +61,7 @@ SubscriptionId = Annotated[
     str, Field(pattern=r"^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")]
 AwsAccountId = Annotated[str, Field(pattern=r"^[0-9]{12}$")]
 
-# The functions' refusals (migration 0021), by SQLSTATE.
+# The functions' refusals (migration 0025), by SQLSTATE.
 _REFUSALS: Final = {
     "42501": (403, "forbidden"),
     "CMSCP": (404, "not_found"),

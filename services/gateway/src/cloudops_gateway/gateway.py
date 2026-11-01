@@ -7,11 +7,13 @@ One call, in this order. Each refusal is traced before it is raised:
 
 1. **Turn ceiling:** at most 20 turns per conversation.
 2. **Quotas:** tokens per user per day and per tenant per month, read from the
-   ledger. Refused at 100%, with a warning flag on the reply from 80%.
+   ledger through ``cloudops.llm_usage`` (totals only, so a customer scope can
+   ask too). A task family may have its own sub-budget inside them (the
+   assistant: ADR 0029). Refused at 100%, with a warning flag from 80%.
 3. **Spend breaker:** this tenant's spend over the last 15 minutes against
-   its trailing 24-hour rate, and the platform's (through
-   ``cloudops.llm_platform_spend``). Open above five times the trailing rate,
-   once past a floor.
+   its trailing 24-hour rate (a verdict from ``cloudops.llm_usage``), and the
+   platform's (through ``cloudops.llm_platform_spend``). Open above five times
+   the trailing rate, once past a floor.
 4. **Redaction:** of every message, before anything leaves the process.
 5. **Semantic cache:** only when the caller asks for it. Scoped by tenant
    (RLS), role class and subscription scope.
@@ -91,6 +93,15 @@ class AllProvidersFailedError(Exception):
 
 
 @dataclass(frozen=True)
+class SubBudget:
+    """A task family's share of the tenant's budget, and its own per-user cap,
+    so one family (the assistant) can never starve another (triage)."""
+
+    user_daily_tokens: int
+    tenant_monthly_fraction: float
+
+
+@dataclass(frozen=True)
 class Limits:
     user_daily_tokens: int = 200_000
     tenant_monthly_tokens: int = 5_000_000
@@ -101,6 +112,10 @@ class Limits:
     breaker_trailing: timedelta = timedelta(hours=24)
     breaker_multiple: Decimal = Decimal(5)  # not money: a ratio of spend rates
     breaker_floor: Decimal = SPEND_BREAKER_FLOOR  # recent spend below this never trips
+    # Task prefix -> sub-budget. ADR 0029: the assistant may use 40% of the
+    # tenant's month, and 100k tokens per user per day.
+    sub_budgets: Mapping[str, SubBudget] = field(default_factory=lambda: {
+        "assistant.": SubBudget(user_daily_tokens=100_000, tenant_monthly_fraction=0.4)})
 
 
 @dataclass(frozen=True)
@@ -164,30 +179,26 @@ class GatewayReply:
     latency_ms: int = 0
 
 
+# The id comes from the sequence, not RETURNING: a customer scope may insert a
+# ledger row but never read one back (migration 0023).
+_NEXT_CALL_ID: Final = text("SELECT nextval('cloudops.llm_call_id_seq')")
 _INSERT_CALL: Final = text(
-    "INSERT INTO cloudops.llm_call (tenant_id, principal, conversation_id, task, tier_requested,"
-    " tier_used, provider, deployment, prompt_redacted, redactions, retrieval, tool_calls,"
+    "INSERT INTO cloudops.llm_call (id, tenant_id, principal, conversation_id, task,"
+    " tier_requested, tier_used, provider, deployment, prompt_redacted, redactions, retrieval,"
+    " tool_calls,"
     " tokens_in, tokens_out, cost, cost_currency, latency_ms, cache_hit, outcome, reason,"
     " trace_id)"
-    " VALUES (:tenant_id, :principal, :conversation_id, :task, :tier_requested, :tier_used,"
+    " VALUES (:id, :tenant_id, :principal, :conversation_id, :task, :tier_requested, :tier_used,"
     " :provider, :deployment, :prompt, :redactions, CAST(:retrieval AS jsonb),"
     " CAST(:tool_calls AS jsonb), :tokens_in, :tokens_out, :cost, :currency, :latency_ms,"
-    " :cache_hit, :outcome, :reason, :trace_id) RETURNING id"
+    " :cache_hit, :outcome, :reason, :trace_id)"
 )
+# Totals for this principal and tenant (the scope's), and the tenant breaker's
+# verdict: never a cost or a row, so a customer scope may ask (migration 0023).
 _USAGE: Final = text(
-    "SELECT"
-    " coalesce(sum(tokens_in + tokens_out) FILTER (WHERE principal = :principal"
-    "   AND created_at >= date_trunc('day', now())), 0),"
-    " coalesce(sum(tokens_in + tokens_out) FILTER (WHERE created_at >= date_trunc('month', now())),"
-    "   0)"
-    " FROM cloudops.llm_call WHERE tenant_id = :tenant_id"
-    "   AND created_at >= date_trunc('month', now())"
-)
-_TENANT_SPEND: Final = text(
-    "SELECT coalesce(sum(cost) FILTER (WHERE created_at >= now() - CAST(:recent AS interval)), 0),"
-    "       coalesce(sum(cost) FILTER (WHERE created_at >= now() - CAST(:trailing AS interval)), 0)"
-    " FROM cloudops.llm_call WHERE tenant_id = :tenant_id"
-    "   AND created_at >= now() - CAST(:trailing AS interval)"
+    "SELECT user_day_tokens, tenant_month_tokens, task_user_day_tokens,"
+    " task_tenant_month_tokens, tenant_breaker_open FROM cloudops.llm_usage(:prefix,"
+    " CAST(:recent AS interval), CAST(:trailing AS interval), :multiple, :floor)"
 )
 _PLATFORM_SPEND: Final = text(
     "SELECT recent_spend, trailing_spend FROM cloudops.llm_platform_spend("
@@ -352,29 +363,37 @@ class Gateway:
         ctx: CallContext = trace["ctx"]
         lim = self.limits
         recent, trailing = _interval(lim.breaker_recent), _interval(lim.breaker_trailing)
+        task = str(trace["task"])
+        prefix, sub = next(((p, b) for p, b in lim.sub_budgets.items() if task.startswith(p)),
+                           ("", None))
         async with self._db.transaction(ctx.scope) as conn:
-            usage: tuple[Any, ...] = tuple((await conn.execute(
-                _USAGE, {"principal": ctx.principal_id, "tenant_id": ctx.tenant_id}
-            )).one())
-            tenant_spend: tuple[Any, ...] = tuple((await conn.execute(
-                _TENANT_SPEND,
-                {"tenant_id": ctx.tenant_id, "recent": recent, "trailing": trailing},
-            )).one())
+            usage: tuple[Any, ...] = tuple((await conn.execute(_USAGE, {
+                "prefix": prefix or task, "recent": recent, "trailing": trailing,
+                "multiple": lim.breaker_multiple, "floor": lim.breaker_floor,
+            })).one())
             platform_spend: tuple[Any, ...] = tuple((await conn.execute(
                 _PLATFORM_SPEND, {"recent": recent, "trailing": trailing}
             )).one())
         user_used, tenant_used = int(usage[0]), int(usage[1])
-        if user_used >= lim.user_daily_tokens:
-            await self._refuse(trace, QuotaExceededError("user daily token quota reached"))
-        if tenant_used >= lim.tenant_monthly_tokens:
-            await self._refuse(trace, QuotaExceededError("tenant monthly token quota reached"))
-        for scope_name, spend in (("tenant", tenant_spend), ("platform", platform_spend)):
-            if self._tripped(Decimal(spend[0]), Decimal(spend[1])):
-                await self._refuse(
-                    trace, CircuitOpenError(f"{scope_name} spend rate above threshold")
-                )
-        return bool(user_used >= lim.alert_fraction * lim.user_daily_tokens
-                    or tenant_used >= lim.alert_fraction * lim.tenant_monthly_tokens)
+        # (used, limit, refusal) for every budget this call counts against.
+        budgets: list[tuple[int, float, str]] = [
+            (user_used, lim.user_daily_tokens, "user daily token quota reached"),
+            (tenant_used, lim.tenant_monthly_tokens, "tenant monthly token quota reached"),
+        ]
+        if sub is not None:
+            budgets += [
+                (int(usage[2]), sub.user_daily_tokens, f"{prefix} user daily quota reached"),
+                (int(usage[3]), sub.tenant_monthly_fraction * lim.tenant_monthly_tokens,
+                 f"{prefix} tenant monthly quota reached"),
+            ]
+        for used, limit, message in budgets:
+            if used >= limit:
+                await self._refuse(trace, QuotaExceededError(message))
+        if bool(usage[4]):
+            await self._refuse(trace, CircuitOpenError("tenant spend rate above threshold"))
+        if self._tripped(Decimal(platform_spend[0]), Decimal(platform_spend[1])):
+            await self._refuse(trace, CircuitOpenError("platform spend rate above threshold"))
+        return any(used >= lim.alert_fraction * limit for used, limit, _ in budgets)
 
     def _tripped(self, recent: Decimal, trailing: Decimal) -> bool:
         lim = self.limits
@@ -473,8 +492,9 @@ class Gateway:
     ) -> int:
         ctx: CallContext = trace["ctx"]
         async with self._db.transaction(ctx.scope) as conn:
-            call_id = await conn.scalar(_INSERT_CALL, {
-                "tenant_id": ctx.tenant_id, "principal": ctx.principal_id,
+            call_id = await conn.scalar(_NEXT_CALL_ID)
+            await conn.execute(_INSERT_CALL, {
+                "id": call_id, "tenant_id": ctx.tenant_id, "principal": ctx.principal_id,
                 "conversation_id": ctx.conversation_id, "task": trace["task"],
                 "tier_requested": Tier(trace["tier"]).value,
                 "tier_used": None if tier_used is None else tier_used.value,

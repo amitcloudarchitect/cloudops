@@ -15,6 +15,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { PeriodControls, usePeriodChoice } from "@/components/PeriodControls";
 import { Provenance } from "@/components/Provenance";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { chargeClassLabel, checkReason, periodLabel, sortKey, verificationReason } from "@/lib/commercial";
 import { date, money, percent } from "@/lib/format";
 import { useMe } from "@/lib/session";
@@ -64,6 +65,7 @@ function Allocation({ lines, dimension, label, role }: { lines: AllocationLine[]
 }
 
 export function FinOpsCustomer({ tenantId }: { tenantId: string }) {
+  useAssistantContext({ screen: "finops_customer", tenantId });
   const me = useMe();
   const choice = usePeriodChoice();
   const loaded = useApi(load(tenantId, choice.period, choice.currency), `finops:${tenantId}:${choice.query}`);

@@ -118,8 +118,8 @@ Four things were not specified and were asked (2026-10-31):
    bounded step whose state machine is the forward-only table.
 
 8. **The shared subscription** (decision 1 above; ADR 0023 amended). `cloud_account`
-   is unique on (tenant, provider, id) (0021); the old global constraint is dropped in
-   0022, a contract shipped with its expand as 0015 was (an old connector pod's upsert
+   is unique on (tenant, provider, id) (0025); the old global constraint is dropped in
+   0026, a contract shipped with its expand as 0015 was (an old connector pod's upsert
    fails and is retried until replaced). A SECURITY DEFINER trigger admits a second
    tenant on the same id only when one of the two is the internal tenant, refuses a
    second customer (`CAOWN`, naming no tenant), marks both rows

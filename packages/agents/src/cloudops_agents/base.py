@@ -41,7 +41,7 @@ from opentelemetry.trace import get_current_span
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from cloudops_agents.prompts import DataItem, PromptTemplate, build_messages
-from cloudops_gateway.gateway import CallContext, GatewayRefusedError, GatewayReply
+from cloudops_gateway.gateway import CacheClass, CallContext, GatewayRefusedError, GatewayReply
 from cloudops_gateway.providers import Message, Tier, ToolCallRequest, ToolSpec
 from cloudops_gateway.registry import ToolOutcome
 from cloudops_observability import record_agent_run, tracer
@@ -115,6 +115,7 @@ class GatewayLike(Protocol):
         self, ctx: CallContext, *, tier: Tier, task: str, messages: Sequence[Message],
         tools: Sequence[ToolSpec] = ..., retrieval: Sequence[Mapping[str, Any]] | None = ...,
         tool_calls: Sequence[Mapping[str, Any]] | None = ...,
+        cache: CacheClass | None = ...,
     ) -> GatewayReply: ...
 
     async def record_escalation(self, ctx: CallContext, task: str, reason: str,
@@ -181,6 +182,7 @@ class Agent[O: AgentOutput]:
         request: str,
         data: Sequence[DataItem] = (),
         retrieval_ids: Sequence[str] = (),
+        cache: CacheClass | None = None,
     ) -> AgentResult[O]:
         """One bounded agent run, as one span (``agent.run``) whose children are
         the gateway calls and tool invocations. The span names the agent and its
@@ -189,7 +191,8 @@ class Agent[O: AgentOutput]:
                 "cloudops.agent": self.spec.name,
                 "cloudops.agent.version": self.spec.prompt.version,
                 "cloudops.agent.tier": self.spec.tier.value}):
-            return await self._run(ctx, request=request, data=data, retrieval_ids=retrieval_ids)
+            return await self._run(ctx, request=request, data=data, retrieval_ids=retrieval_ids,
+                                   cache=cache)
 
     async def _run(
         self,
@@ -198,8 +201,11 @@ class Agent[O: AgentOutput]:
         request: str,
         data: Sequence[DataItem],
         retrieval_ids: Sequence[str],
+        cache: CacheClass | None = None,
     ) -> AgentResult[O]:
         spec = self.spec
+        if cache is not None and spec.tools:
+            raise ValueError("only a tool-free agent's answer may be cached (ADR 0005)")
         run_id = uuid.uuid4()
         history: list[Message] = build_messages(
             spec.prompt.render(spec.slots), schema=spec.output.model_json_schema(),
@@ -237,9 +243,11 @@ class Agent[O: AgentOutput]:
 
         try:
             while True:
+                # The first attempt only: a retry carries the validation errors.
+                cached = {"cache": cache} if cache is not None and attempts == 0 else {}
                 reply = await self._gateway.complete(
                     ctx, tier=spec.tier, task=spec.name, messages=history, tools=offered,
-                    retrieval=retrieval, tool_calls=tools_trace or None,
+                    retrieval=retrieval, tool_calls=tools_trace or None, **cached,
                 )
                 calls.append(reply.call_id)
                 tokens_in += reply.tokens_in

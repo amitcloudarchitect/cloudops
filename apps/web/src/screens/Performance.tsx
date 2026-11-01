@@ -7,6 +7,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { count, decimal } from "@/lib/format";
 import { band, THRESHOLDS } from "@/lib/health";
 import { useMe } from "@/lib/session";
@@ -21,6 +22,7 @@ function attainment(m: MonthPerformance): string {
 // Service performance (the VP or director's landing view, ADR 0018): SLA
 // attainment and ticket volumes by month, and what is open now.
 export function Performance() {
+  useAssistantContext({ screen: "performance" });
   const me = useMe();
   const loaded = useApi((token) => apiGet(token, "/v1/performance"), "performance");
   if (loaded.status === "loading") return <Loading what="service performance" />;

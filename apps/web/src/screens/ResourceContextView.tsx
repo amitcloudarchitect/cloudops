@@ -11,6 +11,7 @@ import { LoadError, Loading } from "@/components/Loading";
 import { MetricCard } from "@/components/MetricCard";
 import { PageHeader } from "@/components/PageHeader";
 import { apiGet } from "@/lib/api";
+import { useAssistantContext } from "@/lib/assistant";
 import { date } from "@/lib/format";
 import { band, priorityBand, THRESHOLDS } from "@/lib/health";
 import { useMe } from "@/lib/session";
@@ -39,6 +40,11 @@ function WorkList({ items, empty }: { items: WorkItemSummary[]; empty: string })
 export function ResourceContextView({ id }: { id: string }) {
   const me = useMe();
   const loaded = useApi((token) => apiGet(token, "/v1/resources/{resource_id}/context", { resource_id: id }), id);
+  useAssistantContext({
+    screen: "resource",
+    tenantId: loaded.status === "ready" && "tenant_id" in loaded.data.resource ? loaded.data.resource.tenant_id : null,
+    record: { type: "resource", id },
+  });
   if (loaded.status === "loading") return <Loading what="the resource" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="resource" />;
   const ctx = loaded.data;

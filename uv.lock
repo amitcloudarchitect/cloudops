@@ -384,9 +384,11 @@ name = "cloudops-api"
 version = "0.1.0"
 source = { editable = "services/api" }
 dependencies = [
+    { name = "cloudops-agents" },
     { name = "cloudops-commercial" },
     { name = "cloudops-config" },
     { name = "cloudops-domain" },
+    { name = "cloudops-gateway" },
     { name = "cloudops-observability", extra = ["fastapi", "httpx"] },
     { name = "cloudops-tenancy" },
     { name = "fastapi" },
@@ -397,9 +399,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cloudops-agents", editable = "packages/agents" },
     { name = "cloudops-commercial", editable = "packages/commercial" },
     { name = "cloudops-config", editable = "packages/config" },
     { name = "cloudops-domain", editable = "services/domain" },
+    { name = "cloudops-gateway", editable = "services/gateway" },
     { name = "cloudops-observability", extras = ["fastapi", "httpx"], editable = "packages/observability" },
     { name = "cloudops-tenancy", editable = "packages/tenancy" },
     { name = "fastapi", specifier = ">=0.115" },

@@ -1,4 +1,4 @@
-"""Cloud onboarding at the database level (migration 0021, ADR 0027, ADR 0003):
+"""Cloud onboarding at the database level (migration 0025, ADR 0027, ADR 0003):
 the credential inventory and its checks are tenant data no other tenant and no
 customer can read; only a platform administrator records one, through the
 functions; the 90-day expiry and one-credential-one-tenant hold in the table; the
