@@ -42,9 +42,9 @@ test.describe("finops", () => {
     await expect(woodgrove).not.toContainText(/GBP 0\.00|EUR 0\.00|\b0\.0%/);
     const northwind = row(page, "Northwind Logistics B.V.");
     await expect(northwind).toContainText(/EUR [\d,]+\.\d{2}/);
-    // The seed does not record CSP: hosting ACV is not guessed.
+    // The seed does not record CSP; derived figures are marked, in words.
     await expect(northwind).toContainText("Not recorded");
-    await expect(northwind).toContainText("the SOW does not say whether Getronics resells the cloud");
+    await expect(northwind).toContainText("Modelled");
     await expect(page.getByRole("heading", { level: 2, name: "Totals by contract currency" })).toBeVisible();
     await expect(page.getByRole("table", { name: "Revenue and margin totals" }).getByRole("row", { name: /EUR/ })).toBeVisible();
   });
@@ -56,7 +56,7 @@ test.describe("finops", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Totals in EUR" })).toBeVisible();
     await expect(row(page, "Contoso Retail Ltd")).toContainText(/EUR [\d,]+\.\d{2}|no rate in force/);
 
-    await page.getByLabel("Compare with another range").check();
+    await page.getByLabel("Compare with another range").click();
     await expect(page).toHaveURL(/compare_from=\d{4}-\d{2}&compare_to=\d{4}-\d{2}/);
     await expect(page.getByRole("heading", { level: 2 }).filter({ hasText: "against" })).toBeVisible();
     await expect(row(page, "Northwind Logistics B.V.")).toContainText("was ");
@@ -96,7 +96,7 @@ for (const theme of ["light", "dark"] as const) {
     test("passes axe (WCAG 2.1 AA), comparing, and does not scroll sideways at tablet width", async ({ signedIn: page }) => {
       await page.goto("/revenue");
       await expect(page.getByRole("table", { name: TABLE })).toBeVisible();
-      await page.getByLabel("Compare with another range").check();
+      await page.getByLabel("Compare with another range").click();
       await expect(page.getByRole("heading", { level: 2 }).filter({ hasText: "against" })).toBeVisible();
       await page.waitForLoadState("networkidle");
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
