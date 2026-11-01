@@ -7,6 +7,11 @@
 # needs two samples, so the first minutes return nothing. Rollouts counts an empty
 # result as an error (five in a row aborted the first canary), so each query falls
 # back to NaN: "no data yet", which passes until real traffic says otherwise.
+#
+# Volume guard: below 50 canary requests in five minutes both checks are NaN too.
+# In dev a p95 over a handful of requests swung from 5 ms to 925 ms on one slow
+# call and aborted a healthy canary; with real traffic the thresholds apply as
+# before. Windows are five minutes, so one burst does not decide a rollout.
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
@@ -21,9 +26,13 @@ spec:
         prometheus:
           address: http://prometheus-server.monitoring.svc.cluster.local
           query: |
-            (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary",response_code=~"5.."}[2m])) or vector(0))
-            /
-            (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[2m])) or vector(0))
+            (
+              (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary",response_code=~"5.."}[5m])) or vector(0))
+              /
+              sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[5m]))
+            )
+            and on() (sum(increase(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[5m])) >= 50)
+            or vector(NaN)
     - name: p95-latency
       interval: 1m
       failureLimit: 1
@@ -32,5 +41,6 @@ spec:
         prometheus:
           address: http://prometheus-server.monitoring.svc.cluster.local
           query: |
-            histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[2m])))
+            histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[5m])))
+            and on() (sum(increase(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="api-canary"}[5m])) >= 50)
             or vector(NaN)

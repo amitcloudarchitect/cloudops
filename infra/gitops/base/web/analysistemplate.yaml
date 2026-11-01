@@ -2,6 +2,8 @@
 # (base/api/analysistemplate.yaml explains them and the NaN fallback), measuring the
 # console's live Service for five minutes. A failure switches back to the previous
 # ReplicaSet, which scaleDownDelaySeconds keeps running for that long.
+# Both checks carry the API template's volume guard: below 50 requests in five
+# minutes they read NaN, so a handful of slow requests cannot fail a release.
 apiVersion: argoproj.io/v1alpha1
 kind: AnalysisTemplate
 metadata:
@@ -17,9 +19,13 @@ spec:
         prometheus:
           address: http://prometheus-server.monitoring.svc.cluster.local
           query: |
-            (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="web",response_code=~"5.."}[2m])) or vector(0))
-            /
-            (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="web"}[2m])) or vector(0))
+            (
+              (sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="web",response_code=~"5.."}[5m])) or vector(0))
+              /
+              sum(rate(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="web"}[5m]))
+            )
+            and on() (sum(increase(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="web"}[5m])) >= 50)
+            or vector(NaN)
     - name: p95-latency
       interval: 1m
       count: 5
@@ -29,5 +35,6 @@ spec:
         prometheus:
           address: http://prometheus-server.monitoring.svc.cluster.local
           query: |
-            histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{namespace="platform-edge",reporter="source",destination_service_name="web"}[2m])))
+            histogram_quantile(0.95, sum by (le) (rate(istio_request_duration_milliseconds_bucket{namespace="platform-edge",reporter="source",destination_service_name="web"}[5m])))
+            and on() (sum(increase(istio_requests_total{namespace="platform-edge",reporter="source",destination_service_name="web"}[5m])) >= 50)
             or vector(NaN)
