@@ -9,29 +9,28 @@ row-level security decides what exists, and every number is a ``Metric``.
   priority, how much the classifier triaged and where it routed it, auto
   remediation (always 0 until the execution plane exists, and said so), and SLA
   attainment against ADR 0030's modelled targets. Triage is staff-only.
-- ``/v1/home/sections/revenue`` (``cost.read``): hosting cost by provider and
-  currency; with ``commercial.read``, the hosting price, managed services revenue,
-  cost and margin; project prices once their source exists. A customer gets the
-  price of its own consumption (ADR 0021), closed months only, and nothing else.
+- ``/v1/home/sections/revenue`` (``cost.read``): a customer gets the price of its
+  own consumption (ADR 0021), closed months only, and nothing else. Staff revenue,
+  cost and margin are the revenue table's (``/v1/commercial/revenue``) and project
+  prices the project task ingest's: this module computes neither, and says
+  ``no_data_source`` until they are served.
 - ``/v1/home/sections/security`` (``vulnerabilities.read``): open vulnerabilities
   at the range's end by severity and age, found and fixed in the range; for staff,
   assessment scores (ADR 0020) and CoreStack's security events.
 - ``/v1/home/sections/platform`` (``inventory.read``, staff): customers onboarded,
   split by cloud, and each customer's size band.
 - ``/v1/home/sections/top-customers`` (``tickets.read``, staff): ten customers by
-  a modelled health score or by revenue.
+  a modelled health score (by revenue once the revenue table serves it).
 - ``/v1/settings/size-bands``: the size band thresholds, set with
   ``sizebands.manage`` (migration 0036).
 
-**Money** stays in its transaction currency. Given ``currency``, each line is
-also converted at the daily average rate in force on its own date: a cost line's
-usage date, a managed services month's last day. A total with any line that has
-no rate is absent, never partial. Margin is computed in the contract currency,
-then converted. Nothing is rounded here (CLAUDE.md rule 5).
+**Money** stays in its transaction currency, converted only at the daily average
+rate in force on each line's own date: the customer's price, and the spend that
+decides a size band (a month with any day lacking a rate has none). Nothing is
+rounded here (CLAUDE.md rule 5).
 
-**Modelled figures** say so: SLA attainment (ADR 0030 targets), the health score
-and its parts (``HEALTH_POLICY``), and a managed services cost the margin engine
-modelled rather than measured.
+**Modelled figures** say so: SLA attainment (ADR 0030 targets), and the health
+score and its parts (``HEALTH_POLICY``).
 """
 
 from __future__ import annotations
@@ -73,7 +72,6 @@ Start = Annotated[date | None, Query(description="First day, inclusive (UTC).")]
 End = Annotated[date | None, Query(description="Last day, inclusive (UTC); default today.")]
 
 COST_SOURCE: Final = "billing_exports"
-MARGIN_SOURCE: Final = "margin_engine"
 QUALYS: Final = "qualys"
 CORESTACK: Final = "corestack"
 ASSURANCE: Final = "assurance"
@@ -351,103 +349,30 @@ async def operations(request: Request, access: AccessDep, scope: ScopeDep,
 # --- revenue and margin ----------------------------------------------------------------
 
 
-class HostingLine(ApiModel):
-    provider: str
-    currency: str
-    cost: Metric[Decimal]  # Getronics' amortised cost from the provider
-    cost_converted: Metric[Decimal] | None
-    # The price charged (ADR 0021): commercial only. None: not permitted, or a day
-    # without exactly one SOW in force.
-    price: Metric[Decimal] | None
-    price_converted: Metric[Decimal] | None
-
-
-class ManagedLine(ApiModel):
-    """Managed services in one contract currency, from the margin engine's
-    latest snapshot of every customer-month that overlaps the range."""
-
-    currency: str
-    months: Metric[int]  # customer-months counted
-    provisional: Metric[int]  # of which not yet closed
-    revenue: Metric[Decimal]
-    cost: Metric[Decimal]  # modelled where the engine had no actual cost
-    margin: Metric[Decimal]
-    revenue_converted: Metric[Decimal] | None
-    cost_converted: Metric[Decimal] | None
-    margin_converted: Metric[Decimal] | None
-
-
-class ProjectFigures(ApiModel):
-    """Closed project tasks (new project price) and open ones (proposed
-    initiatives). No source holds their prices yet (ADR 0038)."""
+class SourcePending(ApiModel):
+    """Figures another module serves and this one does not compute (ADR 0038): staff
+    revenue, cost and margin come from the revenue table (``/v1/commercial/revenue``),
+    project prices from the ServiceNow project task ingest. Until each is merged, the
+    section says so rather than showing a figure of its own."""
 
     available: bool
     reason: Literal["no_data_source"] | None
-    new_project_price: Metric[Decimal] | None
-    proposed_price: Metric[Decimal] | None
 
 
-class RevenueTotals(ApiModel):
-    """In the reporting currency; each None when any line under it has no rate."""
-
-    currency: str
-    hosting_cost: Metric[Decimal] | None
-    hosting_price: Metric[Decimal] | None
-    managed_revenue: Metric[Decimal] | None
-    managed_cost: Metric[Decimal] | None
-    managed_margin: Metric[Decimal] | None
-    revenue: Metric[Decimal] | None  # hosting price + managed services (+ projects, when known)
-    margin: Metric[Decimal] | None  # (hosting price - hosting cost) + managed margin
-    margin_share: Metric[Decimal] | None  # margin over revenue
+PENDING: Final = SourcePending(available=False, reason="no_data_source")
 
 
 class RevenueSection(ApiModel):
     range: DateRange
     view: Literal["staff", "customer"]
-    commercial: bool  # the caller may read commercial figures
     reporting_currency: str | None
-    hosting: list[HostingLine] | None  # None: a customer
-    managed: list[ManagedLine] | None  # None: not commercial
-    projects: ProjectFigures | None  # None: not commercial
-    totals: RevenueTotals | None  # None: no reporting currency, or a customer
+    # Staff: hosting, managed services and margin (the revenue table), and project
+    # prices (project tasks). None for a customer.
+    revenue: SourcePending | None
+    projects: SourcePending | None
     customer_price: list[PriceLine] | None  # a customer's own price; None for staff
 
 
-# Per tenant, provider, currency and day, then priced and converted on that day.
-_HOSTING: Final = text(
-    "WITH day AS ("  # noqa: S608 - constants
-    "  SELECT c.tenant_id, a.provider, c.currency, c.usage_date, sum(c.amortized_cost) AS amount"
-    "  FROM cloudops.cost_fact c JOIN cloudops.cloud_account a ON a.id = c.account_id"
-    "  WHERE c.usage_date BETWEEN :start AND :end GROUP BY 1, 2, 3, 4)"
-    " SELECT d.tenant_id, d.provider, d.currency, sum(d.amount), max(d.usage_date),"
-    "   CASE WHEN bool_and(r.rate IS NOT NULL) THEN sum(d.amount * r.rate) END,"
-    "   CASE WHEN bool_and(u.uplift IS NOT NULL) THEN sum(d.amount * (1 + u.uplift)) END,"
-    "   CASE WHEN bool_and(u.uplift IS NOT NULL AND r.rate IS NOT NULL)"
-    "     THEN sum(d.amount * (1 + u.uplift) * r.rate) END"
-    " FROM day d"
-    # Exactly one SOW in force, or no price (cloudops.customer_price, ADR 0021). The
-    # SOW is commercial: RLS returns none to any other role, so no price either.
-    " LEFT JOIN LATERAL (SELECT CASE WHEN count(*) = 1 THEN max(s.consumption_uplift) END"
-    "   AS uplift FROM cloudops.sow s WHERE s.tenant_id = d.tenant_id"
-    "   AND s.effective_from <= d.usage_date"
-    "   AND (s.effective_to IS NULL OR s.effective_to >= d.usage_date)) u ON true"
-    " LEFT JOIN LATERAL (" + _rate("d", "d.usage_date") + ") r ON true"
-    " GROUP BY 1, 2, 3"
-)
-# The latest snapshot of each customer-month overlapping the range, converted at
-# the rate in force on the month's last day measured.
-_MANAGED: Final = text(
-    "SELECT DISTINCT ON (s.tenant_id, s.period) s.tenant_id, s.period, s.status,"  # noqa: S608 - constants
-    "   s.contract_currency, s.revenue, s.band_basis, s.actual_margin, s.modelled_margin,"
-    "   s.computed_at, r.rate"
-    " FROM (SELECT m.*, m.contract_currency AS currency,"
-    "   coalesce(m.through, (m.period + interval '1 month - 1 day')::date) AS last_day"
-    "   FROM cloudops.margin_snapshot m) s"
-    " LEFT JOIN LATERAL (" + _rate("s", "s.last_day") + ") r ON true"
-    " WHERE s.period BETWEEN :first AND :last AND s.revenue IS NOT NULL"
-    "   AND s.contract_currency IS NOT NULL"
-    " ORDER BY s.tenant_id, s.period, s.version DESC"
-)
 _CUSTOMER_PRICE: Final = text(
     "SELECT period, provider, currency, price, converted"
     " FROM cloudops.customer_monthly_price(:start, :end, CAST(:rep AS char(3)))"
@@ -455,231 +380,40 @@ _CUSTOMER_PRICE: Final = text(
 )
 
 
-@dataclass
-class _Sum:
-    """A running total in one currency and its conversion; a conversion with any
-    line missing a rate is lost for good."""
-
-    amount: Decimal = Decimal(0)
-    converted: Decimal | None = Decimal(0)
-    lines: int = 0
-
-    def add(self, amount: Any, converted: Any) -> None:
-        self.amount += Decimal(amount)
-        self.lines += 1
-        self.converted = (None if self.converted is None or converted is None
-                          else self.converted + Decimal(converted))
-
-
-@dataclass
-class _Hosting:
-    tenant: UUID
-    provider: str
-    currency: str
-    cost: Decimal
-    last_day: date
-    cost_converted: Decimal | None
-    price: Decimal | None
-    price_converted: Decimal | None
-
-
-@dataclass
-class _Managed:
-    tenant: UUID
-    period: date
-    closed: bool
-    currency: str
-    revenue: Decimal
-    cost: Decimal  # revenue less the engine's margin
-    modelled: bool
-    computed_at: datetime
-    rate: Decimal | None
-
-
-async def _hosting(conn: ScopedConnection, first: date, last: date,
-                   rep: str | None) -> list[_Hosting]:
-    rows = _rows(await conn.execute(_HOSTING, {"start": first, "end": last, "rep": rep}))
-    return [_Hosting(UUID(str(t)), str(p), str(c).strip(), Decimal(cost), day,
-                     None if conv is None else Decimal(conv),
-                     None if price is None else Decimal(price),
-                     None if pconv is None else Decimal(pconv))
-            for t, p, c, cost, day, conv, price, pconv in rows]
-
-
-async def _managed(conn: ScopedConnection, first: date, last: date,
-                   rep: str | None) -> list[_Managed]:
-    rows = _rows(await conn.execute(_MANAGED, {
-        "first": first.replace(day=1), "last": last.replace(day=1), "rep": rep}))
-    out: list[_Managed] = []
-    for t, period, status, ccy, revenue, basis, actual, modelled, computed, rate in rows:
-        # The engine's own margin, on the basis it chose (cost includes tooling).
-        margin = actual if basis == "actual" and actual is not None else modelled
-        if margin is None:
-            continue  # the engine computed no margin for the month: nothing to show
-        out.append(_Managed(UUID(str(t)), period, status == "closed", str(ccy).strip(),
-                            Decimal(revenue), Decimal(revenue) - Decimal(margin),
-                            margin is not actual, computed,
-                            None if rate is None else Decimal(rate)))
-    return out
-
-
-def managed_margin(revenue: Decimal, cost: Decimal, rate: Decimal | None
-                   ) -> tuple[Decimal, Decimal | None]:
-    """Margin in the contract currency, then converted (CLAUDE.md rule 5)."""
-    margin = revenue - cost
-    return margin, None if rate is None else margin * rate
-
-
-def _sum_converted(values: list[Decimal | None]) -> Decimal | None:
-    if any(v is None for v in values):
-        return None
-    return sum((v for v in values if v is not None), Decimal(0))
-
-
 @router.get("/home/sections/revenue", response_model=RevenueSection)
 @requires("cost.read")
 async def revenue(request: Request, access: AccessDep, scope: ScopeDep,
                   start: Start = None, end: End = None,
                   currency: Currency = None) -> RevenueSection:
-    """Staff: hosting cost, and with ``commercial.read`` the commercial figures. A
-    customer: the price of its own consumption, closed months only (ADR 0021)."""
+    """A customer: the price of its own consumption, closed months only, converted
+    at each day's rate when ``currency`` is given (ADR 0021). Staff, with
+    ``commercial.read``: which sources the section waits for."""
     now = _now()
     first, last = resolve_range(start, end, now.date())
-    params: dict[str, Any] = {"start": first, "end": last, "rep": currency}
-    if access.kind == "customer":
-        async with platform(request).db.transaction(scope) as conn:
-            rows = _rows(await conn.execute(_CUSTOMER_PRICE, {**params}))
-        ref = query_ref("home.customer_price", 1, start=first, end=last)
-        cref = query_ref("home.customer_price_converted", 1, start=first, end=last,
-                         rep=currency)
-        prices: list[PriceLine] = []
-        for period, provider, ccy, total, conv in rows:
-            base = customer_price(period, ccy, total, ref)
-            month_end = (period.replace(day=28) + timedelta(days=4)).replace(day=1) \
-                - timedelta(days=1)
-            prices.append(PriceLine(
-                period=period, provider=provider, currency=ccy, price=base.price,
-                not_captured=base.not_captured,
-                converted=_converted(conv, total is not None, currency, PRICE_SOURCE,
-                                     _end_of(month_end), cref)))
-        return RevenueSection(range=_range_view(first, last, now), view="customer",
-                              commercial=False, reporting_currency=currency, hosting=None,
-                              managed=None, projects=None, totals=None, customer_price=prices)
-
-    commercial = access.allows("commercial.read")
+    if access.kind != "customer":
+        if not access.allows("commercial.read"):
+            raise ApiError(403, "forbidden")
+        return RevenueSection(range=_range_view(first, last, now), view="staff",
+                              reporting_currency=currency, revenue=PENDING, projects=PENDING,
+                              customer_price=None)
     async with platform(request).db.transaction(scope) as conn:
-        hosting = await _hosting(conn, first, last, currency)
-        managed = await _managed(conn, first, last, currency) if commercial else []
-    return _revenue_section(first, last, now, currency, commercial, hosting, managed)
-
-
-def _revenue_section(first: date, last: date, now: datetime, rep: str | None,
-                     commercial: bool, hosting: list[_Hosting],
-                     managed: list[_Managed]) -> RevenueSection:
-    params: dict[str, Any] = {"start": first, "end": last}
-    grouped: dict[tuple[str, str], list[_Hosting]] = defaultdict(list)
-    for h in hosting:
-        grouped[(h.provider, h.currency)].append(h)
-    hosting_lines: list[HostingLine] = []
-    for (provider, ccy), lines in sorted(grouped.items()):
-        as_of = _end_of(max(h.last_day for h in lines))
-        price = _sum_converted([h.price for h in lines]) if commercial else None
-        p = {**params, "provider": provider, "currency": ccy}
-        hosting_lines.append(HostingLine(
-            provider=provider, currency=ccy,
-            cost=Metric[Decimal](value=sum((h.cost for h in lines), Decimal(0)), unit=ccy,
-                                 source_system=COST_SOURCE, as_of=as_of,
-                                 query_ref=query_ref("home.hosting_cost", 1, **p),
-                                 is_modelled=False),
-            cost_converted=_dec(_sum_converted([h.cost_converted for h in lines]), rep,
-                                COST_SOURCE, as_of, "home.hosting_cost_converted", rep=rep, **p),
-            price=_dec(price, ccy, PRICE_SOURCE, as_of, "home.hosting_price", **p),
-            price_converted=_dec(
-                _sum_converted([h.price_converted for h in lines]) if commercial else None,
-                rep, PRICE_SOURCE, as_of, "home.hosting_price_converted", rep=rep, **p)))
-
-    managed_lines: list[ManagedLine] | None = None
-    projects: ProjectFigures | None = None
-    if commercial:
-        by_ccy: dict[str, list[_Managed]] = defaultdict(list)
-        for m in managed:
-            by_ccy[m.currency].append(m)
-        managed_lines = []
-        for ccy, months in sorted(by_ccy.items()):
-            as_of = max(m.computed_at for m in months)
-            modelled = any(m.modelled for m in months)
-            p = {**params, "currency": ccy}
-            margins = [managed_margin(m.revenue, m.cost, m.rate) for m in months]
-
-            def money(v: Decimal | None, unit: str | None, name: str, model: bool = False,
-                      p: dict[str, Any] = p, as_of: datetime = as_of) -> Metric[Decimal] | None:
-                return _dec(v, unit, MARGIN_SOURCE, as_of, name, modelled=model, rep=rep, **p)
-
-            def sure(v: Decimal, name: str, model: bool = False, p: dict[str, Any] = p,
-                     as_of: datetime = as_of, ccy: str = ccy) -> Metric[Decimal]:
-                return Metric[Decimal](value=v, unit=ccy, source_system=MARGIN_SOURCE,
-                                       as_of=as_of, query_ref=query_ref(name, 1, **p),
-                                       is_modelled=model)
-
-            revenue_c = _sum_converted([None if m.rate is None else m.revenue * m.rate
-                                        for m in months])
-            cost_c = _sum_converted([None if m.rate is None else m.cost * m.rate
-                                     for m in months])
-            revenue_m = sure(sum((m.revenue for m in months), Decimal(0)), "home.managed_revenue")
-            cost_m = sure(sum((m.cost for m in months), Decimal(0)), "home.managed_cost",
-                          modelled)
-            margin_m = sure(sum((mg for mg, _ in margins), Decimal(0)), "home.managed_margin",
-                            modelled)
-            managed_lines.append(ManagedLine(
-                currency=ccy,
-                months=_count(len(months), "customer-months", MARGIN_SOURCE, as_of,
-                              "home.managed_months", **p),
-                provisional=_count(sum(1 for m in months if not m.closed), "customer-months",
-                                   MARGIN_SOURCE, as_of, "home.managed_provisional", **p),
-                revenue=revenue_m, cost=cost_m, margin=margin_m,
-                revenue_converted=money(revenue_c if rep else None, rep,
-                                        "home.managed_revenue_converted"),
-                cost_converted=money(cost_c if rep else None, rep,
-                                     "home.managed_cost_converted", modelled),
-                margin_converted=money(_sum_converted([c for _, c in margins]) if rep else None,
-                                       rep, "home.managed_margin_converted", modelled)))
-        projects = ProjectFigures(available=False, reason="no_data_source",
-                                  new_project_price=None, proposed_price=None)
-
-    totals = None
-    if rep is not None:
-        modelled = any(m.modelled for m in managed)
-        hc = _sum_converted([h.cost_converted for h in hosting])
-        hp = _sum_converted([h.price_converted for h in hosting]) if commercial else None
-        mr = mc = mm = None
-        if commercial:
-            mr = _sum_converted([None if m.rate is None else m.revenue * m.rate for m in managed])
-            mc = _sum_converted([None if m.rate is None else m.cost * m.rate for m in managed])
-            mm = _sum_converted([managed_margin(m.revenue, m.cost, m.rate)[1] for m in managed])
-        rev = None if hp is None or mr is None else hp + mr
-        margin = None if hp is None or hc is None or mm is None else hp - hc + mm
-        share = None if margin is None or not rev else margin / rev
-        p = {**params, "rep": rep}
-
-        def total(v: Decimal | None, name: str, source: str = MARGIN_SOURCE,
-                  model: bool = False, unit: str | None = rep) -> Metric[Decimal] | None:
-            return _dec(v, unit, source, now, name, modelled=model, **p)
-
-        totals = RevenueTotals(
-            currency=rep,
-            hosting_cost=total(hc, "home.total_hosting_cost", COST_SOURCE),
-            hosting_price=total(hp, "home.total_hosting_price", PRICE_SOURCE),
-            managed_revenue=total(mr, "home.total_managed_revenue"),
-            managed_cost=total(mc, "home.total_managed_cost", model=modelled),
-            managed_margin=total(mm, "home.total_managed_margin", model=modelled),
-            revenue=total(rev, "home.total_revenue"),
-            margin=total(margin, "home.total_margin", model=modelled),
-            margin_share=total(share, "home.total_margin_share", model=modelled, unit=RATIO))
-
-    return RevenueSection(
-        range=_range_view(first, last, now), view="staff", commercial=commercial,
-        reporting_currency=rep, hosting=hosting_lines, managed=managed_lines,
-        projects=projects, totals=totals, customer_price=None)
+        rows = _rows(await conn.execute(_CUSTOMER_PRICE,
+                                        {"start": first, "end": last, "rep": currency}))
+    ref = query_ref("home.customer_price", 1, start=first, end=last)
+    cref = query_ref("home.customer_price_converted", 1, start=first, end=last, rep=currency)
+    prices: list[PriceLine] = []
+    for period, provider, ccy, total, conv in rows:
+        base = customer_price(period, ccy, total, ref)
+        month_end = (period.replace(day=28) + timedelta(days=4)).replace(day=1) \
+            - timedelta(days=1)
+        prices.append(PriceLine(
+            period=period, provider=provider, currency=ccy, price=base.price,
+            not_captured=base.not_captured,
+            converted=_converted(conv, total is not None, currency, PRICE_SOURCE,
+                                 _end_of(month_end), cref)))
+    return RevenueSection(range=_range_view(first, last, now), view="customer",
+                          reporting_currency=currency, revenue=None, projects=None,
+                          customer_price=prices)
 
 
 # --- security and compliance -----------------------------------------------------------
@@ -1149,29 +883,20 @@ class HealthPart(ApiModel):
     cap: Metric[int]
 
 
-class RevenueParts(ApiModel):
-    """In the reporting currency. None: a line without a rate, or no SOW price."""
-
-    hosting: Metric[Decimal] | None
-    managed: Metric[Decimal] | None
-    projects: Metric[Decimal] | None  # no source yet (ADR 0038)
-    total: Metric[Decimal] | None
-
-
 class TopCustomer(ApiModel):
     rank: Metric[int]
     tenant: TenantView
     health: Metric[Decimal]  # modelled, 0..100
     health_band: HealthBand
     parts: list[HealthPart]
-    revenue: RevenueParts | None  # None: not commercial
 
 
 class TopCustomers(ApiModel):
     range: DateRange
-    sort: Literal["health", "revenue"]
-    reporting_currency: str
-    commercial: bool
+    sort: Literal["health"]
+    # Ranking by revenue reads the revenue table (ADR 0038); until it is merged, None
+    # for a role without commercial.read, else pending.
+    revenue: SourcePending | None
     ranked: Metric[int]  # customers considered
     customers: list[TopCustomer]
 
@@ -1200,23 +925,18 @@ _CUSTOMERS: Final = text(
     "SELECT id, canonical_name FROM cloudops.tenant WHERE NOT internal"
     " AND status NOT IN ('prospect', 'exited') ORDER BY canonical_name"
 )
-SortKey = Annotated[Literal["health", "revenue"] | None, Query()]
+SortKey = Annotated[Literal["health"] | None, Query()]
 
 
 @router.get("/home/sections/top-customers", response_model=TopCustomers)
 @requires("tickets.read")
 async def top_customers(request: Request, access: AccessDep, scope: ScopeDep,
                         start: Start = None, end: End = None, sort: SortKey = None,
-                        currency: Annotated[str, Query(pattern=r"^[A-Z]{3}$")] = "EUR",
                         ) -> TopCustomers:
-    """The ten customers first by ``sort``: ``revenue`` (largest first) or
-    ``health`` (least healthy first: what needs attention). Revenue is commercial,
-    so sorting by it without ``commercial.read`` is refused."""
+    """The ten least healthy customers first: what needs attention. Ranking by
+    revenue joins once the revenue table serves it."""
     _staff(access)
-    commercial = access.allows("commercial.read")
-    order = sort or ("revenue" if commercial else "health")
-    if order == "revenue" and not commercial:
-        raise ApiError(403, "forbidden")
+    order: Literal["health"] = sort or "health"
     now = _now()
     first, last = resolve_range(start, end, now.date())
     _, hi = _bounds(first, last)
@@ -1231,23 +951,9 @@ async def top_customers(request: Request, access: AccessDep, scope: ScopeDep,
             await conn.execute(_MAJOR_VULNS, {"hi": hi}))} if vulns_ok else None
         events = {UUID(str(t)): int(n) for t, n in _rows(
             await conn.execute(_HIGH_EVENTS, {"hi": hi}))}
-        hosting = await _hosting(conn, first, last, currency) if commercial else []
-        managed = await _managed(conn, first, last, currency) if commercial else []
     at = min(now, hi)
     params: dict[str, Any] = {"start": first, "end": last}
     policy = HEALTH_POLICY
-
-    revenue_by: dict[UUID, tuple[Decimal | None, Decimal | None]] = {}
-    if commercial:
-        host: dict[UUID, list[Decimal | None]] = defaultdict(list)
-        for h in hosting:
-            host[h.tenant].append(h.price_converted)
-        mgd: dict[UUID, list[Decimal | None]] = defaultdict(list)
-        for m in managed:
-            mgd[m.tenant].append(None if m.rate is None else m.revenue * m.rate)
-        for tid, _ in names:
-            revenue_by[tid] = (_sum_converted(host.get(tid, [])),
-                               _sum_converted(mgd.get(tid, [])))
 
     rows: list[tuple[UUID, str, Health, HealthInputs, Decimal | None]] = []
     for tid, name in names:
@@ -1255,9 +961,7 @@ async def top_customers(request: Request, access: AccessDep, scope: ScopeDep,
         critical, down = avail.get(tid, (0, 0))
         inputs = HealthInputs(p1, p2, critical, down,
                               None if vulns is None else vulns.get(tid, 0), events.get(tid, 0))
-        h_rev, m_rev = revenue_by.get(tid, (None, None))
-        total = None if h_rev is None or m_rev is None else h_rev + m_rev
-        rows.append((tid, name, health_score(inputs, policy), inputs, total))
+        rows.append((tid, name, health_score(inputs, policy), inputs, None))
     rows = rank_customers(rows, order)[:TOP]
 
     def parts(tid: UUID, h: Health, i: HealthInputs) -> list[HealthPart]:
@@ -1293,16 +997,7 @@ async def top_customers(request: Request, access: AccessDep, scope: ScopeDep,
         ]
 
     out: list[TopCustomer] = []
-    for n, (tid, name, health, inputs, total_revenue) in enumerate(rows, start=1):
-        rev = None
-        if commercial:
-            h_rev, m_rev = revenue_by.get(tid, (None, None))
-            p = {**params, "tenant": str(tid), "rep": currency}
-            rev = RevenueParts(
-                hosting=_dec(h_rev, currency, PRICE_SOURCE, at, "home.top_hosting", **p),
-                managed=_dec(m_rev, currency, MARGIN_SOURCE, at, "home.top_managed", **p),
-                projects=None,
-                total=_dec(total_revenue, currency, MARGIN_SOURCE, at, "home.top_revenue", **p))
+    for n, (tid, name, health, inputs, _) in enumerate(rows, start=1):
         out.append(TopCustomer(
             rank=_count(n, "rank", POLICY_SOURCE, at, "home.top_rank", sort=order, **params),
             tenant=TenantView(id=tid, name=name),
@@ -1310,10 +1005,10 @@ async def top_customers(request: Request, access: AccessDep, scope: ScopeDep,
                                    as_of=at, query_ref=query_ref("home.health", 1,
                                                                  tenant=str(tid), **params),
                                    is_modelled=True),
-            health_band=health.band, parts=parts(tid, health, inputs), revenue=rev))
+            health_band=health.band, parts=parts(tid, health, inputs)))
     return TopCustomers(
-        range=_range_view(first, last, now), sort=order, reporting_currency=currency,
-        commercial=commercial,
+        range=_range_view(first, last, now), sort=order,
+        revenue=PENDING if access.allows("commercial.read") else None,
         ranked=_count(len(names), "customers", POLICY_SOURCE, at, "home.top_ranked", **params),
         customers=out)
 
@@ -1322,7 +1017,9 @@ def rank_customers(rows: list[tuple[UUID, str, Health, HealthInputs, Decimal | N
                    order: Literal["health", "revenue"]
                    ) -> list[tuple[UUID, str, Health, HealthInputs, Decimal | None]]:
     """``revenue``: largest first, unknown revenue last. ``health``: least healthy
-    first, then the larger revenue. Ties fall to the name, so the order is stable."""
+    first, then the larger revenue. Ties fall to the name, so the order is stable.
+    Revenue is the revenue table's figure in one currency once it is served; until
+    then every row's is None and health decides."""
     def revenue_key(r: Decimal | None) -> tuple[int, Decimal]:
         return (1, Decimal(0)) if r is None else (0, -r)
 

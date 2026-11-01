@@ -88,16 +88,15 @@ test.describe("operations", () => {
 test.describe("revenue and margin", () => {
   test.use({ role: "finops" });
 
-  test("totals in a reporting currency, and says project prices have no source yet", async ({ signedIn: page }) => {
+  test("names each component and says it has no data source yet, never a figure of its own", async ({ signedIn: page }) => {
     await page.goto("/");
     const revenue = page.locator('section[data-section="revenue"]');
     await settled(page);
-    const table = revenue.getByRole("table", { name: "Revenue and margin by component, in the reporting currency" });
-    await expect(table.getByRole("rowheader", { name: "Hosting cost (Azure and AWS consumption)" })).toBeVisible();
-    await expect(table.getByRole("rowheader", { name: "Managed services margin" })).toBeVisible();
-    await expect(table.getByRole("row", { name: /New project price/ })).toContainText("No data source yet");
-    await revenue.getByLabel("Reporting currency").selectOption("");
-    await expect(revenue.getByText("Choose a reporting currency to total across currencies.")).toBeVisible();
+    const table = revenue.getByRole("table", { name: /Revenue and margin by component/ });
+    for (const component of ["Hosting cost (Azure and AWS consumption)", "Managed services revenue", "Margin", "New project price (closed project tasks)"]) {
+      await expect(table.getByRole("row", { name: new RegExp(component.replace(/[()]/g, "\\$&")) })).toContainText("No data source yet");
+    }
+    await expect(revenue.getByText(/^EUR /)).toHaveCount(0);
   });
 });
 
@@ -156,16 +155,14 @@ test.describe("size bands without the permission", () => {
 test.describe("top 10 customers", () => {
   test.use({ role: "admin" });
 
-  test("sorts by revenue or health, and narrows every section to a chosen customer", async ({ signedIn: page }) => {
+  test("ranks by modelled health, says revenue ranking has no source yet, and narrows every section to a chosen customer", async ({ signedIn: page }) => {
     await page.goto("/");
     const top = page.locator('section[data-section="top"]');
-    await settled(page);
-    await expect(top.getByLabel("Sort by")).toHaveValue("revenue");
-    await top.getByLabel("Sort by").selectOption("health");
     await settled(page);
     const table = top.getByTestId("top-customers");
     await expect(table).toBeVisible();
     await expect(top.getByText(/Health is modelled/)).toBeVisible();
+    await expect(top.getByTestId("top-revenue-pending")).toContainText("no data source yet");
     const first = table.getByRole("rowheader").first().getByRole("button");
     const name = ((await first.textContent()) ?? "").replace(": show this customer on every section", "").trim();
     await first.click();
@@ -179,12 +176,13 @@ test.describe("top 10 customers", () => {
 test.describe("an engineer's top 10", () => {
   test.use({ role: "engineer" });
 
-  test("ranks by health only: revenue is commercial", async ({ signedIn: page }) => {
+  test("ranks by health, with nothing about revenue: it is commercial", async ({ signedIn: page }) => {
     await page.goto("/");
     const top = page.locator('section[data-section="top"]');
     await settled(page);
-    await expect(top.getByLabel("Sort by").locator("option")).toHaveText(["Health, least healthy first"]);
-    await expect(top.getByRole("columnheader", { name: /Revenue/ })).toHaveCount(0);
+    await expect(top.getByTestId("top-customers")).toBeVisible();
+    await expect(top.getByTestId("top-revenue-pending")).toHaveCount(0);
+    await expect(top.getByText(/revenue/i)).toHaveCount(0);
   });
 });
 

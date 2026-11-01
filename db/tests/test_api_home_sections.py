@@ -46,6 +46,7 @@ class Sections:
     ceo_all: UUID  # CEO, all tenants: operations, cost and commercial
     cxo_a: UUID  # customer CXO of a: tickets, cost (its price), vulnerabilities
     security_a: UUID  # customer Security officer of a: vulnerabilities, no tickets
+    cost_only: UUID  # staff, all tenants, a role with cost.read but not commercial.read
     month: tuple[date, date]  # the month before last, first and last day
     before: tuple[date, date]  # the month before that
 
@@ -191,7 +192,17 @@ async def sections(admin_server: str) -> AsyncIterator[Sections]:
                            " native_id, display_name) VALUES (%s, %s, %s, %s, 'acct')",
                            (account, tenant, provider, f"acct-{account}"))
         _populate(seeded, delta, delta_account, a_aws, month, before)
-        admin, engineer_a, finops_all, ceo_all, cxo_a, security_a = (uuid4() for _ in range(6))
+        with psycopg.connect(seeded.admin_dsn, autocommit=True) as cx:
+            # A staff role that reads cost but nothing commercial, as an administrator
+            # could define in the matrix.
+            cx.execute("INSERT INTO access.role_definition (name, role_class, is_system)"
+                       " VALUES ('Cost viewer', 'engineer', false)")
+            cx.execute("INSERT INTO access.role_permission (role_id, permission)"
+                       " SELECT id, p FROM access.role_definition,"
+                       " unnest(ARRAY['cost.read', 'tickets.read']) p"
+                       " WHERE name = 'Cost viewer'")
+        admin, engineer_a, finops_all, ceo_all, cxo_a, security_a, cost_only = (
+            uuid4() for _ in range(7))
         db = Database.create(seeded.app_dsn, pool_size=4, max_overflow=0)
         a = seeded.a.id
         async with db.transaction(TenantScope.for_resolution("setup:sections")) as conn:
@@ -200,6 +211,7 @@ async def sections(admin_server: str) -> AsyncIterator[Sections]:
                 (engineer_a, "Engineer", a, False),
                 (finops_all, "FinOps", None, True),
                 (ceo_all, "CEO", None, True),
+                (cost_only, "Cost viewer", None, True),
             ):
                 await _access(conn, "SELECT access.set_principal(:a, :o, 'staff', :n, :r, :all)",
                               a=admin, o=oid, n=f"{role} {oid}", r=role, all=everyone)
@@ -223,8 +235,8 @@ async def sections(admin_server: str) -> AsyncIterator[Sections]:
             async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
                                          base_url="http://api") as client:
                 yield Sections(seeded, Api(client, private, auth), db, delta, admin,
-                               engineer_a, finops_all, ceo_all, cxo_a, security_a, month,
-                               before)
+                               engineer_a, finops_all, ceo_all, cxo_a, security_a, cost_only,
+                               month, before)
         finally:
             await db.dispose()
 
@@ -358,73 +370,39 @@ async def test_a_customer_reads_its_own_operations_without_triage(sections: Sect
 # --- revenue ---------------------------------------------------------------------------
 
 
-async def test_revenue_in_transaction_currencies_and_converted(sections: Sections) -> None:
+async def test_staff_revenue_waits_for_its_sources(sections: Sections) -> None:
+    """Revenue, cost and margin are the revenue table's, project prices the project
+    task ingest's: this section computes none of them and says so."""
     body = await _get(sections, REVENUE, sections.finops_all, currency="EUR",
                       **_span(sections.month))
-    assert (body["view"], body["commercial"]) == ("staff", True)
-    hosting = {(h["provider"], h["currency"]): h for h in body["hosting"]}
-    assert hosting[("azure", "EUR")]["cost"]["value"] == "60000.000000"
-    aws = hosting[("aws", "USD")]
-    assert aws["cost"]["value"] == "1500.000000"  # never added to the EUR line
-    assert Decimal(aws["cost_converted"]["value"]) == Decimal("1350")
-    assert aws["price"] is None  # a's SOW has no uplift: the line has no price
-    managed = {m["currency"]: m for m in body["managed"]}
-    assert managed["EUR"]["revenue"]["value"] == "5000.000000"
-    assert Decimal(managed["EUR"]["margin"]["value"]) == Decimal(1500)
-    assert managed["EUR"]["margin"]["is_modelled"] is False
-    assert Decimal(managed["GBP"]["margin"]["value"]) == Decimal(400)
-    assert managed["GBP"]["margin"]["is_modelled"] is True  # the engine modelled it
-    assert managed["GBP"]["provisional"]["value"] == 1
-    assert Decimal(managed["GBP"]["margin_converted"]["value"]) == Decimal(460)
-    totals = body["totals"]
-    assert Decimal(totals["hosting_cost"]["value"]) == Decimal("61350")
-    assert Decimal(totals["managed_revenue"]["value"]) == Decimal(7300)
-    assert Decimal(totals["managed_margin"]["value"]) == Decimal(1960)
-    assert totals["revenue"] is None  # a hosting line has no price: no total
-    assert body["projects"] == {"available": False, "reason": "no_data_source",
-                                "new_project_price": None, "proposed_price": None}
-
-
-async def test_the_hosting_price_follows_the_sow_uplift(sections: Sections) -> None:
-    body = await _get(sections, REVENUE, sections.admin, currency="EUR",
-                      tenant_id=sections.delta, **_span(sections.month))
-    [line] = body["hosting"]
-    assert (line["provider"], line["currency"]) == ("aws", "USD")
-    assert Decimal(line["price"]["value"]) == Decimal("1100")
-    assert Decimal(line["price_converted"]["value"]) == Decimal("990")
-    assert Decimal(body["totals"]["revenue"]["value"]) == Decimal("990")
-    assert _tenants(body) == set()  # totals only: no tenant named
-
-
-async def test_without_a_currency_nothing_is_totalled(sections: Sections) -> None:
-    body = await _get(sections, REVENUE, sections.finops_all, **_span(sections.month))
-    assert body["totals"] is None
-    assert all(h["cost_converted"] is None for h in body["hosting"])
+    pending = {"available": False, "reason": "no_data_source"}
+    assert (body["view"], body["revenue"], body["projects"]) == ("staff", pending, pending)
+    assert body["customer_price"] is None
+    assert "60000" not in str(body)  # no figure of this module's own
 
 
 @pytest.mark.isolation
 async def test_a_customer_sees_its_price_never_cost_or_margin(sections: Sections) -> None:
     body = await _get(sections, REVENUE, sections.cxo_a, currency="EUR",
                       **_span(sections.month))
-    assert (body["view"], body["commercial"]) == ("customer", False)
-    assert (body["hosting"], body["managed"], body["projects"], body["totals"]) == (
-        None, None, None, None)
+    assert (body["view"], body["revenue"], body["projects"]) == ("customer", None, None)
     assert body["customer_price"]  # that month's lines, by provider and currency
     assert "60000" not in str(body)
     assert "margin" not in str(body)
+    await _get(sections, REVENUE, sections.cxo_a, 404, tenant_id=sections.seeded.b.id)
     await _get(sections, REVENUE, sections.security_a, 403)  # no cost.read
     await _get(sections, REVENUE, sections.engineer_a, 403)
 
 
 @pytest.mark.isolation
-async def test_one_customer_chosen_holds_that_customer_only(sections: Sections) -> None:
-    """The selector narrows the CEO to a: no other tenant's cost or margin is in it."""
-    a_only = await _get(sections, REVENUE, sections.ceo_all, currency="EUR",
-                        tenant_id=sections.seeded.a.id, **_span(sections.month))
-    managed = {m["currency"] for m in a_only["managed"]}
-    assert managed == {"EUR"}  # b's GBP month is not in a's view
-    hosting = {(h["provider"], h["currency"]): h["cost"]["value"] for h in a_only["hosting"]}
-    assert hosting == {("aws", "USD"): "500.000000", ("azure", "EUR"): "60000.000000"}
+async def test_staff_revenue_needs_commercial_read(sections: Sections) -> None:
+    """Staff revenue is commercial (ADR 0002 D10): cost.read alone is refused."""
+    await _get(sections, REVENUE, sections.cost_only, 403, **_span(sections.month))
+    top = await _get(sections, TOP, sections.cost_only, **_span(sections.month))
+    assert top["revenue"] is None
+    narrowed = await _get(sections, REVENUE, sections.admin, tenant_id=sections.delta,
+                          **_span(sections.month))
+    assert narrowed["view"] == "staff"
 
 
 # --- security --------------------------------------------------------------------------
@@ -505,30 +483,30 @@ async def test_platform_is_staff_and_spend_needs_cost_read(sections: Sections) -
 # --- top customers ---------------------------------------------------------------------
 
 
-async def test_top_customers_by_revenue_and_by_health(sections: Sections) -> None:
-    by_revenue = await _get(sections, TOP, sections.ceo_all, sort="revenue",
-                            **_span(sections.month))
-    assert by_revenue["sort"] == "revenue"
-    names = [c["tenant"]["name"] for c in by_revenue["customers"]]
-    # b 2,000 GBP at 1.15; delta 1,100 USD at 0.9; c nothing; a has no price (last).
-    assert names == ["bravo", "delta", "charlie", "alpha"]
-    assert [c["rank"]["value"] for c in by_revenue["customers"]] == [1, 2, 3, 4]
-    bravo = by_revenue["customers"][0]
-    assert Decimal(bravo["revenue"]["total"]["value"]) == Decimal(2300)
-    assert by_revenue["customers"][3]["revenue"]["total"] is None
-    by_health = await _get(sections, TOP, sections.ceo_all, sort="health",
-                           **_span(sections.month))
-    order = [(c["tenant"]["name"], Decimal(c["health"]["value"]))
-             for c in by_health["customers"]]
+async def test_top_customers_by_health(sections: Sections) -> None:
+    body = await _get(sections, TOP, sections.ceo_all, **_span(sections.month))
+    assert body["sort"] == "health"
+    # Revenue ranking reads the revenue table, not yet served: pending, not computed.
+    assert body["revenue"] == {"available": False, "reason": "no_data_source"}
+    order = [(c["tenant"]["name"], Decimal(c["health"]["value"])) for c in body["customers"]]
     # alpha: an open P2 (10) and a 100-day severity 5 (2); bravo: b's P1 (20) and half
-    # its critical CIs stopped (10); delta beats charlie on revenue.
+    # its critical CIs stopped (10); a tie falls to the name.
     assert order == [("bravo", Decimal(70)), ("alpha", Decimal(88)),
-                     ("delta", Decimal(100)), ("charlie", Decimal(100))]
-    assert all(c["health"]["is_modelled"] for c in by_health["customers"])
-    parts = {p["part"]: p for p in by_health["customers"][0]["parts"]}
+                     ("charlie", Decimal(100)), ("delta", Decimal(100))]
+    assert [c["rank"]["value"] for c in body["customers"]] == [1, 2, 3, 4]
+    assert all(c["health"]["is_modelled"] for c in body["customers"])
+    parts = {p["part"]: p for p in body["customers"][0]["parts"]}
     assert parts["availability"]["observed"]["value"] == 2
     assert Decimal(parts["availability"]["penalty"]["value"]) == Decimal(10)
     assert parts["p1_p2"]["penalty"]["is_modelled"] is True
+
+
+async def test_top_customers_compare_moves_with_the_range(sections: Sections) -> None:
+    earlier = await _get(sections, TOP, sections.ceo_all, **_span(sections.before))
+    # The month before: b's P1 was not yet open, a's P2 neither.
+    health = {c["tenant"]["name"]: Decimal(c["health"]["value"]) for c in earlier["customers"]}
+    assert health["bravo"] == Decimal(90)  # its stopped critical CIs only
+    assert health["alpha"] == Decimal(98)  # the old severity 5 only
 
 
 @pytest.mark.isolation
@@ -536,11 +514,10 @@ async def test_top_customers_refusals_and_scope(sections: Sections) -> None:
     await _get(sections, TOP, sections.cxo_a, 403)
     await _get(sections, TOP, sections.finops_all, 403)  # no tickets.read
     mine = await _get(sections, TOP, sections.engineer_a, **_span(sections.month))
-    assert (mine["sort"], mine["commercial"]) == ("health", False)
+    assert (mine["sort"], mine["revenue"]) == ("health", None)  # not commercial
     assert [c["tenant"]["id"] for c in mine["customers"]] == [str(sections.seeded.a.id)]
-    assert mine["customers"][0]["revenue"] is None
-    # Revenue is commercial: sorting by it without commercial.read is refused.
-    await _get(sections, TOP, sections.engineer_a, 403, sort="revenue")
+    await _get(sections, TOP, sections.engineer_a, 422, sort="revenue")
+    await _get(sections, TOP, sections.engineer_a, 404, tenant_id=sections.seeded.b.id)
 
 
 # --- size band settings ----------------------------------------------------------------

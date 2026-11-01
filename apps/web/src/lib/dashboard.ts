@@ -8,14 +8,17 @@ export type SectionId = "operations" | "revenue" | "security" | "platform" | "to
 export interface SectionSpec {
   title: string;
   permission: string;
+  /** What staff need instead, where the staff view is commercial (ADR 0002 D10). */
+  staffPermission?: string;
   /** Staff work: never shown to a customer, whatever it holds. */
   staff?: boolean;
 }
 
 export const SECTIONS: Record<SectionId, SectionSpec> = {
   operations: { title: "Operations", permission: "tickets.read" },
-  // A customer sees the price of its own consumption here (ADR 0021), never cost or margin.
-  revenue: { title: "Revenue & margin", permission: "cost.read" },
+  // A customer sees the price of its own consumption here (ADR 0021), never cost or margin;
+  // staff see revenue and margin, which are commercial.
+  revenue: { title: "Revenue & margin", permission: "cost.read", staffPermission: "commercial.read" },
   security: { title: "Security & compliance", permission: "vulnerabilities.read" },
   platform: { title: "Platform", permission: "inventory.read", staff: true },
   top: { title: "Top 10 customers", permission: "tickets.read", staff: true },
@@ -39,7 +42,7 @@ export interface Role {
 export function allowed(id: SectionId, role: Role): boolean {
   const s = SECTIONS[id];
   if (s.staff && role.kind !== "staff") return false;
-  return role.can(s.permission);
+  return role.can(role.kind === "staff" ? (s.staffPermission ?? s.permission) : s.permission);
 }
 
 /** The sections the role may see, its landing view's section first. */

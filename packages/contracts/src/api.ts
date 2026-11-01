@@ -891,8 +891,9 @@ export interface paths {
         };
         /**
          * Revenue
-         * @description Staff: hosting cost, and with ``commercial.read`` the commercial figures. A
-         *     customer: the price of its own consumption, closed months only (ADR 0021).
+         * @description A customer: the price of its own consumption, closed months only, converted
+         *     at each day's rate when ``currency`` is given (ADR 0021). Staff, with
+         *     ``commercial.read``: which sources the section waits for.
          */
         get: operations["revenue_v1_home_sections_revenue_get"];
         put?: never;
@@ -929,9 +930,8 @@ export interface paths {
         };
         /**
          * Top Customers
-         * @description The ten customers first by ``sort``: ``revenue`` (largest first) or
-         *     ``health`` (least healthy first: what needs attention). Revenue is commercial,
-         *     so sorting by it without ``commercial.read`` is refused.
+         * @description The ten least healthy customers first: what needs attention. Ranking by
+         *     revenue joins once the revenue table serves it.
          */
         get: operations["top_customers_v1_home_sections_top_customers_get"];
         put?: never;
@@ -3248,17 +3248,6 @@ export interface components {
             part: "p1_p2" | "availability" | "vulnerabilities" | "security_events";
             penalty: components["schemas"]["Metric_Decimal_"] | null;
         };
-        /** HostingLine */
-        HostingLine: {
-            cost: components["schemas"]["Metric_Decimal_"];
-            cost_converted: components["schemas"]["Metric_Decimal_"] | null;
-            /** Currency */
-            currency: string;
-            price: components["schemas"]["Metric_Decimal_"] | null;
-            price_converted: components["schemas"]["Metric_Decimal_"] | null;
-            /** Provider */
-            provider: string;
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3284,23 +3273,6 @@ export interface components {
             /** Library Version */
             library_version: string;
             loaded: components["schemas"]["Metric_int_"];
-        };
-        /**
-         * ManagedLine
-         * @description Managed services in one contract currency, from the margin engine's
-         *     latest snapshot of every customer-month that overlaps the range.
-         */
-        ManagedLine: {
-            cost: components["schemas"]["Metric_Decimal_"];
-            cost_converted: components["schemas"]["Metric_Decimal_"] | null;
-            /** Currency */
-            currency: string;
-            margin: components["schemas"]["Metric_Decimal_"];
-            margin_converted: components["schemas"]["Metric_Decimal_"] | null;
-            months: components["schemas"]["Metric_int_"];
-            provisional: components["schemas"]["Metric_int_"];
-            revenue: components["schemas"]["Metric_Decimal_"];
-            revenue_converted: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** MarginDetail */
         MarginDetail: {
@@ -3764,19 +3736,6 @@ export interface components {
             /** Priority */
             priority: string;
             target_hours: components["schemas"]["Metric_int_"] | null;
-        };
-        /**
-         * ProjectFigures
-         * @description Closed project tasks (new project price) and open ones (proposed
-         *     initiatives). No source holds their prices yet (ADR 0038).
-         */
-        ProjectFigures: {
-            /** Available */
-            available: boolean;
-            new_project_price: components["schemas"]["Metric_Decimal_"] | null;
-            proposed_price: components["schemas"]["Metric_Decimal_"] | null;
-            /** Reason */
-            reason: "no_data_source" | null;
         };
         /** ProposalRequest */
         ProposalRequest: {
@@ -4353,52 +4312,20 @@ export interface components {
             /** Result */
             result: ("compliant" | "partially_compliant" | "non_compliant" | "not_applicable" | "manual") | null;
         };
-        /**
-         * RevenueParts
-         * @description In the reporting currency. None: a line without a rate, or no SOW price.
-         */
-        RevenueParts: {
-            hosting: components["schemas"]["Metric_Decimal_"] | null;
-            managed: components["schemas"]["Metric_Decimal_"] | null;
-            projects: components["schemas"]["Metric_Decimal_"] | null;
-            total: components["schemas"]["Metric_Decimal_"] | null;
-        };
         /** RevenueSection */
         RevenueSection: {
-            /** Commercial */
-            commercial: boolean;
             /** Customer Price */
             customer_price: components["schemas"]["PriceLine"][] | null;
-            /** Hosting */
-            hosting: components["schemas"]["HostingLine"][] | null;
-            /** Managed */
-            managed: components["schemas"]["ManagedLine"][] | null;
-            projects: components["schemas"]["ProjectFigures"] | null;
+            projects: components["schemas"]["SourcePending"] | null;
             range: components["schemas"]["DateRange"];
             /** Reporting Currency */
             reporting_currency: string | null;
-            totals: components["schemas"]["RevenueTotals"] | null;
+            revenue: components["schemas"]["SourcePending"] | null;
             /**
              * View
              * @enum {string}
              */
             view: "staff" | "customer";
-        };
-        /**
-         * RevenueTotals
-         * @description In the reporting currency; each None when any line under it has no rate.
-         */
-        RevenueTotals: {
-            /** Currency */
-            currency: string;
-            hosting_cost: components["schemas"]["Metric_Decimal_"] | null;
-            hosting_price: components["schemas"]["Metric_Decimal_"] | null;
-            managed_cost: components["schemas"]["Metric_Decimal_"] | null;
-            managed_margin: components["schemas"]["Metric_Decimal_"] | null;
-            managed_revenue: components["schemas"]["Metric_Decimal_"] | null;
-            margin: components["schemas"]["Metric_Decimal_"] | null;
-            margin_share: components["schemas"]["Metric_Decimal_"] | null;
-            revenue: components["schemas"]["Metric_Decimal_"] | null;
         };
         /** ReviewRequest */
         ReviewRequest: {
@@ -4770,6 +4697,19 @@ export interface components {
             /** Source System */
             source_system: string;
         };
+        /**
+         * SourcePending
+         * @description Figures another module serves and this one does not compute (ADR 0038): staff
+         *     revenue, cost and margin come from the revenue table (``/v1/commercial/revenue``),
+         *     project prices from the ServiceNow project task ingest. Until each is merged, the
+         *     section says so rather than showing a figure of its own.
+         */
+        SourcePending: {
+            /** Available */
+            available: boolean;
+            /** Reason */
+            reason: "no_data_source" | null;
+        };
         /** SourceView */
         SourceView: {
             /** As Of */
@@ -5058,24 +4998,20 @@ export interface components {
             /** Parts */
             parts: components["schemas"]["HealthPart"][];
             rank: components["schemas"]["Metric_int_"];
-            revenue: components["schemas"]["RevenueParts"] | null;
             tenant: components["schemas"]["TenantView"];
         };
         /** TopCustomers */
         TopCustomers: {
-            /** Commercial */
-            commercial: boolean;
             /** Customers */
             customers: components["schemas"]["TopCustomer"][];
             range: components["schemas"]["DateRange"];
             ranked: components["schemas"]["Metric_int_"];
-            /** Reporting Currency */
-            reporting_currency: string;
+            revenue: components["schemas"]["SourcePending"] | null;
             /**
              * Sort
-             * @enum {string}
+             * @constant
              */
-            sort: "health" | "revenue";
+            sort: "health";
         };
         /** TrendPoint */
         TrendPoint: {
@@ -7056,10 +6992,9 @@ export interface operations {
     top_customers_v1_home_sections_top_customers_get: {
         parameters: {
             query?: {
-                currency?: string;
                 /** @description Last day, inclusive (UTC); default today. */
                 end?: string | null;
-                sort?: ("health" | "revenue") | null;
+                sort?: "health" | null;
                 /** @description First day, inclusive (UTC). */
                 start?: string | null;
                 /** @description One customer in the caller's scope; omitted: every customer in it. */

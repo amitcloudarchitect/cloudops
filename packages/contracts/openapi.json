@@ -4339,62 +4339,6 @@
         "title": "HealthPart",
         "type": "object"
       },
-      "HostingLine": {
-        "additionalProperties": false,
-        "properties": {
-          "cost": {
-            "$ref": "#/components/schemas/Metric_Decimal_"
-          },
-          "cost_converted": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "currency": {
-            "title": "Currency",
-            "type": "string"
-          },
-          "price": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "price_converted": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "provider": {
-            "title": "Provider",
-            "type": "string"
-          }
-        },
-        "required": [
-          "provider",
-          "currency",
-          "cost",
-          "cost_converted",
-          "price",
-          "price_converted"
-        ],
-        "title": "HostingLine",
-        "type": "object"
-      },
       "KindReceived": {
         "additionalProperties": false,
         "properties": {
@@ -4456,74 +4400,6 @@
           "loaded"
         ],
         "title": "LoadResult",
-        "type": "object"
-      },
-      "ManagedLine": {
-        "additionalProperties": false,
-        "description": "Managed services in one contract currency, from the margin engine's\nlatest snapshot of every customer-month that overlaps the range.",
-        "properties": {
-          "cost": {
-            "$ref": "#/components/schemas/Metric_Decimal_"
-          },
-          "cost_converted": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "currency": {
-            "title": "Currency",
-            "type": "string"
-          },
-          "margin": {
-            "$ref": "#/components/schemas/Metric_Decimal_"
-          },
-          "margin_converted": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "months": {
-            "$ref": "#/components/schemas/Metric_int_"
-          },
-          "provisional": {
-            "$ref": "#/components/schemas/Metric_int_"
-          },
-          "revenue": {
-            "$ref": "#/components/schemas/Metric_Decimal_"
-          },
-          "revenue_converted": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "currency",
-          "months",
-          "provisional",
-          "revenue",
-          "cost",
-          "margin",
-          "revenue_converted",
-          "cost_converted",
-          "margin_converted"
-        ],
-        "title": "ManagedLine",
         "type": "object"
       },
       "MarginDetail": {
@@ -6283,56 +6159,6 @@
           "target_hours"
         ],
         "title": "PriorityLine",
-        "type": "object"
-      },
-      "ProjectFigures": {
-        "additionalProperties": false,
-        "description": "Closed project tasks (new project price) and open ones (proposed\ninitiatives). No source holds their prices yet (ADR 0038).",
-        "properties": {
-          "available": {
-            "title": "Available",
-            "type": "boolean"
-          },
-          "new_project_price": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "proposed_price": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "const": "no_data_source",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason"
-          }
-        },
-        "required": [
-          "available",
-          "reason",
-          "new_project_price",
-          "proposed_price"
-        ],
-        "title": "ProjectFigures",
         "type": "object"
       },
       "ProposalRequest": {
@@ -8097,67 +7923,9 @@
         "title": "ResponseView",
         "type": "object"
       },
-      "RevenueParts": {
-        "additionalProperties": false,
-        "description": "In the reporting currency. None: a line without a rate, or no SOW price.",
-        "properties": {
-          "hosting": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "managed": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "projects": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "total": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "hosting",
-          "managed",
-          "projects",
-          "total"
-        ],
-        "title": "RevenueParts",
-        "type": "object"
-      },
       "RevenueSection": {
         "additionalProperties": false,
         "properties": {
-          "commercial": {
-            "title": "Commercial",
-            "type": "boolean"
-          },
           "customer_price": {
             "anyOf": [
               {
@@ -8172,38 +7940,10 @@
             ],
             "title": "Customer Price"
           },
-          "hosting": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/HostingLine"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hosting"
-          },
-          "managed": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ManagedLine"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Managed"
-          },
           "projects": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ProjectFigures"
+                "$ref": "#/components/schemas/SourcePending"
               },
               {
                 "type": "null"
@@ -8224,10 +7964,10 @@
             ],
             "title": "Reporting Currency"
           },
-          "totals": {
+          "revenue": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/RevenueTotals"
+                "$ref": "#/components/schemas/SourcePending"
               },
               {
                 "type": "null"
@@ -8246,118 +7986,12 @@
         "required": [
           "range",
           "view",
-          "commercial",
           "reporting_currency",
-          "hosting",
-          "managed",
+          "revenue",
           "projects",
-          "totals",
           "customer_price"
         ],
         "title": "RevenueSection",
-        "type": "object"
-      },
-      "RevenueTotals": {
-        "additionalProperties": false,
-        "description": "In the reporting currency; each None when any line under it has no rate.",
-        "properties": {
-          "currency": {
-            "title": "Currency",
-            "type": "string"
-          },
-          "hosting_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "hosting_price": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "managed_cost": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "managed_margin": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "managed_revenue": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "margin": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "margin_share": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "revenue": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Metric_Decimal_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "required": [
-          "currency",
-          "hosting_cost",
-          "hosting_price",
-          "managed_revenue",
-          "managed_cost",
-          "managed_margin",
-          "revenue",
-          "margin",
-          "margin_share"
-        ],
-        "title": "RevenueTotals",
         "type": "object"
       },
       "ReviewRequest": {
@@ -9625,6 +9259,34 @@
         "title": "SourceHealth",
         "type": "object"
       },
+      "SourcePending": {
+        "additionalProperties": false,
+        "description": "Figures another module serves and this one does not compute (ADR 0038): staff\nrevenue, cost and margin come from the revenue table (``/v1/commercial/revenue``),\nproject prices from the ServiceNow project task ingest. Until each is merged, the\nsection says so rather than showing a figure of its own.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "const": "no_data_source",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "available",
+          "reason"
+        ],
+        "title": "SourcePending",
+        "type": "object"
+      },
       "SourceView": {
         "additionalProperties": false,
         "properties": {
@@ -10593,16 +10255,6 @@
           "rank": {
             "$ref": "#/components/schemas/Metric_int_"
           },
-          "revenue": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RevenueParts"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "tenant": {
             "$ref": "#/components/schemas/TenantView"
           }
@@ -10612,8 +10264,7 @@
           "tenant",
           "health",
           "health_band",
-          "parts",
-          "revenue"
+          "parts"
         ],
         "title": "TopCustomer",
         "type": "object"
@@ -10621,10 +10272,6 @@
       "TopCustomers": {
         "additionalProperties": false,
         "properties": {
-          "commercial": {
-            "title": "Commercial",
-            "type": "boolean"
-          },
           "customers": {
             "items": {
               "$ref": "#/components/schemas/TopCustomer"
@@ -10638,15 +10285,18 @@
           "ranked": {
             "$ref": "#/components/schemas/Metric_int_"
           },
-          "reporting_currency": {
-            "title": "Reporting Currency",
-            "type": "string"
+          "revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourcePending"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sort": {
-            "enum": [
-              "health",
-              "revenue"
-            ],
+            "const": "health",
             "title": "Sort",
             "type": "string"
           }
@@ -10654,8 +10304,7 @@
         "required": [
           "range",
           "sort",
-          "reporting_currency",
-          "commercial",
+          "revenue",
           "ranked",
           "customers"
         ],
@@ -14436,7 +14085,7 @@
     },
     "/v1/home/sections/revenue": {
       "get": {
-        "description": "Staff: hosting cost, and with ``commercial.read`` the commercial figures. A\ncustomer: the price of its own consumption, closed months only (ADR 0021).",
+        "description": "A customer: the price of its own consumption, closed months only, converted\nat each day's rate when ``currency`` is given (ADR 0021). Staff, with\n``commercial.read``: which sources the section waits for.",
         "operationId": "revenue_v1_home_sections_revenue_get",
         "parameters": [
           {
@@ -14628,7 +14277,7 @@
     },
     "/v1/home/sections/top-customers": {
       "get": {
-        "description": "The ten customers first by ``sort``: ``revenue`` (largest first) or\n``health`` (least healthy first: what needs attention). Revenue is commercial,\nso sorting by it without ``commercial.read`` is refused.",
+        "description": "The ten least healthy customers first: what needs attention. Ranking by\nrevenue joins once the revenue table serves it.",
         "operationId": "top_customers_v1_home_sections_top_customers_get",
         "parameters": [
           {
@@ -14676,10 +14325,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "health",
-                    "revenue"
-                  ],
+                  "const": "health",
                   "type": "string"
                 },
                 {
@@ -14687,17 +14333,6 @@
                 }
               ],
               "title": "Sort"
-            }
-          },
-          {
-            "in": "query",
-            "name": "currency",
-            "required": false,
-            "schema": {
-              "default": "EUR",
-              "pattern": "^[A-Z]{3}$",
-              "title": "Currency",
-              "type": "string"
             }
           },
           {

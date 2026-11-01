@@ -7,7 +7,7 @@
 // sections it may, its landing view's section first (ADR 0018, D4).
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import { EmptyState } from "@/components/EmptyState";
 import { PageHeader } from "@/components/PageHeader";
@@ -30,8 +30,6 @@ export function Home() {
   const { tenantId, tenants } = useCustomer();
   const customer = me.kind !== "staff";
   const sections = useMemo(() => sectionsFor({ kind: me.kind, landing: me.landing, can: (p: string) => can(me, p) }), [me]);
-  // One reporting currency for the sections that total money.
-  const [currency, setCurrency] = useState("EUR");
   const landingPath = me.landing ? me.landing.split("?")[0] : null;
   const landing = landingPath ? MODULES.find((m) => m.href === landingPath) : undefined;
   const chosen = tenantId ? tenants.find((t) => t.id === tenantId)?.name : null;
@@ -42,10 +40,10 @@ export function Home() {
 
   const render: Record<SectionId, () => React.ReactNode> = {
     operations: () => <OperationsSection />,
-    revenue: () => <RevenueSection customer={customer} currency={currency} onCurrency={setCurrency} />,
+    revenue: () => <RevenueSection customer={customer} />,
     security: () => <SecuritySection customer={customer} />,
     platform: () => <PlatformSection />,
-    top: () => <TopCustomersSection currency={currency} onCurrency={setCurrency} />,
+    top: () => <TopCustomersSection />,
   };
 
   return (

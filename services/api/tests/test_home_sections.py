@@ -1,6 +1,7 @@
 """The home sections' rules, without a database (ADR 0038): the date range, the
-size band boundaries, the modelled health score, the top-10 order, and money in
-two currencies, converted per line and never summed across currencies unconverted.
+size band boundaries, the modelled health score and the top-10 order. Spend in two
+currencies, converted per day, is checked against the database
+(db/tests/test_api_home_sections.py).
 """
 
 from __future__ import annotations
@@ -16,11 +17,7 @@ from cloudops_api.home_sections import (
     Health,
     HealthInputs,
     SizePolicy,
-    _Hosting,
-    _Managed,
-    _revenue_section,
     health_score,
-    managed_margin,
     rank_customers,
     resolve_range,
     size_band,
@@ -170,114 +167,3 @@ def test_health_order_is_least_healthy_first_then_revenue() -> None:
             _row("Delta", 95, "100")]
     assert [r[1] for r in rank_customers(rows, "health")] == ["Charlie", "Bravo", "Alpha",
                                                               "Delta"]
-
-
-# --- money in two currencies -----------------------------------------------------------
-
-T1, T2 = uuid4(), uuid4()
-
-
-def _hosting() -> list[_Hosting]:
-    # T1 in EUR (rate 1), T2 in USD at 0.9 on its usage dates; T2's price has a rate.
-    return [
-        _Hosting(T1, "azure", "EUR", Decimal("1000.000000"), date(2026, 10, 31),
-                 Decimal("1000.000000"), Decimal("1080.000000"), Decimal("1080.000000")),
-        _Hosting(T2, "aws", "USD", Decimal("2000.000000"), date(2026, 10, 30),
-                 Decimal("1800.000000"), Decimal("2200.000000"), Decimal("1980.000000")),
-    ]
-
-
-def _managed(usd_rate: Decimal | None = Decimal("0.9")) -> list[_Managed]:
-    return [
-        _Managed(T1, date(2026, 10, 1), True, "EUR", Decimal("5000"), Decimal("3500"), False,
-                 NOW, Decimal(1)),
-        _Managed(T2, date(2026, 10, 1), False, "USD", Decimal("4000"), Decimal("3000"), True,
-                 NOW, usd_rate),
-    ]
-
-
-def test_margin_is_computed_in_the_contract_currency_then_converted() -> None:
-    assert managed_margin(Decimal("4000"), Decimal("3000"), Decimal("0.9")) == (
-        Decimal("1000"), Decimal("900.0"))
-    assert managed_margin(Decimal("4000"), Decimal("3000"), None) == (Decimal("1000"), None)
-
-
-def test_lines_stay_in_their_currency_and_totals_are_converted() -> None:
-    body = _revenue_section(date(2026, 10, 1), date(2026, 10, 31), NOW, "EUR", True,
-                            _hosting(), _managed())
-    assert body.hosting is not None
-    assert body.managed is not None
-    hosting = {h.currency: h for h in body.hosting}
-    assert set(hosting) == {"EUR", "USD"}
-    assert hosting["USD"].cost.value == Decimal("2000.000000")
-    assert hosting["USD"].cost.unit == "USD"
-    assert hosting["USD"].cost_converted is not None
-    assert hosting["USD"].cost_converted.unit == "EUR"
-    managed = {m.currency: m for m in body.managed}
-    assert managed["USD"].margin.value == Decimal(1000)
-    assert managed["USD"].margin.is_modelled is True  # the engine modelled that cost
-    assert managed["EUR"].margin.is_modelled is False
-    assert managed["USD"].provisional.value == 1
-    t = body.totals
-    assert t is not None
-    assert t.currency == "EUR"
-    assert t.hosting_cost is not None
-    assert t.hosting_cost.value == Decimal("2800.000000")
-    assert t.hosting_price is not None
-    assert t.hosting_price.value == Decimal("3060.000000")
-    assert t.managed_revenue is not None
-    assert t.managed_revenue.value == Decimal("8600.0")
-    assert t.managed_margin is not None
-    assert t.managed_margin.value == Decimal("2400.0")
-    assert t.revenue is not None
-    assert t.revenue.value == Decimal("11660.0")
-    # (3060 - 2800) + 2400 = 2660, over 11660.
-    assert t.margin is not None
-    assert t.margin.value == Decimal("2660.0")
-    assert t.margin_share is not None
-    assert t.margin_share.value == Decimal("2660.0") / Decimal("11660.0")
-    assert t.margin.is_modelled is True
-    # Not rounded on the way out: rounding happens once, at presentation.
-    assert str(t.hosting_cost.value) == "2800.000000"
-
-
-def test_a_missing_rate_loses_the_total_never_half_of_it() -> None:
-    body = _revenue_section(date(2026, 10, 1), date(2026, 10, 31), NOW, "EUR", True,
-                            _hosting(), _managed(usd_rate=None))
-    t = body.totals
-    assert t is not None
-    assert t.managed_revenue is None
-    assert t.revenue is None
-    assert t.margin is None
-    assert t.hosting_cost is not None  # the hosting lines all had rates
-    assert body.managed is not None
-    usd = next(m for m in body.managed if m.currency == "USD")
-    assert usd.revenue.value == Decimal(4000)  # still shown in its own currency
-    assert usd.revenue_converted is None
-
-
-def test_without_a_reporting_currency_there_is_no_total() -> None:
-    body = _revenue_section(date(2026, 10, 1), date(2026, 10, 31), NOW, None, True,
-                            _hosting(), _managed())
-    assert body.totals is None
-
-
-def test_without_commercial_read_only_cost_is_shown() -> None:
-    body = _revenue_section(date(2026, 10, 1), date(2026, 10, 31), NOW, "EUR", False,
-                            _hosting(), [])
-    assert body.managed is None
-    assert body.projects is None
-    assert body.hosting is not None
-    assert all(h.price is None and h.price_converted is None for h in body.hosting)
-    assert body.totals is not None
-    assert body.totals.hosting_price is None
-    assert body.totals.revenue is None
-    assert body.totals.hosting_cost is not None
-
-
-def test_project_prices_say_there_is_no_source_yet() -> None:
-    body = _revenue_section(date(2026, 10, 1), date(2026, 10, 31), NOW, "EUR", True,
-                            _hosting(), _managed())
-    assert body.projects is not None
-    assert (body.projects.available, body.projects.reason) == (False, "no_data_source")
-    assert body.projects.new_project_price is None

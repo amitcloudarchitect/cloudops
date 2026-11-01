@@ -26,10 +26,10 @@ Every section follows the customer selector (ADR 0032).
    | Section | Permission | Who |
    |---|---|---|
    | Operations | `tickets.read` | staff and customers |
-   | Revenue & margin | `cost.read` (commercial figures need `commercial.read`) | staff; a customer sees "Your cloud consumption" |
+   | Revenue & margin | staff: `commercial.read`; a customer: `cost.read` | staff; a customer sees "Your cloud consumption" |
    | Security & compliance | `vulnerabilities.read` | staff and customers |
    | Platform | `inventory.read` | staff |
-   | Top 10 customers | `tickets.read` (revenue needs `commercial.read`) | staff |
+   | Top 10 customers | `tickets.read` | staff |
 
    A role's landing view (ADR 0018 D4) puts its section first (`/posture`: Security;
    `/work`, `/performance`: Operations) and is linked from Home's header ("Go to …"). A
@@ -60,23 +60,23 @@ Every section follows the customer selector (ADR 0032).
      120 h, P5 none): an incident resolved in the range is met when ServiceNow's resolve
      time (else wall clock) is within its priority's target. ServiceNow's own breach flag
      is shown apart.
-5. **Revenue & margin** (`/v1/home/sections/revenue`). Money stays in its transaction
-   currency; given `currency`, each line is converted at the daily average rate in force
-   on its own date and a total with any line lacking a rate is absent, never partial.
-   - hosting cost: amortised cost by cloud and billing currency (`cost.read`);
-   - hosting revenue: the price, cost × (1 + the SOW's consumption uplift) per usage
-     date, exactly one SOW in force (ADR 0021's rule), commercial only;
-   - managed services revenue, cost and margin: the margin engine's latest snapshot of
-     every customer-month overlapping the range, whole months; margin is the engine's,
-     on its own basis (actual, else modelled and marked), computed in the contract
-     currency and then converted at the rate on the month's last measured day; cost is
-     revenue less that margin;
-   - new project price (closed project tasks) and proposed initiatives (open ones):
-     `available: false`, `reason: no_data_source` until the project task ingest
-     (sibling work) holds prices; the console says "No data source yet";
-   - a customer gets `customer_price` only: its consumption price per closed month,
-     provider and currency, through `cloudops.customer_monthly_price` (ADR 0021). No
-     cost, margin or project figure, whatever its role holds (ADR 0002 D10).
+5. **Revenue & margin** (`/v1/home/sections/revenue`) **computes no revenue of its
+   own** (coordinating session, 2026-11-01). Staff figures come from two sibling
+   sources, read once each is merged:
+   - hosting cost, managed services revenue and cost, margin and the ACV figures from
+     the revenue table, `GET /v1/commercial/revenue` (`commercial.read`, staff,
+     `ScopeDep`, with its own compare range and reporting currency);
+   - new project price (closed project tasks) and proposed initiatives (open ones)
+     from the ServiceNow project task ingest.
+
+   Until then the staff view lists each component, names its source and says "No data
+   source yet" (`revenue` and `projects`: `available: false`,
+   `reason: no_data_source`); it never shows a figure of this module's. A staff role
+   without `commercial.read` is refused the section (ADR 0002 D10). A customer gets
+   `customer_price` only: its consumption price per closed month, provider and currency,
+   through `cloudops.customer_monthly_price` (ADR 0021), converted at each day's rate when
+   a reporting currency is chosen. No cost, margin or project figure, whatever its role
+   holds.
 6. **Security & compliance** (`/v1/home/sections/security`): vulnerabilities open at the
    range's end, by severity and by age at that end (the posture view's bands, ADR 0036),
    found and fixed in the range. Staff with `assurance.read` also get each customer's
@@ -104,19 +104,19 @@ Every section follows the customer selector (ADR 0032).
    Settings → Size bands shows the thresholds and their history to staff and the form to
    holders; every change is in `audit.action_log`.
 9. **Top 10 customers** (`/v1/home/sections/top-customers`, staff): non-internal
-   customers in scope, ranked by `sort`:
-   - `revenue` (largest first; needs `commercial.read`): hosting price + managed services
-     revenue (+ project revenue once known), each line converted at its own date's rate
-     into `currency` (default EUR). A customer with a line not priced has no total and
-     ranks last;
-   - `health` (least healthy first, then by revenue): a **modelled score**, as at the
-     range's end, `cloudops_api.home_sections.HEALTH_POLICY`: 100, less 20 per open P1 and
-     10 per open P2 incident (at most 40), up to 20 for the share of critical resources
-     in an unavailable state in inventory, 2 per open severity 4 or 5 vulnerability (at
-     most 20) and 5 per open high-severity security event (at most 20). Healthy from 80,
-     watch from 60, at risk from 40, else critical. Each part is returned with what was
-     observed and its penalty; a part not observed (no critical resources, or not
-     permitted) costs nothing and says so.
+   customers in scope, least healthy first (then by name), by a **modelled health
+   score** as at the range's end, `cloudops_api.home_sections.HEALTH_POLICY`: 100, less 20
+   per open P1 and 10 per open P2 incident (at most 40), up to 20 for the share of
+   critical resources in an unavailable state in inventory, 2 per open severity 4 or 5
+   vulnerability (at most 20) and 5 per open high-severity security event (at most 20).
+   Healthy from 80, watch from 60, at risk from 40, else critical. Each part is returned
+   with what was observed and its penalty; a part not observed (no critical resources,
+   or not permitted) costs nothing and says so.
+
+   Ranking by revenue (largest first) sorts by the revenue table's
+   `current.reported.total_revenue` once it is served; `rank_customers` already orders
+   by it. Until then a commercial role is told "no data source yet" (`revenue`:
+   pending), and any other role sees nothing about revenue.
 10. **Same design system** (ADR 0014, ADR 0030 decision 6). Metric cards and
     `CompareTable`: a real table, a row per component and a column per range, the change
     in words, wrapping rather than scrolling at tablet width. Modelled figures carry the
@@ -128,20 +128,21 @@ Every section follows the customer selector (ADR 0032).
   tested, but Home no longer calls them. Removing them, or reusing them in the
   Observability page, is a later decision.
 - Tests: `services/api/tests/test_home_sections.py` (range, size band boundaries, health
-  score and bands, ordering, money in two currencies); `db/tests/test_api_home_sections.py`
-  (every section's figures, range and compare, scope and selector narrowing, customer
-  versus staff, refusals, the size band table's policies and immutability, the setting's
-  permission and audit); `apps/web/e2e/home.spec.ts` (each role's sections, compare,
-  range errors, revenue gaps, size band setting, top 10 drill-down, axe in both themes at
-  tablet width); portal journeys follow the landing link instead of a lead widget.
-- Revenue from the `revenue-table` work and project prices from the project task ingest
-  plug into decisions 5 and 9 when they merge: `ProjectFigures` and `RevenueParts.projects`
-  are the places.
+  score and bands, ordering); `db/tests/test_api_home_sections.py` (every section's
+  figures, spend in two currencies, range and compare, scope and selector narrowing,
+  customer versus staff, the pending revenue sources, refusals, the size band table's
+  policies and immutability, the setting's permission and audit);
+  `apps/web/e2e/home.spec.ts` (each role's sections, compare, range errors, pending
+  revenue, size band setting, top 10 drill-down, axe in both themes at tablet width);
+  portal journeys follow the landing link instead of a lead widget.
+- When the revenue table and the project task ingest merge, this change is rebased on
+  them: the staff Revenue & margin view and the top 10's revenue ranking read them, and
+  `SourcePending` becomes their figures.
 
 ## Not decided here
 
-- **Project prices.** Which ServiceNow field carries a project task's price, and its
-  currency, belong to the project task ingest. Until then the figures are absent.
+- **Revenue and project prices.** Their figures, currencies and conversion belong to
+  the revenue table and the project task ingest. Until they are served, absent.
 - **Availability from telemetry.** The health score reads inventory state; ClickHouse
   availability (LLD L1) replaces it when it is captured.
 - **SLA due times from ServiceNow** (`task_sla`), which would replace the modelled

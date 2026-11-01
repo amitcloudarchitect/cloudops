@@ -1,10 +1,9 @@
 "use client";
 
-// Top 10 customers (ADR 0038, staff only), by revenue (largest first) or by a
-// modelled health score (least healthy first: what needs attention). Choosing a
+// Top 10 customers (ADR 0038, staff only), by a modelled health score, least
+// healthy first: what needs attention. Ranking by revenue reads the revenue table
+// and joins once it is served; until then a commercial role is told so. Choosing a
 // customer narrows every section to it, through the top bar's selector.
-
-import { useState } from "react";
 
 import type { HealthPart, TopCustomer, TopCustomers as Top } from "@cloudops/contracts";
 
@@ -13,10 +12,8 @@ import { HealthBadge } from "@/components/HealthBadge";
 import { ModelledMark, Provenance } from "@/components/Provenance";
 import { Gap } from "@/components/Widget";
 import { apiGet } from "@/lib/api";
-import { REPORTING_CURRENCIES } from "@/lib/commercial";
 import { useCustomer } from "@/lib/customer";
 import { rangeLabel } from "@/lib/range";
-import { can, useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
 import { Both, HomeSection, queryKey, RangeControls, useRangeChoice, useRangeQuery } from "./frame";
@@ -43,45 +40,21 @@ function Parts({ c }: { c: TopCustomer }) {
   );
 }
 
-export function TopCustomersSection({ currency, onCurrency }: { currency: string; onCurrency: (c: string) => void }) {
-  const me = useMe();
-  const commercial = can(me, "commercial.read");
+export function TopCustomersSection() {
   const { setTenantId, tenantId } = useCustomer();
   const [choice, setChoice] = useRangeChoice();
-  const [sort, setSort] = useState<"health" | "revenue">(commercial ? "revenue" : "health");
-  const extra = { sort, currency: currency || "EUR" };
-  const qa = useRangeQuery(choice.a, extra);
-  const qb = useRangeQuery(choice.b, extra);
+  const qa = useRangeQuery(choice.a);
+  const qb = useRangeQuery(choice.b);
   const a = useApi((t) => (qa ? apiGet(t, PATH, {}, qa) : Promise.reject(new Error("invalid range"))), queryKey(PATH, qa));
   const b = useApi((t) => (qb ? apiGet(t, PATH, {}, qb) : Promise.resolve(null)), queryKey(PATH, qb));
   return (
     <HomeSection
       id="top"
       title="Top 10 customers"
-      subtitle="By revenue (hosting, managed services and projects) or by a modelled health score. Choose a customer to narrow every section to it."
+      subtitle="By a modelled health score, least healthy first. Choose a customer to narrow every section to it."
       href="/customers"
     >
-      <RangeControls section="Top 10 customers" choice={choice} onChange={setChoice}>
-        <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-          Sort by
-          <select className="field" value={sort} onChange={(e) => setSort(e.target.value as "health" | "revenue")}>
-            {commercial ? <option value="revenue">Revenue, largest first</option> : null}
-            <option value="health">Health, least healthy first</option>
-          </select>
-        </label>
-        {commercial ? (
-          <label className="flex flex-col gap-1 text-xs font-semibold text-muted">
-            Revenue in
-            <select className="field" value={currency || "EUR"} onChange={(e) => onCurrency(e.target.value)}>
-              {REPORTING_CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </RangeControls>
+      <RangeControls section="Top 10 customers" choice={choice} onChange={setChoice} />
       {tenantId ? <p className="mb-3 text-sm text-muted">Narrowed to one customer in the top bar: choose All customers there to rank them all.</p> : null}
       <Both a={a} b={b} what="the top customers">
         {(top: Top, other: Top | null) => {
@@ -92,26 +65,20 @@ export function TopCustomersSection({ currency, onCurrency }: { currency: string
             <>
               <table className="w-full border-collapse text-sm" data-testid="top-customers">
                 <caption className="sr-only">
-                  The ten customers first by {top.sort === "revenue" ? "revenue, largest first" : "health, least healthy first"}, {rangeLabel(choice.a)}
+                  The ten least healthy customers first, {rangeLabel(choice.a)}
                 </caption>
                 <thead>
                   <tr className="text-left text-xs text-muted">
                     <th scope="col" className="pb-1 pr-2 font-semibold">#</th>
                     <th scope="col" className="pb-1 pr-2 font-semibold">Customer</th>
                     <th scope="col" className="pb-1 pr-2 font-semibold">Health</th>
-                    {top.commercial ? <th scope="col" className="pb-1 pl-2 text-right font-semibold">Revenue ({top.reporting_currency})</th> : null}
                     {otherLabel ? <th scope="col" className="pb-1 pl-2 text-right font-semibold">{otherLabel}</th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {top.customers.map((c) => {
                     const prior = otherBy.get(c.tenant.id);
-                    const priorText = prior
-                      ? [
-                          `health ${metricText(prior.health)} (${changeText(c.health, prior.health) ?? "—"})`,
-                          ...(top.commercial && prior.revenue?.total && c.revenue?.total ? [`revenue ${changeText(c.revenue.total, prior.revenue.total) ?? "—"}`] : []),
-                        ].join(", ")
-                      : "Not in that range's top 10";
+                    const priorText = prior ? `Health ${metricText(prior.health)} (${changeText(c.health, prior.health) ?? "—"})` : "Not in that range's top 10";
                     return (
                       <tr key={c.tenant.id} className="border-t border-line-subtle align-top">
                         <td className="py-1.5 pr-2 tabular-nums text-muted">{metricText(c.rank)}</td>
@@ -128,15 +95,6 @@ export function TopCustomersSection({ currency, onCurrency }: { currency: string
                           </div>
                           <Parts c={c} />
                         </td>
-                        {top.commercial ? (
-                          <td className="py-1.5 pl-2 text-right tabular-nums text-ink">
-                            {c.revenue?.total ? metricText(c.revenue.total) : <span className="text-muted">Not complete</span>}
-                            <span className="block text-xs text-muted">
-                              Hosting {c.revenue?.hosting ? metricText(c.revenue.hosting) : "not priced"}; managed {c.revenue?.managed ? metricText(c.revenue.managed) : "—"};
-                              projects: no data source yet
-                            </span>
-                          </td>
-                        ) : null}
                         {otherLabel ? <td className="py-1.5 pl-2 text-right text-xs text-muted">{priorText}</td> : null}
                       </tr>
                     );
@@ -151,10 +109,12 @@ export function TopCustomersSection({ currency, onCurrency }: { currency: string
                   2 per open severity 4 or 5 vulnerability (at most 20) and 5 per open high security event (at most 20), as at the end of the range. Healthy from 80, watch from
                   60, at risk from 40.
                 </p>
-                <p>
-                  Ranked {metricText(top.ranked)} customers. Revenue is each line converted at its own date&rsquo;s rate; a customer with a line not priced is listed last
-                  by revenue.
-                </p>
+                <p>Ranked {metricText(top.ranked)} customers.</p>
+                {top.revenue && !top.revenue.available ? (
+                  <p data-testid="top-revenue-pending">
+                    Ranking by revenue (hosting, managed services and projects): no data source yet. It joins once the revenue table is served.
+                  </p>
+                ) : null}
               </div>
             </>
           );
