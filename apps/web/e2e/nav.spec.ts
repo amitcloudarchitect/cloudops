@@ -74,6 +74,18 @@ test.describe("full sidebar", () => {
     await expect(sidenav(page)).toHaveAttribute("data-rail", "false");
   });
 
+  test("follows the window to a rail until the user chooses", async ({ signedIn: page }) => {
+    await page.goto("/");
+    await expect(sidenav(page)).toHaveAttribute("data-rail", "false");
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await expect(sidenav(page)).toHaveAttribute("data-rail", "true");
+    expect(await sideways(page)).toBeLessThanOrEqual(0);
+    await nav(page).getByRole("button", { name: "Expand sidebar" }).click();
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await expect(sidenav(page)).toHaveAttribute("data-rail", "false");
+  });
+
   test("every nav control is reachable by Tab", async ({ signedIn: page }) => {
     await page.goto("/");
     await expect(nav(page)).toBeVisible();

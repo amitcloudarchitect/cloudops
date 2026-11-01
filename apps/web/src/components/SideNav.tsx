@@ -45,12 +45,29 @@ function store(key: string, prefs: Prefs): void {
   }
 }
 
-function narrow(): boolean {
-  try {
-    return window.matchMedia(NARROW).matches;
-  } catch {
-    return false;
-  }
+/** Whether the viewport is below desktop width, followed live: the default changes as
+ * the window does, until the user chooses. */
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(() => {
+    try {
+      return window.matchMedia(NARROW).matches;
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    let query: MediaQueryList;
+    try {
+      query = window.matchMedia(NARROW);
+    } catch {
+      return;
+    }
+    const onChange = () => setNarrow(query.matches);
+    query.addEventListener("change", onChange);
+    onChange();
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+  return narrow;
 }
 
 export function SideNav({
@@ -67,7 +84,8 @@ export function SideNav({
   // Rendered only once the session is ready, so always on the client.
   const [prefs, setPrefs] = useState<Prefs>(() => load(key));
   const [tip, setTip] = useState<{ label: string; top: number; left: number } | null>(null);
-  const rail = prefs.rail ?? narrow();
+  const narrow = useNarrow();
+  const rail = prefs.rail ?? narrow;
 
   const update = (next: Prefs) => {
     setPrefs(next);
