@@ -3603,6 +3603,25 @@
         "title": "FederationRequest",
         "type": "object"
       },
+      "FigureGap": {
+        "additionalProperties": false,
+        "properties": {
+          "figure": {
+            "title": "Figure",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "figure",
+          "reason"
+        ],
+        "title": "FigureGap",
+        "type": "object"
+      },
       "FigureSnapshot": {
         "additionalProperties": false,
         "description": "A figure as generated: the value is unrounded text (an int, or a Decimal\nin ``unit`` for money); presentation rounds it once.",
@@ -4591,6 +4610,24 @@
           "is_modelled"
         ],
         "title": "Metric[int]",
+        "type": "object"
+      },
+      "MissingCount": {
+        "additionalProperties": false,
+        "properties": {
+          "customers": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "figure": {
+            "title": "Figure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "figure",
+          "customers"
+        ],
+        "title": "MissingCount",
         "type": "object"
       },
       "MonthPerformance": {
@@ -7430,6 +7467,445 @@
         "title": "ResponseView",
         "type": "object"
       },
+      "RevenueBlock": {
+        "additionalProperties": false,
+        "properties": {
+          "contract": {
+            "$ref": "#/components/schemas/RevenueFigures"
+          },
+          "gaps": {
+            "items": {
+              "$ref": "#/components/schemas/FigureGap"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "reported": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueFigures"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contract",
+          "reported",
+          "gaps"
+        ],
+        "title": "RevenueBlock",
+        "type": "object"
+      },
+      "RevenueChange": {
+        "additionalProperties": false,
+        "description": "Current minus compare; the margin percentage's change is in ratio points.",
+        "properties": {
+          "contract": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueFigures"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reported": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueFigures"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contract",
+          "reported"
+        ],
+        "title": "RevenueChange",
+        "type": "object"
+      },
+      "RevenueFigures": {
+        "additionalProperties": false,
+        "description": "One customer's figures in one currency. Monthly averages over the range:\nconsumption, revenue, cost and margin. Contract values: the rest. ``None``:\nnot captured, with the gap in ``gaps``.",
+        "properties": {
+          "cloud_consumption": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "gross_margin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "gross_margin_pct": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hosting_acv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manage_acv": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manage_cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manage_revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "professional_services": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "total_revenue": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Metric_Decimal_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "currency",
+          "cloud_consumption",
+          "manage_revenue",
+          "manage_cost",
+          "gross_margin",
+          "gross_margin_pct",
+          "professional_services",
+          "hosting_acv",
+          "manage_acv",
+          "total_revenue"
+        ],
+        "title": "RevenueFigures",
+        "type": "object"
+      },
+      "RevenueOverview": {
+        "additionalProperties": false,
+        "properties": {
+          "compare_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compare_totals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueTotals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "range": {
+            "$ref": "#/components/schemas/RevenueRange"
+          },
+          "reporting_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporting Currency"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/RevenueRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/RevenueTotals"
+          },
+          "totals_change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueTotalsChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "range",
+          "compare_range",
+          "reporting_currency",
+          "rows",
+          "totals",
+          "compare_totals",
+          "totals_change"
+        ],
+        "title": "RevenueOverview",
+        "type": "object"
+      },
+      "RevenueRange": {
+        "additionalProperties": false,
+        "properties": {
+          "first": {
+            "title": "First",
+            "type": "string"
+          },
+          "last": {
+            "title": "Last",
+            "type": "string"
+          },
+          "months": {
+            "$ref": "#/components/schemas/Metric_int_"
+          }
+        },
+        "required": [
+          "first",
+          "last",
+          "months"
+        ],
+        "title": "RevenueRange",
+        "type": "object"
+      },
+      "RevenueRow": {
+        "additionalProperties": false,
+        "properties": {
+          "change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueChange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "compare": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueBlock"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contract_currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Currency"
+          },
+          "csp": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csp"
+          },
+          "current": {
+            "$ref": "#/components/schemas/RevenueBlock"
+          },
+          "sow_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sow Reference"
+          },
+          "tenant": {
+            "$ref": "#/components/schemas/TenantView"
+          }
+        },
+        "required": [
+          "tenant",
+          "csp",
+          "sow_reference",
+          "contract_currency",
+          "current",
+          "compare",
+          "change"
+        ],
+        "title": "RevenueRow",
+        "type": "object"
+      },
+      "RevenueTotal": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "customers": {
+            "$ref": "#/components/schemas/Metric_int_"
+          },
+          "figures": {
+            "$ref": "#/components/schemas/RevenueFigures"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/MissingCount"
+            },
+            "title": "Missing",
+            "type": "array"
+          }
+        },
+        "required": [
+          "currency",
+          "customers",
+          "figures",
+          "missing"
+        ],
+        "title": "RevenueTotal",
+        "type": "object"
+      },
+      "RevenueTotals": {
+        "additionalProperties": false,
+        "properties": {
+          "contract": {
+            "items": {
+              "$ref": "#/components/schemas/RevenueTotal"
+            },
+            "title": "Contract",
+            "type": "array"
+          },
+          "reported": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueTotal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contract",
+          "reported"
+        ],
+        "title": "RevenueTotals",
+        "type": "object"
+      },
+      "RevenueTotalsChange": {
+        "additionalProperties": false,
+        "properties": {
+          "contract": {
+            "items": {
+              "$ref": "#/components/schemas/RevenueFigures"
+            },
+            "title": "Contract",
+            "type": "array"
+          },
+          "reported": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RevenueFigures"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "contract",
+          "reported"
+        ],
+        "title": "RevenueTotalsChange",
+        "type": "object"
+      },
       "ReviewRequest": {
         "additionalProperties": false,
         "properties": {
@@ -8471,6 +8947,17 @@
             ],
             "title": "Coverage"
           },
+          "csp": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csp"
+          },
           "currency": {
             "pattern": "^[A-Z]{3}$",
             "title": "Currency",
@@ -8692,6 +9179,17 @@
             ],
             "title": "Coverage"
           },
+          "csp": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Csp"
+          },
           "currency": {
             "title": "Currency",
             "type": "string"
@@ -8860,6 +9358,7 @@
           "term_end",
           "currency",
           "service_scope",
+          "csp",
           "coverage",
           "support",
           "recurring_fee",
@@ -12350,6 +12849,238 @@
           }
         },
         "summary": "Publish Rate Card"
+      }
+    },
+    "/v1/commercial/revenue": {
+      "get": {
+        "description": "Every customer in scope over a range of months (default: the latest closed\nmonth), optionally against a second range: CSP, average monthly consumption,\nmanage revenue and cost, gross margin, professional services and ACVs, with\ntotals per contract currency and, given ``currency``, in it.",
+        "operationId": "revenue_overview_v1_commercial_revenue_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "compare_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Compare From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "compare_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Compare To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevenueOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revenue Overview"
+      }
+    },
+    "/v1/commercial/revenue.csv": {
+      "get": {
+        "description": "The range's rows and totals as the workbook's sheet, rounded for print.",
+        "operationId": "revenue_csv_v1_commercial_revenue_csv_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Currency"
+            }
+          },
+          {
+            "description": "One customer in the caller's scope; omitted: every customer in it.",
+            "in": "query",
+            "name": "tenant_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "One customer in the caller's scope; omitted: every customer in it.",
+              "title": "Tenant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revenue Csv"
       }
     },
     "/v1/commercial/sows": {

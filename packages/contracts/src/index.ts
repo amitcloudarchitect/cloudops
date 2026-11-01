@@ -179,3 +179,8 @@ export type SecOpsPostureScores = Schemas["SecOpsPostureScores"];
 export type CustomerPostureScore = Schemas["CustomerPostureScore"];
 export type FindingDetail = Schemas["FindingDetail"];
 export type SlaBand = SecOpsFinding["sla"];
+// Revenue & margin (ADR 0038).
+export type RevenueOverview = Schemas["RevenueOverview"];
+export type RevenueRow = Schemas["RevenueRow"];
+export type RevenueFigures = Schemas["RevenueFigures"];
+export type RevenueTotal = Schemas["RevenueTotal"];

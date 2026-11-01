@@ -45,6 +45,8 @@ interface Props<Row> {
   role: string;
   initial?: Partial<View>;
   empty: { title: string; next: ReactNode };
+  /** Replaces the table's own export: a server-rendered file (with totals, say). */
+  onExport?: () => void;
 }
 
 const BLANK: View = { name: "All", query: "", facets: {}, sort: null };
@@ -97,6 +99,7 @@ export function DataTable<Row>({
   role,
   initial,
   empty,
+  onExport,
 }: Props<Row>) {
   const [view, setView] = useState<View>({ ...BLANK, ...initial });
   const [saved, setSaved] = useState<View[]>([]);
@@ -230,7 +233,7 @@ export function DataTable<Row>({
               Delete view
             </button>
           ) : null}
-          <button type="button" className={action} onClick={exportCsv} disabled={shown.length === 0}>
+          <button type="button" className={action} onClick={onExport ?? exportCsv} disabled={shown.length === 0}>
             Export CSV
           </button>
         </div>

@@ -16,6 +16,7 @@ test("sees every module, customer mapping included", async ({ signedIn: page }) 
     "SecOps",
     "FinOps",
     "Margin",
+    "Revenue & margin",
     "Pricing",
     "Assurance",
     "Reports",

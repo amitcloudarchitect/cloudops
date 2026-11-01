@@ -41,6 +41,7 @@ terms.
 | Where the agreement is recorded | `Example only: no real agreement` | In a real setup, the contract library and the document's name |
 | Service scope | `Managed Azure operations (example)` | |
 | Coverage / Support tier | `24x7` / `Gold` | What the pricing engine quotes the modelled cost with |
+| Cloud resold as CSP | `Yes` | Whether Getronics resells the cloud. Revenue & margin derives a hosting ACV only for a CSP customer; "Not recorded" leaves it not captured |
 | Contract currency | `EUR` | Margin is computed in this currency first, then converted |
 | Recurring fee | `30000` | |
 | Billed | `Quarterly` | Margin uses 30000 / 3 = **EUR 10,000.00 a month** |
@@ -68,7 +69,24 @@ terms.
   cost connector (ADR 0027). Until a month has consumption, it shows "Not captured: no
   billing data", which is a gap, never a zero.
 
-### 4. The rate card
+### 4. Revenue & margin
+
+**Commercial → Revenue & margin** (`/revenue`, ADR 0038) shows the monthly report's sheet from
+what was entered above. With these example values, for a month the worker has computed:
+
+- monthly manage revenue **EUR 10,000.00**, its manage cost and gross margin from the margin
+  engine;
+- professional services **EUR 0.00** and manage ACV **EUR 120,000.00**, as entered;
+- hosting ACV: `0` as entered. Leave it empty instead to see it derived, marked
+  **Modelled**: 12 × the average monthly consumption × 1.05.
+- total revenue (monthly): EUR 10,000.00 manage revenue, plus hosting (0 as entered), plus
+  professional services spread over the SOW's term. It is marked **Modelled**, because the
+  services figure is the SOW's until ServiceNow project tasks are delivered in the range.
+
+Choose a range of months, a reporting currency and **Compare with another range** to see a
+month against the one before. **Export CSV** downloads the sheet with its totals.
+
+### 5. The rate card
 
 Version `2026-v2.14`, the pricing workbook's, is in force from 1 January 2026. Pricing quotes
 on it, and margin's modelled cost uses it. To try publishing:

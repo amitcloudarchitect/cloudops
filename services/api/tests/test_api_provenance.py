@@ -28,6 +28,7 @@ NUMERIC = (int, float, Decimal, complex)
 BINARY_ROUTES = {
     "/v1/reports/packs/{pack_id}/pdf": "application/pdf",
     "/v1/reports/packs/{pack_id}/text": "text/plain",
+    "/v1/commercial/revenue.csv": "text/csv",
 }
 
 

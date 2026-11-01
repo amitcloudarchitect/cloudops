@@ -10,7 +10,7 @@ import type { Page } from "@playwright/test";
 
 import { expect, navLabels, test } from "./fixtures";
 
-const COMMERCIAL = ["FinOps", "Margin", "Pricing"];
+const COMMERCIAL = ["FinOps", "Margin", "Revenue & margin", "Pricing"];
 
 function row(page: Page, table: string, text: string | RegExp) {
   return page.getByRole("table", { name: table }).getByRole("row").filter({ hasText: text });
@@ -196,7 +196,7 @@ for (const role of ["engineer", "customer"] as const) {
       await page.goto("/");
       const labels = await navLabels(page);
       for (const label of [...COMMERCIAL, "Commercial setup"]) expect(labels).not.toContain(label);
-      for (const path of ["/finops", "/margin", "/pricing", "/settings/commercial", "/finops/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b", "/margin/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b"]) {
+      for (const path of ["/finops", "/margin", "/revenue", "/pricing", "/settings/commercial", "/finops/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b", "/margin/54190aa0-4b8a-5d71-b0f1-4fea5cf3fb7b"]) {
         await page.goto(path);
         await expect(page.getByText("Not available to your role"), path).toBeVisible();
         await expect(page.getByRole("table"), path).toHaveCount(0);

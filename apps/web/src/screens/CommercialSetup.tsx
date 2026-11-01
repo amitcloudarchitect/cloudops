@@ -148,6 +148,7 @@ function sowColumns(): Column<SowVersionView>[] {
       value: (v) => v.consumption_uplift?.value ?? null,
       render: (v) => (v.consumption_uplift ? percent(v.consumption_uplift.value, 2) : <span className="text-muted">Not priced</span>),
     },
+    { key: "csp", header: "CSP", value: (v) => (v.csp === null ? "Not recorded" : v.csp ? "Yes" : "No") },
     { key: "scope", header: "Service scope", value: (v) => v.service_scope, render: (v) => <span className="break-words">{v.service_scope ?? "—"}</span> },
     { key: "agreement", header: "Agreement recorded at", value: (v) => v.document_uri, render: (v) => <span className="break-words">{v.document_uri ?? "—"}</span> },
     { key: "why", header: "Amendment", value: (v) => v.amendment_reason, render: (v) => <span className="break-words">{v.amendment_reason ?? "First version"}</span> },
@@ -163,6 +164,7 @@ interface SowForm {
   service_scope: string;
   coverage: "" | NonNullable<SowInput["coverage"]>;
   support: "" | NonNullable<SowInput["support"]>;
+  csp: "" | "yes" | "no";
   recurring_fee: string;
   billing_frequency: SowInput["billing_frequency"];
   target_margin: string; // per cent
@@ -183,6 +185,7 @@ const EMPTY_SOW: SowForm = {
   service_scope: "",
   coverage: "24x7",
   support: "Gold",
+  csp: "",
   recurring_fee: "",
   billing_frequency: "monthly",
   target_margin: "",
@@ -205,6 +208,7 @@ function fromVersion(v: SowVersionView): SowForm {
     service_scope: v.service_scope ?? "",
     coverage: v.coverage === "8x5" || v.coverage === "16x5" || v.coverage === "24x7" ? v.coverage : "",
     support: v.support === "Bronze" || v.support === "Silver" || v.support === "Gold" ? v.support : "",
+    csp: v.csp === null ? "" : v.csp ? "yes" : "no",
     recurring_fee: v.recurring_fee ? String(v.recurring_fee.value) : "",
     billing_frequency: v.billing_frequency ?? "monthly",
     target_margin: v.target_margin ? toPercent(String(v.target_margin.value)) : "",
@@ -268,6 +272,7 @@ function SowEditor({ tenantId, current, onSaved }: { tenantId: string; current: 
       service_scope: form.service_scope.trim(),
       coverage: form.coverage || null,
       support: form.support || null,
+      csp: form.csp === "" ? null : form.csp === "yes",
       recurring_fee: form.recurring_fee.trim(),
       billing_frequency: form.billing_frequency,
       target_margin: form.target_margin.trim() ? fromPercent(form.target_margin) : null,
@@ -335,6 +340,13 @@ function SowEditor({ tenantId, current, onSaved }: { tenantId: string; current: 
               <option value="Bronze">Bronze</option>
               <option value="Silver">Silver</option>
               <option value="Gold">Gold</option>
+            </select>
+          </Field>
+          <Field label="Cloud resold as CSP">
+            <select className={control} value={form.csp} onChange={(e) => set({ csp: e.target.value === "yes" ? "yes" : e.target.value === "no" ? "no" : "" })}>
+              <option value="">Not recorded</option>
+              <option value="yes">Yes: Getronics resells the cloud</option>
+              <option value="no">No: the customer buys its own cloud</option>
             </select>
           </Field>
         </div>
