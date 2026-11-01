@@ -25,6 +25,7 @@ import { useAssistantContext } from "@/lib/assistant";
 import { notCapturedReason, periodLabel, sortKey, statusLabel } from "@/lib/commercial";
 import { count, date, decimal, money, percent } from "@/lib/format";
 import { BAND_LABEL, marginBand, type Band } from "@/lib/health";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -114,15 +115,16 @@ export function Trend({ points: trend }: { points: TrendPoint[] }) {
   );
 }
 
-function load(period: string | undefined, currency: string | undefined) {
-  return (token: string) => apiGet(token, "/v1/commercial/margin", {}, { period, currency });
+function load(period: string | undefined, currency: string | undefined, tenantId: string | null) {
+  return (token: string) => apiGet(token, "/v1/commercial/margin", {}, { period, currency, ...customerQuery(tenantId) });
 }
 
 export function Margin() {
   useAssistantContext({ screen: "margin" });
   const me = useMe();
   const choice = usePeriodChoice();
-  const loaded = useApi(load(choice.period, choice.currency), `margin:${choice.query}`);
+  const { tenantId } = useCustomer();
+  const loaded = useApi(load(choice.period, choice.currency, tenantId), `margin:${choice.query}:${tenantId ?? "all"}`);
   const header = (
     <PageHeader
       title="Margin"

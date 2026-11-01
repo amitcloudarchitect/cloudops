@@ -23,6 +23,7 @@ from cloudops_api.pipeline import (
     AUTHENTICATED,
     ApiError,
     AuditedRoute,
+    ScopeDep,
     audit_only,
     current_access,
     platform,
@@ -194,8 +195,8 @@ async def me(request: Request, access: AccessDep) -> MeView:
 
 @router.get("/resources", response_model=ResourceList)
 @requires("inventory.read")
-async def list_resources(request: Request, access: AccessDep) -> ResourceList:
-    async with platform(request).db.transaction(access.scope) as conn:
+async def list_resources(request: Request, access: AccessDep, scope: ScopeDep) -> ResourceList:
+    async with platform(request).db.transaction(scope) as conn:
         rows = (
             await conn.execute(
                 text(

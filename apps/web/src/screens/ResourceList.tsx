@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Provenance } from "@/components/Provenance";
 import { apiGet } from "@/lib/api";
 import { useAssistantContext } from "@/lib/assistant";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -18,7 +19,8 @@ type Resource = components["schemas"]["ResourceStaffView"] | components["schemas
 export function ResourceList() {
   useAssistantContext({ screen: "resources" });
   const me = useMe();
-  const loaded = useApi((token) => apiGet(token, "/v1/resources"), "resources");
+  const { tenantId } = useCustomer();
+  const loaded = useApi((token) => apiGet(token, "/v1/resources", {}, customerQuery(tenantId)), `resources:${tenantId ?? "all"}`);
   const columns: Column<Resource>[] = [
     {
       key: "name",

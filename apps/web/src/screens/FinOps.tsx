@@ -20,6 +20,7 @@ import { apiGet } from "@/lib/api";
 import { useAssistantContext } from "@/lib/assistant";
 import { periodLabel, sortKey, sumDecimal, verificationReason } from "@/lib/commercial";
 import { count, money, percent } from "@/lib/format";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { can, useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -82,15 +83,16 @@ export function unallocatedText(lines: readonly Unallocated[], dimension: Unallo
   return mine.map((u) => (u.share ? `${percent(u.share.value)}${mine.length > 1 ? ` of ${u.currency}` : ""}` : `No ${u.currency} cost`)).join("; ");
 }
 
-function load(period: string | undefined, currency: string | undefined) {
-  return (token: string) => apiGet(token, "/v1/finops/overview", {}, { period, currency });
+function load(period: string | undefined, currency: string | undefined, tenantId: string | null) {
+  return (token: string) => apiGet(token, "/v1/finops/overview", {}, { period, currency, ...customerQuery(tenantId) });
 }
 
 export function FinOps() {
   useAssistantContext({ screen: "finops" });
   const me = useMe();
   const choice = usePeriodChoice();
-  const loaded = useApi(load(choice.period, choice.currency), `finops:${choice.query}`);
+  const { tenantId } = useCustomer();
+  const loaded = useApi(load(choice.period, choice.currency, tenantId), `finops:${choice.query}:${tenantId ?? "all"}`);
   const header = (
     <PageHeader
       title="FinOps"

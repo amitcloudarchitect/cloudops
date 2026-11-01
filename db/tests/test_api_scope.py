@@ -55,13 +55,98 @@ async def test_tampered_organisation_claim_header_and_query_are_ignored(
     assert me.json()["kind"] == "customer"
 
     resources = await api.get(
+        "/v1/resources", principals.customer_a, claims=tampered_claims, headers=tampered_headers,
+    )
+    assert _ids(resources.json()) == {str(seeded.a.resource_id)}
+    # The customer selector's parameter only narrows: naming another tenant is the
+    # same 404 as a tenant that does not exist, never tenant b's data.
+    named = await api.get(
         "/v1/resources", principals.customer_a,
         claims=tampered_claims, headers=tampered_headers, params={"tenant_id": b},
     )
-    assert _ids(resources.json()) == {str(seeded.a.resource_id)}
+    assert named.status_code == 404
+    assert named.json()["error"]["code"] == "not_found"
 
     sows = await api.get("/v1/commercial/sows", principals.customer_a, claims=tampered_claims)
     assert sows.status_code == 403, "a roles claim cannot grant the commercial permission"
+
+
+# --- The customer selector: tenant_id narrows, never widens (ADR 0002) --------------
+
+# Every list endpoint the console's customer selector narrows.
+NARROWED = (
+    "/v1/resources", "/v1/work-items?status=all", "/v1/customers", "/v1/performance",
+    "/v1/posture", "/v1/approvals", "/v1/finops/overview", "/v1/commercial/margin",
+    "/v1/reports/packs",
+)
+
+
+def _with_tenant(path: str, tenant: object) -> str:
+    return f"{path}{'&' if '?' in path else '?'}tenant_id={tenant}"
+
+
+async def test_tenant_id_narrows_a_staff_scope_to_one_customer(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    every = await api.get("/v1/resources", principals.finops_all)
+    assert {str(t.resource_id) for t in seeded.tenants} <= _ids(every.json())
+    one = await api.get("/v1/resources", principals.finops_all,
+                        params={"tenant_id": str(seeded.a.id)})
+    assert one.status_code == 200
+    assert _ids(one.json()) == {str(seeded.a.resource_id)}
+    customers = await api.get("/v1/customers", principals.finops_all,
+                              params={"tenant_id": str(seeded.b.id)})
+    assert [c["tenant"]["id"] for c in customers.json()] == [str(seeded.b.id)]
+
+
+async def test_no_tenant_id_is_the_whole_scope(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    listed = await api.get("/v1/customers", principals.finops_all)
+    me = await api.get("/v1/me", principals.finops_all)
+    assert {c["tenant"]["id"] for c in listed.json()} == {t["id"] for t in me.json()["tenants"]}
+
+
+@pytest.mark.parametrize("path", NARROWED)
+async def test_a_tenant_outside_scope_is_404_like_one_that_does_not_exist(
+    api: Api, principals: Principals, seeded: Seeded, path: str
+) -> None:
+    # engineer_a holds tenant a only: tenant b exists but is not in its scope.
+    foreign = await api.get(_with_tenant(path, seeded.b.id), principals.engineer_a)
+    missing = await api.get(_with_tenant(path, uuid4()), principals.engineer_a)
+    if foreign.status_code == 403:  # the role lacks the module: refused before scope
+        assert missing.status_code == 403
+        return
+    assert foreign.status_code == missing.status_code == 404, path
+    assert foreign.json()["error"]["code"] == missing.json()["error"]["code"] == "not_found"
+    assert str(seeded.b.id) not in foreign.text
+
+
+@pytest.mark.parametrize("path", NARROWED)
+async def test_a_customer_cannot_name_another_tenant(
+    api: Api, principals: Principals, seeded: Seeded, path: str
+) -> None:
+    honest = await api.get(path, principals.customer_a)
+    own = await api.get(_with_tenant(path, seeded.a.id), principals.customer_a)
+    other = await api.get(_with_tenant(path, seeded.b.id), principals.customer_a)
+    assert str(seeded.b.id) not in other.text
+    if honest.status_code != 200:  # staff work: refused either way, nothing of b's shown
+        assert own.status_code == honest.status_code
+        assert other.status_code in (honest.status_code, 404)
+        return
+    assert own.status_code == 200
+    assert other.status_code == 404, path
+    assert other.json()["error"]["code"] == "not_found"
+
+
+async def test_narrowing_keeps_a_subscription_restriction(
+    api: Api, principals: Principals, seeded: Seeded
+) -> None:
+    own = await api.get("/v1/resources", principals.customer_c_limited,
+                        params={"tenant_id": str(seeded.c.id)})
+    assert own.status_code == 200
+    assert str(seeded.c_resource2) not in _ids(own.json())
+    assert str(seeded.c.resource_id) in _ids(own.json())
 
 
 # --- Required case: a customer principal cannot reach another tenant -----------------

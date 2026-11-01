@@ -48,6 +48,7 @@ from cloudops_api.bff import TenantView
 from cloudops_api.pipeline import (
     ApiError,
     AuditedRoute,
+    ScopeDep,
     audit_only,
     current_access,
     platform,
@@ -327,19 +328,15 @@ async def generate_pack(request: Request, body: GenerateRequest, access: AccessD
 @router.get("/packs", response_model=list[ReportPackSummary])
 @requires("reports.read")
 async def list_packs(
-    request: Request, access: AccessDep,
-    tenant_id: Annotated[UUID | None, Query()] = None,
+    request: Request, access: AccessDep, scope: ScopeDep,
     period: Annotated[str | None, Query(pattern=PERIOD)] = None,
 ) -> list[ReportPackSummary]:
     where: list[str] = ["true"]
     params: dict[str, Any] = {}
-    if tenant_id is not None:
-        where.append("p.tenant_id = :t")
-        params["t"] = tenant_id
     if period is not None:
         where.append("p.period = :p")
         params["p"] = _period(period)
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         rows = [tuple(r) for r in await conn.execute(text(
             f"SELECT {_pack_cols(access.kind == 'staff')} FROM cloudops.report_pack p"  # noqa: S608
             " JOIN cloudops.tenant t ON t.id = p.tenant_id"
@@ -499,7 +496,7 @@ async def pack_text(request: Request, pack_id: UUID, access: AccessDep) -> Respo
 @router.get("/portfolio", response_model=PortfolioView)
 @requires("reports.read")
 async def portfolio(
-    request: Request, access: AccessDep,
+    request: Request, access: AccessDep, scope: ScopeDep,
     period: Annotated[str, Query(pattern=PERIOD)],
     currency: Annotated[str, Query(pattern=CURRENCY)],
 ) -> PortfolioView:
@@ -509,7 +506,7 @@ async def portfolio(
     if access.scope.account_ids is not None:
         raise ApiError(404, "not_found")
     month = _period(period)
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         result = await consolidation.consolidate(conn, month, currency)
     now = datetime.now(UTC)
 

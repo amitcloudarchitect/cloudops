@@ -4024,7 +4024,10 @@ export type $defs = Record<string, never>;
 export interface operations {
     approvals_v1_approvals_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4038,6 +4041,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Approvals"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -4798,6 +4810,8 @@ export interface operations {
             query?: {
                 currency?: string | null;
                 period?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -5045,7 +5059,10 @@ export interface operations {
     };
     list_customers_v1_customers_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5059,6 +5076,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomerOverview"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -5155,6 +5181,8 @@ export interface operations {
             query?: {
                 currency?: string | null;
                 period?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -5849,7 +5877,10 @@ export interface operations {
     };
     performance_v1_performance_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5865,11 +5896,23 @@ export interface operations {
                     "application/json": components["schemas"]["Performance"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     posture_v1_posture_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5885,12 +5928,22 @@ export interface operations {
                     "application/json": components["schemas"]["Posture"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     list_packs_v1_reports_packs_get: {
         parameters: {
             query?: {
                 period?: string | null;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
                 tenant_id?: string | null;
             };
             header?: never;
@@ -6180,6 +6233,8 @@ export interface operations {
             query: {
                 currency: string;
                 period: string;
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
             };
             header?: never;
             path?: never;
@@ -6209,7 +6264,10 @@ export interface operations {
     };
     list_resources_v1_resources_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6223,6 +6281,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResourceList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -6399,6 +6466,8 @@ export interface operations {
                 kind?: ("incident" | "change_task" | "service_request" | "project_task") | null;
                 q?: string | null;
                 status?: "open" | "closed" | "all";
+                /** @description One customer in the caller's scope; omitted: every customer in it. */
+                tenant_id?: string | null;
                 workgroup?: string | null;
             };
             header?: never;

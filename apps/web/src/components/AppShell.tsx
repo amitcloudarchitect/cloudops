@@ -13,6 +13,7 @@ import { can, useSession } from "@/lib/session";
 import { AssistantPanel, SHORTCUT_ARIA, SHORTCUT_LABEL } from "./AssistantPanel";
 import { BrandLogo } from "./BrandLogo";
 import { BrandPhoto } from "./BrandPhoto";
+import { CustomerSelect } from "./CustomerSelect";
 import { EmptyState } from "./EmptyState";
 import { Loading } from "./Loading";
 import { ThemeToggle } from "./ThemeToggle";
@@ -171,6 +172,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          {ready ? <CustomerSelect /> : null}
           {who}
           <ThemeToggle />
           {ready ? (

@@ -41,6 +41,7 @@ from cloudops_api.pipeline import (
     AUTHENTICATED,
     ApiError,
     AuditedRoute,
+    ScopeDep,
     audit_only,
     current_access,
     platform,
@@ -130,10 +131,10 @@ def _months_back(start: date, n: int) -> date:
 
 @router.get("/performance", response_model=Performance)
 @requires("tickets.read")
-async def performance(request: Request, access: AccessDep) -> Performance:
+async def performance(request: Request, access: AccessDep, scope: ScopeDep) -> Performance:
     first = _months_back(_month_start(_now().date()), PERFORMANCE_MONTHS - 1)
     since = datetime.combine(first, datetime.min.time(), UTC)
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         opened = {(r[0], r[1]): int(r[2]) for r in _rows(await conn.execute(text(
             f"SELECT {_OPENED_MONTH}, kind, count(*)"  # noqa: S608
             " FROM cloudops.work_item WHERE opened_at >= :since GROUP BY 1, 2"),
@@ -218,9 +219,9 @@ _AGE_BANDS: Final[tuple[tuple[AgeBandName, int, int | None], ...]] = (
 
 @router.get("/posture", response_model=Posture)
 @requires("vulnerabilities.read")
-async def posture(request: Request, access: AccessDep) -> Posture:
+async def posture(request: Request, access: AccessDep, scope: ScopeDep) -> Posture:
     now = _now()
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         severities = {int(r[0]): int(r[1]) for r in _rows(await conn.execute(text(
             "SELECT severity, count(*) FROM cloudops.vulnerability"
             " WHERE remediated_at IS NULL GROUP BY 1")))}
@@ -283,8 +284,8 @@ class Approvals(ApiModel):
 
 @router.get("/approvals", response_model=Approvals)
 @requires("approvals.read")
-async def approvals(request: Request, access: AccessDep) -> Approvals:
-    async with platform(request).db.transaction(access.scope) as conn:
+async def approvals(request: Request, access: AccessDep, scope: ScopeDep) -> Approvals:
+    async with platform(request).db.transaction(scope) as conn:
         rows = [tuple(r) for r in await conn.execute(text(
             "SELECT w.number, t.id, t.canonical_name, w.change_request, w.short_description,"
             " w.state, w.priority, w.configuration_item, w.resource_id, w.opened_at"

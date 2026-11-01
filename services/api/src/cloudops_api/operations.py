@@ -38,6 +38,7 @@ from cloudops_api.pipeline import (
     AUTHENTICATED,
     ApiError,
     AuditedRoute,
+    ScopeDep,
     audit_only,
     current_access,
     platform,
@@ -247,7 +248,7 @@ def _summary(row: tuple[Any, ...], staff: bool, route: str | None = None) -> Wor
 @requires("tickets.read")
 async def list_work_items(
     request: Request,
-    access: AccessDep,
+    access: AccessDep, scope: ScopeDep,
     kind: Annotated[Literal["incident", "change_task", "service_request", "project_task"]
                     | None, Query()] = None,
     workgroup: Annotated[str | None, Query(max_length=200)] = None,
@@ -272,7 +273,7 @@ async def list_work_items(
         params["q"] = f"%{q.replace('%', '').replace('_', '')}%"
     clause = " AND ".join(where)
     route = f", {_LATEST_ROUTE}" if staff else ", NULL"
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         rows: list[tuple[Any, ...]] = [tuple(r) for r in await conn.execute(text(
             f"SELECT {_item_columns(staff)}{route} FROM cloudops.work_item w"  # noqa: S608
             " JOIN cloudops.tenant t ON t.id = w.tenant_id"
@@ -437,12 +438,14 @@ async def resource_context(
 
 @router.get("/customers", response_model=list[CustomerOverview])
 @requires(AUTHENTICATED)
-async def list_customers(request: Request, access: AccessDep) -> list[CustomerOverview]:
+async def list_customers(
+    request: Request, access: AccessDep, scope: ScopeDep,
+) -> list[CustomerOverview]:
     """One row per tenant in scope. Each figure is present only when the caller
     holds the permission it comes from; absent is not zero."""
     since = (_now() - timedelta(days=RECENT_DAYS)).date()
     can = access.allows
-    async with platform(request).db.transaction(access.scope) as conn:
+    async with platform(request).db.transaction(scope) as conn:
         tenants: list[tuple[Any, ...]] = [tuple(r) for r in await conn.execute(text(
             "SELECT id, canonical_name FROM cloudops.tenant ORDER BY canonical_name"))]
 

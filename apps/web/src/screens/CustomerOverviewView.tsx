@@ -10,6 +10,7 @@ import { apiGet } from "@/lib/api";
 import { useAssistantContext } from "@/lib/assistant";
 import { count, money, month } from "@/lib/format";
 import { band, THRESHOLDS, type Band } from "@/lib/health";
+import { customerQuery, useCustomer } from "@/lib/customer";
 import { can, useMe } from "@/lib/session";
 import { useApi } from "@/lib/useApi";
 
@@ -52,10 +53,13 @@ function PriceCards({ prices }: { prices: CustomerPrice[] }) {
 
 export function CustomerOverviewView() {
   const me = useMe();
+  const { tenantId } = useCustomer();
   useAssistantContext(
-    me.tenants.length > 1 ? { screen: "customers" } : { screen: "customer", tenantId: me.tenants[0]?.id ?? null },
+    me.tenants.length > 1 && tenantId === null
+      ? { screen: "customers" }
+      : { screen: "customer", tenantId: tenantId ?? me.tenants[0]?.id ?? null },
   );
-  const loaded = useApi((token) => apiGet(token, "/v1/customers"), "customers");
+  const loaded = useApi((token) => apiGet(token, "/v1/customers", {}, customerQuery(tenantId)), `customers:${tenantId ?? "all"}`);
   if (loaded.status === "loading") return <Loading what="your customers" />;
   if (loaded.status === "error") return <LoadError error={loaded.error} what="customers" />;
   const customers = [...loaded.data].sort((a, b) => ORDER[worst(a)] - ORDER[worst(b)] || a.tenant.name.localeCompare(b.tenant.name));
