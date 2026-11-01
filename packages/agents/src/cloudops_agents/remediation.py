@@ -18,6 +18,15 @@ cross-checked against it.
 (migration 0008), under the run's own single-tenant scope, so the console can
 show it and a person can accept or override it (ADR 0014).
 
+**What starts it.** ``TriageSweepWorkflow``, on a schedule (``SCHEDULES``):
+it lists tenants, finds each tenant's open incidents with no triage result
+under that tenant's own scope, and starts this workflow for each as an
+abandoned child, at most ``SWEEP_LIMIT`` per run. The workflow id is
+``triage_workflow_id(tenant, number)``, so a ticket is never triaged twice; a
+run that failed may be started again. A tenant whose AI budget is near its
+alert fraction is skipped until a later run (``Gateway.headroom``). The sweep
+only chooses which tickets enter triage, by a fixed query: no model is asked.
+
 **Failures.** Invalid agent output or a gateway refusal (quota, breaker) is
 returned as a status and routed to a human; it is not retried. Transient
 faults (a provider down, a network error) are retried by Temporal under the
@@ -33,7 +42,9 @@ from typing import Any, Final
 from uuid import UUID
 
 from temporalio import activity, workflow
-from temporalio.common import RetryPolicy
+from temporalio.common import RetryPolicy, WorkflowIDReusePolicy
+from temporalio.exceptions import ActivityError, WorkflowAlreadyStartedError
+from temporalio.workflow import ParentClosePolicy
 
 with workflow.unsafe.imports_passed_through():
     import json
@@ -58,6 +69,11 @@ PERMISSIONS: Final = frozenset({"inventory.read", "tickets.read", "knowledge.rea
 DB_RETRY: Final = RetryPolicy(initial_interval=timedelta(seconds=1), maximum_attempts=5)
 DB_TIMEOUT: Final = timedelta(seconds=30)
 COST_CURRENCY: Final = "USD"  # the gateway's rate card (cloudops_gateway.pricing)
+SWEEP_PRINCIPAL: Final = "service:triage-sweep"
+SWEEP_EVERY: Final = timedelta(minutes=5)
+SWEEP_LIMIT: Final = 20  # tickets started per run, across tenants
+SWEEP_TENANT_LIMIT: Final = 10  # per tenant per run, so one tenant never takes the batch
+SWEEP_WINDOW: Final = timedelta(days=7)  # opened within; older tickets wait for a person
 
 
 @dataclass
@@ -242,6 +258,59 @@ def activities(acts: TriageActivities) -> list[Any]:
             acts.record_outcome]
 
 
+def triage_workflow_id(tenant_id: str, number: str) -> str:
+    """One triage per ticket: the sweep starts it under this id only."""
+    return f"triage-{tenant_id}-{number}"
+
+
+@dataclass
+class SweepRequest:
+    tenant_id: str  # from the tenant list, never from a model
+    limit: int
+
+
+# The tenant ids the sweep visits (migration 0013's definer function: ids only).
+_SWEEP_TENANTS: Final = text("SELECT tenant_id FROM cloudops.knowledge_tenants()")
+# Open incidents in the window with no triage result, newest first. RLS limits it
+# to the scope's one tenant; the tenant filter says so again.
+_UNTRIAGED: Final = text(
+    "SELECT w.number FROM cloudops.work_item w"
+    " WHERE w.tenant_id = :t AND w.kind = 'incident' AND w.closed_at IS NULL"
+    " AND w.opened_at >= now() - CAST(:window AS interval)"
+    " AND lower(coalesce(w.state, '')) <> ALL(:closed)"
+    " AND NOT EXISTS (SELECT 1 FROM cloudops.triage_result r"
+    "                 WHERE r.tenant_id = w.tenant_id AND r.number = w.number)"
+    " GROUP BY w.number ORDER BY max(w.opened_at) DESC, w.number LIMIT :limit"
+)
+
+
+class TriageSweepActivities:
+    def __init__(self, db: Database, gateway: Gateway) -> None:
+        self._db = db
+        self._gateway = gateway
+
+    @activity.defn
+    async def triage_tenants(self) -> list[str]:
+        async with self._db.transaction(TenantScope.for_resolution(SWEEP_PRINCIPAL)) as conn:
+            return [str(r[0]) for r in await conn.execute(_SWEEP_TENANTS)]
+
+    @activity.defn
+    async def untriaged(self, req: SweepRequest) -> list[str]:
+        """This tenant's tickets to triage now, or none while its AI budget is near
+        its alert fraction: they wait for a later run rather than being refused."""
+        ctx = _ctx(TriageRequest(req.tenant_id, ""))
+        if not await self._gateway.headroom(ctx, CLASSIFIER.name):
+            return []
+        async with self._db.transaction(ctx.scope) as conn:
+            return [str(r[0]) for r in await conn.execute(_UNTRIAGED, {
+                "t": ctx.tenant_id, "window": f"{int(SWEEP_WINDOW.total_seconds())} seconds",
+                "closed": sorted(triage.CLOSED_STATES), "limit": max(req.limit, 0)})]
+
+
+def sweep_activities(acts: TriageSweepActivities) -> list[Any]:
+    return [acts.triage_tenants, acts.untriaged]
+
+
 @workflow.defn
 class TicketTriageWorkflow:
     @workflow.run
@@ -298,3 +367,42 @@ class TicketTriageWorkflow:
                                            evidence=enr.evidence)
         return TriageOutcome(req.number, decision.route, 3, list(decision.reasons), cls.output,
                              resource, enr.output, signals, runs, cost, enr.evidence)
+
+
+@workflow.defn
+class TriageSweepWorkflow:
+    """Start triage for open incidents that have none. Scheduled; safe to overlap
+    or repeat, since each ticket's workflow id is fixed. Returns the workflow ids
+    it started."""
+
+    @workflow.run
+    async def run(self, limit: int = SWEEP_LIMIT) -> list[str]:
+        tenants = await workflow.execute_activity_method(
+            TriageSweepActivities.triage_tenants, start_to_close_timeout=DB_TIMEOUT,
+            retry_policy=DB_RETRY)
+        started: list[str] = []
+        for tenant in tenants:
+            room = min(SWEEP_TENANT_LIMIT, limit - len(started))
+            if room <= 0:
+                break
+            try:
+                numbers = await workflow.execute_activity_method(
+                    TriageSweepActivities.untriaged, SweepRequest(tenant, room),
+                    start_to_close_timeout=DB_TIMEOUT, retry_policy=DB_RETRY)
+            except ActivityError:
+                continue  # one tenant's failure never stops the tenants after it
+            for number in numbers[:room]:
+                wf_id = triage_workflow_id(tenant, number)
+                try:
+                    await workflow.start_child_workflow(
+                        TicketTriageWorkflow.run, TriageRequest(tenant, number), id=wf_id,
+                        task_queue=TASK_QUEUE, parent_close_policy=ParentClosePolicy.ABANDON,
+                        id_reuse_policy=WorkflowIDReusePolicy.ALLOW_DUPLICATE_FAILED_ONLY)
+                except WorkflowAlreadyStartedError:
+                    continue  # running, or done and its result not yet recorded
+                started.append(wf_id)
+        return started
+
+
+WORKFLOWS: Final = [TicketTriageWorkflow, TriageSweepWorkflow]
+SCHEDULES: Final = (("triage-sweep", TriageSweepWorkflow, SWEEP_EVERY),)

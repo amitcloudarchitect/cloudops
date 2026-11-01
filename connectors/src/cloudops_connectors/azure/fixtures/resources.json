@@ -2077,9 +2077,9 @@
    "provisioningState": "Succeeded"
   },
   {
-   "id": "/subscriptions/89ef84c7-bf5f-5ef2-9bdf-3b4e0ce59a7f/resourceGroups/rg-nwl-prod/providers/Microsoft.KeyVault/vaults/kv-nwl-weu-01",
-   "name": "kv-nwl-weu-01",
-   "type": "microsoft.keyvault/vaults",
+   "id": "/subscriptions/89ef84c7-bf5f-5ef2-9bdf-3b4e0ce59a7f/resourceGroups/rg-nwl-prod/providers/Microsoft.DevTestLab/schedules/shutdown-computevm-nwl-01",
+   "name": "shutdown-computevm-nwl-01",
+   "type": "microsoft.devtestlab/schedules",
    "location": "westeurope",
    "tags": {
     "environment": "prod"

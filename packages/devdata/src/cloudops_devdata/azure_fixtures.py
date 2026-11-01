@@ -149,11 +149,12 @@ def build() -> tuple[bytes, bytes, list[Expected]]:
     base = f"/subscriptions/{nwl.native_id}/resourceGroups/rg-nwl-prod/providers"
 
     # A type the mapping does not know: kept, typed "other".
-    vault = f"{base}/Microsoft.KeyVault/vaults/kv-nwl-weu-01"
-    rows.append(_row(vault, "kv-nwl-weu-01", "Microsoft.KeyVault/vaults", nwl.native_id,
-                     nwl_dir, "westeurope", {"environment": "prod"}, None, "Succeeded"))
-    expected.append(Expected(vault, nwl.native_id, "NWL", None, "kv-nwl-weu-01",
-                             "microsoft.keyvault/vaults", "other", "westeurope",
+    vault = f"{base}/Microsoft.DevTestLab/schedules/shutdown-computevm-nwl-01"
+    rows.append(_row(vault, "shutdown-computevm-nwl-01", "Microsoft.DevTestLab/schedules",
+                     nwl.native_id, nwl_dir, "westeurope", {"environment": "prod"}, None,
+                     "Succeeded"))
+    expected.append(Expected(vault, nwl.native_id, "NWL", None, "shutdown-computevm-nwl-01",
+                             "microsoft.devtestlab/schedules", "other", "westeurope",
                              {"environment": "prod"}, None, "Succeeded"))
     # A field the mapping does not carry: kept in raw_extra.
     zonal = f"{base}/Microsoft.Compute/virtualMachines/nwl-weu-zonal-01"

@@ -38,7 +38,7 @@ AccessDep = Annotated[Access, Depends(current_access)]
 COST_SOURCE: Final = {"azure": "azure_cost_management", "aws": "aws_cost_and_usage"}
 PRICE_SOURCE: Final = "customer_price"
 Currency = Annotated[str | None, Query(pattern=r"^[A-Z]{3}$")]
-MAX_LIST: Final = 500
+MAX_LIST: Final = 500  # a page of a list; the total is always the true count
 
 
 # --- views -------------------------------------------------------------------------
@@ -78,6 +78,7 @@ class ResourceStaffView(ApiModel):
 
     id: UUID
     tenant_id: UUID
+    customer: str  # the tenant's canonical name
     account_id: UUID
     native_id: str
     name: str
@@ -89,8 +90,13 @@ class ResourceStaffView(ApiModel):
 
 
 class ResourceList(ApiModel):
+    """One page, ordered by name. ``count`` is every resource in scope, so a
+    caller can tell a page from the whole. ``next_cursor`` asks for the next
+    page, and is None on the last; it is opaque, not a figure."""
+
     items: list[ResourceStaffView | ResourceView]
     count: Metric[int]
+    next_cursor: str | None
 
 
 class CostLine(ApiModel):
@@ -154,17 +160,18 @@ def _now() -> datetime:
 # --- endpoints ---------------------------------------------------------------------
 
 _RESOURCE_COLUMNS: Final = (
-    "r.id, r.tenant_id, r.account_id, r.native_id, r.name, r.type_canonical,"
+    "r.id, r.tenant_id, t.canonical_name, r.account_id, r.native_id, r.name, r.type_canonical,"
     " r.type_native, r.region, r.state, r.tags"
 )
+_RESOURCE_FROM: Final = "cloudops.resource r JOIN cloudops.tenant t ON t.id = r.tenant_id"
 
 
 def _resource(row: tuple[Any, ...], access: Access) -> ResourceStaffView | ResourceView:
-    rid, tid, aid, native, name, canonical, type_native, region, state, tags = row
+    rid, tid, customer, aid, native, name, canonical, type_native, region, state, tags = row
     if access.kind == "customer":
         return ResourceView(id=rid, name=name, type=canonical, region=region, state=state)
     return ResourceStaffView(
-        id=rid, tenant_id=tid, account_id=aid, native_id=native, name=name,
+        id=rid, tenant_id=tid, customer=customer, account_id=aid, native_id=native, name=name,
         type=canonical, type_native=type_native, region=region, state=state,
         tags={str(k): str(v) for k, v in dict(tags or {}).items()},
     )
@@ -195,24 +202,34 @@ async def me(request: Request, access: AccessDep) -> MeView:
 
 @router.get("/resources", response_model=ResourceList)
 @requires("inventory.read")
-async def list_resources(request: Request, access: AccessDep, scope: ScopeDep) -> ResourceList:
+async def list_resources(
+    request: Request,
+    access: AccessDep,
+    scope: ScopeDep,
+    limit: Annotated[int, Query(ge=1, le=MAX_LIST)] = MAX_LIST,
+    cursor: Annotated[str, Query(pattern=r"^[0-9]{1,9}$")] = "0",
+) -> ResourceList:
+    offset = int(cursor)
     async with platform(request).db.transaction(scope) as conn:
         rows = (
             await conn.execute(
                 text(
-                    f"SELECT {_RESOURCE_COLUMNS} FROM cloudops.resource r"  # noqa: S608
-                    " WHERE r.deleted_at IS NULL ORDER BY r.name, r.id LIMIT :limit"
+                    f"SELECT {_RESOURCE_COLUMNS} FROM {_RESOURCE_FROM}"  # noqa: S608
+                    " WHERE r.deleted_at IS NULL ORDER BY r.name, r.id"
+                    " LIMIT :limit OFFSET :offset"
                 ),
-                {"limit": MAX_LIST},
+                {"limit": limit, "offset": offset},
             )
         ).all()
-        total = await conn.scalar(
+        total = int(await conn.scalar(
             text("SELECT count(*) FROM cloudops.resource WHERE deleted_at IS NULL")
-        )
+        ) or 0)
+    following = offset + len(rows)
     return ResourceList(
         items=[_resource(tuple(r), access) for r in rows],
+        next_cursor=str(following) if len(rows) == limit and following < total else None,
         count=Metric[int](
-            value=int(total or 0),
+            value=total,
             unit="resources",
             source_system="platform_inventory",
             as_of=_now(),
@@ -230,7 +247,7 @@ async def get_resource(
     async with platform(request).db.transaction(access.scope) as conn:
         found = (
             await conn.execute(
-                text(f"SELECT {_RESOURCE_COLUMNS} FROM cloudops.resource r WHERE r.id = :id"),  # noqa: S608
+                text(f"SELECT {_RESOURCE_COLUMNS} FROM {_RESOURCE_FROM} WHERE r.id = :id"),  # noqa: S608
                 {"id": resource_id},
             )
         ).one_or_none()

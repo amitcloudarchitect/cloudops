@@ -197,13 +197,16 @@ resource "grafana_dashboard" "this" {
         type    = p.type
         gridPos = { h = 8, w = 12, x = (i % 2) * 12, y = floor(i / 2) * 8 }
       },
-      p.type == "text" ? {
+      # The two panel kinds have different shapes, which a conditional cannot return
+      # directly ("inconsistent conditional result types"): encode each branch, then
+      # decode the one chosen. The JSON Grafana receives is unchanged.
+      jsondecode(p.type == "text" ? jsonencode({
         options = { mode = "markdown", content = p.text }
-        } : {
+        }) : jsonencode({
         datasource  = { type = "prometheus", uid = grafana_data_source.prometheus.uid }
         fieldConfig = { defaults = { unit = p.unit }, overrides = [] }
         targets     = [{ refId = "A", expr = p.expr, range = p.type != "stat", instant = p.type == "stat" }]
-      }
+      }))
     )]
   })
 }

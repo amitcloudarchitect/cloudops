@@ -109,7 +109,10 @@ def test_a_deleted_item_is_deleted_at_its_capture_time(status: str) -> None:
 @pytest.mark.parametrize(("rtype", "canonical"), [
     ("AWS::EC2::Instance", "compute.vm"), ("AWS::RDS::DBInstance", "database.sql"),
     ("AWS::S3::Bucket", "storage.account"), ("AWS::Lambda::Function", "compute.function"),
-    ("AWS::EC2::SecurityGroup", "other"),
+    ("AWS::EC2::SecurityGroup", "network.security_group"), ("AWS::EC2::VPC", "network.vnet"),
+    ("AWS::EC2::Subnet", "network.subnet"), ("AWS::EC2::NetworkInterface", "network.interface"),
+    ("AWS::EC2::EIP", "network.public_ip"), ("AWS::EKS::Cluster", "compute.kubernetes"),
+    ("AWS::ECR::Repository", "container.registry"), ("AWS::Backup::BackupVault", "other"),
 ])
 def test_resource_types_map_through_a_fixed_table(rtype: str, canonical: str) -> None:
     assert mapping.normalise_config({**ITEM, "resourceType": rtype}).type_canonical == canonical

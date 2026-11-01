@@ -109,6 +109,98 @@ spec:
             secretName: worker-ai-temporal-tls
             defaultMode: 0440
 ---
+# Creates or updates the worker's schedules (the triage sweep, drafting, knowledge
+# indexing, assistant retention) on every sync; safe to repeat. Talks to Temporal only.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: worker-ai-schedule
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: worker-ai-schedule
+        # The Azure profile refuses to start without a workload identity, even for
+        # a job that only talks to Temporal; it is the worker's own identity.
+        azure.workload.identity/use: "true"
+    spec:
+      restartPolicy: Never
+      serviceAccountName: worker-ai
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile: { type: RuntimeDefault }
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - { key: cloudops.getronics.com/pool, operator: In, values: [ai] }
+      containers:
+        - name: schedule
+          image: worker-ai
+          command: ["/app/.venv/bin/python", "-m", "cloudops_agents.worker", "schedule"]
+          envFrom:
+            - configMapRef: { name: worker-ai }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: temporal-tls, mountPath: /mnt/temporal-tls, readOnly: true }
+            # The job reads no secret: an empty store, never the worker's Key Vault mount.
+            - { name: no-secrets, mountPath: /mnt/secrets, readOnly: true }
+      volumes:
+        - name: temporal-tls
+          secret:
+            secretName: worker-ai-temporal-tls
+            defaultMode: 0440
+        - name: no-secrets
+          emptyDir: { sizeLimit: 1Mi }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: worker-ai-schedule
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: worker-ai-schedule
+  policyTypes: [Ingress, Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: temporal
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: frontend
+      ports:
+        - { protocol: TCP, port: 7233 }
+    # OTLP to the OpenTelemetry Collector (step 19, ADR 0022).
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: otel-collector
+      ports:
+        - { protocol: TCP, port: 4318 }
+---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
 metadata:

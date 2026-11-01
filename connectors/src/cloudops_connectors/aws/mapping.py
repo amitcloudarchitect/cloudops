@@ -78,8 +78,8 @@ CONFIG_EXPECTED: Final = frozenset({
 })
 DELETED_STATUSES: Final = frozenset({"ResourceDeleted", "ResourceDeletedNotRecorded"})
 
-# resourceType -> type_canonical. Consistent with the synthetic dataset; the
-# rest of the catalogue is mapped when someone needs it.
+# resourceType -> type_canonical. Consistent with the synthetic dataset, and with
+# Azure's names (azure/mapping.py) where the thing is the same.
 TYPE_CANONICAL: Final = {
     "AWS::EC2::Instance": "compute.vm",
     "AWS::RDS::DBInstance": "database.sql",
@@ -89,6 +89,31 @@ TYPE_CANONICAL: Final = {
     "AWS::EC2::Volume": "storage.disk",
     "AWS::ElasticLoadBalancingV2::LoadBalancer": "network.load_balancer",
     "AWS::ElasticLoadBalancing::LoadBalancer": "network.load_balancer",
+    "AWS::AutoScaling::AutoScalingGroup": "compute.vm_scale_set",
+    "AWS::EKS::Cluster": "compute.kubernetes",
+    "AWS::ECR::Repository": "container.registry",
+    "AWS::ECS::Cluster": "compute.container_cluster",
+    "AWS::EFS::FileSystem": "storage.file_share",
+    "AWS::EC2::NetworkInterface": "network.interface",
+    "AWS::EC2::EIP": "network.public_ip",
+    "AWS::EC2::VPC": "network.vnet",
+    "AWS::EC2::Subnet": "network.subnet",
+    "AWS::EC2::SecurityGroup": "network.security_group",
+    "AWS::EC2::RouteTable": "network.route_table",
+    "AWS::EC2::NatGateway": "network.nat_gateway",
+    "AWS::EC2::InternetGateway": "network.internet_gateway",
+    "AWS::EC2::VPCEndpoint": "network.private_endpoint",
+    "AWS::EC2::VPNGateway": "network.vpn_gateway",
+    "AWS::NetworkFirewall::Firewall": "network.firewall",
+    "AWS::Route53::HostedZone": "network.dns_zone",
+    "AWS::CloudFront::Distribution": "network.cdn",
+    "AWS::KMS::Key": "security.key",
+    "AWS::SecretsManager::Secret": "security.secret",
+    "AWS::IAM::Role": "identity.role",
+    "AWS::DynamoDB::Table": "database.nosql",
+    "AWS::ElastiCache::CacheCluster": "database.cache",
+    "AWS::Kinesis::Stream": "messaging.event_stream",
+    "AWS::SQS::Queue": "messaging.queue",
 }
 UNMAPPED_TYPE: Final = "other"
 

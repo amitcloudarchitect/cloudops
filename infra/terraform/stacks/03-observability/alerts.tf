@@ -195,7 +195,7 @@ locals {
   p2_rules = {
     ConnectorOutage = {
       # LLD: connector outage beyond three intervals.
-      expr = "cloudops_connector_last_success_age > 3 * on(source, entity) cloudops_connector_expected_interval"
+      expr = "cloudops_connector_last_success_age > on(source, entity) (3 * cloudops_connector_expected_interval)"
       for  = "PT5M"
       text = "{{ $labels.source }}/{{ $labels.entity }} has not succeeded for more than three intervals."
     }

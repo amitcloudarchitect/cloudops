@@ -6,7 +6,8 @@
 Serves ``TicketTriageWorkflow`` on the ``remediation-triage`` queue, and the
 step 17 drafting sweep and knowledge indexer (``drafting``) on the ``drafting``
 queue, with the AI gateway in-process (ADR 0007). ``schedule`` creates or
-updates the drafting and indexing schedules, safe to repeat. Probes on port 8080:
+updates the triage sweep, drafting and indexing schedules, safe to repeat; the
+GitOps base runs it as a Job on every sync. Probes on port 8080:
 liveness is the event loop answering; readiness is the database and Temporal.
 
 Locally the gateway uses the mock providers. In Azure it calls the Azure
@@ -33,14 +34,9 @@ from temporalio.client import (
 )
 from temporalio.worker import Worker
 
-from cloudops_agents import drafting
+from cloudops_agents import drafting, remediation
 from cloudops_agents.enricher import knowledge_tool
-from cloudops_agents.remediation import (
-    TASK_QUEUE,
-    TicketTriageWorkflow,
-    TriageActivities,
-    activities,
-)
+from cloudops_agents.remediation import TASK_QUEUE, TriageActivities, TriageSweepActivities
 from cloudops_agents.runtime import build_gateway
 from cloudops_config import (
     Component,
@@ -63,10 +59,11 @@ SERVICE = "worker-triage"
 async def _schedule() -> int:
     settings = load_settings(os.environ, require={Component.TEMPORAL})
     temporal: Client = await connect(settings.temporal)
-    for schedule_id, wf, every in drafting.SCHEDULES:
+    schedules = [(*s, TASK_QUEUE) for s in remediation.SCHEDULES]
+    schedules += [(*s, drafting.TASK_QUEUE) for s in drafting.SCHEDULES]
+    for schedule_id, wf, every, queue in schedules:
         wanted = Schedule(
-            action=ScheduleActionStartWorkflow(wf.run, id=schedule_id,
-                                               task_queue=drafting.TASK_QUEUE),
+            action=ScheduleActionStartWorkflow(wf.run, id=schedule_id, task_queue=queue),
             spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
         )
         try:
@@ -107,8 +104,10 @@ async def _main() -> int:
         )
         stack.push_async_callback(probes.wait_closed)
         stack.callback(probes.close)
-        worker = Worker(temporal, task_queue=TASK_QUEUE, workflows=[TicketTriageWorkflow],
-                        activities=activities(TriageActivities(db, gateway, registry)))
+        worker = Worker(
+            temporal, task_queue=TASK_QUEUE, workflows=remediation.WORKFLOWS,
+            activities=[*remediation.activities(TriageActivities(db, gateway, registry)),
+                        *remediation.sweep_activities(TriageSweepActivities(db, gateway))])
         drafter = Worker(temporal, task_queue=drafting.TASK_QUEUE, workflows=drafting.WORKFLOWS,
                          activities=drafting.activities(drafting.DraftingActivities(db, gateway)))
         print(f"worker serving {TASK_QUEUE} and {drafting.TASK_QUEUE}")
